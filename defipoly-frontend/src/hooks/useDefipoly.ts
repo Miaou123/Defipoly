@@ -144,45 +144,91 @@ export function useDefipoly() {
 
   const buyProperty = useCallback(async (propertyId: number) => {
     if (!program || !wallet) throw new Error('Wallet not connected');
-    if (!playerInitialized) throw new Error('Initialize player first');
 
     setLoading(true);
     try {
-      const playerTokenAccount = await getOrCreateTokenAccount(
-        connection,
-        wallet.publicKey,
+      const { Transaction, SystemProgram } = await import('@solana/web3.js');
+      const { getAssociatedTokenAddress, createAssociatedTokenAccountInstruction } = await import('@solana/spl-token');
+      
+      const transaction = new Transaction();
+      
+      // Check if token account exists
+      const tokenAccount = await getAssociatedTokenAddress(
+        TOKEN_MINT,
         wallet.publicKey
       );
+      
+      const tokenAccountInfo = await connection.getAccountInfo(tokenAccount);
+      
+      // Add create token account instruction if it doesn't exist
+      if (!tokenAccountInfo) {
+        console.log('Creating token account...');
+        const createATAIx = createAssociatedTokenAccountInstruction(
+          wallet.publicKey, // payer
+          tokenAccount,     // ata
+          wallet.publicKey, // owner
+          TOKEN_MINT        // mint
+        );
+        transaction.add(createATAIx);
+      }
 
-      const [propertyPDA] = getPropertyPDA(propertyId);
+      // Check if player account exists
       const [playerPDA] = getPlayerPDA(wallet.publicKey);
+      const playerAccountInfo = await connection.getAccountInfo(playerPDA);
+      
+      // Add initialize player instruction if it doesn't exist
+      if (!playerAccountInfo) {
+        console.log('Initializing player...');
+        const initPlayerIx = await program.methods
+          .initializePlayer()
+          .accountsPartial({
+            player: wallet.publicKey,
+            playerAccount: playerPDA,
+            systemProgram: SystemProgram.programId,
+          })
+          .instruction();
+        transaction.add(initPlayerIx);
+      }
+
+      // Add buy property instruction
+      const [propertyPDA] = getPropertyPDA(propertyId);
       const [ownershipPDA] = getOwnershipPDA(wallet.publicKey, propertyId);
 
-      const tx = await program.methods
+      const buyPropertyIx = await program.methods
         .buyProperty()
         .accountsPartial({
           property: propertyPDA,
           ownership: ownershipPDA,
           playerAccount: playerPDA,
           player: wallet.publicKey,
-          playerTokenAccount,
+          playerTokenAccount: tokenAccount,
           rewardPoolVault: REWARD_POOL,
           gameConfig: GAME_CONFIG,
           tokenProgram: TOKEN_PROGRAM_ID,
           systemProgram: SystemProgram.programId,
         })
-        .rpc();
+        .instruction();
+      
+      transaction.add(buyPropertyIx);
 
-      console.log('Property bought:', tx);
-      return tx;
+      // Send transaction
+      const signature = await provider!.sendAndConfirm(transaction);
+      
+      console.log('Property bought:', signature);
+      
+      // Update states
+      if (!tokenAccountInfo) setTokenAccountExists(true);
+      if (!playerAccountInfo) setPlayerInitialized(true);
+      
+      return signature;
     } catch (error) {
       console.error('Error buying property:', error);
       throw error;
     } finally {
       setLoading(false);
     }
-  }, [program, wallet, playerInitialized, connection]);
-
+  }, [program, wallet, connection, provider]);
+  
   const activateShield = useCallback(async (propertyId: number, cycles: number) => {
     if (!program || !wallet) throw new Error('Wallet not connected');
     if (!playerInitialized) throw new Error('Initialize player first');
