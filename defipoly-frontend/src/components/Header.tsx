@@ -4,10 +4,12 @@ import { useWallet } from '@solana/wallet-adapter-react';
 import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
 import { useDefipoly } from '@/hooks/useDefipoly';
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 
 export function Header() {
   const { connected, publicKey } = useWallet();
   const { tokenBalance } = useDefipoly();
+  const router = useRouter();
   const [mounted, setMounted] = useState(false);
 
   // Prevent hydration mismatch
@@ -44,13 +46,21 @@ export function Header() {
           </div>
         </div>
 
-        {/* Right side - Balance & Wallet */}
+        {/* Right side - Profile, Balance & Wallet */}
         <div className="flex items-center gap-4">
           {connected && (
-            <div className="bg-purple-900/30 px-4 py-2 rounded-lg border border-purple-500/30">
-              <div className="text-xs text-purple-300">Balance</div>
-              <div className="text-sm font-bold text-purple-100">{tokenBalance.toLocaleString()} DEFI</div>
-            </div>
+            <>
+              <button
+                onClick={() => router.push('/profile')}
+                className="px-4 py-2 bg-purple-600/80 hover:bg-purple-600 rounded-lg font-semibold text-sm transition-all flex items-center gap-2 hover:shadow-lg hover:shadow-purple-500/40"
+              >
+                <span>👤</span> Profile
+              </button>
+              <div className="bg-purple-900/30 px-4 py-2 rounded-lg border border-purple-500/30">
+                <div className="text-xs text-purple-300">Balance</div>
+                <div className="text-sm font-bold text-purple-100">{tokenBalance.toLocaleString()} DEFI</div>
+              </div>
+            </>
           )}
           <WalletMultiButton />
         </div>

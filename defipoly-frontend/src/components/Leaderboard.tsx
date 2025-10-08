@@ -8,6 +8,7 @@ import { deserializePlayer } from '@/utils/deserialize';
 
 interface LeaderboardEntry {
   address: string;
+  username: string | null;
   totalDailyIncome: number;
   propertiesOwned: number;
 }
@@ -70,8 +71,12 @@ export function Leaderboard() {
               console.log('   Properties owned:', playerData.totalPropertiesOwned);
               console.log('   Daily income:', playerData.totalDailyIncome.toString());
               
+              // Get username from localStorage
+              const username = localStorage.getItem(`username_${playerData.owner.toString()}`);
+              
               players.push({
                 address: playerData.owner.toString(),
+                username: username,
                 totalDailyIncome: Number(playerData.totalDailyIncome),
                 propertiesOwned: playerData.totalPropertiesOwned,
               });
@@ -149,8 +154,13 @@ export function Leaderboard() {
                 </span>
                 <div className="flex-1 min-w-0">
                   <div className="font-semibold text-purple-100 truncate">
-                    {leader.address.slice(0, 4)}...{leader.address.slice(-4)}
+                    {leader.username || `${leader.address.slice(0, 4)}...${leader.address.slice(-4)}`}
                   </div>
+                  {leader.username && (
+                    <div className="text-xs text-purple-500 font-mono">
+                      {leader.address.slice(0, 4)}...{leader.address.slice(-4)}
+                    </div>
+                  )}
                   <div className="text-xs text-purple-400">
                     {leader.propertiesOwned} {leader.propertiesOwned === 1 ? 'property' : 'properties'}
                   </div>
