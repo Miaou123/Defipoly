@@ -281,6 +281,90 @@ export function useDefipoly() {
     return await fetchPlayerData(program, wallet.publicKey);
   }, [program, wallet]);
 
+  const sellProperty = useCallback(async (propertyId: number, slots: number) => {
+    if (!program || !wallet) throw new Error('Wallet not connected');
+    if (!playerInitialized) throw new Error('Initialize player first');
+
+    setLoading(true);
+    try {
+      const playerTokenAccount = await getOrCreateTokenAccount(
+        connection,
+        wallet.publicKey,
+        wallet.publicKey
+      );
+
+      const [propertyPDA] = getPropertyPDA(propertyId);
+      const [playerPDA] = getPlayerPDA(wallet.publicKey);
+      const [ownershipPDA] = getOwnershipPDA(wallet.publicKey, propertyId);
+
+      const tx = await program.methods
+        .sellProperty(slots)
+        .accountsPartial({
+          property: propertyPDA,
+          ownership: ownershipPDA,
+          playerAccount: playerPDA,
+          player: wallet.publicKey,
+          playerTokenAccount,
+          rewardPoolVault: REWARD_POOL,
+          gameConfig: GAME_CONFIG,
+          tokenProgram: TOKEN_PROGRAM_ID,
+        })
+        .rpc();
+
+      console.log('Property sold:', tx);
+      return tx;
+    } catch (error) {
+      console.error('Error selling property:', error);
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  }, [program, wallet, playerInitialized, connection]);
+
+  const stealProperty = useCallback(async (propertyId: number, targetPlayer: string) => {
+    if (!program || !wallet) throw new Error('Wallet not connected');
+    if (!playerInitialized) throw new Error('Initialize player first');
+
+    setLoading(true);
+    try {
+      const playerTokenAccount = await getOrCreateTokenAccount(
+        connection,
+        wallet.publicKey,
+        wallet.publicKey
+      );
+
+      const targetPlayerPubkey = new PublicKey(targetPlayer);
+      const [propertyPDA] = getPropertyPDA(propertyId);
+      const [playerPDA] = getPlayerPDA(wallet.publicKey);
+      const [targetOwnershipPDA] = getOwnershipPDA(targetPlayerPubkey, propertyId);
+      const [attackerOwnershipPDA] = getOwnershipPDA(wallet.publicKey, propertyId);
+
+      const tx = await program.methods
+        .stealProperty(targetPlayerPubkey)
+        .accountsPartial({
+          property: propertyPDA,
+          targetOwnership: targetOwnershipPDA,
+          attackerOwnership: attackerOwnershipPDA,
+          playerAccount: playerPDA,
+          player: wallet.publicKey,
+          playerTokenAccount,
+          rewardPoolVault: REWARD_POOL,
+          gameConfig: GAME_CONFIG,
+          tokenProgram: TOKEN_PROGRAM_ID,
+          systemProgram: SystemProgram.programId,
+        })
+        .rpc();
+
+      console.log('Steal attempt:', tx);
+      return tx;
+    } catch (error) {
+      console.error('Error stealing property:', error);
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  }, [program, wallet, playerInitialized, connection]);
+
   return {
     program,
     tokenBalance,
@@ -292,6 +376,8 @@ export function useDefipoly() {
     buyProperty,
     activateShield,
     claimRewards,
+    sellProperty,     
+    stealProperty,   
     getPropertyData,
     getOwnershipData,
     getPlayerData,

@@ -5,6 +5,7 @@ import { useWallet, useConnection } from '@solana/wallet-adapter-react';
 import { PROPERTIES } from '@/utils/constants';
 import { useDefipoly } from '@/hooks/useDefipoly';
 import type { PropertyOwnership } from '@/types/accounts';
+import { formatTimeRemaining, isShieldExpired } from '@/utils/time';
 
 interface OwnedProperty extends PropertyOwnership {
   propertyInfo: typeof PROPERTIES[0];
@@ -22,13 +23,22 @@ export function Portfolio({ onSelectProperty }: PortfolioProps) {
   const [loading, setLoading] = useState(false);
   const [dailyIncome, setDailyIncome] = useState(0);
   const [portfolioValue, setPortfolioValue] = useState(0);
+  const [currentTime, setCurrentTime] = useState(Date.now());
+
+  // Update current time every second for shield countdown
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentTime(Date.now());
+    }, 1000);
+    
+    return () => clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     console.log('=== PORTFOLIO DEBUG ===');
     console.log('publicKey:', publicKey?.toString());
     console.log('connected:', connected);
     console.log('program:', program);
-    console.log('getOwnershipData function:', typeof getOwnershipData);
 
     if (!publicKey || !connected || !program) {
       console.log('⚠️ Missing requirements - skipping fetch');
@@ -41,6 +51,7 @@ export function Portfolio({ onSelectProperty }: PortfolioProps) {
     const fetchPortfolio = async () => {
       console.log('🔍 Starting portfolio fetch...');
       setLoading(true);
+      
       try {
         const ownerships: OwnedProperty[] = [];
 
@@ -50,24 +61,24 @@ export function Portfolio({ onSelectProperty }: PortfolioProps) {
           
           try {
             const ownershipData = await getOwnershipData(property.id);
-            console.log(`Property ${property.id} ownership data:`, ownershipData);
             
-            if (ownershipData) {
-              console.log(`  - slotsOwned: ${ownershipData.slotsOwned}`);
-              console.log(`  - shieldActive: ${ownershipData.shieldActive}`);
-              console.log(`  - player: ${ownershipData.player.toString()}`);
+            if (ownershipData && ownershipData.slotsOwned > 0) {
+              console.log(`✅ Player owns ${ownershipData.slotsOwned} slot(s) of property ${property.id}`);
               
-              if (ownershipData.slotsOwned > 0) {
-                console.log(`✅ Player owns ${ownershipData.slotsOwned} slot(s) of property ${property.id}`);
-                ownerships.push({
-                  ...ownershipData,
-                  propertyInfo: property,
-                });
-              } else {
-                console.log(`❌ Player owns 0 slots of property ${property.id}`);
-              }
-            } else {
-              console.log(`❌ No ownership data for property ${property.id}`);
+              // Create a plain object to avoid any reference issues
+              const ownedProperty: OwnedProperty = {
+                player: ownershipData.player,
+                propertyId: ownershipData.propertyId,
+                slotsOwned: ownershipData.slotsOwned,
+                shieldActive: ownershipData.shieldActive,
+                shieldExpiry: ownershipData.shieldExpiry,
+                shieldCyclesQueued: ownershipData.shieldCyclesQueued,
+                lastClaimTimestamp: ownershipData.lastClaimTimestamp,
+                bump: ownershipData.bump,
+                propertyInfo: property,
+              };
+              
+              ownerships.push(ownedProperty);
             }
           } catch (error) {
             console.error(`Error fetching property ${property.id}:`, error);
@@ -75,9 +86,9 @@ export function Portfolio({ onSelectProperty }: PortfolioProps) {
         }
 
         console.log('\n📊 Total owned properties:', ownerships.length);
-        console.log('Owned properties:', ownerships);
-        
-        setOwnedProperties(ownerships);
+
+        // CRITICAL: Force a new array reference to trigger React re-render
+        setOwnedProperties([...ownerships]);
 
         // Calculate stats
         let income = 0;
@@ -85,7 +96,6 @@ export function Portfolio({ onSelectProperty }: PortfolioProps) {
         ownerships.forEach(owned => {
           const propIncome = owned.propertyInfo.dailyIncome * owned.slotsOwned;
           const propValue = owned.propertyInfo.price * owned.slotsOwned;
-          console.log(`Property ${owned.propertyId}: ${propIncome} income, ${propValue} value`);
           income += propIncome;
           value += propValue;
         });
@@ -104,11 +114,12 @@ export function Portfolio({ onSelectProperty }: PortfolioProps) {
 
     fetchPortfolio();
     
-    // Refresh every 10 seconds for debugging (increased from 5)
+    // Refresh every 10 seconds
     const interval = setInterval(() => {
       console.log('🔄 Auto-refreshing portfolio...');
       fetchPortfolio();
     }, 10000);
+    
     return () => clearInterval(interval);
   }, [publicKey, connected, program, getOwnershipData]);
 
@@ -146,17 +157,6 @@ export function Portfolio({ onSelectProperty }: PortfolioProps) {
         </div>
       </div>
 
-      {/* Debug Info */}
-      <div className="bg-red-900/20 border border-red-500/30 rounded-lg p-3 mb-4 text-xs">
-        <div className="font-bold text-red-300 mb-2">🐛 Debug Info:</div>
-        <div className="text-red-200 space-y-1">
-          <div>Connected: {connected ? '✅' : '❌'}</div>
-          <div>Program: {program ? '✅' : '❌'}</div>
-          <div>Owned Properties: {ownedProperties.length}</div>
-          <div>Loading: {loading ? '⏳' : '✅'}</div>
-        </div>
-      </div>
-
       {/* Loading State */}
       {loading && ownedProperties.length === 0 && (
         <div className="text-center py-12">
@@ -179,31 +179,38 @@ export function Portfolio({ onSelectProperty }: PortfolioProps) {
       {/* Owned Properties */}
       {ownedProperties.length > 0 && (
         <div className="space-y-3">
-          {ownedProperties.map(owned => (
-            <div
-              key={owned.propertyId}
-              onClick={() => onSelectProperty(owned.propertyId)}
-              className="bg-purple-900/10 border border-purple-500/20 rounded-xl p-3 cursor-pointer hover:bg-purple-900/15 hover:border-purple-500/40 transition-all"
-            >
-              <div className="flex justify-between items-center mb-2">
-                <div className="text-sm font-semibold text-purple-100">{owned.propertyInfo.name}</div>
-                <div className="flex gap-2">
-                  {owned.shieldActive && (
-                    <div className="text-xs bg-amber-500/20 text-amber-400 px-2 py-1 rounded">
-                      🛡️ Active
+          {ownedProperties.map((owned, index) => {
+            const shieldExpired = owned.shieldActive && isShieldExpired(owned.shieldExpiry);
+            const timeRemaining = owned.shieldActive && !shieldExpired 
+              ? formatTimeRemaining(owned.shieldExpiry)
+              : null;
+
+            return (
+              <div
+                key={`property-${owned.propertyId}-${index}`}
+                onClick={() => onSelectProperty(owned.propertyId)}
+                className="bg-purple-900/10 border border-purple-500/20 rounded-xl p-3 cursor-pointer hover:bg-purple-900/15 hover:border-purple-500/40 transition-all"
+              >
+                <div className="flex justify-between items-center mb-2">
+                  <div className="text-sm font-semibold text-purple-100">{owned.propertyInfo.name}</div>
+                  <div className="flex gap-2">
+                    {owned.shieldActive && !shieldExpired && timeRemaining && (
+                      <div className="text-xs bg-amber-500/20 text-amber-400 px-2 py-1 rounded font-mono">
+                        🛡️ {timeRemaining}
+                      </div>
+                    )}
+                    <div className="text-xs bg-purple-900/30 text-purple-300 px-2 py-1 rounded">
+                      {owned.slotsOwned} slot{owned.slotsOwned > 1 ? 's' : ''}
                     </div>
-                  )}
-                  <div className="text-xs bg-purple-900/30 text-purple-300 px-2 py-1 rounded">
-                    {owned.slotsOwned} slot{owned.slotsOwned > 1 ? 's' : ''}
                   </div>
                 </div>
+                <div className="flex justify-between text-xs text-purple-300">
+                  <span>{owned.propertyInfo.dailyIncome * owned.slotsOwned} DEFI/day</span>
+                  <span>{owned.propertyInfo.price * owned.slotsOwned} DEFI</span>
+                </div>
               </div>
-              <div className="flex justify-between text-xs text-purple-300">
-                <span>{owned.propertyInfo.dailyIncome * owned.slotsOwned} DEFI/day</span>
-                <span>{owned.propertyInfo.price * owned.slotsOwned} DEFI</span>
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>
