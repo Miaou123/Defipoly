@@ -1,0 +1,116 @@
+# ========================================
+# SECURITY - NEVER COMMIT THESE
+# ========================================
+
+# Solana Wallet Keypairs (CRITICAL!)
+*.json
+!package.json
+!package-lock.json
+!tsconfig.json
+!next.config.json
+!tailwind.config.json
+!postcss.config.json
+!**/idl/*.json
+!**/types/*.json
+
+# Private Keys
+*.key
+*.pem
+id.json
+test-ledger/
+
+# Environment Variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+*.env
+
+# ========================================
+# Build Artifacts & Dependencies
+# ========================================
+
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# Anchor/Solana
+target/
+.anchor/
+test-ledger/
+.DS_Store
+
+# Next.js
+.next/
+out/
+build/
+dist/
+
+# ========================================
+# IDE & Editor Files
+# ========================================
+
+# VSCode
+.vscode/
+*.code-workspace
+
+# IntelliJ
+.idea/
+*.iml
+
+# Vim
+*.swp
+*.swo
+*~
+
+# Emacs
+*~
+\#*\#
+
+# ========================================
+# OS Files
+# ========================================
+
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# ========================================
+# Logs
+# ========================================
+
+*.log
+logs/
+*.log.*
+
+# ========================================
+# Temporary Files
+# ========================================
+
+*.tmp
+*.temp
+.cache/
+
+# ========================================
+# Testing
+# ========================================
+
+coverage/
+.nyc_output/
+
+# ========================================
+# Config (Keep templates only)
+# ========================================
+
+config/devnet.json
+config/mainnet.json
+!config/devnet.example.json
+!config/mainnet.example.json
