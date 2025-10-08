@@ -6,7 +6,13 @@
     "test": "...",
     "initialize": "tsx scripts/initialize-game.ts",
     "mint-tokens": "tsx scripts/mint-tokens.ts",
-    "check-ownership": "tsx scripts/check-ownership.ts"
+    "check-ownership": "tsx scripts/check-ownership.ts",
+    
+    "bot:setup": "tsx scripts/setup-test-wallets.ts",
+    "bot:init": "tsx scripts/bot-interactions.ts init all",
+    "bot:claim": "tsx scripts/bot-interactions.ts claim all",
+    "bot:mint": "tsx scripts/mint-bulk-tokens.ts",
+    "bot": "tsx scripts/bot-interactions.ts"
   },
   "dependencies": {
     "@coral-xyz/anchor": "^0.31.1",

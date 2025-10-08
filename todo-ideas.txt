@@ -1,0 +1,5 @@
+Add all the properties and the color/family system
+rework steal system (maybe keep the targeted steal but need to be reworked)
+Instead of 25% sell -> hypotecate like in real monopoly and scaling value (not always 25% but 15% - 33%, scaling like monop)
+Create the player ata and stuff when trying to buy a property for the first time and not when connecting
+profile + pfp system

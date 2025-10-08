@@ -129,15 +129,18 @@ pub mod defipoly_program {
     ) -> Result<()> {
         let property = &ctx.accounts.property;
         let ownership = &mut ctx.accounts.ownership;
-
+    
         require!(ownership.slots_owned > 0, ErrorCode::DoesNotOwnProperty);
         require!(cycles >= 1 && cycles <= 3, ErrorCode::InvalidShieldCycles);
-
-        // Calculate shield cost
-        let base_cost = (property.daily_income * property.shield_cost_percent as u64) / 10000;
+    
+        // ✅ CORRECT: Calculate cost per slot, then multiply by slots owned
+        let base_cost_per_slot = (property.daily_income * property.shield_cost_percent as u64) / 10000;
         let multipliers = [100, 190, 270];
-        let total_cost = (base_cost * multipliers[cycles as usize - 1] as u64) / 100;
-
+        let cost_for_one_slot = (base_cost_per_slot * multipliers[cycles as usize - 1] as u64) / 100;
+        
+        // Shield costs scale with number of slots owned
+        let total_cost = cost_for_one_slot * ownership.slots_owned as u64;
+    
         // Transfer tokens from player to reward pool
         let transfer_ctx = CpiContext::new(
             ctx.accounts.token_program.to_account_info(),
@@ -148,15 +151,15 @@ pub mod defipoly_program {
             },
         );
         token::transfer(transfer_ctx, total_cost)?;
-
+    
         // Set shield
         let clock = Clock::get()?;
         let shield_duration = 48 * 3600; // 48 hours
-
+    
         ownership.shield_active = true;
         ownership.shield_expiry = clock.unix_timestamp + shield_duration;
         ownership.shield_cycles_queued = cycles - 1;
-
+    
         emit!(ShieldActivatedEvent {
             player: ownership.player,
             property_id: property.property_id,
@@ -164,8 +167,9 @@ pub mod defipoly_program {
             expiry: ownership.shield_expiry,
             cycles,
         });
-
-        msg!("Shield activated for property {} by {}", property.property_id, ownership.player);
+    
+        msg!("Shield activated for {} slot(s) of property {} by {}", 
+             ownership.slots_owned, property.property_id, ownership.player);
         Ok(())
     }
 
