@@ -17,58 +17,13 @@ export function Board({ onSelectProperty }: BoardProps) {
   const { connected, publicKey } = useWallet();
   const { connection } = useConnection();
   const { unclaimedRewards, dailyIncome, loading: rewardsLoading } = useRewards();
-  const { claimRewards, getPlayerData, loading: claimLoading } = useDefipoly();
+  const { claimRewards, loading: claimLoading } = useDefipoly();
   const [claiming, setClaiming] = useState(false);
   const claimingRef = useRef(false); // Prevent double-execution
-  const [claimCooldown, setClaimCooldown] = useState<number>(0); // Seconds until next claim
-  const [canClaim, setCanClaim] = useState(false);
-
-  // Check claim cooldown every second
-  useEffect(() => {
-    if (!connected || !publicKey) {
-      setCanClaim(false);
-      setClaimCooldown(0);
-      return;
-    }
-
-    const checkCooldown = async () => {
-      try {
-        const playerData = await getPlayerData();
-        
-        if (playerData) {
-          const now = Math.floor(Date.now() / 1000);
-          const lastClaim = playerData.lastClaimTimestamp.toNumber();
-          const timeElapsed = now - lastClaim;
-          const nextClaimTime = lastClaim + 3600; // 1 hour cooldown
-          
-          if (timeElapsed >= 3600) {
-            setCanClaim(true);
-            setClaimCooldown(0);
-          } else {
-            setCanClaim(false);
-            setClaimCooldown(nextClaimTime - now);
-          }
-        }
-      } catch (error) {
-        console.error('Error checking claim cooldown:', error);
-      }
-    };
-
-    checkCooldown();
-    const interval = setInterval(checkCooldown, 1000);
-    
-    return () => clearInterval(interval);
-  }, [connected, publicKey, getPlayerData]);
-
-  const formatCooldown = (seconds: number): string => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
-  };
 
   const handleClaimRewards = async () => {
     // Prevent double-clicking and ensure conditions are met
-    if (!connected || !publicKey || unclaimedRewards === 0 || claiming || claimingRef.current || !canClaim) return;
+    if (!connected || !publicKey || unclaimedRewards === 0 || claiming || claimingRef.current) return;
     
     // Set both state and ref immediately
     claimingRef.current = true;
@@ -135,11 +90,9 @@ export function Board({ onSelectProperty }: BoardProps) {
     } catch (error: any) {
       console.error('Error claiming rewards:', error);
       
-      // Handle specific error messages
+      // Handle the specific "already processed" error gracefully
       if (error?.message?.includes('already been processed')) {
         alert('Claim successful! (Transaction was already submitted)');
-      } else if (error?.message?.includes('NoRewardsToClaim')) {
-        alert('⏰ Not enough time has passed!\n\nYou need to wait 1 full hour between claims.');
       } else {
         alert('Failed to claim rewards. Check console for details.');
       }
