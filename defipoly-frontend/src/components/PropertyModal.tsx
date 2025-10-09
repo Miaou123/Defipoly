@@ -5,6 +5,7 @@ import { PROPERTIES } from '@/utils/constants';
 import { useDefipoly } from '@/hooks/useDefipoly';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { useAnchorWallet } from '@solana/wallet-adapter-react';
+import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
 
 interface PropertyModalProps {
   propertyId: number | null;
@@ -62,10 +63,7 @@ export function PropertyModal({ propertyId, onClose }: PropertyModalProps) {
   if (!property || propertyId === null) return null;
 
   const handleBuy = async () => {
-    if (!connected) {
-      alert('Please connect your wallet first!');
-      return;
-    }
+    if (!connected) return;
 
     setLoading(true);
     try {
@@ -81,15 +79,12 @@ export function PropertyModal({ propertyId, onClose }: PropertyModalProps) {
   };
 
   const handleShield = async () => {
-    if (!connected) {
-      alert('Please connect your wallet first!');
-      return;
-    }
+    if (!connected) return;
 
     setLoading(true);
     try {
       await activateShield(propertyId, selectedCycles);
-      alert(`Shield activated successfully!`);
+      alert(`Shield activated for ${selectedCycles} cycle(s)!`);
       setShowShieldOptions(false);
       onClose();
     } catch (error) {
@@ -101,21 +96,13 @@ export function PropertyModal({ propertyId, onClose }: PropertyModalProps) {
   };
 
   const handleSell = async () => {
-    if (!connected) {
-      alert('Please connect your wallet first!');
-      return;
-    }
-
-    if (slotsToSell <= 0 || slotsToSell > (propertyData?.owned || 0)) {
-      alert('Invalid number of slots to sell');
-      return;
-    }
+    if (!connected) return;
 
     setLoading(true);
     try {
       await sellProperty(propertyId, slotsToSell);
-      const saleValue = (property.price * slotsToSell * 0.25).toFixed(0);
-      alert(`Sold ${slotsToSell} slot(s) for ${saleValue} DEFI`);
+      alert(`Sold ${slotsToSell} slot(s) successfully!`);
+      setShowSellOptions(false);
       onClose();
     } catch (error) {
       console.error('Error selling property:', error);
@@ -126,13 +113,10 @@ export function PropertyModal({ propertyId, onClose }: PropertyModalProps) {
   };
 
   const handleSteal = async () => {
-    if (!connected) {
-      alert('Please connect your wallet first!');
-      return;
-    }
+    if (!connected) return;
 
-    if (!targetPlayer) {
-      alert('Please enter the target player wallet address');
+    if (!targetPlayer || targetPlayer.trim() === '') {
+      alert('Please enter a target player address');
       return;
     }
 
@@ -177,32 +161,46 @@ export function PropertyModal({ propertyId, onClose }: PropertyModalProps) {
           {property.name}
         </h2>
 
+        {/* Connect Wallet Banner - Show when not connected */}
+        {!connected && (
+          <div className="bg-amber-500/20 border border-amber-500/50 rounded-xl p-4 mb-6 text-center">
+            <div className="text-amber-400 font-semibold mb-3 flex items-center justify-center gap-2">
+              <span>🔒</span> Wallet Not Connected
+            </div>
+            <WalletMultiButton className="!bg-gradient-to-r !from-purple-500 !to-pink-500 hover:!from-purple-400 hover:!to-pink-400 !rounded-lg !font-bold !transition-all !w-full !justify-center" />
+          </div>
+        )}
+
         {/* Property Info */}
         <div className="bg-black/30 rounded-xl p-5 mb-5 border border-purple-500/20">
           <div className="flex justify-between mb-3 text-sm">
             <span className="text-purple-300 font-medium">Available Slots</span>
             <span className="text-purple-100 font-semibold">
-              {propertyData ? `${propertyData.availableSlots} / ${propertyData.totalSlots}` : 'Loading...'}
+              {connected ? (propertyData?.availableSlots ?? 'Loading...') : 'Loading...'}
             </span>
           </div>
+          
           <div className="flex justify-between mb-3 text-sm">
             <span className="text-purple-300 font-medium">Entry Price</span>
             <span className="text-purple-100 font-semibold">{property.price.toLocaleString()} DEFI</span>
           </div>
-          <div className="flex justify-between mb-3 text-sm">
+
+          <div className="flex justify-between text-sm">
             <span className="text-purple-300 font-medium">Daily Yield</span>
-            <span className="text-purple-100 font-semibold">{property.dailyIncome.toLocaleString()} DEFI/day</span>
+            <span className="text-green-400 font-semibold">{property.dailyIncome.toLocaleString()} DEFI/day</span>
           </div>
-          
-          {propertyData?.owned > 0 && (
+
+          {connected && propertyData?.owned > 0 && (
             <>
-              <div className="flex justify-between pt-3 mt-3 border-t border-purple-500/30 text-sm">
-                <span className="text-purple-300 font-medium">Your Ownership</span>
-                <span className="text-purple-100 font-semibold">{propertyData.owned} slot(s)</span>
+              <div className="border-t border-purple-500/20 my-3"></div>
+              <div className="flex justify-between text-sm">
+                <span className="text-purple-300 font-medium">You Own</span>
+                <span className="text-blue-400 font-semibold">{propertyData.owned} slot(s)</span>
               </div>
               {propertyData.shielded && (
-                <div className="mt-2 p-2 bg-amber-500/20 border border-amber-500/50 rounded text-xs text-amber-300 flex items-center gap-2">
-                  🛡️ <span>All {propertyData.owned} slots protected</span>
+                <div className="flex justify-between text-sm mt-2">
+                  <span className="text-purple-300 font-medium">Shield Status</span>
+                  <span className="text-amber-400 font-semibold">🛡️ Active</span>
                 </div>
               )}
             </>
@@ -210,82 +208,61 @@ export function PropertyModal({ propertyId, onClose }: PropertyModalProps) {
         </div>
 
         {/* Shield Options */}
-        {showShieldOptions && propertyData?.owned > 0 && !propertyData?.shielded && (
-          <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-4 mb-5">
-            <div className="text-sm font-semibold text-amber-400 mb-2">
-              🛡️ Shield All Your Slots
-            </div>
-            <div className="text-xs text-purple-300 mb-3">
-              Protects all {propertyData.owned} slot{propertyData.owned > 1 ? 's' : ''} from theft for 48 hours
-            </div>
-            <div className="text-lg font-bold text-amber-400 mb-3">
-              Cost: {shieldCost} DEFI
+        {showShieldOptions && connected && (
+          <div className="bg-purple-900/40 rounded-xl p-4 mb-4 border border-purple-500/20">
+            <div className="text-purple-200 font-semibold mb-3">Select Shield Duration:</div>
+            <div className="flex gap-2 mb-3">
+              {[1, 2, 3].map((cycles) => (
+                <button
+                  key={cycles}
+                  onClick={() => setSelectedCycles(cycles)}
+                  className={`flex-1 py-2 rounded-lg font-semibold transition-all ${
+                    selectedCycles === cycles
+                      ? 'bg-amber-600 text-white'
+                      : 'bg-purple-800/50 text-purple-300 hover:bg-purple-800/70'
+                  }`}
+                >
+                  {cycles} {cycles === 1 ? 'Cycle' : 'Cycles'}
+                </button>
+              ))}
             </div>
             <div className="text-xs text-purple-400">
-              {baseCostPerSlot} DEFI per slot × {propertyData.owned} slot{propertyData.owned > 1 ? 's' : ''}
+              Cost: {(shieldCost * selectedCycles).toLocaleString()} DEFI
             </div>
           </div>
         )}
 
         {/* Sell Options */}
-        {showSellOptions && propertyData?.owned > 0 && (
-          <div className="bg-orange-500/10 border border-orange-500/30 rounded-xl p-4 mb-5">
-            <div className="text-sm font-semibold text-orange-400 mb-2">
-              💰 Sell Your Slots
-            </div>
-            <div className="text-xs text-purple-300 mb-3">
-              Receive 25% of original purchase price ({sellValuePerSlot.toLocaleString()} DEFI per slot)
-            </div>
-            
-            <div className="mb-3">
-              <label className="text-xs text-purple-300 block mb-1">Slots to Sell:</label>
-              <input
-                type="number"
-                min="1"
-                max={propertyData.owned}
-                value={slotsToSell}
-                onChange={(e) => setSlotsToSell(parseInt(e.target.value) || 1)}
-                className="w-full bg-black/30 border border-purple-500/30 rounded px-3 py-2 text-purple-100"
-              />
-            </div>
-            
-            <div className="text-sm text-purple-200">
-              You will receive: <span className="font-bold text-green-400">{(sellValuePerSlot * slotsToSell).toLocaleString()} DEFI</span>
+        {showSellOptions && connected && (
+          <div className="bg-purple-900/40 rounded-xl p-4 mb-4 border border-purple-500/20">
+            <div className="text-purple-200 font-semibold mb-3">Slots to Sell:</div>
+            <input
+              type="number"
+              min="1"
+              max={propertyData?.owned || 1}
+              value={slotsToSell}
+              onChange={(e) => setSlotsToSell(Math.min(Math.max(1, parseInt(e.target.value) || 1), propertyData?.owned || 1))}
+              className="w-full px-4 py-2 bg-purple-900/50 border border-purple-500/30 rounded-lg text-white"
+            />
+            <div className="text-xs text-purple-400 mt-2">
+              You'll receive: {(sellValuePerSlot * slotsToSell).toLocaleString()} DEFI (25% of value)
             </div>
           </div>
         )}
 
         {/* Steal Options */}
-        {showStealOptions && (
-          <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4 mb-5">
-            <div className="text-sm font-semibold text-red-400 mb-2">
-              🎯 Steal Property (33% Success Rate)
-            </div>
-            <div className="text-xs text-purple-300 mb-3">
-              Attempt to steal 1 slot from a player. Costs {stealCost.toLocaleString()} DEFI regardless of success.
-            </div>
-            
-            <div className="mb-3">
-              <label className="text-xs text-purple-300 block mb-1">Target Player Wallet:</label>
-              <input
-                type="text"
-                placeholder="Enter wallet address..."
-                value={targetPlayer}
-                onChange={(e) => setTargetPlayer(e.target.value)}
-                className="w-full bg-black/30 border border-purple-500/30 rounded px-3 py-2 text-purple-100 text-xs font-mono"
-              />
-              <button
-                onClick={() => setTargetPlayer(publicKey?.toString() || '')}
-                className="w-full mt-2 py-1.5 bg-purple-600/20 hover:bg-purple-600/30 border border-purple-500/30 rounded text-xs text-purple-300"
-              >
-                Use My Wallet (for testing)
-              </button>
-            </div>
-            
-            <div className="text-xs text-red-300 space-y-1">
-              <div>⚠️ Target must own at least 1 slot of this property</div>
-              <div>⚠️ If target's property is shielded, steal will fail</div>
-              <div>⚠️ You pay {stealCost.toLocaleString()} DEFI even if steal fails</div>
+        {showStealOptions && connected && (
+          <div className="bg-purple-900/40 rounded-xl p-4 mb-4 border border-purple-500/20">
+            <div className="text-purple-200 font-semibold mb-3">Target Player Address:</div>
+            <input
+              type="text"
+              placeholder="Enter wallet address..."
+              value={targetPlayer}
+              onChange={(e) => setTargetPlayer(e.target.value)}
+              className="w-full px-4 py-2 bg-purple-900/50 border border-purple-500/30 rounded-lg text-white placeholder-purple-400 text-sm"
+            />
+            <div className="text-xs text-purple-400 mt-2">
+              Cost: {stealCost.toLocaleString()} DEFI • 33% success rate
             </div>
           </div>
         )}
@@ -293,60 +270,66 @@ export function PropertyModal({ propertyId, onClose }: PropertyModalProps) {
         {/* Action Buttons */}
         <div className="space-y-3">
           {/* Buy Button */}
-          {propertyData?.availableSlots > 0 && !showShieldOptions && !showSellOptions && !showStealOptions && (
+          {!showShieldOptions && !showSellOptions && !showStealOptions && (
             <button
               onClick={handleBuy}
-              disabled={loading || !connected}
-              className="w-full py-3 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-500 hover:to-green-600 disabled:from-gray-600 disabled:to-gray-700 rounded-xl font-semibold transition-all hover:shadow-lg hover:shadow-green-500/50 disabled:cursor-not-allowed"
+              disabled={!connected || loading}
+              className={`w-full py-3 bg-gradient-to-r from-green-600 to-green-700 rounded-xl font-semibold transition-all flex items-center justify-center gap-2 ${
+                !connected
+                  ? 'opacity-40 cursor-not-allowed'
+                  : 'hover:from-green-500 hover:to-green-600 hover:shadow-lg hover:shadow-green-500/50'
+              }`}
             >
-              {loading ? 'Processing...' : connected ? 'Buy Property' : 'Connect Wallet'}
+              <span>🏠</span> {loading ? 'Processing...' : `Buy Property (${property.price.toLocaleString()} DEFI)`}
             </button>
           )}
 
-          {/* Shield Button - Only show if user owns property */}
-          {propertyData?.owned > 0 && !showShieldOptions && !showSellOptions && !showStealOptions && !propertyData?.shielded && (
+          {/* Shield Button */}
+          {!showShieldOptions && !showSellOptions && !showStealOptions && (
             <button
-              onClick={() => setShowShieldOptions(true)}
-              className="w-full py-3 bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-500 hover:to-amber-600 rounded-xl font-semibold transition-all hover:shadow-lg hover:shadow-amber-500/50"
+              onClick={() => connected ? setShowShieldOptions(true) : null}
+              disabled={!connected || loading}
+              className={`w-full py-3 bg-gradient-to-r from-amber-600 to-amber-700 rounded-xl font-semibold transition-all flex items-center justify-center gap-2 ${
+                !connected
+                  ? 'opacity-40 cursor-not-allowed'
+                  : 'hover:from-amber-500 hover:to-amber-600 hover:shadow-lg hover:shadow-amber-500/50'
+              }`}
             >
-              🛡️ Activate Shield ({shieldCost} DEFI)
+              <span>🛡️</span> Shield Property
             </button>
           )}
 
           {/* Confirm Shield */}
-          {showShieldOptions && (
+          {showShieldOptions && connected && (
             <button
               onClick={handleShield}
-              disabled={loading || !connected}
+              disabled={loading}
               className="w-full py-3 bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-500 hover:to-amber-600 disabled:from-gray-600 disabled:to-gray-700 rounded-xl font-semibold transition-all hover:shadow-lg hover:shadow-amber-500/50 disabled:cursor-not-allowed"
             >
-              {loading ? 'Processing...' : `Confirm Shield (${shieldCost} DEFI)`}
+              {loading ? 'Processing...' : `Confirm Shield (${(shieldCost * selectedCycles).toLocaleString()} DEFI)`}
             </button>
           )}
 
-          {/* Shield Active Badge */}
-          {propertyData?.shielded && !showShieldOptions && !showSellOptions && !showStealOptions && (
-            <div className="w-full py-3 bg-amber-500/20 border-2 border-amber-500/50 rounded-xl text-center">
-              <div className="text-amber-400 font-semibold">🛡️ Shield Active</div>
-              <div className="text-xs text-amber-300 mt-1">All {propertyData.owned} slots protected</div>
-            </div>
-          )}
-
-          {/* Steal Button - Always available */}
+          {/* Steal Button */}
           {!showShieldOptions && !showSellOptions && !showStealOptions && (
             <button
-              onClick={() => setShowStealOptions(true)}
-              className="w-full py-3 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 rounded-xl font-semibold transition-all hover:shadow-lg hover:shadow-red-500/50"
+              onClick={() => connected ? setShowStealOptions(true) : null}
+              disabled={!connected || loading}
+              className={`w-full py-3 bg-gradient-to-r from-red-600 to-red-700 rounded-xl font-semibold transition-all flex items-center justify-center gap-2 ${
+                !connected
+                  ? 'opacity-40 cursor-not-allowed'
+                  : 'hover:from-red-500 hover:to-red-600 hover:shadow-lg hover:shadow-red-500/50'
+              }`}
             >
-              🎯 Steal Property ({stealCost.toLocaleString()} DEFI)
+              <span>🎯</span> Steal Property ({stealCost.toLocaleString()} DEFI)
             </button>
           )}
 
           {/* Confirm Steal */}
-          {showStealOptions && (
+          {showStealOptions && connected && (
             <button
               onClick={handleSteal}
-              disabled={loading || !connected || !targetPlayer}
+              disabled={loading}
               className="w-full py-3 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 disabled:from-gray-600 disabled:to-gray-700 rounded-xl font-semibold transition-all hover:shadow-lg hover:shadow-red-500/50 disabled:cursor-not-allowed"
             >
               {loading ? 'Processing...' : `Confirm Steal (${stealCost.toLocaleString()} DEFI)`}
@@ -354,7 +337,7 @@ export function PropertyModal({ propertyId, onClose }: PropertyModalProps) {
           )}
 
           {/* Sell Button - Only show if user owns property */}
-          {propertyData?.owned > 0 && !showShieldOptions && !showSellOptions && !showStealOptions && (
+          {connected && propertyData?.owned > 0 && !showShieldOptions && !showSellOptions && !showStealOptions && (
             <button
               onClick={() => {
                 setSlotsToSell(1);
@@ -367,10 +350,10 @@ export function PropertyModal({ propertyId, onClose }: PropertyModalProps) {
           )}
 
           {/* Confirm Sell */}
-          {showSellOptions && (
+          {showSellOptions && connected && (
             <button
               onClick={handleSell}
-              disabled={loading || !connected}
+              disabled={loading}
               className="w-full py-3 bg-gradient-to-r from-orange-600 to-orange-700 hover:from-orange-500 hover:to-orange-600 disabled:from-gray-600 disabled:to-gray-700 rounded-xl font-semibold transition-all hover:shadow-lg hover:shadow-orange-500/50 disabled:cursor-not-allowed"
             >
               {loading ? 'Processing...' : `Confirm Sale (${(sellValuePerSlot * slotsToSell).toLocaleString()} DEFI)`}
@@ -378,7 +361,7 @@ export function PropertyModal({ propertyId, onClose }: PropertyModalProps) {
           )}
 
           {/* Back/Cancel Button - Show when in any sub-menu */}
-          {(showShieldOptions || showSellOptions || showStealOptions) && (
+          {connected && (showShieldOptions || showSellOptions || showStealOptions) && (
             <button
               onClick={() => {
                 setShowShieldOptions(false);
