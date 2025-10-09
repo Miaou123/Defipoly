@@ -1,6 +1,7 @@
 import * as anchor from "@coral-xyz/anchor";
 import { Program, AnchorProvider } from "@coral-xyz/anchor";
 import { getAssociatedTokenAddress, TOKEN_PROGRAM_ID } from "@solana/spl-token";
+import { storeTransactionToBackend } from "./storeToBackend.js";
 import * as fs from "fs";
 import * as path from "path";
 import { fileURLToPath } from "url";
@@ -117,22 +118,26 @@ async function buyProperties(walletIds: number[], propertyId: number) {
         wallet.publicKey
       );
 
-      await program.methods
-        .buyProperty()
-        .accountsPartial({
-          property: propertyPDA,
-          playerAccount: playerPDA,
-          ownership: ownershipPDA,
-          player: wallet.publicKey,
-          playerTokenAccount,
-          gameConfig: GAME_CONFIG,
-          rewardPoolVault: REWARD_POOL,
-          tokenProgram: TOKEN_PROGRAM_ID,
-          systemProgram: anchor.web3.SystemProgram.programId,
-        })
-        .rpc();
+      const signature = await program.methods
+      .buyProperty()
+      .accountsPartial({
+        property: propertyPDA,
+        playerAccount: playerPDA,
+        ownership: ownershipPDA,
+        player: wallet.publicKey,
+        playerTokenAccount,
+        rewardPoolVault: REWARD_POOL,
+        gameConfig: GAME_CONFIG,
+        tokenProgram: TOKEN_PROGRAM_ID,
+        systemProgram: anchor.web3.SystemProgram.programId,
+      })
+      .rpc();
+    
+    console.log(`  Wallet ${id}: ✅ Bought property ${propertyId}`);
+    
+    // 🆕 Store to backend
+    await storeTransactionToBackend(connection, signature);
 
-      console.log(`  Wallet ${id}: ✅ Bought property ${propertyId}`);
     } catch (error: any) {
       console.log(`  Wallet ${id}: ❌ Error: ${error?.message || error}`);
     }
@@ -160,21 +165,24 @@ async function activateShields(walletIds: number[], propertyId: number) {
         wallet.publicKey
       );
 
-      await program.methods
-        .activateShield()
+      const signature = await program.methods
+        .activateShield(1) // 1 cycle
         .accountsPartial({
-          ownership: ownershipPDA,
           property: propertyPDA,
+          ownership: ownershipPDA,
           playerAccount: playerPDA,
           player: wallet.publicKey,
           playerTokenAccount,
-          gameConfig: GAME_CONFIG,
           rewardPoolVault: REWARD_POOL,
+          gameConfig: GAME_CONFIG,
           tokenProgram: TOKEN_PROGRAM_ID,
         })
         .rpc();
 
       console.log(`  Wallet ${id}: ✅ Shield activated`);
+
+      // 🆕 Store to backend
+      await storeTransactionToBackend(connection, signature);
     } catch (error: any) {
       console.log(`  Wallet ${id}: ❌ Error: ${error?.message || error}`);
     }
@@ -200,19 +208,22 @@ async function claimRewards(walletIds: number[]) {
         wallet.publicKey
       );
 
-      await program.methods
-        .claimRewards()
-        .accountsPartial({
-          playerAccount: playerPDA,
-          player: wallet.publicKey,
-          playerTokenAccount,
-          rewardPoolVault: REWARD_POOL,
-          gameConfig: GAME_CONFIG,
-          tokenProgram: TOKEN_PROGRAM_ID,
-        })
-        .rpc();
-
+      const signature = await program.methods
+      .claimRewards()
+      .accountsPartial({
+        playerAccount: playerPDA,
+        player: wallet.publicKey,
+        playerTokenAccount,
+        rewardPoolVault: REWARD_POOL,
+        gameConfig: GAME_CONFIG,
+        tokenProgram: TOKEN_PROGRAM_ID,
+      })
+      .rpc();
+      
       console.log(`  Wallet ${id}: ✅ Rewards claimed`);
+      
+      // 🆕 Store to backend
+      await storeTransactionToBackend(connection, signature);
     } catch (error: any) {
       console.log(`  Wallet ${id}: ❌ Error: ${error?.message || error}`);
     }

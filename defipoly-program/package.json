@@ -7,7 +7,6 @@
     "initialize": "tsx scripts/initialize-game.ts",
     "mint-tokens": "tsx scripts/mint-tokens.ts",
     "check-ownership": "tsx scripts/check-ownership.ts",
-    
     "bot:setup": "tsx scripts/setup-test-wallets.ts",
     "bot:init": "tsx scripts/bot-interactions.ts init all",
     "bot:claim": "tsx scripts/bot-interactions.ts claim all",
@@ -16,7 +15,8 @@
   },
   "dependencies": {
     "@coral-xyz/anchor": "^0.31.1",
-    "@solana/spl-token": "^0.4.14"
+    "@solana/spl-token": "^0.4.14",
+    "dotenv": "^17.2.3"
   },
   "devDependencies": {
     "@types/bn.js": "^5.1.0",
