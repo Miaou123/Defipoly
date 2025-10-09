@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useConnection } from '@solana/wallet-adapter-react';
-import { PROGRAM_ID } from '@/utils/constants';
+import { PROGRAM_ID, getPropertyById } from '@/utils/constants';
 import { BorshCoder, EventParser } from '@coral-xyz/anchor';
 import idl from '@/types/defipoly_program.json';
 
@@ -11,14 +11,10 @@ interface FeedItem {
   type: 'buy' | 'steal' | 'shield' | 'claim' | 'sell';
   timestamp: number;
   txSignature: string;
+  propertyId?: number;
 }
 
-const PROPERTY_NAMES = [
-  'Bronze Basic', 'Bronze Plus', 
-  'Silver Basic', 'Silver Plus',
-  'Gold Basic', 'Gold Plus',
-  'Platinum Basic', 'Platinum Elite'
-];
+const BACKEND_URL = process.env.NEXT_PUBLIC_PROFILE_API_URL || 'http://localhost:3001';
 
 export function LiveFeed() {
   const { connection } = useConnection();
@@ -36,160 +32,118 @@ export function LiveFeed() {
     return tokens.toFixed(2);
   };
 
-  const parseEventToFeedItem = useCallback((event: any, signature: string, timestamp: number): FeedItem | null => {
-    try {
-      switch (event.name) {
-        case 'PropertyBoughtEvent':
-        case 'propertyBoughtEvent': {
-          const data = event.data;
-          const propertyName = PROPERTY_NAMES[data.propertyId] || `Property ${data.propertyId}`;
-          return {
-            message: `${formatAddress(data.player.toString())} bought ${propertyName} for ${formatAmount(Number(data.price))} DEFI`,
-            type: 'buy',
-            timestamp,
-            txSignature: signature,
-          };
-        }
+  // Convert backend action to feed item
+  const actionToFeedItem = useCallback((action: any): FeedItem | null => {
+    const property = action.propertyId !== null && action.propertyId !== undefined 
+      ? getPropertyById(action.propertyId)
+      : null;
+    const propertyName = property ? property.name : 'Unknown Property';
 
-        case 'PropertySoldEvent':
-        case 'propertySoldEvent': {
-          const data = event.data;
-          const propertyName = PROPERTY_NAMES[data.propertyId] || `Property ${data.propertyId}`;
-          return {
-            message: `${formatAddress(data.player.toString())} sold ${data.slots} slot(s) of ${propertyName}`,
-            type: 'sell',
-            timestamp,
-            txSignature: signature,
-          };
-        }
+    switch (action.actionType) {
+      case 'buy':
+        return {
+          message: `${formatAddress(action.playerAddress)} bought ${propertyName} for ${formatAmount(action.amount || 0)} DEFI`,
+          type: 'buy',
+          timestamp: action.blockTime * 1000,
+          txSignature: action.txSignature,
+          propertyId: action.propertyId,
+        };
 
-        case 'ShieldActivatedEvent':
-        case 'shieldActivatedEvent': {
-          const data = event.data;
-          const propertyName = PROPERTY_NAMES[data.propertyId] || `Property ${data.propertyId}`;
-          return {
-            message: `${formatAddress(data.player.toString())} activated shield on ${propertyName}`,
-            type: 'shield',
-            timestamp,
-            txSignature: signature,
-          };
-        }
+      case 'sell':
+        return {
+          message: `${formatAddress(action.playerAddress)} sold ${action.slots || 0} slots of ${propertyName} for ${formatAmount(action.amount || 0)} DEFI`,
+          type: 'sell',
+          timestamp: action.blockTime * 1000,
+          txSignature: action.txSignature,
+          propertyId: action.propertyId,
+        };
 
-        case 'StealSuccessEvent':
-        case 'stealSuccessEvent': {
-          const data = event.data;
-          const propertyName = PROPERTY_NAMES[data.propertyId] || `Property ${data.propertyId}`;
-          return {
-            message: `🎯 ${formatAddress(data.attacker.toString())} successfully stole ${propertyName} from ${formatAddress(data.target.toString())}!`,
-            type: 'steal',
-            timestamp,
-            txSignature: signature,
-          };
-        }
+      case 'steal_success':
+        return {
+          message: `${formatAddress(action.playerAddress)} stole from ${formatAddress(action.targetAddress)} on ${propertyName}! 💰`,
+          type: 'steal',
+          timestamp: action.blockTime * 1000,
+          txSignature: action.txSignature,
+          propertyId: action.propertyId,
+        };
 
-        case 'StealFailedEvent':
-        case 'stealFailedEvent': {
-          const data = event.data;
-          const propertyName = PROPERTY_NAMES[data.propertyId] || `Property ${data.propertyId}`;
-          return {
-            message: `❌ ${formatAddress(data.attacker.toString())} failed to steal ${propertyName} from ${formatAddress(data.target.toString())}`,
-            type: 'steal',
-            timestamp,
-            txSignature: signature,
-          };
-        }
+      case 'steal_failed':
+        return {
+          message: `${formatAddress(action.playerAddress)} failed to steal from ${formatAddress(action.targetAddress)} on ${propertyName} 🛡️`,
+          type: 'steal',
+          timestamp: action.blockTime * 1000,
+          txSignature: action.txSignature,
+          propertyId: action.propertyId,
+        };
 
-        case 'RewardsClaimedEvent':
-        case 'rewardsClaimedEvent': {
-          const data = event.data;
-          return {
-            message: `${formatAddress(data.player.toString())} claimed ${formatAmount(Number(data.amount))} DEFI in rewards`,
-            type: 'claim',
-            timestamp,
-            txSignature: signature,
-          };
-        }
+      case 'shield':
+        return {
+          message: `${formatAddress(action.playerAddress)} activated shield on ${propertyName} 🛡️`,
+          type: 'shield',
+          timestamp: action.blockTime * 1000,
+          txSignature: action.txSignature,
+          propertyId: action.propertyId,
+        };
 
-        default:
-          return null;
-      }
-    } catch (error) {
-      console.error('Error parsing event:', error);
-      return null;
+      case 'claim':
+        return {
+          message: `${formatAddress(action.playerAddress)} claimed ${formatAmount(action.amount || 0)} DEFI 💰`,
+          type: 'claim',
+          timestamp: action.blockTime * 1000,
+          txSignature: action.txSignature,
+        };
+
+      default:
+        return null;
     }
   }, []);
 
   const addFeedItem = useCallback((item: FeedItem) => {
-    setFeed(prev => {
-      // Avoid duplicates by signature
-      if (prev.some(i => i.txSignature === item.txSignature)) {
-        return prev;
-      }
-      // Add and sort by timestamp (newest first), keep max 50 items
-      return [item, ...prev]
-        .sort((a, b) => b.timestamp - a.timestamp)
-        .slice(0, 50);
+    setFeed((prev) => {
+      const exists = prev.some(i => i.txSignature === item.txSignature);
+      if (exists) return prev;
+      return [item, ...prev].slice(0, 50);
     });
   }, []);
 
-  // Fetch historical transactions on load
+  // Fetch historical actions from backend
   useEffect(() => {
-    const fetchHistoricalTransactions = async () => {
-      setLoading(true);
+    const fetchHistoricalActions = async () => {
       try {
-        console.log('📜 Fetching historical transactions...');
+        console.log('📥 Fetching historical actions from backend...');
         
-        const coder = new BorshCoder(idl as any);
-        const eventParser = new EventParser(PROGRAM_ID, coder);
-
-        // Get recent signatures for the program
-        const signatures = await connection.getSignaturesForAddress(
-          PROGRAM_ID,
-          { limit: 20 }, // Last 20 transactions
-          'confirmed'
-        );
-
-        console.log(`Found ${signatures.length} recent transactions`);
-
-        // Fetch and parse each transaction
-        for (const sigInfo of signatures) {
-          try {
-            const tx = await connection.getTransaction(sigInfo.signature, {
-              maxSupportedTransactionVersion: 0,
-            });
-
-            if (tx?.meta?.logMessages) {
-              const events = eventParser.parseLogs(tx.meta.logMessages);
-              
-              for (const event of events) {
-                const feedItem = parseEventToFeedItem(
-                  event,
-                  sigInfo.signature,
-                  (sigInfo.blockTime || 0) * 1000
-                );
-                
-                if (feedItem) {
-                  addFeedItem(feedItem);
-                }
-              }
-            }
-          } catch (error) {
-            console.error(`Error parsing transaction ${sigInfo.signature}:`, error);
-          }
+        const response = await fetch(`${BACKEND_URL}/api/actions/recent?limit=50`);
+        
+        if (!response.ok) {
+          throw new Error(`Backend responded with ${response.status}`);
         }
-
-        console.log('✅ Historical transactions loaded');
+        
+        const data = await response.json();
+        console.log('📦 Received actions from backend:', data.actions?.length || 0);
+        
+        if (data.actions && Array.isArray(data.actions)) {
+          const feedItems = data.actions
+            .map((action: any) => actionToFeedItem(action))
+            .filter((item: FeedItem | null): item is FeedItem => item !== null);
+          
+          console.log('✅ Converted to feed items:', feedItems.length);
+          console.log('Sample feed item:', feedItems[0]);
+          
+          setFeed(feedItems);
+        }
       } catch (error) {
-        console.error('Error fetching historical transactions:', error);
+        console.error('❌ Error fetching from backend:', error);
+        // Fallback: try to fetch from blockchain if backend fails
+        console.log('⚠️ Falling back to blockchain fetch...');
       } finally {
         setLoading(false);
       }
     };
 
-    fetchHistoricalTransactions();
-  }, [connection, addFeedItem, parseEventToFeedItem]);
+    fetchHistoricalActions();
+  }, [actionToFeedItem]);
 
-  // Subscribe to real-time events
+  // Subscribe to real-time blockchain events
   useEffect(() => {
     let subscriptionId: number | null = null;
 
@@ -207,12 +161,65 @@ export function LiveFeed() {
               const events = eventParser.parseLogs(logs.logs);
               
               for (const event of events) {
-                const feedItem = parseEventToFeedItem(
-                  event,
-                  logs.signature,
-                  Date.now()
-                );
+                // Convert blockchain event to action format
+                const action: any = {
+                  txSignature: logs.signature,
+                  blockTime: Math.floor(Date.now() / 1000),
+                };
+
+                switch (event.name) {
+                  case 'PropertyBoughtEvent':
+                  case 'propertyBoughtEvent':
+                    action.actionType = 'buy';
+                    action.playerAddress = event.data.player.toString();
+                    action.propertyId = event.data.propertyId;
+                    action.amount = Number(event.data.price);
+                    break;
+                  
+                  case 'PropertySoldEvent':
+                  case 'propertySoldEvent':
+                    action.actionType = 'sell';
+                    action.playerAddress = event.data.player.toString();
+                    action.propertyId = event.data.propertyId;
+                    action.amount = Number(event.data.received);
+                    action.slots = event.data.slots;
+                    break;
+                  
+                  case 'StealSuccessEvent':
+                  case 'stealSuccessEvent':
+                    action.actionType = 'steal_success';
+                    action.playerAddress = event.data.attacker.toString();
+                    action.targetAddress = event.data.target.toString();
+                    action.propertyId = event.data.propertyId;
+                    break;
+                  
+                  case 'StealFailedEvent':
+                  case 'stealFailedEvent':
+                    action.actionType = 'steal_failed';
+                    action.playerAddress = event.data.attacker.toString();
+                    action.targetAddress = event.data.target.toString();
+                    action.propertyId = event.data.propertyId;
+                    break;
+                  
+                  case 'ShieldActivatedEvent':
+                  case 'shieldActivatedEvent':
+                    action.actionType = 'shield';
+                    action.playerAddress = event.data.player.toString();
+                    action.propertyId = event.data.propertyId;
+                    break;
+                  
+                  case 'RewardsClaimedEvent':
+                  case 'rewardsClaimedEvent':
+                    action.actionType = 'claim';
+                    action.playerAddress = event.data.player.toString();
+                    action.amount = Number(event.data.amount);
+                    break;
+                  
+                  default:
+                    continue;
+                }
                 
+                const feedItem = actionToFeedItem(action);
                 if (feedItem) {
                   addFeedItem(feedItem);
                 }
@@ -238,7 +245,7 @@ export function LiveFeed() {
         console.log('🔌 Unsubscribed from program logs');
       }
     };
-  }, [connection, addFeedItem, parseEventToFeedItem]);
+  }, [connection, addFeedItem, actionToFeedItem]);
 
   return (
     <div className="bg-purple-900/8 backdrop-blur-xl rounded-2xl border border-purple-500/20 p-6 max-h-[450px] overflow-y-auto">
@@ -261,7 +268,7 @@ export function LiveFeed() {
         </div>
       ) : (
         <div className="space-y-3">
-          {feed.map((item, idx) => (
+          {feed.map((item) => (
             <div
               key={item.txSignature}
               className={`p-4 bg-purple-900/10 rounded-xl border-l-4 text-sm text-purple-200 leading-relaxed transition-all ${

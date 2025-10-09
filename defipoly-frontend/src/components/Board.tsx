@@ -3,31 +3,149 @@
 import { PROPERTIES } from '@/utils/constants';
 import { useRewards } from '@/hooks/useRewards';
 import { useDefipoly } from '@/hooks/useDefipoly';
-import { useState } from 'react';
-import { useWallet } from '@solana/wallet-adapter-react';
+import { useState, useRef } from 'react';
+import { useWallet, useConnection } from '@solana/wallet-adapter-react';
+import { PROGRAM_ID } from '@/utils/constants';
+import { BorshCoder, EventParser } from '@coral-xyz/anchor';
+import idl from '@/types/defipoly_program.json';
 
 interface BoardProps {
   onSelectProperty: (propertyId: number) => void;
 }
 
 export function Board({ onSelectProperty }: BoardProps) {
-  const { connected } = useWallet();
+  const { connected, publicKey } = useWallet();
+  const { connection } = useConnection();
   const { unclaimedRewards, dailyIncome, loading: rewardsLoading } = useRewards();
-  const { claimRewards, loading: claimLoading } = useDefipoly();
+  const { claimRewards, getPlayerData, loading: claimLoading } = useDefipoly();
   const [claiming, setClaiming] = useState(false);
+  const claimingRef = useRef(false); // Prevent double-execution
+  const [claimCooldown, setClaimCooldown] = useState<number>(0); // Seconds until next claim
+  const [canClaim, setCanClaim] = useState(false);
+
+  // Check claim cooldown every second
+  useEffect(() => {
+    if (!connected || !publicKey) {
+      setCanClaim(false);
+      setClaimCooldown(0);
+      return;
+    }
+
+    const checkCooldown = async () => {
+      try {
+        const playerData = await getPlayerData();
+        
+        if (playerData) {
+          const now = Math.floor(Date.now() / 1000);
+          const lastClaim = playerData.lastClaimTimestamp.toNumber();
+          const timeElapsed = now - lastClaim;
+          const nextClaimTime = lastClaim + 3600; // 1 hour cooldown
+          
+          if (timeElapsed >= 3600) {
+            setCanClaim(true);
+            setClaimCooldown(0);
+          } else {
+            setCanClaim(false);
+            setClaimCooldown(nextClaimTime - now);
+          }
+        }
+      } catch (error) {
+        console.error('Error checking claim cooldown:', error);
+      }
+    };
+
+    checkCooldown();
+    const interval = setInterval(checkCooldown, 1000);
+    
+    return () => clearInterval(interval);
+  }, [connected, publicKey, getPlayerData]);
+
+  const formatCooldown = (seconds: number): string => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
 
   const handleClaimRewards = async () => {
-    if (!connected || unclaimedRewards === 0) return;
+    // Prevent double-clicking and ensure conditions are met
+    if (!connected || !publicKey || unclaimedRewards === 0 || claiming || claimingRef.current || !canClaim) return;
     
+    // Set both state and ref immediately
+    claimingRef.current = true;
     setClaiming(true);
+    
     try {
-      await claimRewards();
+      const signature = await claimRewards();
+      
+      // Store to backend (same approach as bots)
+      if (signature) {
+        try {
+          console.log('⏳ Waiting for transaction to confirm...');
+          await new Promise(resolve => setTimeout(resolve, 2000));
+          
+          // Fetch transaction to get real amount from event
+          const tx = await connection.getTransaction(signature, {
+            commitment: 'confirmed',
+            maxSupportedTransactionVersion: 0
+          });
+
+          if (tx?.meta?.logMessages) {
+            // Parse event to get actual claimed amount
+            const coder = new BorshCoder(idl as any);
+            const eventParser = new EventParser(PROGRAM_ID, coder);
+            const events = eventParser.parseLogs(tx.meta.logMessages);
+            
+            let claimedAmount = Math.floor(unclaimedRewards * 1e9); // fallback
+            
+            for (const event of events) {
+              if (event.name === 'RewardsClaimedEvent' || event.name === 'rewardsClaimedEvent') {
+                claimedAmount = Number(event.data.amount);
+                console.log('✅ Got real claim amount from event:', claimedAmount / 1e9, 'DEFI');
+                break;
+              }
+            }
+
+            // Store to backend with REAL amount
+            const BACKEND_URL = process.env.NEXT_PUBLIC_PROFILE_API_URL || 'http://localhost:3001';
+            const response = await fetch(`${BACKEND_URL}/api/actions`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                txSignature: signature,
+                actionType: 'claim',
+                playerAddress: publicKey.toString(),
+                amount: claimedAmount,
+                blockTime: tx.blockTime || Math.floor(Date.now() / 1000),
+              }),
+            });
+
+            if (response.ok) {
+              console.log('✅ Claim stored to backend');
+            } else {
+              console.error('❌ Failed to store claim to backend:', response.status);
+            }
+          }
+        } catch (backendError) {
+          console.error('Failed to store claim to backend:', backendError);
+          // Don't fail the whole claim if backend storage fails
+        }
+      }
+      
       alert(`Successfully claimed ${unclaimedRewards.toLocaleString()} DEFI!`);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error claiming rewards:', error);
-      alert('Failed to claim rewards. Check console for details.');
+      
+      // Handle specific error messages
+      if (error?.message?.includes('already been processed')) {
+        alert('Claim successful! (Transaction was already submitted)');
+      } else if (error?.message?.includes('NoRewardsToClaim')) {
+        alert('⏰ Not enough time has passed!\n\nYou need to wait 1 full hour between claims.');
+      } else {
+        alert('Failed to claim rewards. Check console for details.');
+      }
     } finally {
       setClaiming(false);
+      claimingRef.current = false;
     }
   };
 
@@ -103,7 +221,7 @@ export function Board({ onSelectProperty }: BoardProps) {
                         {unclaimedRewards > 0 && (
                           <button
                             onClick={handleClaimRewards}
-                            disabled={claiming || claimLoading}
+                            disabled={claiming || claimLoading || claimingRef.current}
                             className="w-full mt-3 py-2.5 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-400 hover:to-emerald-400 disabled:from-gray-600 disabled:to-gray-700 rounded-lg font-bold text-white shadow-lg shadow-green-500/30 hover:shadow-green-500/50 transition-all transform hover:scale-105 disabled:cursor-not-allowed disabled:transform-none"
                           >
                             {claiming ? '⏳ Claiming...' : '🎁 Claim Rewards'}
@@ -169,21 +287,34 @@ export function Board({ onSelectProperty }: BoardProps) {
             if (idx === 6) gridProps = { gridColumnStart: 1, gridRowStart: 10 };
             if (idx === 7) gridProps = { gridColumnStart: 1, gridRowStart: 6 };
 
+            const tierColors: Record<string, { bg: string; border: string; text: string }> = {
+              bronze: { bg: 'bg-gradient-to-br from-amber-700 to-amber-900', border: 'border-amber-600', text: 'text-amber-100' },
+              silver: { bg: 'bg-gradient-to-br from-slate-300 to-slate-500', border: 'border-slate-400', text: 'text-slate-900' },
+              gold: { bg: 'bg-gradient-to-br from-yellow-400 to-yellow-600', border: 'border-yellow-500', text: 'text-yellow-950' },
+              platinum: { bg: 'bg-gradient-to-br from-blue-400 to-blue-700', border: 'border-blue-500', text: 'text-blue-50' }
+            };
+
+            const colors = tierColors[prop.tier];
+
             return (
-              <div
+              <button
                 key={prop.id}
-                className="bg-[#f5f3eb] border border-[#d1ccc0] p-1.5 cursor-pointer hover:scale-110 hover:z-20 transition-transform hover:shadow-xl"
-                style={gridProps}
                 onClick={() => onSelectProperty(prop.id)}
+                style={gridProps}
+                className={`
+                  ${colors.bg} ${colors.border} border-2 ${colors.text}
+                  flex flex-col items-center justify-center p-2 
+                  hover:scale-105 transition-all hover:shadow-lg cursor-pointer
+                  hover:z-10 relative
+                `}
               >
-                <div className={`h-5 w-full ${prop.color} mb-1.5`}></div>
-                <div className="text-[8px] font-bold text-center text-gray-900 leading-tight mb-1 px-0.5">
+                <div className="text-[10px] font-bold text-center leading-tight">
                   {prop.name}
                 </div>
-                <div className="text-[7px] text-center text-gray-600 font-medium">
-                  ${(prop.price / 1000).toFixed(0)}K
+                <div className="text-[9px] opacity-80 mt-1">
+                  {(prop.price / 1000).toFixed(0)}K
                 </div>
-              </div>
+              </button>
             );
           })}
         </div>
