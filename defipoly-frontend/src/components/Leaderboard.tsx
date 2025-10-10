@@ -1,7 +1,3 @@
-// ============================================
-// FILE: defipoly-frontend/src/components/Leaderboard.tsx
-// UPDATED: Uses batch API for efficiency
-// ============================================
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -9,13 +5,10 @@ import { useConnection } from '@solana/wallet-adapter-react';
 import { PublicKey } from '@solana/web3.js';
 import { PROGRAM_ID } from '@/utils/constants';
 import { deserializePlayer } from '@/utils/deserialize';
-import { getProfilesBatch } from '@/utils/profileStorage';
 
 interface LeaderboardEntry {
   address: string;
-  username: string | null;
-  profilePicture: string | null;
-  totalDailyIncome: number;
+  totalSlotsOwned: number;
   propertiesOwned: number;
 }
 
@@ -33,7 +26,7 @@ export function Leaderboard() {
         const allAccounts = await connection.getProgramAccounts(PROGRAM_ID);
         console.log(`🏆 Total accounts found: ${allAccounts.length}`);
         
-        const players: Omit<LeaderboardEntry, 'username' | 'profilePicture'>[] = [];
+        const players: LeaderboardEntry[] = [];
         const expectedDiscriminator = Buffer.from([224, 184, 224, 50, 98, 72, 48, 236]);
         
         for (const { account } of allAccounts) {
@@ -47,8 +40,8 @@ export function Leaderboard() {
               
               players.push({
                 address: playerData.owner.toString(),
-                totalDailyIncome: Number(playerData.totalDailyIncome),
-                propertiesOwned: playerData.totalPropertiesOwned,
+                totalSlotsOwned: playerData.totalSlotsOwned,
+                propertiesOwned: playerData.propertiesOwnedCount,
               });
             }
           } catch (error) {
@@ -56,25 +49,14 @@ export function Leaderboard() {
           }
         }
 
-        // Sort by daily income
-        players.sort((a, b) => b.totalDailyIncome - a.totalDailyIncome);
+        // Sort by total slots owned (best indicator of success)
+        players.sort((a, b) => b.totalSlotsOwned - a.totalSlotsOwned);
         
         // Get top 10
         const top10 = players.slice(0, 10);
         
-        // Batch fetch profiles for all top 10 players
-        const addresses = top10.map(p => p.address);
-        const profiles = await getProfilesBatch(addresses);
-        
-        // Combine player data with profile data
-        const leadersWithProfiles: LeaderboardEntry[] = top10.map(player => ({
-          ...player,
-          username: profiles[player.address]?.username || null,
-          profilePicture: profiles[player.address]?.profilePicture || null,
-        }));
-        
         console.log(`🏆 Found ${players.length} player accounts`);
-        setLeaders(leadersWithProfiles);
+        setLeaders(top10);
       } catch (error) {
         console.error('❌ Error fetching leaderboard:', error);
       } finally {
@@ -87,24 +69,8 @@ export function Leaderboard() {
     // Refresh every 30 seconds
     const interval = setInterval(fetchLeaderboard, 30000);
     
-    // Listen for profile updates
-    const handleProfileUpdate = () => {
-      fetchLeaderboard();
-    };
-    window.addEventListener('profileUpdated', handleProfileUpdate);
-    
-    return () => {
-      clearInterval(interval);
-      window.removeEventListener('profileUpdated', handleProfileUpdate);
-    };
+    return () => clearInterval(interval);
   }, [connection]);
-
-  const formatDailyIncome = (income: number) => {
-    const defi = income / 1e9;
-    if (defi >= 1e6) return `${(defi / 1e6).toFixed(2)}M`;
-    if (defi >= 1e3) return `${(defi / 1e3).toFixed(2)}K`;
-    return defi.toFixed(2);
-  };
 
   return (
     <div className="bg-purple-900/8 backdrop-blur-xl rounded-2xl border border-purple-500/20 p-6 max-h-[450px] overflow-y-auto">
@@ -140,39 +106,26 @@ export function Leaderboard() {
                 
                 {/* Profile Picture */}
                 <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center overflow-hidden flex-shrink-0">
-                  {leader.profilePicture ? (
-                    <img 
-                      src={leader.profilePicture} 
-                      alt={leader.username || 'Profile'} 
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <span className="text-lg">👤</span>
-                  )}
+                  <span className="text-lg">👤</span>
                 </div>
                 
-                {/* Username/Address */}
+                {/* Address */}
                 <div className="flex-1 min-w-0">
                   <div className="font-semibold text-purple-100 truncate">
-                    {leader.username || `${leader.address.slice(0, 4)}...${leader.address.slice(-4)}`}
+                    {`${leader.address.slice(0, 4)}...${leader.address.slice(-4)}`}
                   </div>
-                  {leader.username && (
-                    <div className="text-xs text-purple-500 font-mono truncate">
-                      {leader.address.slice(0, 4)}...{leader.address.slice(-4)}
-                    </div>
-                  )}
                   <div className="text-xs text-purple-400">
                     {leader.propertiesOwned} {leader.propertiesOwned === 1 ? 'property' : 'properties'}
                   </div>
                 </div>
               </div>
               
-              {/* Daily Income */}
+              {/* Total Slots */}
               <div className="text-right flex-shrink-0 ml-3">
                 <div className="text-purple-400 font-semibold">
-                  {formatDailyIncome(leader.totalDailyIncome)}
+                  {leader.totalSlotsOwned}
                 </div>
-                <div className="text-xs text-purple-500">DEFI/day</div>
+                <div className="text-xs text-purple-500">slots</div>
               </div>
             </div>
           ))}

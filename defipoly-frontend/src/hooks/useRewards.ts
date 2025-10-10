@@ -1,71 +1,95 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { useDefipoly } from './useDefipoly';
+import { PROPERTIES } from '@/utils/constants';
 
 export function useRewards() {
-  const { publicKey } = useWallet();
-  const { getPlayerData } = useDefipoly();
+  const { publicKey, connected } = useWallet();
+  const { program, getPlayerData, getOwnershipData, getPropertyData } = useDefipoly();
   const [unclaimedRewards, setUnclaimedRewards] = useState(0);
-  const [totalGenerated, setTotalGenerated] = useState(0);
   const [dailyIncome, setDailyIncome] = useState(0);
-  const [loading, setLoading] = useState(true); // Only true on initial load
-  const [initialLoad, setInitialLoad] = useState(true);
+  const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    if (!publicKey) {
+  const calculateRewards = useCallback(async () => {
+    if (!program || !publicKey || !connected) {
       setUnclaimedRewards(0);
-      setTotalGenerated(0);
       setDailyIncome(0);
-      setLoading(false);
       return;
     }
 
-    const fetchRewards = async () => {
-      // Only set loading on initial load, not on updates
-      if (initialLoad) {
-        setLoading(true);
+    setLoading(true);
+    try {
+      // Get player data for last claim timestamp
+      const playerData = await getPlayerData();
+      if (!playerData) {
+        setUnclaimedRewards(0);
+        setDailyIncome(0);
+        return;
       }
-      
-      try {
-        const playerData = await getPlayerData();
-        
-        if (playerData) {
-          const now = Math.floor(Date.now() / 1000);
-          const lastClaim = playerData.lastClaimTimestamp.toNumber();
-          const timeElapsed = now - lastClaim;
-          const hoursElapsed = timeElapsed / 3600;
-          
-          // CRITICAL FIX: Divide by 1e9 to convert from base units to DEFI
-          const dailyIncomeValue = playerData.totalDailyIncome.toNumber() / 1e9;
-          const hourlyRate = dailyIncomeValue / 24;
-          const unclaimed = Math.floor(hourlyRate * hoursElapsed);
-          
-          setDailyIncome(dailyIncomeValue);
-          setUnclaimedRewards(unclaimed);
-          setTotalGenerated(unclaimed);
-        }
-      } catch (error) {
-        console.error('Error fetching rewards:', error);
-      } finally {
-        if (initialLoad) {
-          setLoading(false);
-          setInitialLoad(false);
-        }
-      }
-    };
 
-    fetchRewards();
+      const now = Math.floor(Date.now() / 1000);
+      const lastClaim = playerData.lastClaimTimestamp.toNumber();
+      const minutesElapsed = Math.max(0, (now - lastClaim) / 60);
+
+      // ✅ NEW: Calculate daily income by iterating through all properties
+      let totalDailyIncome = 0;
+      let totalUnclaimedRewards = 0;
+
+      for (const property of PROPERTIES) {
+        try {
+          // Get ownership data for this property
+          const ownershipData = await getOwnershipData(property.id);
+          
+          if (ownershipData && ownershipData.slotsOwned > 0) {
+            // Get on-chain property data for yield %
+            const propertyData = await getPropertyData(property.id);
+            
+            if (propertyData) {
+              // Calculate daily income per slot
+              // yieldPercentBps is in basis points (e.g., 1000 = 10%)
+              const dailyIncomePerSlot = (Number(propertyData.price) * propertyData.yieldPercentBps) / (10000 * 1); // per day
+              const incomePerMinute = dailyIncomePerSlot / 1440; // 1440 minutes in a day
+              
+              // Calculate total income for owned slots
+              const propertyDailyIncome = dailyIncomePerSlot * ownershipData.slotsOwned;
+              totalDailyIncome += propertyDailyIncome;
+              
+              // Calculate unclaimed rewards for this property
+              const propertyRewards = incomePerMinute * ownershipData.slotsOwned * minutesElapsed;
+              totalUnclaimedRewards += propertyRewards;
+            }
+          }
+        } catch (error) {
+          console.error(`Error calculating rewards for property ${property.id}:`, error);
+          // Continue with other properties
+        }
+      }
+
+      // Convert from lamports to tokens (assuming 9 decimals)
+      setDailyIncome(totalDailyIncome / 1e9);
+      setUnclaimedRewards(totalUnclaimedRewards / 1e9);
+
+    } catch (error) {
+      console.error('Error calculating rewards:', error);
+      setUnclaimedRewards(0);
+      setDailyIncome(0);
+    } finally {
+      setLoading(false);
+    }
+  }, [program, publicKey, connected, getPlayerData, getOwnershipData, getPropertyData]);
+
+  useEffect(() => {
+    calculateRewards();
     
-    // Update every second for live counter effect
-    const interval = setInterval(fetchRewards, 1000);
-    
+    // Update every 30 seconds
+    const interval = setInterval(calculateRewards, 30000);
     return () => clearInterval(interval);
-  }, [publicKey, getPlayerData, initialLoad]);
+  }, [calculateRewards]);
 
   return {
     unclaimedRewards,
-    totalGenerated,
     dailyIncome,
     loading,
+    refresh: calculateRewards,
   };
 }

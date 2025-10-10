@@ -1,11 +1,14 @@
 import { Connection, PublicKey } from '@solana/web3.js';
 import { Program, AnchorProvider, Idl } from '@coral-xyz/anchor';
 import { PROGRAM_ID } from './constants';
-import idl from '@/types/defipoly_program.json';
+import idl from '@/types/memeopoly_program.json';
 import type { Property, PropertyOwnership, PlayerAccount } from '@/types/accounts';
 import { deserializeOwnership, deserializeProperty, deserializePlayer } from './deserialize';
 
-export function getProgram(provider: AnchorProvider) {
+// ✅ SIMPLE: Just use Idl type and cast when needed
+export type MemeopolyProgram = Program<Idl>;
+
+export function getProgram(provider: AnchorProvider): MemeopolyProgram {
   return new Program(idl as Idl, provider);
 }
 
@@ -32,13 +35,41 @@ export function getOwnershipPDA(playerPubkey: PublicKey, propertyId: number): [P
   return [pda, bump];
 }
 
+export function getSetCooldownPDA(playerPubkey: PublicKey, setId: number): [PublicKey, number] {
+  return PublicKey.findProgramAddressSync(
+    [Buffer.from('cooldown'), playerPubkey.toBuffer(), Buffer.from([setId])],
+    PROGRAM_ID
+  );
+}
+
+export function getSetOwnershipPDA(playerPubkey: PublicKey, setId: number): [PublicKey, number] {
+  return PublicKey.findProgramAddressSync(
+    [Buffer.from('set_ownership'), playerPubkey.toBuffer(), Buffer.from([setId])],
+    PROGRAM_ID
+  );
+}
+
+export function getSetStatsPDA(setId: number): [PublicKey, number] {
+  return PublicKey.findProgramAddressSync(
+    [Buffer.from('set_stats'), Buffer.from([setId])],
+    PROGRAM_ID
+  );
+}
+
+export function getStealRequestPDA(attackerPubkey: PublicKey, propertyId: number): [PublicKey, number] {
+  return PublicKey.findProgramAddressSync(
+    [Buffer.from('steal_request'), attackerPubkey.toBuffer(), Buffer.from([propertyId])],
+    PROGRAM_ID
+  );
+}
+
 export async function checkPlayerExists(connection: Connection, playerPubkey: PublicKey): Promise<boolean> {
   const [playerPDA] = getPlayerPDA(playerPubkey);
   const accountInfo = await connection.getAccountInfo(playerPDA);
   return accountInfo !== null;
 }
 
-export async function fetchPropertyData(program: Program<Idl>, propertyId: number): Promise<Property | null> {
+export async function fetchPropertyData(program: MemeopolyProgram, propertyId: number): Promise<Property | null> {
   const [propertyPDA] = getPropertyPDA(propertyId);
   try {
     const connection = program.provider.connection;
@@ -54,7 +85,7 @@ export async function fetchPropertyData(program: Program<Idl>, propertyId: numbe
   }
 }
 
-export async function fetchOwnershipData(program: Program<Idl>, playerPubkey: PublicKey, propertyId: number): Promise<PropertyOwnership | null> {
+export async function fetchOwnershipData(program: MemeopolyProgram, playerPubkey: PublicKey, propertyId: number): Promise<PropertyOwnership | null> {
   const [ownershipPDA] = getOwnershipPDA(playerPubkey, propertyId);
   
   console.log(`\n🔍 Fetching ownership for property ${propertyId}`);
@@ -75,7 +106,6 @@ export async function fetchOwnershipData(program: Program<Idl>, playerPubkey: Pu
     console.log(`  Account data length: ${accountInfo.data.length} bytes`);
     console.log(`  Owner: ${accountInfo.owner.toString()}`);
     
-    // Manually deserialize the account data
     const ownershipAccount = deserializeOwnership(accountInfo.data);
     console.log(`  ✅ Successfully deserialized ownership:`, ownershipAccount);
     return ownershipAccount;
@@ -88,7 +118,7 @@ export async function fetchOwnershipData(program: Program<Idl>, playerPubkey: Pu
   }
 }
 
-export async function fetchPlayerData(program: Program<Idl>, playerPubkey: PublicKey): Promise<PlayerAccount | null> {
+export async function fetchPlayerData(program: MemeopolyProgram, playerPubkey: PublicKey): Promise<PlayerAccount | null> {
   const [playerPDA] = getPlayerPDA(playerPubkey);
   try {
     const connection = program.provider.connection;

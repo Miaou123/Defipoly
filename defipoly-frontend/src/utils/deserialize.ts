@@ -3,8 +3,7 @@ import BN from 'bn.js';
 import type { PropertyOwnership, Property, PlayerAccount } from '@/types/accounts';
 
 export function deserializeOwnership(data: Buffer): PropertyOwnership {
-  // Skip 8-byte discriminator
-  let offset = 8;
+  let offset = 8; // Skip discriminator
 
   // player: Pubkey (32 bytes)
   const player = new PublicKey(data.slice(offset, offset + 32));
@@ -14,24 +13,20 @@ export function deserializeOwnership(data: Buffer): PropertyOwnership {
   const propertyId = data.readUInt8(offset);
   offset += 1;
 
-  // slots_owned: u16 (2 bytes, little-endian)
+  // slots_owned: u16 (2 bytes)
   const slotsOwned = data.readUInt16LE(offset);
   offset += 2;
 
-  // shield_active: bool (1 byte)
-  const shieldActive = data.readUInt8(offset) === 1;
-  offset += 1;
+  // slots_shielded: u16 (2 bytes)
+  const slotsShielded = data.readUInt16LE(offset);
+  offset += 2;
 
-  // shield_expiry: i64 (8 bytes, little-endian)
-  const shieldExpiry = new BN(data.slice(offset, offset + 8), 'le');
+  // purchase_timestamp: i64 (8 bytes)
+  const purchaseTimestamp = new BN(data.slice(offset, offset + 8), 'le');
   offset += 8;
 
-  // shield_cycles_queued: u8 (1 byte)
-  const shieldCyclesQueued = data.readUInt8(offset);
-  offset += 1;
-
-  // last_claim_timestamp: i64 (8 bytes, little-endian)
-  const lastClaimTimestamp = new BN(data.slice(offset, offset + 8), 'le');
+  // shield_expiry: i64 (8 bytes)
+  const shieldExpiry = new BN(data.slice(offset, offset + 8), 'le');
   offset += 8;
 
   // bump: u8 (1 byte)
@@ -41,10 +36,9 @@ export function deserializeOwnership(data: Buffer): PropertyOwnership {
     player,
     propertyId,
     slotsOwned,
-    shieldActive,
+    slotsShielded,
+    purchaseTimestamp,
     shieldExpiry,
-    shieldCyclesQueued,
-    lastClaimTimestamp,
     bump,
   };
 }
@@ -52,55 +46,55 @@ export function deserializeOwnership(data: Buffer): PropertyOwnership {
 export function deserializeProperty(data: Buffer): Property {
   let offset = 8; // Skip discriminator
 
+  // property_id: u8
   const propertyId = data.readUInt8(offset);
   offset += 1;
 
-  // tier enum (1 byte: 0=Bronze, 1=Silver, 2=Gold, 3=Platinum)
-  const tierByte = data.readUInt8(offset);
-  offset += 1;
-  const tier = 
-    tierByte === 0 ? { bronze: {} } :
-    tierByte === 1 ? { silver: {} } :
-    tierByte === 2 ? { gold: {} } :
-    { platinum: {} };
-
-  const count = data.readUInt8(offset);
+  // set_id: u8
+  const setId = data.readUInt8(offset);
   offset += 1;
 
+  // max_slots_per_property: u16
   const maxSlotsPerProperty = data.readUInt16LE(offset);
   offset += 2;
 
-  const totalSlots = data.readUInt16LE(offset);
-  offset += 2;
-
+  // available_slots: u16
   const availableSlots = data.readUInt16LE(offset);
   offset += 2;
 
+  // max_per_player: u16
+  const maxPerPlayer = data.readUInt16LE(offset);
+  offset += 2;
+
+  // price: u64 (8 bytes)
   const price = new BN(data.slice(offset, offset + 8), 'le');
   offset += 8;
 
-  const dailyIncome = new BN(data.slice(offset, offset + 8), 'le');
+  // yield_percent_bps: u16
+  const yieldPercentBps = data.readUInt16LE(offset);
+  offset += 2;
+
+  // shield_cost_percent_bps: u16
+  const shieldCostPercentBps = data.readUInt16LE(offset);
+  offset += 2;
+
+  // cooldown_seconds: i64 (8 bytes)
+  const cooldownSeconds = new BN(data.slice(offset, offset + 8), 'le');
   offset += 8;
 
-  const shieldCostPercent = data.readUInt16LE(offset);
-  offset += 2;
-
-  const familyBonusMultiplier = data.readUInt16LE(offset);
-  offset += 2;
-
+  // bump: u8
   const bump = data.readUInt8(offset);
 
   return {
     propertyId,
-    tier,
-    count,
+    setId,
     maxSlotsPerProperty,
-    totalSlots,
     availableSlots,
+    maxPerPlayer,
     price,
-    dailyIncome,
-    shieldCostPercent,
-    familyBonusMultiplier,
+    yieldPercentBps,
+    shieldCostPercentBps,
+    cooldownSeconds,
     bump,
   };
 }
@@ -108,25 +102,50 @@ export function deserializeProperty(data: Buffer): Property {
 export function deserializePlayer(data: Buffer): PlayerAccount {
   let offset = 8; // Skip discriminator
 
+  // owner: Pubkey (32 bytes)
   const owner = new PublicKey(data.slice(offset, offset + 32));
   offset += 32;
 
-  const totalPropertiesOwned = data.readUInt16LE(offset);
+  // total_slots_owned: u16
+  const totalSlotsOwned = data.readUInt16LE(offset);
   offset += 2;
 
-  const totalDailyIncome = new BN(data.slice(offset, offset + 8), 'le');
-  offset += 8;
-
+  // last_claim_timestamp: i64 (8 bytes)
   const lastClaimTimestamp = new BN(data.slice(offset, offset + 8), 'le');
   offset += 8;
 
+  // total_rewards_claimed: u64 (8 bytes)
+  const totalRewardsClaimed = new BN(data.slice(offset, offset + 8), 'le');
+  offset += 8;
+
+  // complete_sets_owned: u8
+  const completeSetsOwned = data.readUInt8(offset);
+  offset += 1;
+
+  // properties_owned_count: u8
+  const propertiesOwnedCount = data.readUInt8(offset);
+  offset += 1;
+
+  // total_steals_attempted: u32
+  const totalStealsAttempted = data.readUInt32LE(offset);
+  offset += 4;
+
+  // total_steals_successful: u32
+  const totalStealsSuccessful = data.readUInt32LE(offset);
+  offset += 4;
+
+  // bump: u8
   const bump = data.readUInt8(offset);
 
   return {
     owner,
-    totalPropertiesOwned,
-    totalDailyIncome,
+    totalSlotsOwned,
     lastClaimTimestamp,
+    totalRewardsClaimed,
+    completeSetsOwned,
+    propertiesOwnedCount,
+    totalStealsAttempted,
+    totalStealsSuccessful,
     bump,
   };
 }

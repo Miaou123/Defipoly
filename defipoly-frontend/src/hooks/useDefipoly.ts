@@ -19,10 +19,15 @@ import {
   getPropertyPDA,
   getPlayerPDA,
   getOwnershipPDA,
+  getSetCooldownPDA,      // ✅ Already have this
+  getSetOwnershipPDA,     // ✅ Already have this
+  getSetStatsPDA,         // ✅ Already have this
+  getStealRequestPDA,     // ✅ ADD THIS LINE
   fetchPropertyData,
   fetchOwnershipData,
   fetchPlayerData,
-  checkPlayerExists
+  checkPlayerExists,
+  type MemeopolyProgram,  // ✅ ADD THIS TYPE
 } from '@/utils/program';
 
 // Token utilities
@@ -35,7 +40,7 @@ import {
 // 🆕 NEW: Import backend storage utilities
 import { storeAction, eventToAction } from '@/utils/actionsStorage';
 import { BorshCoder, EventParser } from '@coral-xyz/anchor';
-import idl from '@/types/defipoly_program.json';
+import idl from '@/types/memeopoly_program.json';
 
 export function useDefipoly() {
   const { connection } = useConnection();
@@ -195,14 +200,13 @@ export function useDefipoly() {
     }
   }, [program, wallet, tokenAccountExists]);
 
-  // ✨ ENHANCED: buyProperty now stores to backend
   const buyProperty = useCallback(async (propertyId: number) => {
     if (!program || !wallet || !provider) throw new Error('Wallet not connected');
-
+    
     setLoading(true);
     try {
       const transaction = new Transaction();
-      
+  
       // Check token account exists
       const hasTokenAccount = await checkTokenAccountExists(connection, wallet.publicKey);
       
@@ -212,7 +216,7 @@ export function useDefipoly() {
         const createATAIx = await createTokenAccountInstruction(wallet.publicKey);
         transaction.add(createATAIx);
       }
-
+  
       // Check if player account exists
       const [playerPDA] = getPlayerPDA(wallet.publicKey);
       const playerData = await fetchPlayerData(program, wallet.publicKey);
@@ -230,38 +234,53 @@ export function useDefipoly() {
           .instruction();
         transaction.add(initPlayerIx);
       }
-
+  
       // Get token account address
       const playerTokenAccount = await getAssociatedTokenAddress(
         TOKEN_MINT,
         wallet.publicKey
       );
-
+  
       // Get PDAs
       const [propertyPDA] = getPropertyPDA(propertyId);
       const [ownershipPDA] = getOwnershipPDA(wallet.publicKey, propertyId);
-
+      
+      // ✅ NEW: Fetch property to get setId
+      const propertyData = await (program.account as any).property.fetch(propertyPDA);
+      const setId = propertyData.setId;
+      
+      // ✅ NEW: Get the 3 new required PDAs
+      const [setCooldownPDA] = getSetCooldownPDA(wallet.publicKey, setId);
+      const [setOwnershipPDA] = getSetOwnershipPDA(wallet.publicKey, setId);
+      const [setStatsPDA] = getSetStatsPDA(setId);
+      
+      // ✅ NEW: Get dev token account
+      const devWallet = new PublicKey("CgWTFX7JJQHed3qyMDjJkNCxK4sFe3wbDFABmWAAmrdS");
+      const devTokenAccount = await getAssociatedTokenAddress(TOKEN_MINT, devWallet);
+  
       // Add buy property instruction
       const buyPropertyIx = await program.methods
         .buyProperty()
         .accountsPartial({
           property: propertyPDA,
           ownership: ownershipPDA,
+          setCooldown: setCooldownPDA,      // ✅ NEW
+          setOwnership: setOwnershipPDA,    // ✅ NEW
+          setStats: setStatsPDA,            // ✅ NEW
           playerAccount: playerPDA,
           player: wallet.publicKey,
           playerTokenAccount,
           rewardPoolVault: REWARD_POOL,
+          devTokenAccount: devTokenAccount, // ✅ NEW
           gameConfig: GAME_CONFIG,
           tokenProgram: TOKEN_PROGRAM_ID,
           systemProgram: SystemProgram.programId,
         })
         .instruction();
-      
       transaction.add(buyPropertyIx);
-
+  
       // Send transaction
       const signature = await provider.sendAndConfirm(transaction);
-      
       console.log('Property bought:', signature);
       
       // 🆕 NEW: Store to backend
@@ -430,53 +449,125 @@ export function useDefipoly() {
     }
   }, [program, wallet, playerInitialized, storeTransactionEvents]);
 
-  // ✨ ENHANCED: stealProperty now stores to backend
   const stealProperty = useCallback(async (propertyId: number, targetPlayer: string) => {
-    if (!program || !wallet) throw new Error('Wallet not connected');
+    if (!program || !wallet || !provider) throw new Error('Wallet not connected');
     if (!playerInitialized) throw new Error('Initialize player first');
-
+  
     setLoading(true);
     try {
-      const playerTokenAccount = await getAssociatedTokenAddress(
-        TOKEN_MINT,
-        wallet.publicKey
-      );
-
       const targetPlayerPubkey = new PublicKey(targetPlayer);
+      
+      // Get all required accounts
+      const playerTokenAccount = await getAssociatedTokenAddress(TOKEN_MINT, wallet.publicKey);
+      const devWallet = new PublicKey("CgWTFX7JJQHed3qyMDjJkNCxK4sFe3wbDFABmWAAmrdS");
+      const devTokenAccount = await getAssociatedTokenAddress(TOKEN_MINT, devWallet);
+      
       const [propertyPDA] = getPropertyPDA(propertyId);
       const [playerPDA] = getPlayerPDA(wallet.publicKey);
       const [targetOwnershipPDA] = getOwnershipPDA(targetPlayerPubkey, propertyId);
-      const [attackerOwnershipPDA] = getOwnershipPDA(wallet.publicKey, propertyId);
-
-      const tx = await program.methods
-        .stealProperty(targetPlayerPubkey)
+      const [stealRequestPDA] = getStealRequestPDA(wallet.publicKey, propertyId); // ✅ Now works!
+      
+      // ✅ STEP 1: Request Steal (Commit)
+      console.log('🎲 Step 1: Committing steal request...');
+      
+      const userRandomness = Array.from(crypto.getRandomValues(new Uint8Array(32)));
+      
+      const requestTx = await program.methods
+        .stealPropertyRequest(
+          targetPlayerPubkey,
+          true, // isTargeted
+          userRandomness
+        )
         .accountsPartial({
           property: propertyPDA,
           targetOwnership: targetOwnershipPDA,
-          attackerOwnership: attackerOwnershipPDA,
+          stealRequest: stealRequestPDA,
           playerAccount: playerPDA,
-          attacker: wallet.publicKey,
           playerTokenAccount,
           rewardPoolVault: REWARD_POOL,
+          devTokenAccount: devTokenAccount,
           gameConfig: GAME_CONFIG,
+          attacker: wallet.publicKey,
           tokenProgram: TOKEN_PROGRAM_ID,
           systemProgram: SystemProgram.programId,
         })
         .rpc();
-
-      console.log('Steal attempt:', tx);
       
-      // 🆕 NEW: Store to backend
-      await storeTransactionEvents(tx);
+      console.log('✅ Steal committed:', requestTx);
+      await storeTransactionEvents(requestTx);
       
-      return tx;
+      // ✅ STEP 2: Wait at least 1 slot (~400-600ms)
+      console.log('⏳ Waiting for slot confirmation (1 second)...');
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // ✅ STEP 3: Fulfill Steal (Reveal)
+      console.log('🎲 Step 2: Fulfilling steal...');
+      
+      const [attackerOwnershipPDA] = getOwnershipPDA(wallet.publicKey, propertyId);
+      const SLOT_HASHES_SYSVAR = new PublicKey('SysvarS1otHashes111111111111111111111111111');
+      
+      const fulfillTx = await program.methods
+        .stealPropertyFulfill()
+        .accountsPartial({
+          property: propertyPDA,
+          stealRequest: stealRequestPDA,
+          targetOwnership: targetOwnershipPDA,
+          attackerOwnership: attackerOwnershipPDA,
+          attackerAccount: playerPDA,
+          gameConfig: GAME_CONFIG,
+          slotHashes: SLOT_HASHES_SYSVAR,
+          payer: wallet.publicKey,
+          systemProgram: SystemProgram.programId,
+        })
+        .rpc();
+      
+      console.log('✅ Steal fulfilled:', fulfillTx);
+      await storeTransactionEvents(fulfillTx);
+      
+      // ✅ STEP 4: Check result - WITH PROPER TYPING
+      try {
+        // Use type assertion for accounts that aren't in standard IDL
+        const stealRequest = await (program.account as any).stealRequest.fetch(stealRequestPDA);
+        
+        if (stealRequest.success) {
+          console.log('🎉 STEAL SUCCESSFUL! VRF:', stealRequest.vrfResult.toString());
+        } else {
+          console.log('❌ Steal failed. VRF:', stealRequest.vrfResult.toString());
+        }
+        
+        return {
+          requestTx,
+          fulfillTx,
+          success: stealRequest.success,
+          vrfResult: stealRequest.vrfResult.toString(),
+        };
+      } catch (fetchError) {
+        console.warn('⚠️ Could not fetch steal result, checking logs instead...');
+        
+        // Fallback: check transaction logs
+        const txDetails = await connection.getTransaction(fulfillTx, {
+          commitment: 'confirmed',
+          maxSupportedTransactionVersion: 0
+        });
+        
+        const logs = txDetails?.meta?.logMessages || [];
+        const success = logs.some(log => log.includes('STEAL SUCCESS'));
+        
+        return {
+          requestTx,
+          fulfillTx,
+          success,
+          vrfResult: 'Check transaction logs',
+        };
+      }
+      
     } catch (error) {
       console.error('Error stealing property:', error);
       throw error;
     } finally {
       setLoading(false);
     }
-  }, [program, wallet, playerInitialized, storeTransactionEvents]);
+  }, [program, wallet, provider, connection, playerInitialized, storeTransactionEvents]);
 
   return {
     program,

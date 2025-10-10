@@ -28,7 +28,7 @@ export function PropertyModal({ propertyId, onClose }: PropertyModalProps) {
   const [showShieldOptions, setShowShieldOptions] = useState(false);
   const [showSellOptions, setShowSellOptions] = useState(false);
   const [showStealOptions, setShowStealOptions] = useState(false);
-  const [selectedCycles, setSelectedCycles] = useState(1);
+  const [slotsToShield, setSlotsToShield] = useState(1);       // ✅ Changed from selectedCycles
   const [slotsToSell, setSlotsToSell] = useState(1);
   const [propertyData, setPropertyData] = useState<any>(null);
   const [targetPlayer, setTargetPlayer] = useState<string>('');
@@ -44,11 +44,21 @@ export function PropertyModal({ propertyId, onClose }: PropertyModalProps) {
           const ownershipData = wallet ? await getOwnershipData(propertyId) : null;
           
           if (onChainPropertyData) {
+            // ✅ Check if shield is active
+            const now = Date.now() / 1000;
+            const shieldActive = ownershipData 
+              ? (ownershipData.slotsShielded > 0 && ownershipData.shieldExpiry.toNumber() > now)
+              : false;
+
             setPropertyData({
               availableSlots: onChainPropertyData.availableSlots,
-              totalSlots: onChainPropertyData.totalSlots,
+              maxSlotsPerProperty: onChainPropertyData.maxSlotsPerProperty, // ✅ Changed from totalSlots
               owned: ownershipData?.slotsOwned || 0,
-              shielded: ownershipData?.shieldActive || false,
+              slotsShielded: ownershipData?.slotsShielded || 0,
+              shieldActive,
+              shieldExpiry: ownershipData?.shieldExpiry,
+              yieldPercentBps: onChainPropertyData.yieldPercentBps,
+              shieldCostPercentBps: onChainPropertyData.shieldCostPercentBps,
             });
           }
         } catch (error) {
@@ -61,6 +71,10 @@ export function PropertyModal({ propertyId, onClose }: PropertyModalProps) {
   }, [propertyId, connected, program, wallet, getPropertyData, getOwnershipData]);
 
   if (!property || propertyId === null) return null;
+
+  // ✅ Calculate daily income from constants and yield %
+  const dailyIncome = property.dailyIncome; // From PROPERTIES constant
+  const dailyIncomePerSlot = dailyIncome / property.slotsPerProperty;
 
   const handleBuy = async () => {
     if (!connected) return;
@@ -80,11 +94,15 @@ export function PropertyModal({ propertyId, onClose }: PropertyModalProps) {
 
   const handleShield = async () => {
     if (!connected) return;
+    if (slotsToShield <= 0 || slotsToShield > (propertyData?.owned || 0)) {
+      alert('Invalid number of slots to shield');
+      return;
+    }
 
     setLoading(true);
     try {
-      await activateShield(propertyId, selectedCycles);
-      alert(`Shield activated for ${selectedCycles} cycle(s)!`);
+      await activateShield(propertyId, slotsToShield); // ✅ Now takes slots, not cycles
+      alert(`Shield activated for ${slotsToShield} slot(s)!`);
       setShowShieldOptions(false);
       onClose();
     } catch (error) {
@@ -122,14 +140,20 @@ export function PropertyModal({ propertyId, onClose }: PropertyModalProps) {
 
     setLoading(true);
     try {
-      await stealProperty(propertyId, targetPlayer);
-      alert('Steal attempt completed! Check if it succeeded in the transaction.');
+      const result = await stealProperty(propertyId, targetPlayer);
+      
+      if (result.success) {
+        alert(`🎉 Steal successful! You gained 1 slot.`);
+      } else {
+        alert(`❌ Steal failed. Better luck next time!`);
+      }
+      
       setShowStealOptions(false);
       onClose();
     } catch (error: any) {
       console.error('Error attempting steal:', error);
-      if (error.message?.includes('PropertyIsShielded')) {
-        alert('Cannot steal - property is shielded!');
+      if (error.message?.includes('AllSlotsShielded')) {
+        alert('Cannot steal - all slots are shielded!');
       } else if (error.message?.includes('TargetDoesNotOwnProperty')) {
         alert('Target player does not own this property!');
       } else {
@@ -140,252 +164,233 @@ export function PropertyModal({ propertyId, onClose }: PropertyModalProps) {
     }
   };
 
-  // Calculate costs
-  const slotsOwned = propertyData?.owned || 1;
-  const baseCostPerSlot = Math.floor(property.dailyIncome * 0.35);
-  const shieldCost = baseCostPerSlot * slotsOwned;
-  const stealCost = Math.floor(property.price * 0.5);
-  const sellValuePerSlot = Math.floor(property.price * 0.25);
-  const totalSellValue = sellValuePerSlot * slotsOwned;
-
   return (
-    <div 
-      className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4"
-      onClick={onClose}
-    >
-      <div 
-        className="bg-gradient-to-br from-purple-900/95 to-purple-800/95 backdrop-blur-xl border-2 border-purple-500/50 rounded-2xl p-8 max-w-lg w-full shadow-2xl max-h-[90vh] overflow-y-auto"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <h2 className="text-2xl font-bold text-purple-100 mb-6">
-          {property.name}
-        </h2>
-
-        {/* Connect Wallet Banner - Show when not connected */}
-        {!connected && (
-          <div className="bg-amber-500/20 border border-amber-500/50 rounded-xl p-4 mb-6 text-center">
-            <div className="text-amber-400 font-semibold mb-3 flex items-center justify-center gap-2">
-              <span>🔒</span> Wallet Not Connected
-            </div>
-            <WalletMultiButton className="!bg-gradient-to-r !from-purple-500 !to-pink-500 hover:!from-purple-400 hover:!to-pink-400 !rounded-lg !font-bold !transition-all !w-full !justify-center" />
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onClick={onClose}>
+      <div className="bg-gray-800 rounded-lg p-6 max-w-2xl w-full m-4" onClick={e => e.stopPropagation()}>
+        <div className="flex justify-between items-start mb-4">
+          <div>
+            <h2 className="text-2xl font-bold">{property.name}</h2>
+            <div className={`${property.color} h-2 w-20 rounded mt-2`}></div>
           </div>
-        )}
-
-        {/* Property Info */}
-        <div className="bg-black/30 rounded-xl p-5 mb-5 border border-purple-500/20">
-          <div className="flex justify-between mb-3 text-sm">
-            <span className="text-purple-300 font-medium">Available Slots</span>
-            <span className="text-purple-100 font-semibold">
-              {connected ? (propertyData?.availableSlots ?? 'Loading...') : 'Loading...'}
-            </span>
-          </div>
-          
-          <div className="flex justify-between mb-3 text-sm">
-            <span className="text-purple-300 font-medium">Entry Price</span>
-            <span className="text-purple-100 font-semibold">{property.price.toLocaleString()} DEFI</span>
-          </div>
-
-          <div className="flex justify-between text-sm">
-            <span className="text-purple-300 font-medium">Daily Yield</span>
-            <span className="text-green-400 font-semibold">{property.dailyIncome.toLocaleString()} DEFI/day</span>
-          </div>
-
-          {connected && propertyData?.owned > 0 && (
-            <>
-              <div className="border-t border-purple-500/20 my-3"></div>
-              <div className="flex justify-between text-sm">
-                <span className="text-purple-300 font-medium">You Own</span>
-                <span className="text-blue-400 font-semibold">{propertyData.owned} slot(s)</span>
-              </div>
-              {propertyData.shielded && (
-                <div className="flex justify-between text-sm mt-2">
-                  <span className="text-purple-300 font-medium">Shield Status</span>
-                  <span className="text-amber-400 font-semibold">🛡️ Active</span>
-                </div>
-              )}
-            </>
-          )}
+          <button onClick={onClose} className="text-gray-400 hover:text-white text-2xl">×</button>
         </div>
 
-        {/* Shield Options */}
-        {showShieldOptions && connected && (
-          <div className="bg-purple-900/40 rounded-xl p-4 mb-4 border border-purple-500/20">
-            <div className="text-purple-200 font-semibold mb-3">Select Shield Duration:</div>
-            <div className="flex gap-2 mb-3">
-              {[1, 2, 3].map((cycles) => (
+        <div className="space-y-4">
+          {/* Property Stats */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <div className="text-gray-400 text-sm">Price per Slot</div>
+              <div className="text-xl font-bold">{property.price} DEFI</div>
+            </div>
+            <div>
+              <div className="text-gray-400 text-sm">Daily Income (per slot)</div>
+              <div className="text-xl font-bold text-green-500">{dailyIncomePerSlot.toFixed(2)} DEFI</div>
+            </div>
+            <div>
+              <div className="text-gray-400 text-sm">Available Slots</div>
+              <div className="text-xl font-bold">
+                {propertyData?.availableSlots ?? '...'} / {propertyData?.maxSlotsPerProperty ?? property.totalSlots}
+              </div>
+            </div>
+            <div>
+              <div className="text-gray-400 text-sm">ROI</div>
+              <div className="text-xl font-bold">{property.roi} days</div>
+            </div>
+          </div>
+
+          {/* Ownership Info */}
+          {connected && propertyData && propertyData.owned > 0 && (
+            <div className="bg-gray-700 rounded p-4">
+              <h3 className="font-bold mb-2">Your Ownership</h3>
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span>Slots Owned:</span>
+                  <span className="font-semibold">{propertyData.owned}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Your Daily Income:</span>
+                  <span className="font-semibold text-green-500">
+                    {(dailyIncomePerSlot * propertyData.owned).toFixed(2)} DEFI
+                  </span>
+                </div>
+                
+                {/* ✅ NEW Shield Status */}
+                {propertyData.shieldActive ? (
+                  <div className="bg-green-900/30 border border-green-500 rounded p-2 mt-2">
+                    <div className="flex justify-between">
+                      <span className="text-green-500">🛡️ Shield Active</span>
+                      <span>{propertyData.slotsShielded} slots shielded</span>
+                    </div>
+                    <div className="text-xs text-gray-400 mt-1">
+                      Expires: {new Date(propertyData.shieldExpiry.toNumber() * 1000).toLocaleString()}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-gray-400 text-xs">No active shield</div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Action Buttons */}
+          {!connected ? (
+            <div className="text-center py-4">
+              <WalletMultiButton />
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {/* Buy Button */}
+              {(!propertyData || propertyData.availableSlots > 0) && (
                 <button
-                  key={cycles}
-                  onClick={() => setSelectedCycles(cycles)}
-                  className={`flex-1 py-2 rounded-lg font-semibold transition-all ${
-                    selectedCycles === cycles
-                      ? 'bg-amber-600 text-white'
-                      : 'bg-purple-800/50 text-purple-300 hover:bg-purple-800/70'
-                  }`}
+                  onClick={handleBuy}
+                  disabled={loading}
+                  className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 py-3 rounded font-semibold"
                 >
-                  {cycles} {cycles === 1 ? 'Cycle' : 'Cycles'}
+                  {loading ? 'Processing...' : `Buy 1 Slot (${property.price} DEFI)`}
                 </button>
-              ))}
+              )}
+
+              {/* Shield Button */}
+              {propertyData && propertyData.owned > 0 && (
+                <>
+                  {!showShieldOptions ? (
+                    <button
+                      onClick={() => setShowShieldOptions(true)}
+                      className="w-full bg-green-600 hover:bg-green-700 py-3 rounded font-semibold"
+                    >
+                      🛡️ Activate Shield
+                    </button>
+                  ) : (
+                    <div className="bg-gray-700 p-4 rounded space-y-2">
+                      <div className="flex items-center justify-between">
+                        <label>Slots to Shield:</label>
+                        <input
+                          type="number"
+                          min="1"
+                          max={propertyData.owned}
+                          value={slotsToShield}
+                          onChange={(e) => setSlotsToShield(parseInt(e.target.value))}
+                          className="w-20 bg-gray-800 px-2 py-1 rounded"
+                        />
+                      </div>
+                      <div className="text-sm text-gray-400">
+                        Shield Cost: ~{((property.price * (propertyData.shieldCostPercentBps || 500) / 10000) * slotsToShield).toFixed(2)} DEFI
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        Duration: 48 hours
+                      </div>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={handleShield}
+                          disabled={loading}
+                          className="flex-1 bg-green-600 hover:bg-green-700 disabled:bg-gray-600 py-2 rounded"
+                        >
+                          Confirm
+                        </button>
+                        <button
+                          onClick={() => setShowShieldOptions(false)}
+                          className="flex-1 bg-gray-600 hover:bg-gray-500 py-2 rounded"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
+
+              {/* Sell Button */}
+              {propertyData && propertyData.owned > 0 && (
+                <>
+                  {!showSellOptions ? (
+                    <button
+                      onClick={() => setShowSellOptions(true)}
+                      className="w-full bg-orange-600 hover:bg-orange-700 py-3 rounded font-semibold"
+                    >
+                      Sell Slots
+                    </button>
+                  ) : (
+                    <div className="bg-gray-700 p-4 rounded space-y-2">
+                      <div className="flex items-center justify-between">
+                        <label>Slots to Sell:</label>
+                        <input
+                          type="number"
+                          min="1"
+                          max={propertyData.owned}
+                          value={slotsToSell}
+                          onChange={(e) => setSlotsToSell(parseInt(e.target.value))}
+                          className="w-20 bg-gray-800 px-2 py-1 rounded"
+                        />
+                      </div>
+                      <div className="text-sm text-gray-400">
+                        You'll receive: ~{(property.price * slotsToSell * 0.15).toFixed(2)} - {(property.price * slotsToSell * 0.30).toFixed(2)} DEFI
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        Price increases with hold time (15-30%)
+                      </div>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={handleSell}
+                          disabled={loading}
+                          className="flex-1 bg-orange-600 hover:bg-orange-700 disabled:bg-gray-600 py-2 rounded"
+                        >
+                          Confirm
+                        </button>
+                        <button
+                          onClick={() => setShowSellOptions(false)}
+                          className="flex-1 bg-gray-600 hover:bg-gray-500 py-2 rounded"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
+
+              {/* Steal Button */}
+              {propertyData && (
+                <>
+                  {!showStealOptions ? (
+                    <button
+                      onClick={() => setShowStealOptions(true)}
+                      className="w-full bg-red-600 hover:bg-red-700 py-3 rounded font-semibold"
+                    >
+                      🎯 Attempt Steal
+                    </button>
+                  ) : (
+                    <div className="bg-gray-700 p-4 rounded space-y-2">
+                      <input
+                        type="text"
+                        placeholder="Target player wallet address"
+                        value={targetPlayer}
+                        onChange={(e) => setTargetPlayer(e.target.value)}
+                        className="w-full bg-gray-800 px-3 py-2 rounded"
+                      />
+                      <div className="text-sm text-gray-400">
+                        Cost: {(property.price * 0.5).toFixed(2)} DEFI | Success Rate: 25%
+                      </div>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={handleSteal}
+                          disabled={loading}
+                          className="flex-1 bg-red-600 hover:bg-red-700 disabled:bg-gray-600 py-2 rounded"
+                        >
+                          {loading ? 'Processing...' : 'Confirm Steal'}
+                        </button>
+                        <button
+                          onClick={() => setShowStealOptions(false)}
+                          className="flex-1 bg-gray-600 hover:bg-gray-500 py-2 rounded"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
             </div>
-            <div className="text-xs text-purple-400">
-              Cost: {(shieldCost * selectedCycles).toLocaleString()} DEFI
-            </div>
-          </div>
-        )}
-
-        {/* Sell Options */}
-        {showSellOptions && connected && (
-          <div className="bg-purple-900/40 rounded-xl p-4 mb-4 border border-purple-500/20">
-            <div className="text-purple-200 font-semibold mb-3">Slots to Sell:</div>
-            <input
-              type="number"
-              min="1"
-              max={propertyData?.owned || 1}
-              value={slotsToSell}
-              onChange={(e) => setSlotsToSell(Math.min(Math.max(1, parseInt(e.target.value) || 1), propertyData?.owned || 1))}
-              className="w-full px-4 py-2 bg-purple-900/50 border border-purple-500/30 rounded-lg text-white"
-            />
-            <div className="text-xs text-purple-400 mt-2">
-              You'll receive: {(sellValuePerSlot * slotsToSell).toLocaleString()} DEFI (25% of value)
-            </div>
-          </div>
-        )}
-
-        {/* Steal Options */}
-        {showStealOptions && connected && (
-          <div className="bg-purple-900/40 rounded-xl p-4 mb-4 border border-purple-500/20">
-            <div className="text-purple-200 font-semibold mb-3">Target Player Address:</div>
-            <input
-              type="text"
-              placeholder="Enter wallet address..."
-              value={targetPlayer}
-              onChange={(e) => setTargetPlayer(e.target.value)}
-              className="w-full px-4 py-2 bg-purple-900/50 border border-purple-500/30 rounded-lg text-white placeholder-purple-400 text-sm"
-            />
-            <div className="text-xs text-purple-400 mt-2">
-              Cost: {stealCost.toLocaleString()} DEFI • 33% success rate
-            </div>
-          </div>
-        )}
-
-        {/* Action Buttons */}
-        <div className="space-y-3">
-          {/* Buy Button */}
-          {!showShieldOptions && !showSellOptions && !showStealOptions && (
-            <button
-              onClick={handleBuy}
-              disabled={!connected || loading}
-              className={`w-full py-3 bg-gradient-to-r from-green-600 to-green-700 rounded-xl font-semibold transition-all flex items-center justify-center gap-2 ${
-                !connected
-                  ? 'opacity-40 cursor-not-allowed'
-                  : 'hover:from-green-500 hover:to-green-600 hover:shadow-lg hover:shadow-green-500/50'
-              }`}
-            >
-              <span>🏠</span> {loading ? 'Processing...' : `Buy Property (${property.price.toLocaleString()} DEFI)`}
-            </button>
           )}
-
-          {/* Shield Button */}
-          {!showShieldOptions && !showSellOptions && !showStealOptions && (
-            <button
-              onClick={() => connected ? setShowShieldOptions(true) : null}
-              disabled={!connected || loading}
-              className={`w-full py-3 bg-gradient-to-r from-amber-600 to-amber-700 rounded-xl font-semibold transition-all flex items-center justify-center gap-2 ${
-                !connected
-                  ? 'opacity-40 cursor-not-allowed'
-                  : 'hover:from-amber-500 hover:to-amber-600 hover:shadow-lg hover:shadow-amber-500/50'
-              }`}
-            >
-              <span>🛡️</span> Shield Property
-            </button>
-          )}
-
-          {/* Confirm Shield */}
-          {showShieldOptions && connected && (
-            <button
-              onClick={handleShield}
-              disabled={loading}
-              className="w-full py-3 bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-500 hover:to-amber-600 disabled:from-gray-600 disabled:to-gray-700 rounded-xl font-semibold transition-all hover:shadow-lg hover:shadow-amber-500/50 disabled:cursor-not-allowed"
-            >
-              {loading ? 'Processing...' : `Confirm Shield (${(shieldCost * selectedCycles).toLocaleString()} DEFI)`}
-            </button>
-          )}
-
-          {/* Steal Button */}
-          {!showShieldOptions && !showSellOptions && !showStealOptions && (
-            <button
-              onClick={() => connected ? setShowStealOptions(true) : null}
-              disabled={!connected || loading}
-              className={`w-full py-3 bg-gradient-to-r from-red-600 to-red-700 rounded-xl font-semibold transition-all flex items-center justify-center gap-2 ${
-                !connected
-                  ? 'opacity-40 cursor-not-allowed'
-                  : 'hover:from-red-500 hover:to-red-600 hover:shadow-lg hover:shadow-red-500/50'
-              }`}
-            >
-              <span>🎯</span> Steal Property ({stealCost.toLocaleString()} DEFI)
-            </button>
-          )}
-
-          {/* Confirm Steal */}
-          {showStealOptions && connected && (
-            <button
-              onClick={handleSteal}
-              disabled={loading}
-              className="w-full py-3 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 disabled:from-gray-600 disabled:to-gray-700 rounded-xl font-semibold transition-all hover:shadow-lg hover:shadow-red-500/50 disabled:cursor-not-allowed"
-            >
-              {loading ? 'Processing...' : `Confirm Steal (${stealCost.toLocaleString()} DEFI)`}
-            </button>
-          )}
-
-          {/* Sell Button - Only show if user owns property */}
-          {connected && propertyData?.owned > 0 && !showShieldOptions && !showSellOptions && !showStealOptions && (
-            <button
-              onClick={() => {
-                setSlotsToSell(1);
-                setShowSellOptions(true);
-              }}
-              className="w-full py-3 bg-gradient-to-r from-orange-600 to-orange-700 hover:from-orange-500 hover:to-orange-600 rounded-xl font-semibold transition-all hover:shadow-lg hover:shadow-orange-500/50"
-            >
-              💰 Sell Property ({totalSellValue.toLocaleString()} DEFI)
-            </button>
-          )}
-
-          {/* Confirm Sell */}
-          {showSellOptions && connected && (
-            <button
-              onClick={handleSell}
-              disabled={loading}
-              className="w-full py-3 bg-gradient-to-r from-orange-600 to-orange-700 hover:from-orange-500 hover:to-orange-600 disabled:from-gray-600 disabled:to-gray-700 rounded-xl font-semibold transition-all hover:shadow-lg hover:shadow-orange-500/50 disabled:cursor-not-allowed"
-            >
-              {loading ? 'Processing...' : `Confirm Sale (${(sellValuePerSlot * slotsToSell).toLocaleString()} DEFI)`}
-            </button>
-          )}
-
-          {/* Back/Cancel Button - Show when in any sub-menu */}
-          {connected && (showShieldOptions || showSellOptions || showStealOptions) && (
-            <button
-              onClick={() => {
-                setShowShieldOptions(false);
-                setShowSellOptions(false);
-                setShowStealOptions(false);
-              }}
-              className="w-full py-3 bg-purple-600/20 hover:bg-purple-600/30 border border-purple-500/30 rounded-xl font-semibold transition-all"
-            >
-              ← Back
-            </button>
-          )}
-
-          {/* Close Button */}
-          <button
-            onClick={() => {
-              setShowShieldOptions(false);
-              setShowSellOptions(false);
-              setShowStealOptions(false);
-              onClose();
-            }}
-            className="w-full py-3 bg-white/10 hover:bg-white/15 rounded-xl font-semibold transition-all"
-          >
-            Close
-          </button>
         </div>
       </div>
     </div>

@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { useConnection } from '@solana/wallet-adapter-react';
 import { PROGRAM_ID, getPropertyById } from '@/utils/constants';
 import { BorshCoder, EventParser } from '@coral-xyz/anchor';
-import idl from '@/types/defipoly_program.json';
+import idl from '@/types/memeopoly_program.json';
 
 interface FeedItem {
   message: string;
