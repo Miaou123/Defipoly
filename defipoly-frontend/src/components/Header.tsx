@@ -1,15 +1,15 @@
 // ============================================
 // FILE: defipoly-frontend/src/components/Header.tsx
-// UPDATED: Handles async profile loading
+// UPDATED: Using custom styled wallet button
 // ============================================
 'use client';
 
 import { useWallet } from '@solana/wallet-adapter-react';
-import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
 import { useDefipoly } from '@/hooks/useDefipoly';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { getProfile } from '@/utils/profileStorage';
+import { StyledWalletButton } from './StyledWalletButton';
 
 export function Header() {
   const { connected, publicKey } = useWallet();
@@ -69,23 +69,6 @@ export function Header() {
     }
   }, [publicKey, mounted]);
 
-  if (!mounted) {
-    return (
-      <header className="bg-black/60 backdrop-blur-xl border-b border-purple-500/30 sticky top-0 z-50">
-        <div className="w-full px-6 py-4 flex justify-between items-center">
-          <div className="flex items-center gap-3">
-            <div className="text-2xl">🎲</div>
-            <div>
-              <h1 className="text-xl font-bold text-purple-100">Defipoly</h1>
-              <p className="text-xs text-purple-400">DeFi Monopoly on Solana</p>
-            </div>
-          </div>
-          <div className="w-32 h-10 bg-purple-900/20 rounded-lg animate-pulse"></div>
-        </div>
-      </header>
-    );
-  }
-
   return (
     <header className="bg-black/60 backdrop-blur-xl border-b border-purple-500/30 sticky top-0 z-50">
       <div className="w-full px-6 py-4 flex justify-between items-center">
@@ -100,7 +83,7 @@ export function Header() {
 
         {/* Right side - Profile, Balance & Wallet */}
         <div className="flex items-center gap-4">
-          {connected && (
+          {mounted && connected && (
             <>
               {/* Balance Display */}
               <div className="bg-purple-900/30 px-4 py-2 rounded-lg border border-purple-500/30">
@@ -144,7 +127,13 @@ export function Header() {
               </button>
             </>
           )}
-          <WalletMultiButton />
+          
+          {/* Custom Styled Wallet Button */}
+          {mounted ? (
+            <StyledWalletButton variant="header" />
+          ) : (
+            <div className="w-32 h-10 bg-purple-900/20 rounded-lg animate-pulse"></div>
+          )}
         </div>
       </div>
     </header>

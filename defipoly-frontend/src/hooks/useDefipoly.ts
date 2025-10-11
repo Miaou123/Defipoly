@@ -1,7 +1,6 @@
 // ============================================
 // FILE: defipoly-frontend/src/hooks/useDefipoly.ts
-// ENHANCED: Now stores all actions to backend automatically
-// FULLY FIXED: All imports match your actual codebase
+// Complete hook with all functions
 // ============================================
 
 import { useMemo, useState, useCallback, useEffect } from 'react';
@@ -10,34 +9,31 @@ import { AnchorProvider } from '@coral-xyz/anchor';
 import { PublicKey, SystemProgram, Transaction } from '@solana/web3.js';
 import { TOKEN_PROGRAM_ID, getAssociatedTokenAddress } from '@solana/spl-token';
 
-// Constants (only the actual exports from constants.ts)
+// Constants
 import { PROGRAM_ID, GAME_CONFIG, REWARD_POOL, TOKEN_MINT } from '@/utils/constants';
 
-// Program utilities (PDA functions, fetch functions, getProgram)
+// Program utilities
 import { 
   getProgram,
   getPropertyPDA,
   getPlayerPDA,
   getOwnershipPDA,
-  getSetCooldownPDA,      // ✅ Already have this
-  getSetOwnershipPDA,     // ✅ Already have this
-  getSetStatsPDA,         // ✅ Already have this
-  getStealRequestPDA,     // ✅ ADD THIS LINE
+  getSetCooldownPDA,
+  getSetOwnershipPDA,
+  getSetStatsPDA,
+  getStealRequestPDA,
   fetchPropertyData,
   fetchOwnershipData,
   fetchPlayerData,
-  checkPlayerExists,
-  type MemeopolyProgram,  // ✅ ADD THIS TYPE
 } from '@/utils/program';
 
 // Token utilities
 import { 
-  getOrCreateTokenAccount, 
   checkTokenAccountExists,
   createTokenAccountInstruction
 } from '@/utils/token';
 
-// 🆕 NEW: Import backend storage utilities
+// Backend storage utilities
 import { storeAction, eventToAction } from '@/utils/actionsStorage';
 import { BorshCoder, EventParser } from '@coral-xyz/anchor';
 import idl from '@/types/memeopoly_program.json';
@@ -50,7 +46,7 @@ export function useDefipoly() {
   const [tokenAccountExists, setTokenAccountExists] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  // 🆕 NEW: Initialize event parser for storing actions
+  // Initialize event parser for storing actions
   const eventParser = useMemo(() => {
     if (!wallet) return null;
     const coder = new BorshCoder(idl as any);
@@ -69,7 +65,7 @@ export function useDefipoly() {
     return getProgram(provider);
   }, [provider]);
 
-  // 🆕 NEW: Helper to store transaction events to backend
+  // Helper to store transaction events to backend
   const storeTransactionEvents = useCallback(async (signature: string) => {
     if (!eventParser) return;
     
@@ -206,7 +202,7 @@ export function useDefipoly() {
     setLoading(true);
     try {
       const transaction = new Transaction();
-  
+
       // Check token account exists
       const hasTokenAccount = await checkTokenAccountExists(connection, wallet.publicKey);
       
@@ -216,7 +212,7 @@ export function useDefipoly() {
         const createATAIx = await createTokenAccountInstruction(wallet.publicKey);
         transaction.add(createATAIx);
       }
-  
+
       // Check if player account exists
       const [playerPDA] = getPlayerPDA(wallet.publicKey);
       const playerData = await fetchPlayerData(program, wallet.publicKey);
@@ -234,91 +230,99 @@ export function useDefipoly() {
           .instruction();
         transaction.add(initPlayerIx);
       }
-  
+
       // Get token account address
       const playerTokenAccount = await getAssociatedTokenAddress(
         TOKEN_MINT,
         wallet.publicKey
       );
-  
+
       // Get PDAs
       const [propertyPDA] = getPropertyPDA(propertyId);
       const [ownershipPDA] = getOwnershipPDA(wallet.publicKey, propertyId);
       
-      // ✅ NEW: Fetch property to get setId
+      // Fetch property to get setId
       const propertyData = await (program.account as any).property.fetch(propertyPDA);
       const setId = propertyData.setId;
       
-      // ✅ NEW: Get the 3 new required PDAs
+      // Get the 3 new required PDAs
       const [setCooldownPDA] = getSetCooldownPDA(wallet.publicKey, setId);
       const [setOwnershipPDA] = getSetOwnershipPDA(wallet.publicKey, setId);
       const [setStatsPDA] = getSetStatsPDA(setId);
       
-      // ✅ NEW: Get dev token account
+      // Get dev token account
       const devWallet = new PublicKey("CgWTFX7JJQHed3qyMDjJkNCxK4sFe3wbDFABmWAAmrdS");
       const devTokenAccount = await getAssociatedTokenAddress(TOKEN_MINT, devWallet);
-  
+
       // Add buy property instruction
       const buyPropertyIx = await program.methods
         .buyProperty()
         .accountsPartial({
           property: propertyPDA,
           ownership: ownershipPDA,
-          setCooldown: setCooldownPDA,      // ✅ NEW
-          setOwnership: setOwnershipPDA,    // ✅ NEW
-          setStats: setStatsPDA,            // ✅ NEW
+          setCooldown: setCooldownPDA,
+          setOwnership: setOwnershipPDA,
+          setStats: setStatsPDA,
           playerAccount: playerPDA,
           player: wallet.publicKey,
           playerTokenAccount,
           rewardPoolVault: REWARD_POOL,
-          devTokenAccount: devTokenAccount, // ✅ NEW
+          devTokenAccount: devTokenAccount,
           gameConfig: GAME_CONFIG,
           tokenProgram: TOKEN_PROGRAM_ID,
           systemProgram: SystemProgram.programId,
         })
         .instruction();
       transaction.add(buyPropertyIx);
-  
-      // Send transaction
-      const signature = await provider.sendAndConfirm(transaction);
-      console.log('Property bought:', signature);
+
+      // Send and confirm transaction
+      const signature = await provider.sendAndConfirm(transaction, [], {
+        commitment: 'confirmed',
+        skipPreflight: false,
+      });
       
-      // 🆕 NEW: Store to backend
-      await storeTransactionEvents(signature);
+      console.log('✅ Property bought successfully:', signature);
+      
+      // Try to store to backend (but don't fail the whole transaction if this errors)
+      try {
+        await storeTransactionEvents(signature);
+        console.log('✅ Events stored to backend');
+      } catch (backendError) {
+        console.warn('⚠️ Backend storage failed (transaction still succeeded):', backendError);
+      }
       
       // Update states
       if (!hasTokenAccount) setTokenAccountExists(true);
       if (!playerData) setPlayerInitialized(true);
       
       return signature;
-    } catch (error) {
-      console.error('Error buying property:', error);
+    } catch (error: any) {
+      console.error('❌ Error in buyProperty:', error);
       throw error;
     } finally {
       setLoading(false);
     }
   }, [program, wallet, connection, provider, storeTransactionEvents]);
-  
-  // ✨ ENHANCED: activateShield now stores to backend
+
   const activateShield = useCallback(async (propertyId: number, cycles: number) => {
     if (!program || !wallet) throw new Error('Wallet not connected');
     if (!playerInitialized) throw new Error('Initialize player first');
-  
+
     setLoading(true);
     try {
       const playerTokenAccount = await getAssociatedTokenAddress(
         TOKEN_MINT,
         wallet.publicKey
       );
-  
-      // ✅ Get dev token account
+
+      // Get dev token account
       const devWallet = new PublicKey("CgWTFX7JJQHed3qyMDjJkNCxK4sFe3wbDFABmWAAmrdS");
       const devTokenAccount = await getAssociatedTokenAddress(TOKEN_MINT, devWallet);
-  
+
       const [propertyPDA] = getPropertyPDA(propertyId);
       const [playerPDA] = getPlayerPDA(wallet.publicKey);
       const [ownershipPDA] = getOwnershipPDA(wallet.publicKey, propertyId);
-  
+
       const tx = await program.methods
         .activateShield(cycles)
         .accountsPartial({
@@ -333,24 +337,20 @@ export function useDefipoly() {
           tokenProgram: TOKEN_PROGRAM_ID,
         })
         .rpc();
-  
+
       console.log('✅ Shield activated successfully:', tx);
       
-      // ✅ Wrap backend storage in try-catch
+      // Try to store to backend (don't fail if this errors)
       try {
         await storeTransactionEvents(tx);
+        console.log('✅ Events stored to backend');
       } catch (backendError) {
         console.warn('⚠️ Backend storage failed (non-critical):', backendError);
       }
       
       return tx;
     } catch (error: any) {
-      console.error('Error activating shield:', error);
-      // ✅ Don't re-throw if transaction already processed
-      if (error?.message?.includes('already been processed')) {
-        console.log('✅ Shield activation was already successful');
-        return null;
-      }
+      console.error('❌ Error activating shield:', error);
       throw error;
     } finally {
       setLoading(false);
@@ -360,23 +360,23 @@ export function useDefipoly() {
   const claimRewards = useCallback(async () => {
     if (!program || !wallet) throw new Error('Wallet not connected');
     if (!playerInitialized) throw new Error('Initialize player first');
-  
+
     setLoading(true);
     try {
       const playerTokenAccount = await getAssociatedTokenAddress(
         TOKEN_MINT,
         wallet.publicKey
       );
-  
+
       const [playerPDA] = getPlayerPDA(wallet.publicKey);
-  
+
       const playerData = await fetchPlayerData(program, wallet.publicKey);
       if (!playerData || playerData.propertiesOwnedCount === 0) {
         throw new Error('No properties to claim rewards from');
       }
-  
+
       const remainingAccounts: any[] = [];
-  
+
       for (let propertyId = 0; propertyId < 22; propertyId++) {
         const [ownershipPDA] = getOwnershipPDA(wallet.publicKey, propertyId);
         try {
@@ -398,15 +398,9 @@ export function useDefipoly() {
           continue;
         }
       }
-  
-      const actualNumProperties = remainingAccounts.length / 2;
-  
-      if (actualNumProperties === 0) {
-        throw new Error('No properties found to claim rewards from');
-      }
-  
+
       const tx = await program.methods
-        .claimRewards(actualNumProperties)
+        .claimRewards()
         .accountsPartial({
           playerAccount: playerPDA,
           player: wallet.publicKey,
@@ -417,54 +411,25 @@ export function useDefipoly() {
         })
         .remainingAccounts(remainingAccounts)
         .rpc();
-  
+
       console.log('✅ Rewards claimed successfully:', tx);
-      
-      // ✅ FIXED: Wrap backend storage in try-catch - don't let it fail the claim
+
+      // Try to store to backend
       try {
         await storeTransactionEvents(tx);
       } catch (backendError) {
         console.warn('⚠️ Backend storage failed (non-critical):', backendError);
-        // Don't throw - claim was successful even if backend storage failed
       }
-      
+
       return tx;
     } catch (error: any) {
-      console.error('Error claiming rewards:', error);
-      // ✅ FIXED: Don't re-throw if transaction already processed
-      if (error?.message?.includes('already been processed')) {
-        console.log('✅ Claim was already successful');
-        return null; // Return null instead of throwing
-      }
+      console.error('❌ Error claiming rewards:', error);
       throw error;
     } finally {
       setLoading(false);
     }
   }, [program, wallet, playerInitialized, storeTransactionEvents]);
 
-  const getPropertyData = useCallback(async (propertyId: number) => {
-    if (!program) return null;
-    return await fetchPropertyData(program, propertyId);
-  }, [program]);
-
-  const getOwnershipData = useCallback(async (propertyId: number) => {
-    if (!program || !wallet) {
-      console.log('⚠️ getOwnershipData: Missing program or wallet');
-      return null;
-    }
-    
-    console.log(`🔍 getOwnershipData called for property ${propertyId}`);
-    console.log(`  Using wallet: ${wallet.publicKey.toString()}`);
-    
-    return await fetchOwnershipData(program, wallet.publicKey, propertyId);
-  }, [program, wallet]);
-
-  const getPlayerData = useCallback(async () => {
-    if (!program || !wallet) return null;
-    return await fetchPlayerData(program, wallet.publicKey);
-  }, [program, wallet]);
-
-  // ✨ ENHANCED: sellProperty now stores to backend
   const sellProperty = useCallback(async (propertyId: number, slots: number) => {
     if (!program || !wallet) throw new Error('Wallet not connected');
     if (!playerInitialized) throw new Error('Initialize player first');
@@ -494,14 +459,18 @@ export function useDefipoly() {
         })
         .rpc();
 
-      console.log('Property sold:', tx);
-      
-      // 🆕 NEW: Store to backend
-      await storeTransactionEvents(tx);
-      
+      console.log('✅ Property sold successfully:', tx);
+
+      // Try to store to backend
+      try {
+        await storeTransactionEvents(tx);
+      } catch (backendError) {
+        console.warn('⚠️ Backend storage failed (non-critical):', backendError);
+      }
+
       return tx;
-    } catch (error) {
-      console.error('Error selling property:', error);
+    } catch (error: any) {
+      console.error('❌ Error selling property:', error);
       throw error;
     } finally {
       setLoading(false);
@@ -511,7 +480,7 @@ export function useDefipoly() {
   const stealProperty = useCallback(async (propertyId: number, targetPlayer: string) => {
     if (!program || !wallet || !provider) throw new Error('Wallet not connected');
     if (!playerInitialized) throw new Error('Initialize player first');
-  
+
     setLoading(true);
     try {
       const targetPlayerPubkey = new PublicKey(targetPlayer);
@@ -524,72 +493,65 @@ export function useDefipoly() {
       const [propertyPDA] = getPropertyPDA(propertyId);
       const [playerPDA] = getPlayerPDA(wallet.publicKey);
       const [targetOwnershipPDA] = getOwnershipPDA(targetPlayerPubkey, propertyId);
-      const [stealRequestPDA] = getStealRequestPDA(wallet.publicKey, propertyId); // ✅ Now works!
+      const [stealRequestPDA] = getStealRequestPDA(wallet.publicKey, propertyId);
       
-      // ✅ STEP 1: Request Steal (Commit)
-      console.log('🎲 Step 1: Committing steal request...');
+      // Generate user randomness (32 bytes)
+      const userRandomness = new Uint8Array(32);
+      crypto.getRandomValues(userRandomness);
       
-      const userRandomness = Array.from(crypto.getRandomValues(new Uint8Array(32)));
+      console.log('🎲 Initiating steal with randomness...');
       
+      // Step 1: Request steal
       const requestTx = await program.methods
-        .stealPropertyRequest(
-          targetPlayerPubkey,
-          true, // isTargeted
-          userRandomness
-        )
+        .requestSteal(targetPlayerPubkey, Array.from(userRandomness))
         .accountsPartial({
           property: propertyPDA,
           targetOwnership: targetOwnershipPDA,
           stealRequest: stealRequestPDA,
           playerAccount: playerPDA,
+          player: wallet.publicKey,
           playerTokenAccount,
           rewardPoolVault: REWARD_POOL,
-          devTokenAccount: devTokenAccount,
+          devTokenAccount,
           gameConfig: GAME_CONFIG,
-          attacker: wallet.publicKey,
           tokenProgram: TOKEN_PROGRAM_ID,
           systemProgram: SystemProgram.programId,
         })
         .rpc();
       
-      console.log('✅ Steal committed:', requestTx);
-      await storeTransactionEvents(requestTx);
+      console.log('✅ Steal requested:', requestTx);
       
-      // ✅ STEP 2: Wait at least 1 slot (~400-600ms)
-      console.log('⏳ Waiting for slot confirmation (1 second)...');
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Wait for VRF fulfillment
+      console.log('⏳ Waiting for VRF fulfillment...');
+      await new Promise(resolve => setTimeout(resolve, 3000));
       
-      // ✅ STEP 3: Fulfill Steal (Reveal)
-      console.log('🎲 Step 2: Fulfilling steal...');
-      
+      // Step 2: Fulfill the steal request
       const [attackerOwnershipPDA] = getOwnershipPDA(wallet.publicKey, propertyId);
-      const SLOT_HASHES_SYSVAR = new PublicKey('SysvarS1otHashes111111111111111111111111111');
       
       const fulfillTx = await program.methods
-        .stealPropertyFulfill()
+        .fulfillSteal()
         .accountsPartial({
           property: propertyPDA,
-          stealRequest: stealRequestPDA,
           targetOwnership: targetOwnershipPDA,
           attackerOwnership: attackerOwnershipPDA,
-          attackerAccount: playerPDA,
+          stealRequest: stealRequestPDA,
+          playerAccount: playerPDA,
+          player: wallet.publicKey,
           gameConfig: GAME_CONFIG,
-          slotHashes: SLOT_HASHES_SYSVAR,
-          payer: wallet.publicKey,
           systemProgram: SystemProgram.programId,
         })
         .rpc();
       
       console.log('✅ Steal fulfilled:', fulfillTx);
-      await storeTransactionEvents(fulfillTx);
       
-      // ✅ STEP 4: Check result - WITH PROPER TYPING
+      // Fetch the result
       try {
+        await new Promise(resolve => setTimeout(resolve, 2000));
         // Use type assertion for accounts that aren't in standard IDL
         const stealRequest = await (program.account as any).stealRequest.fetch(stealRequestPDA);
         
         if (stealRequest.success) {
-          console.log('🎉 STEAL SUCCESSFUL! VRF:', stealRequest.vrfResult.toString());
+          console.log('✅ Steal successful! VRF:', stealRequest.vrfResult.toString());
         } else {
           console.log('❌ Steal failed. VRF:', stealRequest.vrfResult.toString());
         }
@@ -628,6 +590,21 @@ export function useDefipoly() {
     }
   }, [program, wallet, provider, connection, playerInitialized, storeTransactionEvents]);
 
+  const getPropertyData = useCallback(async (propertyId: number) => {
+    if (!program) throw new Error('Program not initialized');
+    return await fetchPropertyData(program, propertyId);
+  }, [program]);
+
+  const getOwnershipData = useCallback(async (propertyId: number) => {
+    if (!program || !wallet) throw new Error('Wallet not connected');
+    return await fetchOwnershipData(program, wallet.publicKey, propertyId);
+  }, [program, wallet]);
+
+  const getPlayerData = useCallback(async () => {
+    if (!program || !wallet) throw new Error('Wallet not connected');
+    return await fetchPlayerData(program, wallet.publicKey);
+  }, [program, wallet]);
+
   return {
     program,
     tokenBalance,
@@ -639,8 +616,8 @@ export function useDefipoly() {
     buyProperty,
     activateShield,
     claimRewards,
-    sellProperty,     
-    stealProperty,   
+    sellProperty,
+    stealProperty,
     getPropertyData,
     getOwnershipData,
     getPlayerData,

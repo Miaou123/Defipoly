@@ -3,11 +3,12 @@
 import { PROPERTIES } from '@/utils/constants';
 import { useRewards } from '@/hooks/useRewards';
 import { useDefipoly } from '@/hooks/useDefipoly';
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useWallet, useConnection } from '@solana/wallet-adapter-react';
 import { PROGRAM_ID } from '@/utils/constants';
 import { BorshCoder, EventParser } from '@coral-xyz/anchor';
 import idl from '@/types/memeopoly_program.json';
+import { StyledWalletButton } from './StyledWalletButton';
 
 interface BoardProps {
   onSelectProperty: (propertyId: number) => void;
@@ -109,6 +110,11 @@ export function Board({ onSelectProperty }: BoardProps) {
   const { claimRewards, loading: claimLoading } = useDefipoly();
   const [claiming, setClaiming] = useState(false);
   const claimingRef = useRef(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Color mapping to prevent Tailwind purging
   const getColorClass = (colorString: string) => {
@@ -178,9 +184,7 @@ export function Board({ onSelectProperty }: BoardProps) {
       alert(`Successfully claimed ${unclaimedRewards.toLocaleString()} DEFI!`);
     } catch (error: any) {
       console.error('Error claiming rewards:', error);
-      alert(error?.message?.includes('already been processed') 
-        ? 'Claim successful!' 
-        : 'Failed to claim rewards.');
+      alert('Failed to claim rewards. Please try again.');
     } finally {
       setClaiming(false);
       claimingRef.current = false;
@@ -299,7 +303,7 @@ export function Board({ onSelectProperty }: BoardProps) {
             </div>
             <div className="relative text-sm text-white/70 font-bold tracking-widest mb-8">SOLANA EDITION</div>
 
-            {/* Rewards */}
+            {/* Rewards or Connect Wallet */}
             {connected ? (
               <div className="relative w-full max-w-md px-4">
                 {rewardsLoading ? (
@@ -344,8 +348,46 @@ export function Board({ onSelectProperty }: BoardProps) {
                 )}
               </div>
             ) : (
-              <div className="relative text-white/60 text-sm text-center">
-                Connect wallet to view rewards
+              <div className="relative space-y-8 px-4 max-w-md w-full">
+                {/* Message */}
+                <div className="text-center space-y-3">
+                  <p className="text-white/90 text-2xl font-bold">
+                    Welcome to Memeopoly
+                  </p>
+                  <p className="text-white/60 text-sm">
+                    Connect your Solana wallet to start playing
+                  </p>
+                </div>
+                
+                {/* Prominent Connect Button */}
+                <div className="flex justify-center">
+                  {mounted ? (
+                    <StyledWalletButton variant="board" />
+                  ) : (
+                    <div className="w-64 h-16 bg-purple-500/20 rounded-2xl animate-pulse"></div>
+                  )}
+                </div>
+
+                {/* Feature Icons */}
+                <div className="grid grid-cols-3 gap-4 pt-4">
+                  <div className="bg-black/20 backdrop-blur rounded-xl p-4 text-center border border-purple-500/20 hover:border-purple-500/40 transition-all">
+                    <div className="text-3xl mb-2">🏠</div>
+                    <div className="text-xs text-white/80 font-semibold">Buy Properties</div>
+                  </div>
+                  <div className="bg-black/20 backdrop-blur rounded-xl p-4 text-center border border-purple-500/20 hover:border-purple-500/40 transition-all">
+                    <div className="text-3xl mb-2">💰</div>
+                    <div className="text-xs text-white/80 font-semibold">Earn Rewards</div>
+                  </div>
+                  <div className="bg-black/20 backdrop-blur rounded-xl p-4 text-center border border-purple-500/20 hover:border-purple-500/40 transition-all">
+                    <div className="text-3xl mb-2">🎯</div>
+                    <div className="text-xs text-white/80 font-semibold">Steal Slots</div>
+                  </div>
+                </div>
+
+                {/* Additional Info */}
+                <div className="text-center text-white/40 text-xs">
+                  <p>Powered by Solana • Secure • Decentralized</p>
+                </div>
               </div>
             )}
           </div>
