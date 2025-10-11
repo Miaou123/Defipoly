@@ -6,6 +6,7 @@ import { useDefipoly } from '@/hooks/useDefipoly';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { useAnchorWallet } from '@solana/wallet-adapter-react';
 import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
+import { useTokenBalance } from '@/hooks/useTokenBalance';
 
 interface PropertyModalProps {
   propertyId: number | null;
@@ -28,13 +29,16 @@ export function PropertyModal({ propertyId, onClose }: PropertyModalProps) {
   const [showShieldOptions, setShowShieldOptions] = useState(false);
   const [showSellOptions, setShowSellOptions] = useState(false);
   const [showStealOptions, setShowStealOptions] = useState(false);
-  const [slotsToShield, setSlotsToShield] = useState(1);       // ✅ Changed from selectedCycles
+  const [slotsToShield, setSlotsToShield] = useState(1);
   const [slotsToSell, setSlotsToSell] = useState(1);
   const [propertyData, setPropertyData] = useState<any>(null);
   const [targetPlayer, setTargetPlayer] = useState<string>('');
 
   const wallet = useAnchorWallet();
   const property = propertyId !== null ? PROPERTIES.find(p => p.id === propertyId) : null;
+  
+  // ✅ Get token balance
+  const { balance } = useTokenBalance();
 
   useEffect(() => {
     if (propertyId !== null && connected && program) {
@@ -44,7 +48,6 @@ export function PropertyModal({ propertyId, onClose }: PropertyModalProps) {
           const ownershipData = wallet ? await getOwnershipData(propertyId) : null;
           
           if (onChainPropertyData) {
-            // ✅ Check if shield is active
             const now = Date.now() / 1000;
             const shieldActive = ownershipData 
               ? (ownershipData.slotsShielded > 0 && ownershipData.shieldExpiry.toNumber() > now)
@@ -52,7 +55,7 @@ export function PropertyModal({ propertyId, onClose }: PropertyModalProps) {
 
             setPropertyData({
               availableSlots: onChainPropertyData.availableSlots,
-              maxSlotsPerProperty: onChainPropertyData.maxSlotsPerProperty, // ✅ Changed from totalSlots
+              maxSlotsPerProperty: onChainPropertyData.maxSlotsPerProperty,
               owned: ownershipData?.slotsOwned || 0,
               slotsShielded: ownershipData?.slotsShielded || 0,
               shieldActive,
@@ -72,9 +75,17 @@ export function PropertyModal({ propertyId, onClose }: PropertyModalProps) {
 
   if (!property || propertyId === null) return null;
 
-  // ✅ Calculate daily income from constants and yield %
-  const dailyIncome = property.dailyIncome; // From PROPERTIES constant
-  const dailyIncomePerSlot = dailyIncome / property.slotsPerProperty;
+  const dailyIncome = property.dailyIncome;
+
+  // ✅ Calculate costs for each action
+  const buyCost = property.price;
+  const stealCost = property.price * 0.5;
+  const shieldCost = (property.price * (propertyData?.shieldCostPercentBps || 500) / 10000) * slotsToShield;
+
+  // ✅ Check if user has sufficient balance
+  const canBuy = balance >= buyCost;
+  const canSteal = balance >= stealCost;
+  const canShield = balance >= shieldCost;
 
   const handleBuy = async () => {
     if (!connected) return;
@@ -101,7 +112,7 @@ export function PropertyModal({ propertyId, onClose }: PropertyModalProps) {
 
     setLoading(true);
     try {
-      await activateShield(propertyId, slotsToShield); // ✅ Now takes slots, not cycles
+      await activateShield(propertyId, slotsToShield);
       alert(`Shield activated for ${slotsToShield} slot(s)!`);
       setShowShieldOptions(false);
       onClose();
@@ -176,6 +187,14 @@ export function PropertyModal({ propertyId, onClose }: PropertyModalProps) {
         </div>
 
         <div className="space-y-4">
+          {/* Balance Display */}
+          {connected && (
+            <div className="bg-gray-700 rounded p-3 text-center">
+              <span className="text-gray-400 text-sm">Your Balance: </span>
+              <span className="font-bold text-lg">{balance.toFixed(2)} DEFI</span>
+            </div>
+          )}
+
           {/* Property Stats */}
           <div className="grid grid-cols-2 gap-4">
             <div>
@@ -184,7 +203,7 @@ export function PropertyModal({ propertyId, onClose }: PropertyModalProps) {
             </div>
             <div>
               <div className="text-gray-400 text-sm">Daily Income (per slot)</div>
-              <div className="text-xl font-bold text-green-500">{dailyIncomePerSlot.toFixed(2)} DEFI</div>
+              <div className="text-xl font-bold text-green-500">{dailyIncome.toFixed(2)} DEFI</div>
             </div>
             <div>
               <div className="text-gray-400 text-sm">Available Slots</div>
@@ -193,8 +212,8 @@ export function PropertyModal({ propertyId, onClose }: PropertyModalProps) {
               </div>
             </div>
             <div>
-              <div className="text-gray-400 text-sm">ROI</div>
-              <div className="text-xl font-bold">{property.roi} days</div>
+              <div className="text-gray-400 text-sm">Set Bonus</div>
+              <div className="text-xl font-bold text-purple-400">+40% (1.4x)</div>
             </div>
           </div>
 
@@ -210,11 +229,10 @@ export function PropertyModal({ propertyId, onClose }: PropertyModalProps) {
                 <div className="flex justify-between">
                   <span>Your Daily Income:</span>
                   <span className="font-semibold text-green-500">
-                    {(dailyIncomePerSlot * propertyData.owned).toFixed(2)} DEFI
+                    {(dailyIncome * propertyData.owned).toFixed(2)} DEFI
                   </span>
                 </div>
                 
-                {/* ✅ NEW Shield Status */}
                 {propertyData.shieldActive ? (
                   <div className="bg-green-900/30 border border-green-500 rounded p-2 mt-2">
                     <div className="flex justify-between">
@@ -243,10 +261,14 @@ export function PropertyModal({ propertyId, onClose }: PropertyModalProps) {
               {(!propertyData || propertyData.availableSlots > 0) && (
                 <button
                   onClick={handleBuy}
-                  disabled={loading}
-                  className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 py-3 rounded font-semibold"
+                  disabled={loading || !canBuy}
+                  className={`w-full py-3 rounded font-semibold transition-all ${
+                    !canBuy 
+                      ? 'bg-blue-900 cursor-not-allowed' 
+                      : 'bg-blue-600 hover:bg-blue-700'
+                  }`}
                 >
-                  {loading ? 'Processing...' : `Buy 1 Slot (${property.price} DEFI)`}
+                  {loading ? 'Processing...' : `Buy 1 Slot (${buyCost} DEFI)`}
                 </button>
               )}
 
@@ -256,7 +278,12 @@ export function PropertyModal({ propertyId, onClose }: PropertyModalProps) {
                   {!showShieldOptions ? (
                     <button
                       onClick={() => setShowShieldOptions(true)}
-                      className="w-full bg-green-600 hover:bg-green-700 py-3 rounded font-semibold"
+                      disabled={!canShield}
+                      className={`w-full py-3 rounded font-semibold transition-all ${
+                        !canShield 
+                          ? 'bg-green-900 cursor-not-allowed' 
+                          : 'bg-green-600 hover:bg-green-700'
+                      }`}
                     >
                       🛡️ Activate Shield
                     </button>
@@ -274,16 +301,25 @@ export function PropertyModal({ propertyId, onClose }: PropertyModalProps) {
                         />
                       </div>
                       <div className="text-sm text-gray-400">
-                        Shield Cost: ~{((property.price * (propertyData.shieldCostPercentBps || 500) / 10000) * slotsToShield).toFixed(2)} DEFI
+                        Shield Cost: ~{shieldCost.toFixed(2)} DEFI
                       </div>
                       <div className="text-xs text-gray-500">
                         Duration: 48 hours
                       </div>
+                      {!canShield && (
+                        <div className="text-red-400 text-sm">
+                          ⚠️ Insufficient balance
+                        </div>
+                      )}
                       <div className="flex gap-2">
                         <button
                           onClick={handleShield}
-                          disabled={loading}
-                          className="flex-1 bg-green-600 hover:bg-green-700 disabled:bg-gray-600 py-2 rounded"
+                          disabled={loading || !canShield}
+                          className={`flex-1 py-2 rounded ${
+                            loading || !canShield
+                              ? 'bg-green-900 cursor-not-allowed'
+                              : 'bg-green-600 hover:bg-green-700'
+                          }`}
                         >
                           Confirm
                         </button>
@@ -354,9 +390,14 @@ export function PropertyModal({ propertyId, onClose }: PropertyModalProps) {
                   {!showStealOptions ? (
                     <button
                       onClick={() => setShowStealOptions(true)}
-                      className="w-full bg-red-600 hover:bg-red-700 py-3 rounded font-semibold"
+                      disabled={!canSteal}
+                      className={`w-full py-3 rounded font-semibold transition-all ${
+                        !canSteal 
+                          ? 'bg-red-900 cursor-not-allowed' 
+                          : 'bg-red-600 hover:bg-red-700'
+                      }`}
                     >
-                      🎯 Attempt Steal
+                      🎯 Attempt Steal ({stealCost.toFixed(0)} DEFI)
                     </button>
                   ) : (
                     <div className="bg-gray-700 p-4 rounded space-y-2">
@@ -368,13 +409,22 @@ export function PropertyModal({ propertyId, onClose }: PropertyModalProps) {
                         className="w-full bg-gray-800 px-3 py-2 rounded"
                       />
                       <div className="text-sm text-gray-400">
-                        Cost: {(property.price * 0.5).toFixed(2)} DEFI | Success Rate: 25%
+                        Cost: {stealCost.toFixed(2)} DEFI | Success Rate: 25%
                       </div>
+                      {!canSteal && (
+                        <div className="text-red-400 text-sm">
+                          ⚠️ Insufficient balance
+                        </div>
+                      )}
                       <div className="flex gap-2">
                         <button
                           onClick={handleSteal}
-                          disabled={loading}
-                          className="flex-1 bg-red-600 hover:bg-red-700 disabled:bg-gray-600 py-2 rounded"
+                          disabled={loading || !canSteal}
+                          className={`flex-1 py-2 rounded ${
+                            loading || !canSteal
+                              ? 'bg-red-900 cursor-not-allowed'
+                              : 'bg-red-600 hover:bg-red-700'
+                          }`}
                         >
                           {loading ? 'Processing...' : 'Confirm Steal'}
                         </button>

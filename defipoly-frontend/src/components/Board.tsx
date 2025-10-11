@@ -319,7 +319,7 @@ export function Board({ onSelectProperty }: BoardProps) {
                         {unclaimedRewards > 0 && (
                           <button
                             onClick={handleClaimRewards}
-                            disabled={claiming || claimLoading}
+                            disabled={claiming || claimLoading || unclaimedRewards === 0}
                             className="w-full py-3 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-400 hover:to-emerald-400 disabled:from-gray-700 disabled:to-gray-800 rounded-xl font-black text-white shadow-lg hover:shadow-green-500/50 transition-all transform hover:scale-105 disabled:scale-100"
                           >
                             {claiming ? '⏳ Claiming...' : '🎁 CLAIM NOW'}

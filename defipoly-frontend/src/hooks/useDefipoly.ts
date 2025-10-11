@@ -303,18 +303,22 @@ export function useDefipoly() {
   const activateShield = useCallback(async (propertyId: number, cycles: number) => {
     if (!program || !wallet) throw new Error('Wallet not connected');
     if (!playerInitialized) throw new Error('Initialize player first');
-
+  
     setLoading(true);
     try {
       const playerTokenAccount = await getAssociatedTokenAddress(
         TOKEN_MINT,
         wallet.publicKey
       );
-
+  
+      // ✅ Get dev token account
+      const devWallet = new PublicKey("CgWTFX7JJQHed3qyMDjJkNCxK4sFe3wbDFABmWAAmrdS");
+      const devTokenAccount = await getAssociatedTokenAddress(TOKEN_MINT, devWallet);
+  
       const [propertyPDA] = getPropertyPDA(propertyId);
       const [playerPDA] = getPlayerPDA(wallet.publicKey);
       const [ownershipPDA] = getOwnershipPDA(wallet.publicKey, propertyId);
-
+  
       const tx = await program.methods
         .activateShield(cycles)
         .accountsPartial({
@@ -324,41 +328,85 @@ export function useDefipoly() {
           player: wallet.publicKey,
           playerTokenAccount,
           rewardPoolVault: REWARD_POOL,
+          devTokenAccount: devTokenAccount,
           gameConfig: GAME_CONFIG,
           tokenProgram: TOKEN_PROGRAM_ID,
         })
         .rpc();
-
-      console.log('Shield activated:', tx);
+  
+      console.log('✅ Shield activated successfully:', tx);
       
-      // 🆕 NEW: Store to backend
-      await storeTransactionEvents(tx);
+      // ✅ Wrap backend storage in try-catch
+      try {
+        await storeTransactionEvents(tx);
+      } catch (backendError) {
+        console.warn('⚠️ Backend storage failed (non-critical):', backendError);
+      }
       
       return tx;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error activating shield:', error);
+      // ✅ Don't re-throw if transaction already processed
+      if (error?.message?.includes('already been processed')) {
+        console.log('✅ Shield activation was already successful');
+        return null;
+      }
       throw error;
     } finally {
       setLoading(false);
     }
   }, [program, wallet, playerInitialized, storeTransactionEvents]);
 
-  // ✨ ENHANCED: claimRewards now stores to backend
   const claimRewards = useCallback(async () => {
     if (!program || !wallet) throw new Error('Wallet not connected');
     if (!playerInitialized) throw new Error('Initialize player first');
-
+  
     setLoading(true);
     try {
       const playerTokenAccount = await getAssociatedTokenAddress(
         TOKEN_MINT,
         wallet.publicKey
       );
-
+  
       const [playerPDA] = getPlayerPDA(wallet.publicKey);
-
+  
+      const playerData = await fetchPlayerData(program, wallet.publicKey);
+      if (!playerData || playerData.propertiesOwnedCount === 0) {
+        throw new Error('No properties to claim rewards from');
+      }
+  
+      const remainingAccounts: any[] = [];
+  
+      for (let propertyId = 0; propertyId < 22; propertyId++) {
+        const [ownershipPDA] = getOwnershipPDA(wallet.publicKey, propertyId);
+        try {
+          const ownershipData = await fetchOwnershipData(program, wallet.publicKey, propertyId);
+          if (ownershipData?.slotsOwned && ownershipData.slotsOwned > 0) {
+            const [propertyPDA] = getPropertyPDA(propertyId);
+            remainingAccounts.push({
+              pubkey: ownershipPDA,
+              isWritable: false,
+              isSigner: false,
+            });
+            remainingAccounts.push({
+              pubkey: propertyPDA,
+              isWritable: false,
+              isSigner: false,
+            });
+          }
+        } catch (e) {
+          continue;
+        }
+      }
+  
+      const actualNumProperties = remainingAccounts.length / 2;
+  
+      if (actualNumProperties === 0) {
+        throw new Error('No properties found to claim rewards from');
+      }
+  
       const tx = await program.methods
-        .claimRewards()
+        .claimRewards(actualNumProperties)
         .accountsPartial({
           playerAccount: playerPDA,
           player: wallet.publicKey,
@@ -367,16 +415,27 @@ export function useDefipoly() {
           gameConfig: GAME_CONFIG,
           tokenProgram: TOKEN_PROGRAM_ID,
         })
+        .remainingAccounts(remainingAccounts)
         .rpc();
-
-      console.log('Rewards claimed:', tx);
+  
+      console.log('✅ Rewards claimed successfully:', tx);
       
-      // 🆕 NEW: Store to backend
-      await storeTransactionEvents(tx);
+      // ✅ FIXED: Wrap backend storage in try-catch - don't let it fail the claim
+      try {
+        await storeTransactionEvents(tx);
+      } catch (backendError) {
+        console.warn('⚠️ Backend storage failed (non-critical):', backendError);
+        // Don't throw - claim was successful even if backend storage failed
+      }
       
       return tx;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error claiming rewards:', error);
+      // ✅ FIXED: Don't re-throw if transaction already processed
+      if (error?.message?.includes('already been processed')) {
+        console.log('✅ Claim was already successful');
+        return null; // Return null instead of throwing
+      }
       throw error;
     } finally {
       setLoading(false);

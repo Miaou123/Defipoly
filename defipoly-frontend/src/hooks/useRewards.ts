@@ -1,95 +1,99 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { useDefipoly } from './useDefipoly';
 import { PROPERTIES } from '@/utils/constants';
 
 export function useRewards() {
-  const { publicKey, connected } = useWallet();
-  const { program, getPlayerData, getOwnershipData, getPropertyData } = useDefipoly();
-  const [unclaimedRewards, setUnclaimedRewards] = useState(0);
+  const { wallet } = useWallet();
+  const { getPlayerData, getOwnershipData, program } = useDefipoly();
+  
+  const [ownerships, setOwnerships] = useState<any[]>([]);
+  const [lastClaimTime, setLastClaimTime] = useState<number>(Date.now());
   const [dailyIncome, setDailyIncome] = useState(0);
+  const [unclaimedRewards, setUnclaimedRewards] = useState(0);
   const [loading, setLoading] = useState(false);
 
-  const calculateRewards = useCallback(async () => {
-    if (!program || !publicKey || !connected) {
+  // Fetch from blockchain every 30 seconds
+  useEffect(() => {
+    if (!wallet || !program) return;
+
+    const fetchData = async () => {
+      setLoading(true);
+      try {
+        const playerData = await getPlayerData();
+        if (!playerData) {
+          setLoading(false);
+          return;
+        }
+
+        const ownershipPromises = PROPERTIES.map(async (prop) => {
+          const ownership = await getOwnershipData(prop.id);
+          if (ownership?.slotsOwned && ownership.slotsOwned > 0) {
+            return {
+              propertyId: prop.id,
+              slotsOwned: ownership.slotsOwned,
+              purchaseTimestamp: ownership.purchaseTimestamp.toNumber(),
+              dailyIncomePerSlot: prop.dailyIncome,
+            };
+          }
+          return null;
+        });
+
+        const results = await Promise.all(ownershipPromises);
+        const validOwnerships = results.filter((o): o is NonNullable<typeof o> => o !== null);
+        
+        setOwnerships(validOwnerships);
+        setLastClaimTime(playerData.lastClaimTimestamp.toNumber());
+        
+        const totalDaily = validOwnerships.reduce((sum, o) => 
+          sum + (o.dailyIncomePerSlot * o.slotsOwned), 0
+        );
+        setDailyIncome(totalDaily);
+      } catch (error) {
+        console.error('Error fetching rewards data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+    const interval = setInterval(fetchData, 30000); // Sync every 30s
+    return () => clearInterval(interval);
+  }, [wallet, program, getPlayerData, getOwnershipData]);
+
+  // Calculate rewards client-side every second
+  useEffect(() => {
+    if (ownerships.length === 0) {
       setUnclaimedRewards(0);
-      setDailyIncome(0);
       return;
     }
 
-    setLoading(true);
-    try {
-      // Get player data for last claim timestamp
-      const playerData = await getPlayerData();
-      if (!playerData) {
-        setUnclaimedRewards(0);
-        setDailyIncome(0);
-        return;
-      }
+    const calculate = () => {
+      const nowSeconds = Math.floor(Date.now() / 1000);
+      let total = 0;
 
-      const now = Math.floor(Date.now() / 1000);
-      const lastClaim = playerData.lastClaimTimestamp.toNumber();
-      const minutesElapsed = Math.max(0, (now - lastClaim) / 60);
-
-      // ✅ NEW: Calculate daily income by iterating through all properties
-      let totalDailyIncome = 0;
-      let totalUnclaimedRewards = 0;
-
-      for (const property of PROPERTIES) {
-        try {
-          // Get ownership data for this property
-          const ownershipData = await getOwnershipData(property.id);
-          
-          if (ownershipData && ownershipData.slotsOwned > 0) {
-            // Get on-chain property data for yield %
-            const propertyData = await getPropertyData(property.id);
-            
-            if (propertyData) {
-              // Calculate daily income per slot
-              // yieldPercentBps is in basis points (e.g., 1000 = 10%)
-              const dailyIncomePerSlot = (Number(propertyData.price) * propertyData.yieldPercentBps) / (10000 * 1); // per day
-              const incomePerMinute = dailyIncomePerSlot / 1440; // 1440 minutes in a day
-              
-              // Calculate total income for owned slots
-              const propertyDailyIncome = dailyIncomePerSlot * ownershipData.slotsOwned;
-              totalDailyIncome += propertyDailyIncome;
-              
-              // Calculate unclaimed rewards for this property
-              const propertyRewards = incomePerMinute * ownershipData.slotsOwned * minutesElapsed;
-              totalUnclaimedRewards += propertyRewards;
-            }
-          }
-        } catch (error) {
-          console.error(`Error calculating rewards for property ${property.id}:`, error);
-          // Continue with other properties
+      ownerships.forEach(ownership => {
+        // Use later of purchase time or last claim
+        const startTime = Math.max(ownership.purchaseTimestamp, lastClaimTime);
+        const elapsedSeconds = nowSeconds - startTime;
+        
+        if (elapsedSeconds > 0) {
+          const incomePerSecond = (ownership.dailyIncomePerSlot * ownership.slotsOwned) / 86400;
+          total += incomePerSecond * elapsedSeconds;
         }
-      }
+      });
 
-      // Convert from lamports to tokens (assuming 9 decimals)
-      setDailyIncome(totalDailyIncome / 1e9);
-      setUnclaimedRewards(totalUnclaimedRewards / 1e9);
+      setUnclaimedRewards(Math.max(0, total));
+    };
 
-    } catch (error) {
-      console.error('Error calculating rewards:', error);
-      setUnclaimedRewards(0);
-      setDailyIncome(0);
-    } finally {
-      setLoading(false);
-    }
-  }, [program, publicKey, connected, getPlayerData, getOwnershipData, getPropertyData]);
-
-  useEffect(() => {
-    calculateRewards();
-    
-    // Update every 30 seconds
-    const interval = setInterval(calculateRewards, 30000);
+    calculate();
+    const interval = setInterval(calculate, 1000); // Update every second
     return () => clearInterval(interval);
-  }, [calculateRewards]);
+  }, [ownerships, lastClaimTime]);
 
   return {
-    unclaimedRewards,
+    unclaimedRewards: Math.floor(unclaimedRewards), // Round to 2 decimals
     dailyIncome,
     loading,
-    refresh: calculateRewards,
   };
 }
