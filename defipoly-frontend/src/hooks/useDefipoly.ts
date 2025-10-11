@@ -196,13 +196,13 @@ export function useDefipoly() {
     }
   }, [program, wallet, tokenAccountExists]);
 
-  const buyProperty = useCallback(async (propertyId: number) => {
+  const buyProperty = useCallback(async (propertyId: number, slots: number = 1) => {  // <-- ADD slots parameter with default
     if (!program || !wallet || !provider) throw new Error('Wallet not connected');
     
     setLoading(true);
     try {
       const transaction = new Transaction();
-
+  
       // Check token account exists
       const hasTokenAccount = await checkTokenAccountExists(connection, wallet.publicKey);
       
@@ -212,7 +212,7 @@ export function useDefipoly() {
         const createATAIx = await createTokenAccountInstruction(wallet.publicKey);
         transaction.add(createATAIx);
       }
-
+  
       // Check if player account exists
       const [playerPDA] = getPlayerPDA(wallet.publicKey);
       const playerData = await fetchPlayerData(program, wallet.publicKey);
@@ -230,13 +230,13 @@ export function useDefipoly() {
           .instruction();
         transaction.add(initPlayerIx);
       }
-
+  
       // Get token account address
       const playerTokenAccount = await getAssociatedTokenAddress(
         TOKEN_MINT,
         wallet.publicKey
       );
-
+  
       // Get PDAs
       const [propertyPDA] = getPropertyPDA(propertyId);
       const [ownershipPDA] = getOwnershipPDA(wallet.publicKey, propertyId);
@@ -253,10 +253,10 @@ export function useDefipoly() {
       // Get dev token account
       const devWallet = new PublicKey("CgWTFX7JJQHed3qyMDjJkNCxK4sFe3wbDFABmWAAmrdS");
       const devTokenAccount = await getAssociatedTokenAddress(TOKEN_MINT, devWallet);
-
-      // Add buy property instruction
+  
+      // Add buy property instruction with slots parameter
       const buyPropertyIx = await program.methods
-        .buyProperty()
+        .buyProperty(slots)  // <-- PASS slots parameter here
         .accountsPartial({
           property: propertyPDA,
           ownership: ownershipPDA,
@@ -274,14 +274,14 @@ export function useDefipoly() {
         })
         .instruction();
       transaction.add(buyPropertyIx);
-
+  
       // Send and confirm transaction
       const signature = await provider.sendAndConfirm(transaction, [], {
         commitment: 'confirmed',
         skipPreflight: false,
       });
       
-      console.log('✅ Property bought successfully:', signature);
+      console.log(`✅ Bought ${slots} slot(s) successfully:`, signature);
       
       // Backend logging in background - don't block success
       (async () => {
@@ -306,15 +306,14 @@ export function useDefipoly() {
       if (errorMessage.includes('already been processed') || 
           errorMessage.includes('AlreadyProcessed')) {
         console.log('✅ Transaction already processed (success)');
-        return 'already-processed'; // Return something to indicate success
+        return 'already-processed';
       }
       
       throw error;
     } finally {
-      // Delay to prevent rapid re-clicks
       setTimeout(() => setLoading(false), 1000);
     }
-  }, [program, wallet, connection, provider, storeTransactionEvents]);
+  }, [program, wallet, provider, connection, playerInitialized, tokenAccountExists, storeTransactionEvents]);
 
   const activateShield = useCallback(async (propertyId: number, cycles: number) => {
     if (!program || !wallet) throw new Error('Wallet not connected');
