@@ -8,6 +8,7 @@ import { useAnchorWallet } from '@solana/wallet-adapter-react';
 import { useTokenBalance } from '@/hooks/useTokenBalance';
 import { StyledWalletButton } from './StyledWalletButton';
 import { X } from 'lucide-react';
+import { useNotification } from './NotificationProvider';
 
 // Building SVGs for levels 0-5 (same as Board component)
 const BUILDING_SVGS: { [key: number]: React.ReactNode } = {
@@ -121,6 +122,7 @@ export function PropertyModal({ propertyId, onClose }: PropertyModalProps) {
   const [slotsToSell, setSlotsToSell] = useState(1);
   const [propertyData, setPropertyData] = useState<any>(null);
   const [targetPlayer, setTargetPlayer] = useState<string>('');
+  const { showSuccess, showError } = useNotification();
 
   const wallet = useAnchorWallet();
   const property = propertyId !== null ? PROPERTIES.find(p => p.id === propertyId) : null;
@@ -185,7 +187,11 @@ export function PropertyModal({ propertyId, onClose }: PropertyModalProps) {
       
       // Only show success if we got a signature back (meaning transaction succeeded)
       if (signature) {
-        alert('Property purchased successfully! Transaction: ' + signature.slice(0, 8) + '...');
+        showSuccess(
+          'Property Purchased!', 
+          'Property purchased successfully!',
+          signature
+        );
         
         // Wait a moment for state to update
         await new Promise(resolve => setTimeout(resolve, 1000));
@@ -199,10 +205,10 @@ export function PropertyModal({ propertyId, onClose }: PropertyModalProps) {
       
       // Only special case: User cancelled
       if (errorMessage.includes('User rejected') || errorMessage.includes('rejected')) {
-        alert('Transaction cancelled.');
+        showError('Transaction Cancelled', 'Transaction was cancelled by user.');
       } else {
         // For any other error, show failure
-        alert('Failed to purchase property. Please try again.');
+        showError('Purchase Failed', 'Failed to purchase property. Please try again.');
       }
     } finally {
       setLoading(false);
@@ -212,13 +218,16 @@ export function PropertyModal({ propertyId, onClose }: PropertyModalProps) {
   const handleShield = async () => {
     if (!connected || loading) return;
     if (slotsToShield <= 0 || slotsToShield > (propertyData?.owned || 0)) {
-      alert('Invalid number of slots to shield');
+      showError('Invalid Input', 'Invalid number of slots to shield');
       return;
     }
     setLoading(true);
     try {
       await activateShield(propertyId, slotsToShield);
-      alert(`Shield activated for ${slotsToShield} slot(s)!`);
+      showSuccess(
+        'Shield Activated!', 
+        `Shield activated for ${slotsToShield} slot(s)!`
+      );
       setShowShieldOptions(false);
       onClose();
     } catch (error: any) {
@@ -226,9 +235,9 @@ export function PropertyModal({ propertyId, onClose }: PropertyModalProps) {
       const errorMessage = error?.message || error?.toString() || '';
       
       if (errorMessage.includes('User rejected') || errorMessage.includes('rejected')) {
-        alert('Transaction cancelled.');
+        showError('Transaction Cancelled', 'Transaction was cancelled by user.');
       } else {
-        alert('Failed to activate shield. Please try again.');
+        showError('Shield Failed', 'Failed to activate shield. Please try again.');
       }
     } finally {
       setLoading(false);
@@ -240,7 +249,10 @@ export function PropertyModal({ propertyId, onClose }: PropertyModalProps) {
     setLoading(true);
     try {
       await sellProperty(propertyId, slotsToSell);
-      alert(`Sold ${slotsToSell} slot(s) successfully!`);
+      showSuccess(
+        'Slots Sold!', 
+        `Sold ${slotsToSell} slot(s) successfully!`
+      );
       setShowSellOptions(false);
       onClose();
     } catch (error: any) {
@@ -248,9 +260,9 @@ export function PropertyModal({ propertyId, onClose }: PropertyModalProps) {
       const errorMessage = error?.message || error?.toString() || '';
       
       if (errorMessage.includes('User rejected') || errorMessage.includes('rejected')) {
-        alert('Transaction cancelled.');
+        showError('Transaction Cancelled', 'Transaction was cancelled by user.');
       } else {
-        alert('Failed to sell property. Please try again.');
+        showError('Sale Failed', 'Failed to sell property. Please try again.');
       }
     } finally {
       setLoading(false);
@@ -260,16 +272,19 @@ export function PropertyModal({ propertyId, onClose }: PropertyModalProps) {
   const handleSteal = async () => {
     if (!connected || loading) return;
     if (!targetPlayer || targetPlayer.trim() === '') {
-      alert('Please enter a target player address');
+      showError('Missing Input', 'Please enter a target player address');
       return;
     }
     setLoading(true);
     try {
       const result = await stealProperty(propertyId, targetPlayer);
       if (result.success) {
-        alert(`🎉 Steal successful! You gained 1 slot.`);
+        showSuccess(
+          'Steal Successful!', 
+          'You gained 1 slot from the target player!'
+        );
       } else {
-        alert(`❌ Steal failed. Better luck next time!`);
+        showError('Steal Failed', 'Better luck next time!');
       }
       setShowStealOptions(false);
       onClose();
@@ -278,13 +293,13 @@ export function PropertyModal({ propertyId, onClose }: PropertyModalProps) {
       const errorMessage = error?.message || error?.toString() || '';
       
       if (errorMessage.includes('User rejected') || errorMessage.includes('rejected')) {
-        alert('Transaction cancelled.');
+        showError('Transaction Cancelled', 'Transaction was cancelled by user.');
       } else if (errorMessage.includes('AllSlotsShielded')) {
-        alert('Cannot steal - all slots are shielded!');
+        showError('Cannot Steal', 'All slots are protected by shields!');
       } else if (errorMessage.includes('TargetDoesNotOwnProperty')) {
-        alert('Target player does not own this property!');
+        showError('Invalid Target', 'Target player does not own this property!');
       } else {
-        alert('Failed to attempt steal. Please try again.');
+        showError('Steal Failed', 'Failed to attempt steal. Please try again.');
       }
     } finally {
       setLoading(false);

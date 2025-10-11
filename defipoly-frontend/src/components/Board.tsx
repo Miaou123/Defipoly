@@ -9,6 +9,7 @@ import { PROGRAM_ID } from '@/utils/constants';
 import { BorshCoder, EventParser } from '@coral-xyz/anchor';
 import idl from '@/types/memeopoly_program.json';
 import { StyledWalletButton } from './StyledWalletButton';
+import { useNotification } from './NotificationProvider';
 
 interface BoardProps {
   onSelectProperty: (propertyId: number) => void;
@@ -108,13 +109,9 @@ export function Board({ onSelectProperty }: BoardProps) {
   const { connection } = useConnection();
   const { unclaimedRewards, dailyIncome, loading: rewardsLoading } = useRewards();
   const { claimRewards, loading: claimLoading } = useDefipoly();
+  const { showSuccess, showError } = useNotification();
   const [claiming, setClaiming] = useState(false);
   const claimingRef = useRef(false);
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
 
   // Color mapping to prevent Tailwind purging
   const getColorClass = (colorString: string) => {
@@ -181,10 +178,14 @@ export function Board({ onSelectProperty }: BoardProps) {
         }
       }
       
-      alert(`Successfully claimed ${unclaimedRewards.toLocaleString()} DEFI!`);
+      showSuccess(
+        'Rewards Claimed!', 
+        `Successfully claimed ${unclaimedRewards.toLocaleString()} DEFI!`,
+        signature
+      );
     } catch (error: any) {
       console.error('Error claiming rewards:', error);
-      alert('Failed to claim rewards. Please try again.');
+      showError('Claim Failed', 'Failed to claim rewards. Please try again.');
     } finally {
       setClaiming(false);
       claimingRef.current = false;
@@ -361,11 +362,7 @@ export function Board({ onSelectProperty }: BoardProps) {
                 
                 {/* Prominent Connect Button */}
                 <div className="flex justify-center">
-                  {mounted ? (
-                    <StyledWalletButton variant="board" />
-                  ) : (
-                    <div className="w-64 h-16 bg-purple-500/20 rounded-2xl animate-pulse"></div>
-                  )}
+                  <StyledWalletButton variant="board" />
                 </div>
 
                 {/* Feature Icons */}

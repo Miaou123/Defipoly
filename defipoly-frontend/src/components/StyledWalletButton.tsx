@@ -4,6 +4,7 @@
 // ============================================
 'use client';
 
+import { useEffect, useState } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { useWalletModal } from '@solana/wallet-adapter-react-ui';
 import { Wallet } from 'lucide-react';
@@ -15,6 +16,12 @@ interface StyledWalletButtonProps {
 export function StyledWalletButton({ variant = 'header' }: StyledWalletButtonProps) {
   const { connected, disconnect, publicKey } = useWallet();
   const { setVisible } = useWalletModal();
+  const [mounted, setMounted] = useState(false);
+
+  // Prevent hydration mismatch by only rendering after mount
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const handleClick = () => {
     if (connected) {
@@ -23,6 +30,30 @@ export function StyledWalletButton({ variant = 'header' }: StyledWalletButtonPro
       setVisible(true);
     }
   };
+
+  // Show loading skeleton until mounted to prevent hydration mismatch
+  if (!mounted) {
+    if (variant === 'board') {
+      return (
+        <div className="px-10 py-5 bg-purple-500/20 rounded-2xl animate-pulse">
+          <div className="w-64 h-16 bg-purple-500/30 rounded-xl"></div>
+        </div>
+      );
+    }
+    if (variant === 'modal') {
+      return (
+        <div className="px-8 py-4 bg-purple-500/20 rounded-xl animate-pulse">
+          <div className="w-48 h-12 bg-purple-500/30 rounded-lg"></div>
+        </div>
+      );
+    }
+    // Header variant
+    return (
+      <div className="px-5 py-2.5 bg-purple-500/20 rounded-lg animate-pulse">
+        <div className="w-28 h-6 bg-purple-500/30 rounded"></div>
+      </div>
+    );
+  }
 
   if (variant === 'board') {
     // Large prominent button for board center

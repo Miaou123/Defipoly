@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { Header } from '@/components/Header';
 import { getPropertyById } from '@/utils/constants';
 import { compressImage } from '@/utils/profileStorage';
+import { useNotification } from '@/components/NotificationProvider';
 
 interface Activity {
   signature: string;
@@ -33,6 +34,7 @@ const BACKEND_URL = process.env.NEXT_PUBLIC_PROFILE_API_URL || 'http://localhost
 export default function ProfilePage() {
   const { publicKey, connected } = useWallet();
   const router = useRouter();
+  const { showSuccess, showError } = useNotification();
   
   const [username, setUsername] = useState('');
   const [editingUsername, setEditingUsername] = useState(false);
@@ -239,13 +241,13 @@ export default function ProfilePage() {
 
     // Validate file type
     if (!file.type.startsWith('image/')) {
-      alert('Please upload an image file');
+      showError('Invalid File', 'Please upload an image file');
       return;
     }
 
     // Validate file size (2MB)
     if (file.size > 2 * 1024 * 1024) {
-      alert('Image too large. Please use an image under 2MB.');
+      showError('File Too Large', 'Please use an image under 2MB.');
       return;
     }
 
@@ -269,11 +271,11 @@ export default function ProfilePage() {
         setProfilePicture(compressedImage);
         console.log('✅ Profile picture uploaded');
       } else {
-        alert('Failed to upload profile picture');
+        showError('Upload Failed', 'Failed to upload profile picture');
       }
     } catch (error) {
       console.error('Error uploading profile picture:', error);
-      alert('Error uploading profile picture');
+      showError('Upload Error', 'Error uploading profile picture');
     } finally {
       setUploadingPicture(false);
     }
