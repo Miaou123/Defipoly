@@ -185,12 +185,11 @@ export function PropertyModal({ propertyId, onClose }: PropertyModalProps) {
     try {
       const signature = await buyProperty(propertyId);
       
-      // Only show success if we got a signature back (meaning transaction succeeded)
       if (signature) {
         showSuccess(
           'Property Purchased!', 
           'Property purchased successfully!',
-          signature
+          signature !== 'already-processed' ? signature : undefined
         );
         
         // Wait a moment for state to update
@@ -204,17 +203,20 @@ export function PropertyModal({ propertyId, onClose }: PropertyModalProps) {
       const errorMessage = error?.message || error?.toString() || '';
       
       // Only special case: User cancelled
-      if (errorMessage.includes('User rejected') || errorMessage.includes('rejected')) {
+          if (errorMessage.includes('already been processed') || 
+          errorMessage.includes('AlreadyProcessed')) {
+        showSuccess('Property Purchased!', 'Property purchased successfully!');
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        onClose();
+      } else if (errorMessage.includes('User rejected') || errorMessage.includes('rejected')) {
         showError('Transaction Cancelled', 'Transaction was cancelled by user.');
       } else {
-        // For any other error, show failure
         showError('Purchase Failed', 'Failed to purchase property. Please try again.');
       }
     } finally {
       setLoading(false);
     }
   };
-
   const handleShield = async () => {
     if (!connected || loading) return;
     if (slotsToShield <= 0 || slotsToShield > (propertyData?.owned || 0)) {
@@ -223,18 +225,27 @@ export function PropertyModal({ propertyId, onClose }: PropertyModalProps) {
     }
     setLoading(true);
     try {
-      await activateShield(propertyId, slotsToShield);
-      showSuccess(
-        'Shield Activated!', 
-        `Shield activated for ${slotsToShield} slot(s)!`
-      );
-      setShowShieldOptions(false);
-      onClose();
+      const signature = await activateShield(propertyId, slotsToShield);
+      
+      if (signature) {
+        showSuccess(
+          'Shield Activated!', 
+          `Shield activated for ${slotsToShield} slot(s)!`,
+          signature !== 'already-processed' ? signature : undefined
+        );
+        setShowShieldOptions(false);
+        onClose();
+      }
     } catch (error: any) {
       console.error('Error activating shield:', error);
       const errorMessage = error?.message || error?.toString() || '';
       
-      if (errorMessage.includes('User rejected') || errorMessage.includes('rejected')) {
+      if (errorMessage.includes('already been processed') || 
+          errorMessage.includes('AlreadyProcessed')) {
+        showSuccess('Shield Activated!', `Shield activated for ${slotsToShield} slot(s)!`);
+        setShowShieldOptions(false);
+        onClose();
+      } else if (errorMessage.includes('User rejected') || errorMessage.includes('rejected')) {
         showError('Transaction Cancelled', 'Transaction was cancelled by user.');
       } else {
         showError('Shield Failed', 'Failed to activate shield. Please try again.');
@@ -243,23 +254,32 @@ export function PropertyModal({ propertyId, onClose }: PropertyModalProps) {
       setLoading(false);
     }
   };
-
+  
   const handleSell = async () => {
     if (!connected || loading) return;
     setLoading(true);
     try {
-      await sellProperty(propertyId, slotsToSell);
-      showSuccess(
-        'Slots Sold!', 
-        `Sold ${slotsToSell} slot(s) successfully!`
-      );
-      setShowSellOptions(false);
-      onClose();
+      const signature = await sellProperty(propertyId, slotsToSell);
+      
+      if (signature) {
+        showSuccess(
+          'Slots Sold!', 
+          `Sold ${slotsToSell} slot(s) successfully!`,
+          signature !== 'already-processed' ? signature : undefined
+        );
+        setShowSellOptions(false);
+        onClose();
+      }
     } catch (error: any) {
       console.error('Error selling property:', error);
       const errorMessage = error?.message || error?.toString() || '';
       
-      if (errorMessage.includes('User rejected') || errorMessage.includes('rejected')) {
+      if (errorMessage.includes('already been processed') || 
+          errorMessage.includes('AlreadyProcessed')) {
+        showSuccess('Slots Sold!', `Sold ${slotsToSell} slot(s) successfully!`);
+        setShowSellOptions(false);
+        onClose();
+      } else if (errorMessage.includes('User rejected') || errorMessage.includes('rejected')) {
         showError('Transaction Cancelled', 'Transaction was cancelled by user.');
       } else {
         showError('Sale Failed', 'Failed to sell property. Please try again.');
@@ -268,6 +288,7 @@ export function PropertyModal({ propertyId, onClose }: PropertyModalProps) {
       setLoading(false);
     }
   };
+  
 
   const handleSteal = async () => {
     if (!connected || loading) return;
@@ -278,28 +299,32 @@ export function PropertyModal({ propertyId, onClose }: PropertyModalProps) {
     setLoading(true);
     try {
       const result = await stealProperty(propertyId, targetPlayer);
+      
       if (result.success) {
         showSuccess(
           'Steal Successful!', 
-          'You gained 1 slot from the target player!'
+          'You successfully stole a property slot!',
+          result.fulfillTx !== 'already-processed' ? result.fulfillTx : undefined
         );
       } else {
-        showError('Steal Failed', 'Better luck next time!');
+        showError('Steal Failed', 'The steal attempt was unsuccessful. Better luck next time!');
       }
+      
       setShowStealOptions(false);
       onClose();
     } catch (error: any) {
-      console.error('Error attempting steal:', error);
+      console.error('Error stealing property:', error);
       const errorMessage = error?.message || error?.toString() || '';
       
-      if (errorMessage.includes('User rejected') || errorMessage.includes('rejected')) {
+      if (errorMessage.includes('already been processed') || 
+          errorMessage.includes('AlreadyProcessed')) {
+        showSuccess('Steal Completed!', 'Steal transaction completed!');
+        setShowStealOptions(false);
+        onClose();
+      } else if (errorMessage.includes('User rejected') || errorMessage.includes('rejected')) {
         showError('Transaction Cancelled', 'Transaction was cancelled by user.');
-      } else if (errorMessage.includes('AllSlotsShielded')) {
-        showError('Cannot Steal', 'All slots are protected by shields!');
-      } else if (errorMessage.includes('TargetDoesNotOwnProperty')) {
-        showError('Invalid Target', 'Target player does not own this property!');
       } else {
-        showError('Steal Failed', 'Failed to attempt steal. Please try again.');
+        showError('Steal Failed', 'Failed to execute steal. Please try again.');
       }
     } finally {
       setLoading(false);

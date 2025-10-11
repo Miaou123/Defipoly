@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { WalletContextProvider } from "@/components/WalletProvider";
 import { NotificationProvider } from "@/components/NotificationProvider";
+import { PropertyRefreshProvider } from '@/components/PropertyRefreshContext';
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -21,7 +22,9 @@ export default function RootLayout({
       <body className={`${inter.className} text-white min-h-screen overflow-x-hidden`}>
         <WalletContextProvider>
           <NotificationProvider>
-            {children}
+            <PropertyRefreshProvider>
+              {children}
+            </PropertyRefreshProvider>
           </NotificationProvider>
         </WalletContextProvider>
       </body>
