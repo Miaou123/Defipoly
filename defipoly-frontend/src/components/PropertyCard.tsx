@@ -107,6 +107,8 @@ export function PropertyCard({ propertyId, onSelect }: PropertyCardProps) {
   
   const [buildingLevel, setBuildingLevel] = useState(0);
   const [owned, setOwned] = useState(0);
+  const [totalSlots, setTotalSlots] = useState(0);
+  const [shieldActive, setShieldActive] = useState(false);
   
   const property = PROPERTIES.find(p => p.id === propertyId);
   if (!property) return null;
@@ -116,6 +118,8 @@ export function PropertyCard({ propertyId, onSelect }: PropertyCardProps) {
     if (!connected || !publicKey || !program) {
       setBuildingLevel(0);
       setOwned(0);
+      setTotalSlots(property.totalSlots);
+      setShieldActive(false);
       return;
     }
 
@@ -126,39 +130,40 @@ export function PropertyCard({ propertyId, onSelect }: PropertyCardProps) {
         if (ownershipData?.slotsOwned && ownershipData.slotsOwned > 0) {
           const slotsOwned = ownershipData.slotsOwned;
           setOwned(slotsOwned);
+          setTotalSlots(property.totalSlots);
           
           // Calculate building level (1 slot = 1 level, up to 5)
           const level = Math.min(5, slotsOwned);
           setBuildingLevel(level);
           
-          console.log(`🏠 Property ${propertyId} (${property.name}): ${slotsOwned} slots, Level ${level}`);
+          // Check if shield is active
+          const now = Date.now() / 1000;
+          const isShielded = ownershipData.slotsShielded > 0 && ownershipData.shieldExpiry.toNumber() > now;
+          setShieldActive(isShielded);
+          
+          console.log(`🏠 Property ${propertyId} (${property.name}): ${slotsOwned} slots, Level ${level}, Shield: ${isShielded}`);
         } else {
           setBuildingLevel(0);
           setOwned(0);
+          setTotalSlots(property.totalSlots);
+          setShieldActive(false);
         }
       } catch (error) {
         console.warn(`Failed to fetch property ${propertyId}:`, error);
         setBuildingLevel(0);
         setOwned(0);
+        setTotalSlots(property.totalSlots);
+        setShieldActive(false);
       }
     };
 
     fetchOwnership();
-  }, [connected, publicKey, propertyId, program, getOwnershipData, refreshKey, property.name]);
+  }, [connected, publicKey, propertyId, program, getOwnershipData, refreshKey, property.name, property.totalSlots]);
 
   return (
     <button
       onClick={() => onSelect(propertyId)}
-      className={`
-        w-full h-full
-        relative
-        border-2 border-gray-800
-        hover:scale-105 hover:z-20 hover:shadow-2xl
-        transition-all duration-200 cursor-pointer
-        flex flex-col
-        overflow-hidden
-        bg-white
-      `}
+      className="w-full h-full relative border-2 border-gray-800 hover:scale-105 hover:z-20 hover:shadow-2xl transition-all duration-200 cursor-pointer flex flex-col overflow-hidden bg-white"
     >
       {/* Color bar at top */}
       <div className={`${property.color} h-4 w-full flex-shrink-0`}></div>
@@ -185,10 +190,30 @@ export function PropertyCard({ propertyId, onSelect }: PropertyCardProps) {
         )}
       </div>
 
-      {/* Price */}
-      <div className="px-1 py-2 bg-white border-t border-gray-200 flex-shrink-0">
+      {/* Ownership Info */}
+      <div className="px-1 py-1 bg-white border-t border-gray-200 flex-shrink-0">
         <div className="text-center">
-          <div className="text-[9px] font-black text-gray-900">
+          <div className="text-[9px] font-bold text-purple-600">
+            {owned}/{totalSlots}
+          </div>
+          <div className="text-[6px] text-gray-500">slots</div>
+        </div>
+      </div>
+
+      {/* Shield Indicator */}
+      {shieldActive && (
+        <div className="px-1 py-1 bg-amber-50 border-t border-amber-200 flex-shrink-0">
+          <div className="flex items-center justify-center gap-0.5">
+            <span className="text-[7px]">🛡️</span>
+            <span className="text-[6px] font-semibold text-amber-700">Shield</span>
+          </div>
+        </div>
+      )}
+
+      {/* Price */}
+      <div className="px-1 py-1 bg-white border-t border-gray-200 flex-shrink-0">
+        <div className="text-center">
+          <div className="text-[8px] font-black text-gray-900">
             ${(property.price / 1000)}K
           </div>
         </div>
