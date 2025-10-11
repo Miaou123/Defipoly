@@ -36,6 +36,7 @@ export interface Property {
   bump: number;
 }
 
+
 export interface PlayerAccount {
   owner: PublicKey;
   totalSlotsOwned: number;
@@ -61,8 +62,8 @@ export interface PropertyOwnership {
 export interface PlayerSetCooldown {
   player: PublicKey;
   setId: number;
-  lastPurchaseTimestamp: BN;
-  cooldownDuration: BN;
+  lastPurchaseTimestamp: number;
+  cooldownDuration: number;
   lastPurchasedPropertyId: number;
   propertiesOwnedInSet: number[];
   propertiesCount: number;

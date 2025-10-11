@@ -2,8 +2,9 @@ import { Connection, PublicKey } from '@solana/web3.js';
 import { Program, AnchorProvider, Idl } from '@coral-xyz/anchor';
 import { PROGRAM_ID } from './constants';
 import idl from '@/types/memeopoly_program.json';
-import type { Property, PropertyOwnership, PlayerAccount } from '@/types/accounts';
+import type { Property, PropertyOwnership, PlayerAccount, PlayerSetCooldown } from '@/types/accounts';
 import { deserializeOwnership, deserializeProperty, deserializePlayer } from './deserialize';
+
 
 // ✅ SIMPLE: Just use Idl type and cast when needed
 export type MemeopolyProgram = Program<Idl>;
@@ -130,6 +131,35 @@ export async function fetchPlayerData(program: MemeopolyProgram, playerPubkey: P
     return playerAccount;
   } catch (error) {
     console.error('Error fetching player data:', error);
+    return null;
+  }
+}
+
+/**
+ * Fetch set cooldown data for a player and set
+ */
+export async function fetchSetCooldownData(
+  program: MemeopolyProgram,
+  playerPubkey: PublicKey,
+  setId: number
+): Promise<PlayerSetCooldown | null> {
+  try {
+    const [cooldownPDA] = getSetCooldownPDA(playerPubkey, setId);
+    const data = await (program.account as any).playerSetCooldown.fetch(cooldownPDA);
+    
+    return {
+      player: data.player,
+      setId: data.setId,
+      lastPurchaseTimestamp: data.lastPurchaseTimestamp,
+      cooldownDuration: data.cooldownDuration,
+      lastPurchasedPropertyId: data.lastPurchasedPropertyId,
+      propertiesOwnedInSet: Array.from(data.propertiesOwnedInSet),
+      propertiesCount: data.propertiesCount,
+      bump: data.bump,
+    };
+  } catch (error) {
+    // Account doesn't exist yet or other error
+    console.warn(`No cooldown data for set ${setId}:`, error);
     return null;
   }
 }

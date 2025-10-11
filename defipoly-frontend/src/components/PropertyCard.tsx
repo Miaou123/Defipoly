@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { useDefipoly } from '@/hooks/useDefipoly';
 import { usePropertyRefresh } from '@/components/PropertyRefreshContext';
+import { useCooldown } from '@/hooks/useCooldown';
 import { PROPERTIES } from '@/utils/constants';
 
 // Building SVGs for levels 0-5
@@ -106,19 +107,26 @@ export function PropertyCard({ propertyId, onSelect }: PropertyCardProps) {
   const { refreshKey } = usePropertyRefresh();
   
   const [buildingLevel, setBuildingLevel] = useState(0);
-  const [owned, setOwned] = useState(0);
-  const [totalSlots, setTotalSlots] = useState(0);
   const [shieldActive, setShieldActive] = useState(false);
   
   const property = PROPERTIES.find(p => p.id === propertyId);
   if (!property) return null;
 
-  // Fetch ownership data - refreshes when refreshKey changes
+  // Get cooldown info (optimized - fetches once, calculates client-side)
+  const { cooldownRemaining, isOnCooldown } = useCooldown(property.setId);
+  
+  // Format cooldown time
+  const formatCooldown = (seconds: number) => {
+    const hours = Math.floor(seconds / 3600);
+    const mins = Math.floor((seconds % 3600) / 60);
+    if (hours > 0) return `${hours}h ${mins}m`;
+    return `${mins}m`;
+  };
+
+  // Fetch ownership data
   useEffect(() => {
     if (!connected || !publicKey || !program) {
       setBuildingLevel(0);
-      setOwned(0);
-      setTotalSlots(property.totalSlots);
       setShieldActive(false);
       return;
     }
@@ -129,8 +137,6 @@ export function PropertyCard({ propertyId, onSelect }: PropertyCardProps) {
         
         if (ownershipData?.slotsOwned && ownershipData.slotsOwned > 0) {
           const slotsOwned = ownershipData.slotsOwned;
-          setOwned(slotsOwned);
-          setTotalSlots(property.totalSlots);
           
           // Calculate building level (1 slot = 1 level, up to 5)
           const level = Math.min(5, slotsOwned);
@@ -144,21 +150,17 @@ export function PropertyCard({ propertyId, onSelect }: PropertyCardProps) {
           console.log(`🏠 Property ${propertyId} (${property.name}): ${slotsOwned} slots, Level ${level}, Shield: ${isShielded}`);
         } else {
           setBuildingLevel(0);
-          setOwned(0);
-          setTotalSlots(property.totalSlots);
           setShieldActive(false);
         }
       } catch (error) {
         console.warn(`Failed to fetch property ${propertyId}:`, error);
         setBuildingLevel(0);
-        setOwned(0);
-        setTotalSlots(property.totalSlots);
         setShieldActive(false);
       }
     };
 
     fetchOwnership();
-  }, [connected, publicKey, propertyId, program, getOwnershipData, refreshKey, property.name, property.totalSlots]);
+  }, [connected, publicKey, propertyId, program, getOwnershipData, refreshKey, property.name]);
 
   return (
     <button
@@ -190,22 +192,24 @@ export function PropertyCard({ propertyId, onSelect }: PropertyCardProps) {
         )}
       </div>
 
-      {/* Ownership Info */}
-      <div className="px-1 py-1 bg-white border-t border-gray-200 flex-shrink-0">
-        <div className="text-center">
-          <div className="text-[9px] font-bold text-purple-600">
-            {owned}/{totalSlots}
-          </div>
-          <div className="text-[6px] text-gray-500">slots</div>
-        </div>
-      </div>
-
       {/* Shield Indicator */}
       {shieldActive && (
         <div className="px-1 py-1 bg-amber-50 border-t border-amber-200 flex-shrink-0">
           <div className="flex items-center justify-center gap-0.5">
             <span className="text-[7px]">🛡️</span>
             <span className="text-[6px] font-semibold text-amber-700">Shield</span>
+          </div>
+        </div>
+      )}
+
+      {/* Cooldown Indicator */}
+      {isOnCooldown && (
+        <div className="px-1 py-1 bg-orange-50 border-t border-orange-200 flex-shrink-0">
+          <div className="flex items-center justify-center gap-0.5">
+            <span className="text-[7px]">⏳</span>
+            <span className="text-[6px] font-semibold text-orange-700">
+              {formatCooldown(cooldownRemaining)}
+            </span>
           </div>
         </div>
       )}

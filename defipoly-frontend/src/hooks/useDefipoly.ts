@@ -25,6 +25,7 @@ import {
   fetchPropertyData,
   fetchOwnershipData,
   fetchPlayerData,
+  fetchSetCooldownData
 } from '@/utils/program';
 
 // Token utilities
@@ -699,6 +700,11 @@ export function useDefipoly() {
     return await fetchPlayerData(program, wallet.publicKey);
   }, [program, wallet]);
 
+  const getSetCooldownData = useCallback(async (setId: number) => {
+    if (!program || !wallet) return null;
+    return fetchSetCooldownData(program, wallet.publicKey, setId);
+  }, [program, wallet]);
+
   return {
     program,
     tokenBalance,
@@ -715,5 +721,6 @@ export function useDefipoly() {
     getPropertyData,
     getOwnershipData,
     getPlayerData,
+    getSetCooldownData
   };
 }

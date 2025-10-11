@@ -1,6 +1,6 @@
 // ============================================
 // FILE: defipoly-frontend/src/components/property-actions/BuyPropertySection.tsx
-// Compact buy property component
+// Updated with optimized cooldown support
 // ============================================
 
 import { useState, useEffect, useMemo } from 'react';
@@ -9,6 +9,9 @@ import { PROPERTIES } from '@/utils/constants';
 import { useDefipoly } from '@/hooks/useDefipoly';
 import { useNotification } from '../NotificationProvider';
 import { usePropertyRefresh } from '../PropertyRefreshContext';
+import { useCooldown } from '@/hooks/useCooldown';
+import { CooldownExplanationModal } from '../CooldownExplanationModal';
+import { Clock } from 'lucide-react';
 
 interface BuyPropertySectionProps {
   propertyId: number;
@@ -33,14 +36,27 @@ export function BuyPropertySection({
   const { buyProperty, getOwnershipData } = useDefipoly();
   const { showSuccess, showError } = useNotification();
   const { triggerRefresh } = usePropertyRefresh();
+  const { cooldownRemaining, isOnCooldown, affectedProperties, cooldownHours } = useCooldown(property.setId);
   
   const [showBuyOptions, setShowBuyOptions] = useState(false);
   const [slotsToBuy, setSlotsToBuy] = useState(1);
   const [buyingProgress, setBuyingProgress] = useState<string>('');
+  const [showCooldownModal, setShowCooldownModal] = useState(false);
   const [setInfo, setSetInfo] = useState<{
     ownedPropertiesInSet: number[];
     hasCompleteSet: boolean;
   } | null>(null);
+
+  // Format cooldown time
+  const formatCooldown = (seconds: number) => {
+    const hours = Math.floor(seconds / 3600);
+    const mins = Math.floor((seconds % 3600) / 60);
+    const secs = seconds % 60;
+    
+    if (hours > 0) return `${hours}h ${mins}m`;
+    if (mins > 0) return `${mins}m ${secs}s`;
+    return `${secs}s`;
+  };
 
   // Calculate max slots user can buy
   const maxSlotsToBuy = useMemo(() => {
@@ -117,10 +133,16 @@ export function BuyPropertySection({
 
   const dailyIncome = property.dailyIncome;
   const buyCost = property.price * slotsToBuy;
-  const canBuy = balance >= buyCost;
+  const canBuy = balance >= buyCost && !isOnCooldown;
 
   const handleBuy = async () => {
     if (!wallet || loading) return;
+    
+    // Show explanation modal if on cooldown
+    if (isOnCooldown) {
+      setShowCooldownModal(true);
+      return;
+    }
 
     setLoading(true);
     setBuyingProgress('');
@@ -136,7 +158,7 @@ export function BuyPropertySection({
         signature !== 'already-processed' ? signature : undefined
       );
       
-      triggerRefresh();
+      triggerRefresh(); // This will auto-refresh cooldowns!
       setTimeout(() => onClose(), 2000);
 
     } catch (error: any) {
@@ -145,14 +167,17 @@ export function BuyPropertySection({
       let errorMessage = 'Failed to buy slots';
       const errorString = error?.message || error?.toString() || '';
       
-      if (errorString.includes('MaxSlotsReached')) {
+      if (errorString.includes('CooldownActive')) {
+        errorMessage = `Set cooldown active. Wait ${formatCooldown(cooldownRemaining)} before buying from this set.`;
+        setShowCooldownModal(true);
+      } else if (errorString.includes('MaxSlotsReached')) {
         errorMessage = `Cannot buy ${slotsToBuy} slots - would exceed maximum allowed`;
       } else if (errorString.includes('NoSlotsAvailable')) {
         errorMessage = `Only ${propertyData?.availableSlots} slot${propertyData?.availableSlots === 1 ? '' : 's'} available`;
-      } else if (errorString.includes('CooldownActive')) {
-        errorMessage = 'Cooldown period active';
-      } else if (errorString.includes('InvalidSlotAmount')) {
-        errorMessage = 'Must select at least 1 slot';
+      } else if (errorString.includes('insufficient')) {
+        errorMessage = 'Insufficient balance';
+      } else if (errorString.includes('User rejected')) {
+        errorMessage = 'Transaction was cancelled';
       }
       
       showError('Purchase Failed', errorMessage);
@@ -162,158 +187,136 @@ export function BuyPropertySection({
     }
   };
 
+  if (!propertyData || propertyData.owned >= propertyData.maxSlotsPerProperty) return null;
+
   if (!showBuyOptions) {
     return (
       <button
         onClick={() => setShowBuyOptions(true)}
-        disabled={loading || maxSlotsToBuy === 0}
-        className={`w-full py-3 rounded-xl font-bold text-base transition-all shadow-lg ${
-          loading
-            ? 'bg-purple-900/30 cursor-wait text-purple-400 border border-purple-700/30'
-            : maxSlotsToBuy === 0
-              ? 'bg-purple-900/30 cursor-not-allowed text-purple-500 border border-purple-700/30' 
-              : 'bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 text-white border border-green-400/30 hover:shadow-green-500/50 hover:scale-[1.02]'
-        }`}
+        disabled={loading}
+        className="w-full py-3 rounded-xl font-bold text-base transition-all shadow-lg bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 text-white border border-green-400/30 hover:shadow-green-500/50 hover:scale-[1.02]"
       >
-        {loading ? '⏳ Processing...' : '🏠 Buy Slots'}
+        Buy Slots
       </button>
     );
   }
 
   return (
-    <div className="bg-gradient-to-br from-purple-900/40 to-purple-800/40 backdrop-blur-xl rounded-xl p-4 border-2 border-purple-500/40 space-y-3">
-      <h4 className="font-black text-lg text-purple-100 flex items-center gap-2">
-        <span className="text-xl">💰</span> Purchase Slots
-      </h4>
-      
-      {/* Inline Calculator (Most Compact) */}
-      <div className="bg-black/30 rounded-lg p-3 border border-purple-500/20">
-        <div className="flex justify-between items-center py-2">
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-purple-300">Number of Slots:</span>
-            <span className="text-xs text-purple-400/60">(1-{maxSlotsToBuy})</span>
+    <>
+      <div className="bg-purple-900/20 rounded-xl p-4 border border-purple-500/20 space-y-3">
+        {/* Cooldown Warning */}
+        {isOnCooldown && (
+          <div className="bg-orange-900/30 rounded-lg p-3 border border-orange-500/30">
+            <div className="flex items-center gap-2 mb-2">
+              <Clock className="w-4 h-4 text-orange-400" />
+              <span className="text-sm font-bold text-orange-200">Set Cooldown Active</span>
+            </div>
+            <p className="text-xs text-orange-300 mb-2">
+              You must wait <span className="font-bold">{formatCooldown(cooldownRemaining)}</span> before buying another property from this set.
+            </p>
+            <button
+              onClick={() => setShowCooldownModal(true)}
+              className="text-xs text-orange-200 underline hover:text-orange-100"
+            >
+              Why is there a cooldown?
+            </button>
           </div>
-          <style>{`
-            input[type="number"]::-webkit-inner-spin-button,
-            input[type="number"]::-webkit-outer-spin-button {
-              opacity: 1;
-              cursor: pointer;
-              background: rgba(168, 85, 247, 0.3);
-              border-radius: 4px;
-              margin-left: 4px;
-            }
-            input[type="number"]::-webkit-inner-spin-button:hover,
-            input[type="number"]::-webkit-outer-spin-button:hover {
-              background: rgba(168, 85, 247, 0.6);
-            }
-          `}</style>
+        )}
+
+        {/* Slot selector */}
+        <div>
+          <label className="block text-xs text-purple-300 mb-2 font-semibold">
+            Number of slots to buy:
+          </label>
           <input
             type="number"
             min="1"
             max={maxSlotsToBuy}
             value={slotsToBuy}
-            onChange={(e) => {
-              const value = parseInt(e.target.value) || 1;
-              const clamped = Math.max(1, Math.min(value, maxSlotsToBuy));
-              setSlotsToBuy(clamped);
-            }}
-            className="w-20 px-2 py-1 bg-purple-950/60 border-2 border-purple-500/40 rounded-lg text-purple-100 font-bold text-base text-center focus:outline-none focus:border-purple-400"
+            onChange={(e) => setSlotsToBuy(Math.min(maxSlotsToBuy, Math.max(1, parseInt(e.target.value) || 1)))}
+            disabled={loading || isOnCooldown}
+            className="w-full px-3 py-2 bg-purple-950/50 border border-purple-500/30 rounded-lg text-purple-100 text-sm focus:outline-none focus:border-purple-400/50 disabled:opacity-50"
           />
+          <div className="text-xs text-purple-400 mt-1">
+            Max: {maxSlotsToBuy} slots • Available: {propertyData?.availableSlots || 0}
+          </div>
         </div>
-        <div className="flex justify-between items-center py-1.5 text-sm border-t border-purple-500/10">
-          <span className="text-purple-300">Price per Slot:</span>
-          <span className="font-bold text-purple-100">{property.price.toLocaleString()} DEFI</span>
-        </div>
-        <div className="flex justify-between items-center pt-2 border-t border-purple-500/20">
-          <span className="text-purple-300 font-bold">Total Cost:</span>
-          <span className="font-black text-lg text-purple-100">{buyCost.toLocaleString()} DEFI</span>
-        </div>
-      </div>
 
-      {/* Compact Income - Option 1 Style */}
-      <div className="bg-black/30 rounded-lg p-2.5 border border-purple-500/20">
-        <div className="text-xs text-purple-300 mb-2">Daily Income</div>
-        {setBonusInfo.loading ? (
-          <div className="text-xs text-purple-400 animate-pulse">Loading...</div>
-        ) : (
-          <>
-            <div className="flex gap-2 items-center">
-              {/* Base/Current - HIGHLIGHTED when no bonus */}
-              <div className={`flex-1 rounded p-2 border-2 ${
-                !setBonusInfo.hasCompleteSet
-                  ? 'bg-gradient-to-br from-purple-600/20 to-purple-700/20 border-purple-400/50'
-                  : 'bg-purple-950/30 border-purple-700/20'
-              }`}>
-                <div className={`text-xs mb-0.5 ${!setBonusInfo.hasCompleteSet ? 'text-purple-300 font-semibold' : 'text-purple-400 opacity-60'}`}>
-                  {setBonusInfo.hasCompleteSet ? 'Base' : 'Current'}
+        {/* Purchase info */}
+        <div className="space-y-2">
+          <div className="flex justify-between text-sm">
+            <span className="text-purple-300">Cost:</span>
+            <span className="font-bold text-purple-100">{buyCost.toLocaleString()} DEFI</span>
+          </div>
+          <div className="flex justify-between text-sm">
+            <span className="text-purple-300">Daily Income:</span>
+            <span className="font-bold text-green-400">+{(dailyIncome * slotsToBuy).toLocaleString()} DEFI</span>
+          </div>
+          
+          {!setBonusInfo.loading && (
+            <>
+              {setBonusInfo.hasCompleteSet ? (
+                <div className="text-xs text-green-300 mt-2 text-center bg-green-900/20 rounded py-1 px-2">
+                  ✅ Set bonus activated (+40%)
                 </div>
-                <div className={`text-base font-black ${!setBonusInfo.hasCompleteSet ? 'text-purple-200' : 'text-purple-400 opacity-60'}`}>
-                  +{(dailyIncome * slotsToBuy).toLocaleString()}
+              ) : setBonusInfo.willCompleteSet ? (
+                <div className="text-xs text-green-300 mt-2 text-center">
+                  🎉 This completes your set!
                 </div>
-              </div>
-              
-              {/* Arrow */}
-              <div className={`text-xl ${setBonusInfo.hasCompleteSet ? 'text-green-400' : 'text-purple-400'}`}>
-                →
-              </div>
-              
-              {/* With Bonus - HIGHLIGHTED when bonus active */}
-              <div className={`flex-1 rounded p-2 border-2 ${
-                setBonusInfo.hasCompleteSet
-                  ? 'bg-gradient-to-br from-green-600/20 to-emerald-600/20 border-green-400/50'
-                  : 'bg-purple-950/30 border-purple-700/20'
-              }`}>
-                <div className={`text-xs mb-0.5 ${setBonusInfo.hasCompleteSet ? 'text-green-300 font-semibold' : 'text-purple-400 opacity-60'}`}>
-                  {setBonusInfo.hasCompleteSet ? 'Your Income' : 'With Bonus'}
+              ) : (
+                <div className="text-xs text-purple-400 mt-2 text-center">
+                  Own {setBonusInfo.ownedInSet}/{setBonusInfo.requiredProps} • Need {setBonusInfo.requiredProps - setBonusInfo.ownedInSet} more for +40%
                 </div>
-                <div className={`text-base font-black ${setBonusInfo.hasCompleteSet ? 'text-green-300' : 'text-purple-400 opacity-60'}`}>
-                  +{Math.round((dailyIncome * slotsToBuy) * 1.4).toLocaleString()}
-                </div>
-              </div>
-            </div>
-            
-            {/* Info text */}
-            {setBonusInfo.hasCompleteSet ? (
-              <div className="text-xs text-green-300 mt-2 text-center bg-green-900/20 rounded py-1 px-2">
-                ✅ Set bonus activated (+40%)
-              </div>
-            ) : setBonusInfo.willCompleteSet ? (
-              <div className="text-xs text-green-300 mt-2 text-center">
-                🎉 This completes your set!
-              </div>
+              )}
+            </>
+          )}
+        </div>
+
+        {/* Action buttons */}
+        <div className="flex gap-2">
+          <button
+            onClick={handleBuy}
+            disabled={loading || slotsToBuy < 1 || slotsToBuy > maxSlotsToBuy || (!isOnCooldown && !canBuy)}
+            className={`flex-1 py-2.5 rounded-lg font-black text-base transition-all ${
+              isOnCooldown
+                ? 'bg-gradient-to-r from-orange-800 to-orange-900 hover:from-orange-700 hover:to-orange-800 text-orange-200 shadow-lg cursor-pointer'
+                : loading || slotsToBuy < 1 || slotsToBuy > maxSlotsToBuy || !canBuy
+                ? 'bg-gray-800/50 cursor-not-allowed text-gray-500'
+                : 'bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 text-white shadow-lg hover:shadow-green-500/50'
+            }`}
+          >
+            {loading ? (
+              buyingProgress || 'Processing...'
+            ) : isOnCooldown ? (
+              <>
+                <Clock className="inline w-4 h-4 mr-1" />
+                On Cooldown
+              </>
             ) : (
-              <div className="text-xs text-purple-400 mt-2 text-center">
-                Own {setBonusInfo.ownedInSet}/{setBonusInfo.requiredProps} • Need {setBonusInfo.requiredProps - setBonusInfo.ownedInSet} more for +40%
-              </div>
+              'Confirm'
             )}
-          </>
-        )}
+          </button>
+          <button
+            onClick={() => {
+              setShowBuyOptions(false);
+              setSlotsToBuy(1);
+            }}
+            disabled={loading}
+            className="px-4 bg-purple-800/60 hover:bg-purple-700/60 py-2.5 rounded-lg font-bold text-purple-100 transition-all"
+          >
+            Cancel
+          </button>
+        </div>
       </div>
 
-      {/* Action buttons */}
-      <div className="flex gap-2">
-        <button
-          onClick={handleBuy}
-          disabled={loading || !canBuy || slotsToBuy < 1 || slotsToBuy > maxSlotsToBuy}
-          className={`flex-1 py-2.5 rounded-lg font-black text-base transition-all ${
-            loading || !canBuy || slotsToBuy < 1 || slotsToBuy > maxSlotsToBuy
-              ? 'bg-gray-800/50 cursor-not-allowed text-gray-500'
-              : 'bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 text-white shadow-lg hover:shadow-green-500/50'
-          }`}
-        >
-          {loading ? buyingProgress || 'Processing...' : 'Confirm'}
-        </button>
-        <button
-          onClick={() => {
-            setShowBuyOptions(false);
-            setSlotsToBuy(1);
-          }}
-          disabled={loading}
-          className="px-4 bg-purple-800/60 hover:bg-purple-700/60 py-2.5 rounded-lg font-bold text-purple-100 transition-all"
-        >
-          Cancel
-        </button>
-      </div>
-    </div>
+      {/* Cooldown Explanation Modal */}
+      {showCooldownModal && (
+        <CooldownExplanationModal
+          onClose={() => setShowCooldownModal(false)}
+          cooldownHours={cooldownHours}
+          affectedProperties={affectedProperties.map(p => p.name)}
+        />
+      )}
+    </>
   );
 }
