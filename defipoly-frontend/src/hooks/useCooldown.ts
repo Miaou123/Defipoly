@@ -132,6 +132,7 @@ export function useCooldown(setId: number) {
   const [isOnCooldown, setIsOnCooldown] = useState(false);
   const [affectedProperties, setAffectedProperties] = useState<typeof PROPERTIES>([]);
   const [cooldownDurationHours, setCooldownDurationHours] = useState<number>(getCooldownDurationForSet(setId));
+  const [lastPurchasedPropertyId, setLastPurchasedPropertyId] = useState<number | null>(null);
 
   // Fetch cooldown data from blockchain
   const fetchCooldown = useCallback(async () => {
@@ -140,6 +141,7 @@ export function useCooldown(setId: number) {
       setIsOnCooldown(false);
       setAffectedProperties([]);
       setCooldownDurationHours(getCooldownDurationForSet(setId));
+      setLastPurchasedPropertyId(null); // FIXED: Set to null, not data.lastPurchasedPropertyId
       return;
     }
 
@@ -174,6 +176,7 @@ export function useCooldown(setId: number) {
         setIsOnCooldown(false);
         setAffectedProperties(propsInSet);
         setCooldownDurationHours(expectedDuration);
+        setLastPurchasedPropertyId(null);
         return;
       }
 
@@ -183,6 +186,7 @@ export function useCooldown(setId: number) {
       if (!cooldownData) {
         console.error('❌ Failed to parse cooldown data for set', setId);
         setCooldownDurationHours(getCooldownDurationForSet(setId));
+        setLastPurchasedPropertyId(null);
         return;
       }
 
@@ -197,7 +201,7 @@ export function useCooldown(setId: number) {
       const propsInSet = PROPERTIES.filter(p => p.setId === setId);
       
       // Calculate duration in hours
-      const durationHours = Math.ceil(cooldownData.cooldownDuration / 3600);
+      const expectedDurationHours = getCooldownDurationForSet(setId);
       
       // Store in cache
       const data: CooldownData = {
@@ -214,11 +218,12 @@ export function useCooldown(setId: number) {
       setCooldownRemaining(remaining);
       setIsOnCooldown(remaining > 0);
       setAffectedProperties(propsInSet);
-      setCooldownDurationHours(durationHours);
+      setCooldownDurationHours(expectedDurationHours);
+      setLastPurchasedPropertyId(cooldownData.lastPurchasedPropertyId); // FIXED: Added this line
       
       const hours = Math.floor(remaining / 3600);
       const mins = Math.floor((remaining % 3600) / 60);
-      console.log(`✅ Set ${setId} cooldown: ${remaining > 0 ? `${hours}h ${mins}m remaining` : 'READY'} (Total duration: ${durationHours}h)`);
+      console.log(`✅ Set ${setId} cooldown: ${remaining > 0 ? `${hours}h ${mins}m remaining` : 'READY'} (Total duration: ${expectedDurationHours}h, Last property: ${cooldownData.lastPurchasedPropertyId})`);
       
     } catch (error) {
       console.error('❌ Error fetching cooldown from blockchain:', error);
@@ -226,6 +231,7 @@ export function useCooldown(setId: number) {
       setCooldownRemaining(0);
       setIsOnCooldown(false);
       setCooldownDurationHours(getCooldownDurationForSet(setId));
+      setLastPurchasedPropertyId(null);
     }
   }, [connected, publicKey, setId, connection]);
 
@@ -258,6 +264,7 @@ export function useCooldown(setId: number) {
     affectedProperties,
     cooldownHours: Math.ceil(cooldownRemaining / 3600), // Time remaining in hours
     cooldownDurationHours, // Total cooldown duration for this set
+    lastPurchasedPropertyId, // FIXED: Added to return object
     refresh: fetchCooldown
   };
 }

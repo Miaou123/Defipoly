@@ -36,8 +36,8 @@ export function BuyPropertySection({
   const { buyProperty, getOwnershipData } = useDefipoly();
   const { showSuccess, showError } = useNotification();
   const { triggerRefresh } = usePropertyRefresh();
-  const { cooldownRemaining, isOnCooldown, affectedProperties, cooldownHours } = useCooldown(property.setId);
-  
+  const { cooldownRemaining, isOnCooldown, affectedProperties, cooldownDurationHours, lastPurchasedPropertyId } = useCooldown(property.setId);
+
   const [showBuyOptions, setShowBuyOptions] = useState(false);
   const [slotsToBuy, setSlotsToBuy] = useState(1);
   const [buyingProgress, setBuyingProgress] = useState<string>('');
@@ -133,13 +133,15 @@ export function BuyPropertySection({
 
   const dailyIncome = property.dailyIncome;
   const buyCost = property.price * slotsToBuy;
-  const canBuy = balance >= buyCost && !isOnCooldown;
+  // FIXED: Only block if cooldown is active AND trying to buy a different property
+  const isThisPropertyBlocked = isOnCooldown && lastPurchasedPropertyId !== propertyId;
+  const canBuy = balance >= buyCost && !isThisPropertyBlocked;
 
   const handleBuy = async () => {
     if (!wallet || loading) return;
     
-    // Show explanation modal if on cooldown
-    if (isOnCooldown) {
+    // FIXED: Show modal if THIS specific property is blocked
+    if (isThisPropertyBlocked) {
       setShowCooldownModal(true);
       return;
     }
@@ -204,8 +206,8 @@ export function BuyPropertySection({
   return (
     <>
       <div className="bg-purple-900/20 rounded-xl p-4 border border-purple-500/20 space-y-3">
-        {/* Cooldown Warning */}
-        {isOnCooldown && (
+        {/* FIXED: Only show cooldown warning if THIS property is blocked */}
+        {isThisPropertyBlocked && (
           <div className="bg-orange-900/30 rounded-lg p-3 border border-orange-500/30">
             <div className="flex items-center gap-2 mb-2">
               <Clock className="w-4 h-4 text-orange-400" />
@@ -234,7 +236,7 @@ export function BuyPropertySection({
             max={maxSlotsToBuy}
             value={slotsToBuy}
             onChange={(e) => setSlotsToBuy(Math.min(maxSlotsToBuy, Math.max(1, parseInt(e.target.value) || 1)))}
-            disabled={loading || isOnCooldown}
+            disabled={loading || isThisPropertyBlocked}
             className="w-full px-3 py-2 bg-purple-950/50 border border-purple-500/30 rounded-lg text-purple-100 text-sm focus:outline-none focus:border-purple-400/50 disabled:opacity-50"
           />
           <div className="text-xs text-purple-400 mt-1">
@@ -276,9 +278,9 @@ export function BuyPropertySection({
         <div className="flex gap-2">
           <button
             onClick={handleBuy}
-            disabled={loading || slotsToBuy < 1 || slotsToBuy > maxSlotsToBuy || (!isOnCooldown && !canBuy)}
+            disabled={loading || slotsToBuy < 1 || slotsToBuy > maxSlotsToBuy || !canBuy}
             className={`flex-1 py-2.5 rounded-lg font-black text-base transition-all ${
-              isOnCooldown
+              isThisPropertyBlocked
                 ? 'bg-gradient-to-r from-orange-800 to-orange-900 hover:from-orange-700 hover:to-orange-800 text-orange-200 shadow-lg cursor-pointer'
                 : loading || slotsToBuy < 1 || slotsToBuy > maxSlotsToBuy || !canBuy
                 ? 'bg-gray-800/50 cursor-not-allowed text-gray-500'
@@ -287,7 +289,7 @@ export function BuyPropertySection({
           >
             {loading ? (
               buyingProgress || 'Processing...'
-            ) : isOnCooldown ? (
+            ) : isThisPropertyBlocked ? (
               <>
                 <Clock className="inline w-4 h-4 mr-1" />
                 On Cooldown
@@ -313,7 +315,7 @@ export function BuyPropertySection({
       {showCooldownModal && (
         <CooldownExplanationModal
           onClose={() => setShowCooldownModal(false)}
-          cooldownHours={cooldownHours}
+          cooldownHours={cooldownDurationHours} 
           affectedProperties={affectedProperties.map(p => p.name)}
         />
       )}

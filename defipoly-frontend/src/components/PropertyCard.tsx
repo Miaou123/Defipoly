@@ -108,12 +108,13 @@ export function PropertyCard({ propertyId, onSelect }: PropertyCardProps) {
   
   const [buildingLevel, setBuildingLevel] = useState(0);
   const [shieldActive, setShieldActive] = useState(false);
+  const [hasCompleteSet, setHasCompleteSet] = useState(false);
   
   const property = PROPERTIES.find(p => p.id === propertyId);
   if (!property) return null;
 
   // Get cooldown info (optimized - fetches once, calculates client-side)
-  const { cooldownRemaining, isOnCooldown } = useCooldown(property.setId);
+  const { cooldownRemaining, isOnCooldown, lastPurchasedPropertyId } = useCooldown(property.setId);
   
   // Format cooldown time
   const formatCooldown = (seconds: number) => {
@@ -123,11 +124,15 @@ export function PropertyCard({ propertyId, onSelect }: PropertyCardProps) {
     return `${mins}m`;
   };
 
-  // Fetch ownership data
+  // Only show cooldown if there's a cooldown AND this is NOT the property that was just bought
+  const isThisPropertyBlocked = isOnCooldown && lastPurchasedPropertyId !== propertyId;
+
+  // Fetch ownership data AND check for complete set
   useEffect(() => {
     if (!connected || !publicKey || !program) {
       setBuildingLevel(0);
       setShieldActive(false);
+      setHasCompleteSet(false);
       return;
     }
 
@@ -147,25 +152,53 @@ export function PropertyCard({ propertyId, onSelect }: PropertyCardProps) {
           const isShielded = ownershipData.slotsShielded > 0 && ownershipData.shieldExpiry.toNumber() > now;
           setShieldActive(isShielded);
           
-          console.log(`🏠 Property ${propertyId} (${property.name}): ${slotsOwned} slots, Level ${level}, Shield: ${isShielded}`);
+          // Check for complete set
+          const setId = property.setId;
+          const propertiesInSet = PROPERTIES.filter(p => p.setId === setId);
+          const requiredProps = setId === 0 || setId === 7 ? 2 : 3;
+          
+          let ownedInSet = 0;
+          for (const prop of propertiesInSet) {
+            try {
+              const ownership = await getOwnershipData(prop.id);
+              if (ownership && ownership.slotsOwned > 0) {
+                ownedInSet++;
+              }
+            } catch {
+              // Property not owned
+            }
+          }
+          
+          setHasCompleteSet(ownedInSet >= requiredProps);
+          
+          console.log(`🏠 Property ${propertyId} (${property.name}): ${slotsOwned} slots, Level ${level}, Shield: ${isShielded}, Complete Set: ${ownedInSet >= requiredProps}`);
         } else {
           setBuildingLevel(0);
           setShieldActive(false);
+          setHasCompleteSet(false);
         }
       } catch (error) {
         console.warn(`Failed to fetch property ${propertyId}:`, error);
         setBuildingLevel(0);
         setShieldActive(false);
+        setHasCompleteSet(false);
       }
     };
 
     fetchOwnership();
-  }, [connected, publicKey, propertyId, program, getOwnershipData, refreshKey, property.name]);
+  }, [connected, publicKey, propertyId, program, getOwnershipData, refreshKey, property.name, property.setId]);
 
   return (
     <button
       onClick={() => onSelect(propertyId)}
-      className="w-full h-full relative border-2 border-gray-800 hover:scale-105 hover:z-20 hover:shadow-2xl transition-all duration-200 cursor-pointer flex flex-col overflow-hidden bg-white"
+      className={`w-full h-full relative border-2 hover:scale-105 hover:z-20 hover:shadow-2xl transition-all duration-200 cursor-pointer flex flex-col overflow-hidden bg-white ${
+        hasCompleteSet 
+          ? 'border-[#fbbf24] shadow-[0_0_20px_rgba(251,191,36,0.6),0_0_40px_rgba(251,191,36,0.3)] animate-[pulse-glow_2s_ease-in-out_infinite]' 
+          : 'border-gray-800'
+      }`}
+      style={hasCompleteSet ? {
+        animation: 'pulse-glow 2s ease-in-out infinite'
+      } : undefined}
     >
       {/* Color bar at top */}
       <div className={`${property.color} h-4 w-full flex-shrink-0`}></div>
@@ -202,8 +235,8 @@ export function PropertyCard({ propertyId, onSelect }: PropertyCardProps) {
         </div>
       )}
 
-      {/* Cooldown Indicator */}
-      {isOnCooldown && (
+      {/* Cooldown Indicator - Only show if THIS property is blocked */}
+      {isThisPropertyBlocked && (
         <div className="px-1 py-1 bg-orange-50 border-t border-orange-200 flex-shrink-0">
           <div className="flex items-center justify-center gap-0.5">
             <span className="text-[7px]">⏳</span>
@@ -222,6 +255,18 @@ export function PropertyCard({ propertyId, onSelect }: PropertyCardProps) {
           </div>
         </div>
       </div>
+
+      {/* Add keyframe animation for the golden glow */}
+      <style jsx>{`
+        @keyframes pulse-glow {
+          0%, 100% { 
+            box-shadow: 0 0 20px rgba(251, 191, 36, 0.6), 0 0 40px rgba(251, 191, 36, 0.3);
+          }
+          50% { 
+            box-shadow: 0 0 30px rgba(251, 191, 36, 0.8), 0 0 60px rgba(251, 191, 36, 0.4);
+          }
+        }
+      `}</style>
     </button>
   );
 }

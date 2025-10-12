@@ -1,6 +1,6 @@
 // ============================================
 // FILE: defipoly-frontend/src/components/PropertyModal.tsx
-// SIMPLIFIED VERSION - Now much cleaner!
+// With Set Bonus Display
 // ============================================
 
 'use client';
@@ -26,6 +26,21 @@ interface PropertyModalProps {
   onClose: () => void;
 }
 
+// Helper function to get color from Tailwind class
+const getColorFromClass = (colorClass: string): string => {
+  const colorMap: { [key: string]: string } = {
+    'bg-amber-900': '#78350f',
+    'bg-orange-600': '#ea580c',
+    'bg-sky-500': '#0ea5e9',
+    'bg-pink-500': '#ec4899',
+    'bg-yellow-400': '#eab308',
+    'bg-green-600': '#16a34a',
+    'bg-blue-600': '#2563eb',
+    'bg-red-600': '#dc2626'
+  };
+  return colorMap[colorClass] || '#10b981';
+};
+
 export function PropertyModal({ propertyId, onClose }: PropertyModalProps) {
   const { connected } = useWallet();
   const { getPropertyData, getOwnershipData, program } = useDefipoly();
@@ -35,7 +50,13 @@ export function PropertyModal({ propertyId, onClose }: PropertyModalProps) {
   
   const [loading, setLoading] = useState(false);
   const [propertyData, setPropertyData] = useState<any>(null);
+  const [setBonusInfo, setSetBonusInfo] = useState<{
+    hasCompleteSet: boolean;
+    boostedSlots: number;
+    totalSlots: number;
+  } | null>(null);
   
+  // Fetch property and ownership data
   useEffect(() => {
     if (propertyId !== null && connected && program) {
       const fetchData = async () => {
@@ -69,9 +90,63 @@ export function PropertyModal({ propertyId, onClose }: PropertyModalProps) {
     }
   }, [propertyId, connected, program, wallet, getPropertyData, getOwnershipData]);
 
+  // Fetch set bonus info
+  useEffect(() => {
+    const fetchSetBonusInfo = async () => {
+      if (!connected || !wallet || !program || !propertyData || propertyData.owned === 0 || !property) {
+        setSetBonusInfo(null);
+        return;
+      }
+
+      try {
+        const setId = property.setId;
+        const propertiesInSet = PROPERTIES.filter(p => p.setId === setId);
+        const requiredProps = setId === 0 || setId === 7 ? 2 : 3;
+        
+        // Get ownership for all properties in the set
+        const ownerships: { propertyId: number; slotsOwned: number }[] = [];
+        
+        for (const prop of propertiesInSet) {
+          try {
+            const ownership = await getOwnershipData(prop.id);
+            if (ownership && ownership.slotsOwned > 0) {
+              ownerships.push({
+                propertyId: prop.id,
+                slotsOwned: ownership.slotsOwned
+              });
+            }
+          } catch {
+            // Property not owned
+          }
+        }
+        
+        // Check if we have complete set
+        const hasCompleteSet = ownerships.length >= requiredProps;
+        
+        // If complete set, find minimum slots owned across the set
+        let boostedSlots = 0;
+        if (hasCompleteSet) {
+          boostedSlots = Math.min(...ownerships.map(o => o.slotsOwned));
+        }
+        
+        setSetBonusInfo({
+          hasCompleteSet,
+          boostedSlots,
+          totalSlots: propertyData.owned
+        });
+      } catch (error) {
+        console.error('Error fetching set bonus info:', error);
+        setSetBonusInfo(null);
+      }
+    };
+
+    fetchSetBonusInfo();
+  }, [connected, wallet, program, propertyData, property, getOwnershipData]);
+
   if (!property || propertyId === null) return null;
 
   const dailyIncome = property.dailyIncome;
+  const propertyColor = getColorFromClass(property.color);
 
   return (
     <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={onClose}>
@@ -128,17 +203,59 @@ export function PropertyModal({ propertyId, onClose }: PropertyModalProps) {
           {/* Ownership Info */}
           {connected && propertyData && propertyData.owned > 0 && (
             <div className="bg-gradient-to-br from-purple-900/40 to-purple-800/40 backdrop-blur rounded-xl p-4 border border-purple-500/30">
-              <h3 className="font-black text-base text-purple-100 mb-2">Your Ownership</h3>
+              <h3 className="font-black text-base text-purple-100 mb-3">Your Ownership</h3>
               <div className="space-y-2 text-sm">
+                {/* Slots Owned with Boosted Badge */}
                 <div className="flex justify-between items-center">
                   <span className="text-purple-300">Slots Owned:</span>
-                  <span className="font-bold text-purple-100 text-base">{propertyData.owned}</span>
+                  <div className="flex items-center gap-2">
+                    <span className="font-bold text-purple-100 text-lg">{propertyData.owned}</span>
+                    {setBonusInfo?.hasCompleteSet && setBonusInfo.boostedSlots > 0 && (
+                      <span 
+                        className="text-white text-xs font-bold px-2.5 py-1 rounded-xl"
+                        style={{ backgroundColor: propertyColor }}
+                      >
+                        {setBonusInfo.boostedSlots} boosted
+                      </span>
+                    )}
+                  </div>
                 </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-purple-300">Daily Income:</span>
-                  <span className="font-bold text-green-400 text-base">
-                    +{(dailyIncome * propertyData.owned).toLocaleString()} DEFI
-                  </span>
+                
+                {/* Daily Income with Breakdown */}
+                <div className="flex justify-between items-start">
+                  <span className="text-purple-300 pt-1">Daily Income:</span>
+                  <div className="flex flex-col items-end gap-0.5">
+                    {setBonusInfo?.hasCompleteSet && setBonusInfo.boostedSlots > 0 ? (
+                      <>
+                        {/* Boosted slots income */}
+                        <div 
+                          className="text-sm"
+                          style={{ color: propertyColor }}
+                        >
+                          {setBonusInfo.boostedSlots} slot{setBonusInfo.boostedSlots > 1 ? 's' : ''} × {(dailyIncome * 1.4).toLocaleString()}
+                        </div>
+                        
+                        {/* Regular slots income (if any) */}
+                        {(propertyData.owned - setBonusInfo.boostedSlots) > 0 && (
+                          <div className="text-sm text-purple-300/70">
+                            {propertyData.owned - setBonusInfo.boostedSlots} slot{(propertyData.owned - setBonusInfo.boostedSlots) > 1 ? 's' : ''} × {dailyIncome.toLocaleString()}
+                          </div>
+                        )}
+                        
+                        {/* Total */}
+                        <div className="font-bold text-white text-lg border-t border-purple-500/20 pt-1 mt-0.5 w-full text-right">
+                          {(
+                            (setBonusInfo.boostedSlots * dailyIncome * 1.4) + 
+                            ((propertyData.owned - setBonusInfo.boostedSlots) * dailyIncome)
+                          ).toLocaleString()} DEFI
+                        </div>
+                      </>
+                    ) : (
+                      <span className="font-bold text-green-400 text-lg">
+                        +{(dailyIncome * propertyData.owned).toLocaleString()} DEFI
+                      </span>
+                    )}
+                  </div>
                 </div>
                 
                 {propertyData.shieldActive && (

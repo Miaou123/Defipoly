@@ -1,11 +1,11 @@
 // ============================================
 // FILE: defipoly-frontend/src/components/CooldownExplanationModal.tsx
-// Cooldown explanation modal
+// Cooldown explanation modal - Updated with clearer messaging
 // ============================================
 
 'use client';
 
-import { X, Clock, Shield } from 'lucide-react';
+import { X, Clock, Shield, Zap } from 'lucide-react';
 
 interface CooldownExplanationModalProps {
   onClose: () => void;
@@ -50,8 +50,23 @@ export function CooldownExplanationModal({
               <Shield className="w-5 h-5 text-purple-400 mt-1 flex-shrink-0" />
               <div>
                 <h3 className="font-bold text-purple-100 mb-2">What is a Set Cooldown?</h3>
-                <p className="text-purple-200 text-sm leading-relaxed">
-                  When you purchase a property from a set, there's a <span className="font-bold text-purple-300">{cooldownHours}-hour cooldown</span> before you can buy another property from the same set.
+                <p className="text-purple-200 text-sm leading-relaxed mb-3">
+                  When you purchase a property from this set, there's a <span className="font-bold text-purple-300">{cooldownHours}-hour cooldown</span> before you can buy a <span className="font-bold text-purple-300">different property</span> from the same set.
+                </p>
+                <p className="text-purple-300 text-xs leading-relaxed">
+                  <span className="font-bold">Note:</span> You can still buy more slots of the same property during the cooldown!
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-blue-900/20 rounded-xl p-4 border border-blue-500/20">
+            <div className="flex items-start gap-3">
+              <Zap className="w-5 h-5 text-blue-400 mt-1 flex-shrink-0" />
+              <div>
+                <h3 className="font-bold text-blue-100 mb-2">Each Set Has Its Own Cooldown</h3>
+                <p className="text-blue-200 text-sm leading-relaxed">
+                  Different property sets have different cooldown periods (1h to 24h). Higher-tier sets have longer cooldowns. Each set's cooldown is tracked separately.
                 </p>
               </div>
             </div>
@@ -66,7 +81,7 @@ export function CooldownExplanationModal({
 
           {affectedProperties.length > 0 && (
             <div className="bg-amber-900/20 rounded-xl p-4 border border-amber-500/20">
-              <h3 className="font-bold text-amber-200 mb-2">Affected Properties:</h3>
+              <h3 className="font-bold text-amber-200 mb-2">Properties in This Set:</h3>
               <ul className="space-y-1">
                 {affectedProperties.map((prop, i) => (
                   <li key={i} className="text-amber-100 text-sm flex items-center gap-2">
@@ -75,6 +90,9 @@ export function CooldownExplanationModal({
                   </li>
                 ))}
               </ul>
+              <p className="text-amber-200 text-xs mt-2 italic">
+                Cooldown applies when buying between these properties
+              </p>
             </div>
           )}
 
