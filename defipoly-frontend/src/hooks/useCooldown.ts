@@ -1,6 +1,6 @@
 // ============================================
 // FILE: defipoly-frontend/src/hooks/useCooldown.ts
-// UPDATED: Query blockchain directly, no backend needed
+// UPDATED: Query blockchain directly with correct duration display
 // ============================================
 
 'use client';
@@ -25,6 +25,12 @@ interface CooldownData {
 // Store cooldown data in memory (shared across all hook instances)
 const cooldownCache = new Map<string, CooldownData>();
 
+// Get the expected cooldown duration for each set (in hours)
+function getCooldownDurationForSet(setId: number): number {
+  const cooldownHours = [1, 2, 4, 4, 5, 6, 7, 24]; // Set 0-7
+  return cooldownHours[setId] || 24;
+}
+
 // Helper to get cooldown PDA
 function getSetCooldownPDA(playerPubkey: PublicKey, setId: number): PublicKey {
   const [pda] = PublicKey.findProgramAddressSync(
@@ -41,47 +47,80 @@ function getPropertiesInSet(setId: number): number[] {
 
 // Deserialize cooldown account data
 function deserializeCooldown(data: Buffer): any {
-  if (!data || data.length < 64) {
+  try {
+    // Account structure:
+    // - 8 bytes: discriminator
+    // - 32 bytes: player pubkey
+    // - 1 byte: set_id
+    // - 8 bytes: last_purchase_timestamp (i64)
+    // - 8 bytes: cooldown_duration (i64)
+    // - 1 byte: last_purchased_property_id
+    // - 3 bytes: properties_owned_in_set array
+    // - 1 byte: properties_count
+    // - 1 byte: bump
+    // Total: 8 + 32 + 1 + 8 + 8 + 1 + 3 + 1 + 1 = 63 bytes
+    
+    const expectedSize = 63;
+    
+    if (!data || data.length < expectedSize) {
+      console.error(`Invalid cooldown data size: ${data?.length} bytes (expected ${expectedSize})`);
+      return null;
+    }
+
+    console.log(`📦 Deserializing cooldown account (${data.length} bytes)`);
+    
+    let offset = 8; // Skip discriminator
+
+    // Read player (32 bytes)
+    const playerBytes = data.slice(offset, offset + 32);
+    offset += 32;
+
+    // Read setId (1 byte)
+    const setId = data[offset];
+    offset += 1;
+
+    // Read lastPurchaseTimestamp (8 bytes, i64)
+    const lastPurchaseTimestamp = data.readBigInt64LE(offset);
+    offset += 8;
+
+    // Read cooldownDuration (8 bytes, i64)
+    const cooldownDuration = data.readBigInt64LE(offset);
+    offset += 8;
+
+    // Read lastPurchasedPropertyId (1 byte)
+    const lastPurchasedPropertyId = data[offset];
+    offset += 1;
+
+    // Read propertiesOwnedInSet (3 bytes)
+    const propertiesOwnedInSet = Array.from(data.slice(offset, offset + 3));
+    offset += 3;
+
+    // Read propertiesCount (1 byte)
+    const propertiesCount = data[offset];
+    offset += 1;
+
+    // Read bump (1 byte)
+    const bump = data[offset];
+
+    const result = {
+      setId,
+      lastPurchaseTimestamp: Number(lastPurchaseTimestamp),
+      cooldownDuration: Number(cooldownDuration),
+      lastPurchasedPropertyId,
+      propertiesOwnedInSet: propertiesOwnedInSet.slice(0, propertiesCount),
+      propertiesCount,
+      bump
+    };
+
+    console.log('✅ Deserialized cooldown:', result);
+    return result;
+    
+  } catch (error) {
+    console.error('❌ Error deserializing cooldown:', error);
+    console.error('Data length:', data?.length);
+    console.error('Data hex:', data?.toString('hex'));
     return null;
   }
-
-  let offset = 8; // Skip discriminator
-
-  // Read player (32 bytes)
-  const playerBytes = data.slice(offset, offset + 32);
-  offset += 32;
-
-  // Read setId (1 byte)
-  const setId = data[offset];
-  offset += 1;
-
-  // Read lastPurchaseTimestamp (8 bytes, i64)
-  const lastPurchaseTimestamp = data.readBigInt64LE(offset);
-  offset += 8;
-
-  // Read cooldownDuration (8 bytes, i64)
-  const cooldownDuration = data.readBigInt64LE(offset);
-  offset += 8;
-
-  // Read lastPurchasedPropertyId (1 byte)
-  const lastPurchasedPropertyId = data[offset];
-  offset += 1;
-
-  // Read propertiesOwnedInSet (3 bytes)
-  const propertiesOwnedInSet = Array.from(data.slice(offset, offset + 3));
-  offset += 3;
-
-  // Read propertiesCount (1 byte)
-  const propertiesCount = data[offset];
-
-  return {
-    setId,
-    lastPurchaseTimestamp: Number(lastPurchaseTimestamp),
-    cooldownDuration: Number(cooldownDuration),
-    lastPurchasedPropertyId,
-    propertiesOwnedInSet: propertiesOwnedInSet.slice(0, propertiesCount),
-    propertiesCount
-  };
 }
 
 export function useCooldown(setId: number) {
@@ -92,6 +131,7 @@ export function useCooldown(setId: number) {
   const [cooldownRemaining, setCooldownRemaining] = useState<number>(0);
   const [isOnCooldown, setIsOnCooldown] = useState(false);
   const [affectedProperties, setAffectedProperties] = useState<typeof PROPERTIES>([]);
+  const [cooldownDurationHours, setCooldownDurationHours] = useState<number>(getCooldownDurationForSet(setId));
 
   // Fetch cooldown data from blockchain
   const fetchCooldown = useCallback(async () => {
@@ -99,6 +139,7 @@ export function useCooldown(setId: number) {
       setCooldownRemaining(0);
       setIsOnCooldown(false);
       setAffectedProperties([]);
+      setCooldownDurationHours(getCooldownDurationForSet(setId));
       return;
     }
 
@@ -113,16 +154,17 @@ export function useCooldown(setId: number) {
       
       if (!accountInfo) {
         // No cooldown account exists - no cooldown active
-        console.log(`✅ No cooldown for set ${setId}`);
+        console.log(`✅ No cooldown account for set ${setId}`);
         
         const propsInSet = PROPERTIES.filter(p => p.setId === setId);
+        const expectedDuration = getCooldownDurationForSet(setId);
         
         const data: CooldownData = {
           isOnCooldown: false,
           cooldownRemaining: 0,
           lastPurchaseTimestamp: 0,
           lastPurchasedPropertyId: null,
-          cooldownDuration: 86400, // Default 24 hours
+          cooldownDuration: expectedDuration * 3600, // Convert hours to seconds
           affectedPropertyIds: getPropertiesInSet(setId),
           setId
         };
@@ -131,6 +173,7 @@ export function useCooldown(setId: number) {
         setCooldownRemaining(0);
         setIsOnCooldown(false);
         setAffectedProperties(propsInSet);
+        setCooldownDurationHours(expectedDuration);
         return;
       }
 
@@ -138,7 +181,8 @@ export function useCooldown(setId: number) {
       const cooldownData = deserializeCooldown(accountInfo.data);
       
       if (!cooldownData) {
-        console.error('Failed to parse cooldown data');
+        console.error('❌ Failed to parse cooldown data for set', setId);
+        setCooldownDurationHours(getCooldownDurationForSet(setId));
         return;
       }
 
@@ -151,6 +195,9 @@ export function useCooldown(setId: number) {
       
       // Get property details
       const propsInSet = PROPERTIES.filter(p => p.setId === setId);
+      
+      // Calculate duration in hours
+      const durationHours = Math.ceil(cooldownData.cooldownDuration / 3600);
       
       // Store in cache
       const data: CooldownData = {
@@ -167,14 +214,18 @@ export function useCooldown(setId: number) {
       setCooldownRemaining(remaining);
       setIsOnCooldown(remaining > 0);
       setAffectedProperties(propsInSet);
+      setCooldownDurationHours(durationHours);
       
-      console.log(`✅ Cooldown fetched for set ${setId}: ${remaining}s remaining (${Math.floor(remaining / 3600)}h ${Math.floor((remaining % 3600) / 60)}m)`);
+      const hours = Math.floor(remaining / 3600);
+      const mins = Math.floor((remaining % 3600) / 60);
+      console.log(`✅ Set ${setId} cooldown: ${remaining > 0 ? `${hours}h ${mins}m remaining` : 'READY'} (Total duration: ${durationHours}h)`);
       
     } catch (error) {
-      console.error('Error fetching cooldown from blockchain:', error);
+      console.error('❌ Error fetching cooldown from blockchain:', error);
       // Set defaults on error
       setCooldownRemaining(0);
       setIsOnCooldown(false);
+      setCooldownDurationHours(getCooldownDurationForSet(setId));
     }
   }, [connected, publicKey, setId, connection]);
 
@@ -205,7 +256,8 @@ export function useCooldown(setId: number) {
     cooldownRemaining, 
     isOnCooldown, 
     affectedProperties,
-    cooldownHours: Math.ceil(cooldownRemaining / 3600),
+    cooldownHours: Math.ceil(cooldownRemaining / 3600), // Time remaining in hours
+    cooldownDurationHours, // Total cooldown duration for this set
     refresh: fetchCooldown
   };
 }

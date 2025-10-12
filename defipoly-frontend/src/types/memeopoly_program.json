@@ -191,7 +191,10 @@
                   116,
                   97,
                   116,
-                  115
+                  115,
+                  95,
+                  118,
+                  50
                 ]
               },
               {
@@ -235,7 +238,12 @@
           "address": "11111111111111111111111111111111"
         }
       ],
-      "args": []
+      "args": [
+        {
+          "name": "slots",
+          "type": "u16"
+        }
+      ]
     },
     {
       "name": "claim_rewards",
@@ -381,9 +389,106 @@
           }
         },
         {
+          "name": "dev_token_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "dev_wallet"
+              },
+              {
+                "kind": "const",
+                "value": [
+                  6,
+                  221,
+                  246,
+                  225,
+                  215,
+                  101,
+                  161,
+                  147,
+                  217,
+                  203,
+                  225,
+                  70,
+                  206,
+                  235,
+                  121,
+                  172,
+                  28,
+                  180,
+                  133,
+                  237,
+                  95,
+                  91,
+                  55,
+                  145,
+                  58,
+                  140,
+                  245,
+                  133,
+                  126,
+                  255,
+                  0,
+                  169
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "token_mint"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                140,
+                151,
+                37,
+                143,
+                78,
+                36,
+                137,
+                241,
+                187,
+                61,
+                16,
+                41,
+                20,
+                142,
+                13,
+                131,
+                11,
+                90,
+                19,
+                153,
+                218,
+                255,
+                16,
+                132,
+                4,
+                142,
+                123,
+                216,
+                219,
+                233,
+                248,
+                89
+              ]
+            }
+          }
+        },
+        {
+          "name": "dev_wallet"
+        },
+        {
           "name": "authority",
           "writable": true,
           "signer": true
+        },
+        {
+          "name": "associated_token_program",
+          "address": "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"
         },
         {
           "name": "token_program",
@@ -1187,13 +1292,13 @@
     },
     {
       "code": 6001,
-      "name": "InvalidSetId",
-      "msg": "Invalid set ID (must be 0-7)"
+      "name": "InvalidSlotAmount",
+      "msg": "Invalid slot amount (must be > 0)"
     },
     {
       "code": 6002,
-      "name": "NoSlotsAvailable",
-      "msg": "No available slots for this property"
+      "name": "Overflow",
+      "msg": "Arithmetic overflow"
     },
     {
       "code": 6003,
@@ -1202,116 +1307,126 @@
     },
     {
       "code": 6004,
+      "name": "InvalidSetId",
+      "msg": "Invalid set ID (must be 0-7)"
+    },
+    {
+      "code": 6005,
+      "name": "NoSlotsAvailable",
+      "msg": "No available slots for this property"
+    },
+    {
+      "code": 6006,
       "name": "CooldownActive",
       "msg": "Cooldown still active - cannot purchase yet"
     },
     {
-      "code": 6005,
+      "code": 6007,
       "name": "DoesNotOwnProperty",
       "msg": "Player does not own this property"
     },
     {
-      "code": 6006,
+      "code": 6008,
       "name": "InvalidShieldSlots",
       "msg": "Invalid number of slots to shield"
     },
     {
-      "code": 6007,
+      "code": 6009,
       "name": "TargetDoesNotOwnProperty",
       "msg": "Target does not own this property"
     },
     {
-      "code": 6008,
+      "code": 6010,
       "name": "CannotStealFromSelf",
       "msg": "Cannot steal from yourself"
     },
     {
-      "code": 6009,
+      "code": 6011,
       "name": "AllSlotsShielded",
       "msg": "All slots are shielded"
     },
     {
-      "code": 6010,
+      "code": 6012,
       "name": "InsufficientSlots",
       "msg": "Insufficient slots"
     },
     {
-      "code": 6011,
+      "code": 6013,
       "name": "NoRewardsToClaim",
       "msg": "No rewards to claim"
     },
     {
-      "code": 6012,
+      "code": 6014,
       "name": "GamePaused",
       "msg": "Game is paused"
     },
     {
-      "code": 6013,
+      "code": 6015,
       "name": "Unauthorized",
       "msg": "Unauthorized - ownership does not match player"
     },
     {
-      "code": 6014,
+      "code": 6016,
       "name": "InvalidAccountCount",
       "msg": "Invalid account count in remaining_accounts"
     },
     {
-      "code": 6015,
+      "code": 6017,
       "name": "PropertyMismatch",
       "msg": "Property mismatch between ownership and property account"
     },
     {
-      "code": 6016,
+      "code": 6018,
       "name": "NoProperties",
       "msg": "No properties provided"
     },
     {
-      "code": 6017,
+      "code": 6019,
       "name": "InvalidTarget",
       "msg": "Invalid target player"
     },
     {
-      "code": 6018,
+      "code": 6020,
       "name": "InsufficientRewardPool",
       "msg": "Insufficient reward pool balance"
     },
     {
-      "code": 6019,
+      "code": 6021,
       "name": "TooManyProperties",
       "msg": "Too many properties in single claim (max 22)"
     },
     {
-      "code": 6020,
+      "code": 6022,
       "name": "ClaimTooSoon",
-      "msg": "Claim too soon - wait at least 5 minutes"
+      "msg": "Claim too soon - wait at least 1 minutes"
     },
     {
-      "code": 6021,
+      "code": 6023,
       "name": "AlreadyFulfilled",
       "msg": "VRF result already fulfilled"
     },
     {
-      "code": 6022,
+      "code": 6024,
       "name": "VrfNotReady",
       "msg": "VRF result not ready yet - wait at least 1 slot"
     },
     {
-      "code": 6023,
+      "code": 6025,
       "name": "PendingStealExists",
       "msg": "Pending steal request exists - wait 5 minutes or until fulfilled"
     },
     {
-      "code": 6024,
+      "code": 6026,
       "name": "NotFulfilled",
       "msg": "Steal request not fulfilled yet - cannot close"
     },
     {
-      "code": 6025,
+      "code": 6027,
       "name": "StealRequestExpired",
       "msg": "Steal request expired - must fulfill within 150 slots (~60 sec)"
     },
     {
-      "code": 6026,
+      "code": 6028,
       "name": "SlotHashUnavailable",
       "msg": "Slot hash unavailable - try again"
     }
@@ -1615,6 +1730,18 @@
           {
             "name": "slots_owned",
             "type": "u16"
+          },
+          {
+            "name": "slots",
+            "type": "u16"
+          },
+          {
+            "name": "total_cost",
+            "type": "u64"
+          },
+          {
+            "name": "total_slots_owned",
+            "type": "u16"
           }
         ]
       }
@@ -1726,6 +1853,10 @@
           },
           {
             "name": "unique_owners",
+            "type": "u32"
+          },
+          {
+            "name": "total_players",
             "type": "u32"
           },
           {
