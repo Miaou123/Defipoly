@@ -184,13 +184,68 @@ export function Portfolio({ onSelectProperty }: PortfolioProps) {
     return Math.floor((dailyIncomePerSlot * shieldCostBps / 10000) * slots);
   };
 
-  // Prepare data for Shield All Modal
-  const shieldAllData = ownedProperties.map(owned => ({
-    propertyId: owned.propertyId,
-    propertyInfo: owned.propertyInfo,
-    slotsOwned: owned.slotsOwned,
-    shieldCost: calculateShieldCost(owned.propertyInfo, owned.slotsOwned)
-  }));
+  // Check if shield is in cooldown (12 hours after expiry)
+  const isShieldInCooldown = (owned: OwnedProperty): boolean => {
+    const now = Date.now() / 1000;
+    const shieldExpiryTimestamp = owned.shieldExpiry.toNumber();
+    const SHIELD_COOLDOWN_HOURS = 12;
+    const SHIELD_COOLDOWN_SECONDS = SHIELD_COOLDOWN_HOURS * 3600;
+    const cooldownEndTime = shieldExpiryTimestamp + SHIELD_COOLDOWN_SECONDS;
+    
+    // Shield is in cooldown if:
+    // 1. Shield is not currently active (expired)
+    // 2. Shield expiry timestamp exists (has been shielded before)
+    // 3. Current time is still within the cooldown period
+    const isActive = isShieldActive(owned);
+    return !isActive && shieldExpiryTimestamp > 0 && now < cooldownEndTime;
+  };
+
+  // Prepare data for Shield All Modal - ONLY include properties that can be shielded
+  const shieldAllData = ownedProperties
+    .filter(owned => {
+      // Exclude properties that already have active shields
+      if (isShieldActive(owned)) return false;
+      
+      // Exclude properties in cooldown period
+      if (isShieldInCooldown(owned)) return false;
+      
+      // Include all other properties
+      return true;
+    })
+    .map(owned => ({
+      propertyId: owned.propertyId,
+      propertyInfo: owned.propertyInfo,
+      slotsOwned: owned.slotsOwned,
+      shieldCost: calculateShieldCost(owned.propertyInfo, owned.slotsOwned)
+    }));
+
+  // Count properties available to shield
+  const shieldablePropertiesCount = shieldAllData.length;
+
+  // Button UI for Shield All - Updated to show count and disable when no properties available
+  const renderShieldAllButton = () => {
+    if (ownedProperties.length === 0) return null;
+
+    const hasShieldableProperties = shieldablePropertiesCount > 0;
+
+    return (
+      <button 
+        onClick={() => setShowShieldAllModal(true)}
+        disabled={!hasShieldableProperties}
+        className={`w-full py-2 rounded-lg font-bold text-sm mb-4 flex items-center justify-center gap-2 transition-all ${
+          hasShieldableProperties
+            ? 'bg-gradient-to-r from-yellow-600 to-amber-600 hover:from-yellow-500 hover:to-amber-500 text-white'
+            : 'bg-gray-800/50 text-gray-500 cursor-not-allowed'
+        }`}
+      >
+        <Shield className="w-4 h-4" />
+        {hasShieldableProperties 
+          ? `Shield ${shieldablePropertiesCount} ${shieldablePropertiesCount === 1 ? 'Property' : 'Properties'}`
+          : 'All Properties Protected'
+        }
+      </button>
+    );
+  };
 
   // Group owned properties by setId
   const groupedProperties = ownedProperties.reduce((acc, prop) => {
@@ -225,15 +280,7 @@ export function Portfolio({ onSelectProperty }: PortfolioProps) {
         </div>
 
         {/* Shield All Button */}
-        {ownedProperties.length > 0 && (
-          <button 
-            onClick={() => setShowShieldAllModal(true)}
-            className="w-full py-2 bg-gradient-to-r from-yellow-600 to-amber-600 hover:from-yellow-500 hover:to-amber-500 rounded-lg font-bold text-sm text-white mb-4 flex items-center justify-center gap-2 transition-all"
-          >
-            <Shield className="w-4 h-4" />
-            Shield All Properties
-          </button>
-        )}
+        {renderShieldAllButton()}
 
         {/* Loading State */}
         {loading && ownedProperties.length === 0 && (

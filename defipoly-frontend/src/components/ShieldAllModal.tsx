@@ -1,12 +1,12 @@
 // ============================================
 // FILE: defipoly-frontend/src/components/ShieldAllModal.tsx
-// Modal for shielding multiple selected properties
+// Modal for shielding multiple selected properties (FIXED)
 // ============================================
 
 'use client';
 
 import { useState } from 'react';
-import { Shield, X, AlertCircle, CheckCircle, Loader, Trophy } from 'lucide-react';
+import { Shield, X, AlertCircle, CheckCircle, Loader, Trophy, Clock } from 'lucide-react';
 import { useDefipoly } from '@/hooks/useDefipoly';
 import { useNotification } from './NotificationProvider';
 import { usePropertyRefresh } from './PropertyRefreshContext';
@@ -36,7 +36,7 @@ interface PropertyShieldStatus {
 }
 
 export function ShieldAllModal({ ownedProperties, balance, onClose }: ShieldAllModalProps) {
-  const { activateShield } = useDefipoly();
+  const { activateMultipleShields } = useDefipoly();
   const { showSuccess, showError } = useNotification();
   const { triggerRefresh } = usePropertyRefresh();
   
@@ -91,53 +91,64 @@ export function ShieldAllModal({ ownedProperties, balance, onClose }: ShieldAllM
     if (!canAfford || shielding || selectedCount === 0) return;
     
     setShielding(true);
-    let successCount = 0;
-    let failCount = 0;
-
-    // Shield only selected properties
-    for (const property of selectedProperties) {
+  
+    // Mark all as processing
+    selectedProperties.forEach(property => {
       updatePropertyStatus(property.propertyId, 'processing');
+    });
+  
+    try {
+      // Prepare data for batched transaction
+      const propertiesToShield = selectedProperties.map(property => ({
+        propertyId: property.propertyId,
+        slotsToShield: property.slotsOwned
+      }));
+  
+      const BATCH_SIZE = 5;
+      const totalBatches = Math.ceil(propertiesToShield.length / BATCH_SIZE);
       
-      try {
-        const signature = await activateShield(property.propertyId, property.slotsOwned);
-        
-        if (signature) {
-          updatePropertyStatus(property.propertyId, 'success');
-          successCount++;
-          
-          // Small delay between transactions
-          await new Promise(resolve => setTimeout(resolve, 500));
-        } else {
-          throw new Error('Failed to get transaction signature');
-        }
-      } catch (error: any) {
-        console.error(`Error shielding property ${property.propertyId}:`, error);
-        const errorMessage = error?.message || 'Unknown error';
-        updatePropertyStatus(property.propertyId, 'error', errorMessage);
-        failCount++;
+      // Show batch info if multiple batches needed
+      if (totalBatches > 1) {
+        console.log(`Processing ${selectedCount} properties in ${totalBatches} batches...`);
       }
-    }
-
-    setShielding(false);
-    triggerRefresh();
-
-    // Show final notification
-    if (successCount === selectedCount) {
-      showSuccess(
-        'Properties Shielded!',
-        `Successfully shielded ${successCount} propert${successCount === 1 ? 'y' : 'ies'}!`
-      );
-      setTimeout(() => onClose(), 2000);
-    } else if (successCount > 0) {
-      showSuccess(
-        'Partial Success',
-        `Shielded ${successCount} of ${selectedCount} properties. ${failCount} failed.`
-      );
-    } else {
+  
+      // Execute batched transaction(s)
+      const signature = await activateMultipleShields(propertiesToShield);
+      
+      if (signature) {
+        // Mark all as success
+        selectedProperties.forEach(property => {
+          updatePropertyStatus(property.propertyId, 'success');
+        });
+  
+        const message = totalBatches > 1 
+          ? `Successfully shielded ${selectedCount} properties in ${totalBatches} transactions!`
+          : `Successfully shielded ${selectedCount} propert${selectedCount === 1 ? 'y' : 'ies'} in one transaction!`;
+  
+        showSuccess(
+          'Properties Shielded!',
+          message,
+          signature !== 'already-processed' ? signature : undefined
+        );
+        
+        triggerRefresh();
+        setTimeout(() => onClose(), 2000);
+      }
+    } catch (error: any) {
+      console.error('Error shielding properties:', error);
+      
+      // Mark all as error
+      const errorMessage = error?.message || error?.toString() || 'Unknown error';
+      selectedProperties.forEach(property => {
+        updatePropertyStatus(property.propertyId, 'error', errorMessage);
+      });
+  
       showError(
         'Shield Failed',
         'Failed to shield properties. Please try again.'
       );
+    } finally {
+      setShielding(false);
     }
   };
 
@@ -192,12 +203,21 @@ export function ShieldAllModal({ ownedProperties, balance, onClose }: ShieldAllM
 
         {/* Content */}
         <div className="p-6 max-h-[60vh] overflow-y-auto">
-          {/* All Properties Already Shielded */}
+          {/* All Properties Already Shielded or in Cooldown */}
           {propertyCount === 0 && (
             <div className="text-center py-8">
               <Shield className="w-12 h-12 text-green-400 mx-auto mb-3" />
               <div className="text-lg font-bold text-purple-100 mb-2">All Properties Protected!</div>
-              <div className="text-sm text-purple-300">All your properties already have active shields.</div>
+              <div className="text-sm text-purple-300 mb-3">
+                All your properties are either actively shielded or in cooldown period.
+              </div>
+              <div className="bg-purple-900/30 border border-purple-500/30 rounded-lg p-3 mb-4 text-xs text-purple-300">
+                <div className="flex items-center gap-2 mb-1">
+                  <Clock className="w-4 h-4" />
+                  <span className="font-bold">Cooldown Info:</span>
+                </div>
+                <div>After a 48-hour shield expires, there's a 12-hour cooldown before you can reactivate.</div>
+              </div>
               <button
                 onClick={onClose}
                 className="mt-4 px-6 py-2 bg-purple-800/60 hover:bg-purple-700/60 rounded-lg font-bold text-purple-100 transition-all"
@@ -281,7 +301,7 @@ export function ShieldAllModal({ ownedProperties, balance, onClose }: ShieldAllM
           {/* Properties List */}
           <div className="space-y-2">
             <div className="text-xs text-purple-300 font-semibold uppercase tracking-wide mb-2">
-              Properties:
+              Properties Available to Shield:
             </div>
             {propertyStatuses.map((propStatus) => {
               const property = ownedProperties.find(p => p.propertyId === propStatus.propertyId);
@@ -339,8 +359,24 @@ export function ShieldAllModal({ ownedProperties, balance, onClose }: ShieldAllM
           {/* Info Box */}
           <div className="mt-4 bg-purple-900/30 border border-purple-500/30 rounded-lg p-3">
             <div className="text-xs text-purple-300">
-              <div className="font-bold mb-1">ℹ️ Shield Duration</div>
-              <div>Selected properties will be protected for 48 hours (2 days) from theft attempts.</div>
+              <div className="font-bold mb-2 flex items-center gap-2">
+                <Shield className="w-4 h-4" />
+                Shield Information
+              </div>
+              <div className="space-y-1.5">
+                <div className="flex items-start gap-2">
+                  <span className="text-yellow-300">•</span>
+                  <span><strong>Duration:</strong> 48 hours of protection from theft</span>
+                </div>
+                <div className="flex items-start gap-2">
+                  <span className="text-orange-300">•</span>
+                  <span><strong>Cooldown:</strong> 12-hour cooldown after shield expires</span>
+                </div>
+                <div className="flex items-start gap-2">
+                  <span className="text-green-300">•</span>
+                  <span><strong>Coverage:</strong> All selected slots will be protected</span>
+                </div>
+              </div>
             </div>
           </div>
           </>
@@ -393,7 +429,8 @@ export function ShieldAllModal({ ownedProperties, balance, onClose }: ShieldAllM
               <div className="text-2xl font-black text-white mb-2">
                 {selectedCount === 1 ? 'Property Shielded!' : 'Properties Shielded!'}
               </div>
-              <div className="text-green-300">Your properties are now protected</div>
+              <div className="text-green-300 mb-1">Your properties are now protected</div>
+              <div className="text-sm text-green-400/80">48h protection • 12h cooldown after</div>
             </div>
           </div>
         )}
