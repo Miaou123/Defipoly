@@ -4,12 +4,13 @@
 
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, Token, TokenAccount, Transfer, Mint};
+use anchor_spl::associated_token::AssociatedToken;
 
 declare_id!("Fx8rVmiwHiBuB28MWDAaY68PXRmZLTsXsf2SJ6694oFi");
 
 const DEV_WALLET: &str = "CgWTFX7JJQHed3qyMDjJkNCxK4sFe3wbDFABmWAAmrdS";
 const MAX_PROPERTIES_PER_CLAIM: u8 = 22;
-const MIN_CLAIM_INTERVAL_MINUTES: i64 = 5;
+const MIN_CLAIM_INTERVAL_MINUTES: i64 = 1;
 
 #[program]
 pub mod memeopoly_program {
@@ -92,7 +93,10 @@ pub mod memeopoly_program {
 
     // ========== PROPERTY PURCHASE ==========
 
-    pub fn buy_property(ctx: Context<BuyProperty>) -> Result<()> {
+    pub fn buy_property(
+        ctx: Context<BuyProperty>,
+        slots: u16, // NEW: Number of slots to buy (1 to max_per_player)
+    ) -> Result<()> {
         let game_config = &ctx.accounts.game_config;
         let property = &mut ctx.accounts.property;
         let player = &mut ctx.accounts.player_account;
@@ -101,16 +105,22 @@ pub mod memeopoly_program {
         let set_ownership = &mut ctx.accounts.set_ownership;
         let set_stats = &mut ctx.accounts.set_stats;
         let clock = Clock::get()?;
-
+    
+        // Validation
         require!(!game_config.game_paused, ErrorCode::GamePaused);
-        require!(property.available_slots > 0, ErrorCode::NoSlotsAvailable);
+        require!(slots > 0, ErrorCode::InvalidSlotAmount);
+        require!(property.available_slots >= slots, ErrorCode::NoSlotsAvailable);
         
-        let total_slots_for_this_property = ownership.slots_owned;
+        let current_owned = ownership.slots_owned;
+        let max_allowed = property.max_per_player;
+        
+        // Check if user can buy this many slots
         require!(
-            total_slots_for_this_property < property.max_per_player,
+            current_owned + slots <= max_allowed,
             ErrorCode::MaxSlotsReached
         );
-
+    
+        // Cooldown check
         if set_cooldown.last_purchase_timestamp != 0 {
             let time_since_last_purchase = clock.unix_timestamp - set_cooldown.last_purchase_timestamp;
             require!(
@@ -118,11 +128,18 @@ pub mod memeopoly_program {
                 ErrorCode::CooldownActive
             );
         }
-
-        let price = property.price;
-        let to_reward_pool = (price * 90) / 100;
-        let to_dev = price - to_reward_pool;
-
+    
+        // Calculate total cost for all slots
+        let total_price = property.price.checked_mul(slots as u64)
+            .ok_or(ErrorCode::Overflow)?;
+        let to_reward_pool = total_price.checked_mul(90)
+            .ok_or(ErrorCode::Overflow)?
+            .checked_div(100)
+            .ok_or(ErrorCode::Overflow)?;
+        let to_dev = total_price.checked_sub(to_reward_pool)
+            .ok_or(ErrorCode::Overflow)?;
+    
+        // Transfer to reward pool
         let transfer_ctx_pool = CpiContext::new(
             ctx.accounts.token_program.to_account_info(),
             Transfer {
@@ -132,7 +149,8 @@ pub mod memeopoly_program {
             },
         );
         token::transfer(transfer_ctx_pool, to_reward_pool)?;
-
+    
+        // Transfer to dev wallet
         let transfer_ctx_dev = CpiContext::new(
             ctx.accounts.token_program.to_account_info(),
             Transfer {
@@ -142,25 +160,35 @@ pub mod memeopoly_program {
             },
         );
         token::transfer(transfer_ctx_dev, to_dev)?;
-
-        property.available_slots -= 1;
-
+    
+        // Update property: reduce available slots
+        property.available_slots = property.available_slots
+            .checked_sub(slots)
+            .ok_or(ErrorCode::Overflow)?;
+    
+        // Update or initialize ownership
         let is_new_ownership = ownership.slots_owned == 0;
         if is_new_ownership {
             ownership.player = player.owner;
             ownership.property_id = property.property_id;
-            ownership.slots_owned = 1;
+            ownership.slots_owned = slots;
             ownership.slots_shielded = 0;
             ownership.purchase_timestamp = clock.unix_timestamp;
             ownership.shield_expiry = 0;
             ownership.bump = ctx.bumps.ownership;
             player.properties_owned_count += 1;
         } else {
-            ownership.slots_owned += 1;
+            ownership.slots_owned = ownership.slots_owned
+                .checked_add(slots)
+                .ok_or(ErrorCode::Overflow)?;
         }
-
-        player.total_slots_owned += 1;
-
+    
+        // Update player total slots
+        player.total_slots_owned = player.total_slots_owned
+            .checked_add(slots)
+            .ok_or(ErrorCode::Overflow)?;
+    
+        // Update set ownership (tracking which properties owned in set)
         if set_ownership.total_slots_in_set == 0 {
             set_ownership.player = player.owner;
             set_ownership.set_id = property.set_id;
@@ -183,8 +211,12 @@ pub mod memeopoly_program {
                 set_ownership.properties_count += 1;
             }
         }
-        set_ownership.total_slots_in_set += 1;
         
+        set_ownership.total_slots_in_set = set_ownership.total_slots_in_set
+            .checked_add(slots)
+            .ok_or(ErrorCode::Overflow)?;
+        
+        // Check for complete set bonus
         let required_properties = Property::get_properties_in_set(property.set_id);
         let was_complete = set_ownership.has_complete_set;
         set_ownership.has_complete_set = set_ownership.properties_count >= required_properties;
@@ -192,46 +224,45 @@ pub mod memeopoly_program {
         if set_ownership.has_complete_set && !was_complete {
             player.complete_sets_owned += 1;
         }
-
+    
+        // Update set stats
         if set_stats.set_id == 0 && set_stats.total_slots_sold == 0 {
             set_stats.set_id = property.set_id;
+            set_stats.total_players = 1;
             set_stats.bump = ctx.bumps.set_stats;
-        }
-        set_stats.total_slots_sold += 1;
-        set_stats.total_revenue += price;
-
-        set_cooldown.player = player.owner;
-        set_cooldown.set_id = property.set_id;
-        set_cooldown.last_purchase_timestamp = clock.unix_timestamp;
-        set_cooldown.cooldown_duration = property.cooldown_seconds;
-        set_cooldown.last_purchased_property_id = property.property_id;
-        
-        let mut already_tracked = false;
-        for i in 0..set_cooldown.properties_count as usize {
-            if set_cooldown.properties_owned_in_set[i] == property.property_id {
-                already_tracked = true;
-                break;
-            }
+        } else if is_new_ownership {
+            set_stats.total_players = set_stats.total_players
+                .checked_add(1)
+                .ok_or(ErrorCode::Overflow)?;
         }
         
-        if !already_tracked && set_cooldown.properties_count < 3 {
-            let count = set_cooldown.properties_count as usize;
-            set_cooldown.properties_owned_in_set[count] = property.property_id;
-            set_cooldown.properties_count += 1;
-        }
-        
-        if set_cooldown.bump == 0 {
+        set_stats.total_slots_sold = set_stats.total_slots_sold
+            .checked_add(slots as u64)
+            .ok_or(ErrorCode::Overflow)?;
+    
+        // Update cooldown
+        if set_cooldown.player == Pubkey::default() {
+            set_cooldown.player = player.owner;
+            set_cooldown.set_id = property.set_id;
+            set_cooldown.cooldown_duration = property.cooldown_seconds;
             set_cooldown.bump = ctx.bumps.set_cooldown;
         }
-
+        set_cooldown.last_purchase_timestamp = clock.unix_timestamp;
+        set_cooldown.last_purchased_property_id = property.property_id;
+    
+        // Emit event
         emit!(PropertyBoughtEvent {
             player: player.owner,
             property_id: property.property_id,
-            price,
-            slots_owned: ownership.slots_owned,
+            price: property.price,      
+            slots_owned: ownership.slots_owned, 
+            slots,
+            total_cost: total_price,
+            total_slots_owned: ownership.slots_owned,
         });
-
-        msg!("Property {} bought by {}", property.property_id, player.owner);
+    
+        msg!("✅ Player {} bought {} slots of property {} for {} tokens", 
+             player.owner, slots, property.property_id, total_price);
         Ok(())
     }
 
@@ -520,29 +551,31 @@ pub mod memeopoly_program {
         let game_config = &ctx.accounts.game_config;
         let player = &mut ctx.accounts.player_account;
         let clock = Clock::get()?;
-
+    
         require!(!game_config.game_paused, ErrorCode::GamePaused);
         require!(
             num_properties > 0 && num_properties <= game_config.max_properties_per_claim,
             ErrorCode::TooManyProperties
         );
-
-        let minutes_elapsed = (clock.unix_timestamp - player.last_claim_timestamp) / 60;
-        require!(minutes_elapsed > 0, ErrorCode::NoRewardsToClaim);
+    
+        // ❌ REMOVE THIS - we'll calculate per property instead
+        // let minutes_elapsed = (clock.unix_timestamp - player.last_claim_timestamp) / 60;
+        
         require!(
-            minutes_elapsed >= game_config.min_claim_interval_minutes,
+            (clock.unix_timestamp - player.last_claim_timestamp) >= game_config.min_claim_interval_minutes * 60,
             ErrorCode::ClaimTooSoon
         );
-
+    
         let remaining_accounts = ctx.remaining_accounts;
         let num_props = num_properties as usize;
         require!(remaining_accounts.len() >= num_props * 2, ErrorCode::InvalidAccountCount);
-
+    
         struct OwnershipInfo {
             property_id: u8,
             set_id: u8,
             slots_owned: u16,
             daily_income_per_slot: u64,
+            purchase_timestamp: i64,  // ✅ ADD THIS
         }
         
         let mut ownerships: Vec<OwnershipInfo> = Vec::with_capacity(num_props);
@@ -568,6 +601,7 @@ pub mod memeopoly_program {
                 set_id: property.set_id,
                 slots_owned: ownership.slots_owned,
                 daily_income_per_slot,
+                purchase_timestamp: ownership.purchase_timestamp,  // ✅ ADD THIS
             });
         }
         
@@ -594,6 +628,18 @@ pub mod memeopoly_program {
         let mut total_bonus_slots: u32 = 0;
         
         for ownership in &ownerships {
+            // ✅ FIX: Use the later of purchase time or last claim time
+            let time_start = std::cmp::max(
+                ownership.purchase_timestamp,
+                player.last_claim_timestamp
+            );
+            let minutes_elapsed = (clock.unix_timestamp - time_start) / 60;
+            
+            // Skip if no time has elapsed for this property
+            if minutes_elapsed <= 0 {
+                continue;
+            }
+            
             let set_idx = ownership.set_id as usize;
             let income_per_minute = ownership.daily_income_per_slot / 1440;
             let min_slots_in_set = set_min_slots[set_idx];
@@ -650,7 +696,7 @@ pub mod memeopoly_program {
         emit!(RewardsClaimedEvent {
             player: player.owner,
             amount: total_rewards,
-            seconds_elapsed: minutes_elapsed * 60,
+            seconds_elapsed: (clock.unix_timestamp - player.last_claim_timestamp),
         });
 
         msg!("✅ Rewards claimed successfully!");
@@ -841,10 +887,22 @@ pub struct InitializeGame<'info> {
         bump
     )]
     pub reward_pool_vault: Account<'info, TokenAccount>,
+
+    #[account(
+        init_if_needed,
+        payer = authority,
+        associated_token::mint = token_mint,
+        associated_token::authority = dev_wallet,
+    )]
+    pub dev_token_account: Account<'info, TokenAccount>,
+    
+    /// CHECK: Dev wallet address - hardcoded as DEV_WALLET constant
+    pub dev_wallet: UncheckedAccount<'info>,
     
     #[account(mut)]
     pub authority: Signer<'info>,
-    
+
+    pub associated_token_program: Program<'info, AssociatedToken>, 
     pub token_program: Program<'info, Token>,
     pub system_program: Program<'info, System>,
     pub rent: Sysvar<'info, Rent>,
@@ -1249,6 +1307,7 @@ pub struct SetStats {
     pub total_slots_sold: u64,
     pub total_revenue: u64,
     pub unique_owners: u32,
+    pub total_players: u32,
     pub bump: u8,
 }
 
@@ -1289,6 +1348,9 @@ pub struct PropertyBoughtEvent {
     pub property_id: u8,
     pub price: u64,
     pub slots_owned: u16,
+    pub slots: u16,             
+    pub total_cost: u64,          
+    pub total_slots_owned: u16,  
 }
 
 #[event]
@@ -1360,12 +1422,16 @@ pub struct AdminUpdateEvent {
 pub enum ErrorCode {
     #[msg("Invalid property ID (must be 0-21)")]
     InvalidPropertyId,
+    #[msg("Invalid slot amount (must be > 0)")]
+    InvalidSlotAmount,
+    #[msg("Arithmetic overflow")]
+    Overflow,
+    #[msg("Maximum slots per player reached")]
+    MaxSlotsReached,
     #[msg("Invalid set ID (must be 0-7)")]
     InvalidSetId,
     #[msg("No available slots for this property")]
     NoSlotsAvailable,
-    #[msg("Maximum slots per player reached")]
-    MaxSlotsReached,
     #[msg("Cooldown still active - cannot purchase yet")]
     CooldownActive,
     #[msg("Player does not own this property")]
@@ -1398,7 +1464,7 @@ pub enum ErrorCode {
     InsufficientRewardPool,
     #[msg("Too many properties in single claim (max 22)")]
     TooManyProperties,
-    #[msg("Claim too soon - wait at least 5 minutes")]
+    #[msg("Claim too soon - wait at least 1 minutes")]
     ClaimTooSoon,
     #[msg("VRF result already fulfilled")]
     AlreadyFulfilled,

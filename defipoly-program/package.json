@@ -1,17 +1,13 @@
 {
   "license": "ISC",
   "scripts": {
-    "lint:fix": "prettier */*.js \"*/**/*{.js,.ts}\" -w",
-    "lint": "prettier */*.js \"*/**/*{.js,.ts}\" --check",
-    "test": "...",
-    "initialize": "tsx scripts/initialize-game.ts",
-    "mint-tokens": "tsx scripts/mint-tokens.ts",
-    "check-ownership": "tsx scripts/check-ownership.ts",
-    "bot:setup": "tsx scripts/setup-test-wallets.ts",
+    "build": "anchor build",
+    "deploy": "anchor deploy",
+
+    "bot:setup": "tsx scripts/bot-setup.ts",
     "bot:init": "tsx scripts/bot-interactions.ts init all",
-    "bot:claim": "tsx scripts/bot-interactions.ts claim all",
-    "bot:mint": "tsx scripts/mint-bulk-tokens.ts",
     "bot": "tsx scripts/bot-interactions.ts"
+  
   },
   "dependencies": {
     "@coral-xyz/anchor": "^0.31.1",
