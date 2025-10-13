@@ -1,4 +1,4 @@
-// Memeopoly Solana Program - v7 Optimized (No External Dependencies)
+// Defipoly Solana Program - v7 Optimized (No External Dependencies)
 // Anchor 0.31.1
 // Secure commit-reveal randomness using slot hashes
 
@@ -13,7 +13,7 @@ const MAX_PROPERTIES_PER_CLAIM: u8 = 22;
 const MIN_CLAIM_INTERVAL_MINUTES: i64 = 1;
 
 #[program]
-pub mod memeopoly_program {
+pub mod defipoly_program {
     use super::*;
 
     // ========== INITIALIZATION ==========
@@ -79,6 +79,7 @@ pub mod memeopoly_program {
         let player = &mut ctx.accounts.player_account;
         player.owner = ctx.accounts.player.key();
         player.total_slots_owned = 0;
+        player.total_base_daily_income = 0;
         player.last_claim_timestamp = Clock::get()?.unix_timestamp;
         player.total_rewards_claimed = 0;
         player.complete_sets_owned = 0;
@@ -190,6 +191,16 @@ pub mod memeopoly_program {
         // Update player total slots
         player.total_slots_owned = player.total_slots_owned
             .checked_add(slots)
+            .ok_or(ErrorCode::Overflow)?;
+
+        // Calculate and add daily income for the purchased slots
+        let daily_income_per_slot = (property.price * property.yield_percent_bps as u64) / 10000;
+        let total_daily_income_increase = daily_income_per_slot
+            .checked_mul(slots as u64)
+            .ok_or(ErrorCode::Overflow)?;
+
+        player.total_base_daily_income = player.total_base_daily_income
+            .checked_add(total_daily_income_increase)
             .ok_or(ErrorCode::Overflow)?;
     
         // Update set ownership (tracking which properties owned in set)
@@ -518,6 +529,25 @@ pub mod memeopoly_program {
             attacker_account.total_slots_owned += 1;
             attacker_account.total_steals_successful += 1;
 
+            // Calculate daily income for 1 stolen slot
+            let daily_income_per_slot = (property.price * property.yield_percent_bps as u64) / 10000;
+
+            // Add to attacker's daily income
+            attacker_account.total_base_daily_income = attacker_account.total_base_daily_income
+                .checked_add(daily_income_per_slot)
+                .ok_or(ErrorCode::Overflow)?;
+
+            let target_account = &mut ctx.accounts.target_account;
+            target_account.total_base_daily_income = target_account.total_base_daily_income
+                .checked_sub(daily_income_per_slot)
+                .ok_or(ErrorCode::Overflow)?;
+            
+            // Also update target's total slots
+            target_account.total_slots_owned = target_account.total_slots_owned
+                .checked_sub(1)
+                .ok_or(ErrorCode::Overflow)?;
+
+
             emit!(StealSuccessEvent {
                 attacker: steal_request.attacker,
                 target: steal_request.target,
@@ -775,6 +805,16 @@ pub mod memeopoly_program {
         property.available_slots += slots;
         player.total_slots_owned -= slots;
 
+        // Calculate and subtract daily income for the sold slots
+        let daily_income_per_slot = (property.price * property.yield_percent_bps as u64) / 10000;
+        let total_daily_income_decrease = daily_income_per_slot
+            .checked_mul(slots as u64)
+            .ok_or(ErrorCode::Overflow)?;
+
+        player.total_base_daily_income = player.total_base_daily_income
+            .checked_sub(total_daily_income_decrease)
+            .ok_or(ErrorCode::Overflow)?;
+
         emit!(PropertySoldEvent {
             player: player.owner,
             property_id: property.property_id,
@@ -865,6 +905,16 @@ pub mod memeopoly_program {
         msg!("🧹 Closing fulfilled steal request");
         Ok(())
     }
+
+    pub fn close_player_account(ctx: Context<ClosePlayerAccount>) -> Result<()> {
+        msg!("🧹 Closing player account: {}", ctx.accounts.player_account.owner);
+        Ok(())
+    }
+
+    pub fn admin_close_player_account(ctx: Context<AdminClosePlayerAccount>) -> Result<()> {
+        msg!("🧹 Admin closing player account: {}", ctx.accounts.player_account.owner);
+        Ok(())
+    }    
 }
 
 // ========== ACCOUNT CONTEXTS ==========
@@ -1096,6 +1146,12 @@ pub struct StealPropertyFulfill<'info> {
     
     #[account(mut)]
     pub attacker_account: Account<'info, PlayerAccount>,
+
+    #[account(
+        mut,
+        constraint = target_account.owner == steal_request.target @ ErrorCode::InvalidTarget
+    )]
+    pub target_account: Account<'info, PlayerAccount>,
     
     pub game_config: Account<'info, GameConfig>,
     
@@ -1189,6 +1245,43 @@ pub struct CloseStealRequest<'info> {
     pub rent_receiver: AccountInfo<'info>,
 }
 
+#[derive(Accounts)]
+pub struct ClosePlayerAccount<'info> {
+    #[account(
+        mut,
+        close = rent_receiver,
+        constraint = player_account.owner == player.key() @ ErrorCode::Unauthorized
+    )]
+    pub player_account: Account<'info, PlayerAccount>,
+    
+    #[account(mut)]
+    pub player: Signer<'info>,
+    
+    /// CHECK: Receives the rent refund
+    #[account(mut)]
+    pub rent_receiver: AccountInfo<'info>,
+}
+
+
+#[derive(Accounts)]
+pub struct AdminClosePlayerAccount<'info> {
+    #[account(
+        mut,
+        close = rent_receiver
+    )]
+    pub player_account: Account<'info, PlayerAccount>,
+    
+    #[account(constraint = game_config.authority == authority.key() @ ErrorCode::Unauthorized)]
+    pub game_config: Account<'info, GameConfig>,
+    
+    #[account(mut)]
+    pub authority: Signer<'info>,
+    
+    /// CHECK: Receives the rent refund
+    #[account(mut)]
+    pub rent_receiver: AccountInfo<'info>,
+}
+
 // ========== STATE ACCOUNTS ==========
 
 #[account]
@@ -1245,6 +1338,7 @@ impl Property {
 pub struct PlayerAccount {
     pub owner: Pubkey,
     pub total_slots_owned: u16,
+    pub total_base_daily_income: u64,
     pub last_claim_timestamp: i64,
     pub total_rewards_claimed: u64,
     pub complete_sets_owned: u8,
@@ -1255,7 +1349,7 @@ pub struct PlayerAccount {
 }
 
 impl PlayerAccount {
-    pub const SIZE: usize = 32 + 2 + 8 + 8 + 1 + 1 + 4 + 4 + 1;
+    pub const SIZE: usize = 32 + 2 + 8 + 8 + 8 + 1 + 1 + 4 + 4 + 1;
 }
 
 #[account]
