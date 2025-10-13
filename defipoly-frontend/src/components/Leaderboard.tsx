@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { getProfilesBatch, ProfileData } from '@/utils/profileStorage';
 
 interface LeaderboardEntry {
   walletAddress: string;
@@ -13,6 +14,7 @@ const API_URL = process.env.NEXT_PUBLIC_PROFILE_API_URL || 'http://localhost:300
 
 export function Leaderboard() {
   const [leaders, setLeaders] = useState<LeaderboardEntry[]>([]);
+  const [profiles, setProfiles] = useState<Record<string, ProfileData>>({});
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -31,6 +33,13 @@ export function Leaderboard() {
         
         console.log(`🏆 Found ${data.leaderboard.length} players`);
         setLeaders(data.leaderboard);
+        
+        // Fetch profiles for all wallet addresses
+        const walletAddresses = data.leaderboard.map((entry: LeaderboardEntry) => entry.walletAddress);
+        if (walletAddresses.length > 0) {
+          const profilesData = await getProfilesBatch(walletAddresses);
+          setProfiles(profilesData);
+        }
       } catch (error) {
         console.error('❌ Error fetching leaderboard:', error);
         setLeaders([]);
@@ -49,6 +58,11 @@ export function Leaderboard() {
 
   const formatAddress = (address: string) => {
     return `${address.slice(0, 4)}...${address.slice(-4)}`;
+  };
+
+  const getDisplayName = (address: string) => {
+    const profile = profiles[address];
+    return profile?.username || formatAddress(address);
   };
 
   const formatIncome = (lamports: number) => {
@@ -98,21 +112,43 @@ export function Leaderboard() {
                   {medal}
                 </div>
                 
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <div className={`font-mono text-sm ${
-                      isTop3 ? 'text-yellow-200' : 'text-purple-200'
-                    }`}>
-                      {formatAddress(leader.walletAddress)}
-                    </div>
+                <div className="flex items-center gap-3 flex-1 min-w-0">
+                  {/* Profile Picture */}
+                  <div className="w-10 h-10 rounded-full overflow-hidden bg-purple-500/20 border border-purple-500/30 flex-shrink-0">
+                    {profiles[leader.walletAddress]?.profilePicture ? (
+                      <img 
+                        src={profiles[leader.walletAddress].profilePicture} 
+                        alt="Profile"
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-purple-300 text-xs font-bold">
+                        {getDisplayName(leader.walletAddress).slice(0, 2).toUpperCase()}
+                      </div>
+                    )}
                   </div>
                   
-                  <div className="flex items-center gap-3 mt-1 text-xs">
-                    <div className="text-green-400 font-semibold">
-                      💰 {formatIncome(leader.dailyIncome)}/day
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <div className={`font-semibold text-sm truncate ${
+                        isTop3 ? 'text-yellow-200' : 'text-purple-200'
+                      }`}>
+                        {getDisplayName(leader.walletAddress)}
+                      </div>
+                      {profiles[leader.walletAddress]?.username && (
+                        <div className="text-xs text-purple-400 font-mono">
+                          {formatAddress(leader.walletAddress)}
+                        </div>
+                      )}
                     </div>
-                    <div className="text-purple-400">
-                      🏠 {leader.totalSlotsOwned} slots
+                    
+                    <div className="flex items-center gap-3 mt-1 text-xs">
+                      <div className="text-green-400 font-semibold">
+                        💰 {formatIncome(leader.dailyIncome)}/day
+                      </div>
+                      <div className="text-purple-400">
+                        🏠 {leader.totalSlotsOwned} slots
+                      </div>
                     </div>
                   </div>
                 </div>

@@ -1,11 +1,12 @@
 import { PublicKey } from "@solana/web3.js";
 
-export const PROGRAM_ID = new PublicKey("Fx8rVmiwHiBuB28MWDAaY68PXRmZLTsXsf2SJ6694oFi");
-export const TOKEN_MINT = new PublicKey("HJhZC9TfGMvHh8VYTshxDWg9RFxmUSNFtYzPVo7h2MUv");
-export const GAME_CONFIG = new PublicKey("5tcqVj62EfgBxtnT8NKR9h1sc2GJpP4H9tT3Ssx2c4vU");
-export const REWARD_POOL = new PublicKey("4w7U9vhXpShdiWYBeecLKxvLR8sBj1zPBX2LdhcfKF9U");
+export const PROGRAM_ID = new PublicKey("HpacCgxUuzwoMeryvQtC94RxFmpxC6dYPX5E17JBzBmQ");
+export const TOKEN_MINT = new PublicKey("8SVK8CUtNbwCsBz1NUtdeCKbMN4kn9h7AoMc6MvmgGrN");
+export const GAME_CONFIG = new PublicKey("G9MQnarM1rQnJJAd32vSYUQjKwtt2U4ZmXYm2GjkNRkL");
+export const REWARD_POOL = new PublicKey("5tKzYM4b2hK6tVYPwqdjbQwhkTaXpJcQNQRc3qvhZBrz");
 
 export const RPC_ENDPOINT = "https://api.devnet.solana.com";
+
 
 export const PROPERTIES = [
   // ========== SET 0: BROWN (2 properties) ==========

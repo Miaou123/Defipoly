@@ -5,7 +5,7 @@
  * IDL can be found at `target/idl/memeopoly_program.json`.
  */
 export type MemeopolyProgram = {
-  "address": "Fx8rVmiwHiBuB28MWDAaY68PXRmZLTsXsf2SJ6694oFi",
+  "address": "HpacCgxUuzwoMeryvQtC94RxFmpxC6dYPX5E17JBzBmQ",
   "metadata": {
     "name": "memeopolyProgram",
     "version": "0.1.0",

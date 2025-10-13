@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { useConnection } from '@solana/wallet-adapter-react';
 import { PROGRAM_ID, getPropertyById } from '@/utils/constants';
 import { BorshCoder, EventParser } from '@coral-xyz/anchor';
+import { getProfilesBatch, ProfileData } from '@/utils/profileStorage';
 import idl from '@/types/defipoly_program.json';
 
 interface FeedItem {
@@ -12,6 +13,8 @@ interface FeedItem {
   timestamp: number;
   txSignature: string;
   propertyId?: number;
+  playerAddress?: string;
+  targetAddress?: string;
 }
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_PROFILE_API_URL || 'http://localhost:3001';
@@ -19,10 +22,16 @@ const BACKEND_URL = process.env.NEXT_PUBLIC_PROFILE_API_URL || 'http://localhost
 export function LiveFeed() {
   const { connection } = useConnection();
   const [feed, setFeed] = useState<FeedItem[]>([]);
+  const [profiles, setProfiles] = useState<Record<string, ProfileData>>({});
   const [loading, setLoading] = useState(true);
 
   const formatAddress = (address: string) => {
     return `${address.slice(0, 4)}...${address.slice(-4)}`;
+  };
+
+  const getDisplayName = (address: string) => {
+    const profile = profiles[address];
+    return profile?.username || formatAddress(address);
   };
 
   const formatAmount = (amount: number) => {
@@ -42,55 +51,63 @@ export function LiveFeed() {
     switch (action.actionType) {
       case 'buy':
         return {
-          message: `${formatAddress(action.playerAddress)} bought ${propertyName} for ${formatAmount(action.amount || 0)} DEFI`,
+          message: `${getDisplayName(action.playerAddress)} bought ${propertyName} for ${formatAmount(action.amount || 0)} DEFI`,
           type: 'buy',
           timestamp: action.blockTime * 1000,
           txSignature: action.txSignature,
           propertyId: action.propertyId,
+          playerAddress: action.playerAddress,
         };
 
       case 'sell':
         return {
-          message: `${formatAddress(action.playerAddress)} sold ${action.slots || 0} slots of ${propertyName} for ${formatAmount(action.amount || 0)} DEFI`,
+          message: `${getDisplayName(action.playerAddress)} sold ${action.slots || 0} slots of ${propertyName} for ${formatAmount(action.amount || 0)} DEFI`,
           type: 'sell',
           timestamp: action.blockTime * 1000,
           txSignature: action.txSignature,
           propertyId: action.propertyId,
+          playerAddress: action.playerAddress,
         };
 
       case 'steal_success':
         return {
-          message: `${formatAddress(action.playerAddress)} stole from ${formatAddress(action.targetAddress)} on ${propertyName}! 💰`,
+          message: `${getDisplayName(action.playerAddress)} stole from ${getDisplayName(action.targetAddress)} on ${propertyName}! 💰`,
           type: 'steal',
           timestamp: action.blockTime * 1000,
           txSignature: action.txSignature,
           propertyId: action.propertyId,
+          playerAddress: action.playerAddress,
+          targetAddress: action.targetAddress,
         };
 
       case 'steal_failed':
         return {
-          message: `${formatAddress(action.playerAddress)} failed to steal from ${formatAddress(action.targetAddress)} on ${propertyName} 🛡️`,
+          message: `${getDisplayName(action.playerAddress)} failed to steal from ${getDisplayName(action.targetAddress)} on ${propertyName} 🛡️`,
           type: 'steal',
           timestamp: action.blockTime * 1000,
           txSignature: action.txSignature,
           propertyId: action.propertyId,
+          playerAddress: action.playerAddress,
+          targetAddress: action.targetAddress,
         };
 
       case 'shield':
         return {
-          message: `${formatAddress(action.playerAddress)} activated shield on ${propertyName} 🛡️`,
+          message: `${getDisplayName(action.playerAddress)} activated shield on ${propertyName} 🛡️`,
           type: 'shield',
           timestamp: action.blockTime * 1000,
           txSignature: action.txSignature,
           propertyId: action.propertyId,
+          playerAddress: action.playerAddress,
         };
 
       case 'claim':
         return {
-          message: `${formatAddress(action.playerAddress)} claimed ${formatAmount(action.amount || 0)} DEFI 💰`,
+          message: `${getDisplayName(action.playerAddress)} claimed ${formatAmount(action.amount || 0)} DEFI 💰`,
           type: 'claim',
           timestamp: action.blockTime * 1000,
           txSignature: action.txSignature,
+          playerAddress: action.playerAddress,
         };
 
       default:
@@ -130,6 +147,18 @@ export function LiveFeed() {
           console.log('Sample feed item:', feedItems[0]);
           
           setFeed(feedItems);
+          
+          // Fetch profiles for all wallet addresses in the feed
+          const allAddresses = new Set<string>();
+          feedItems.forEach(item => {
+            if (item.playerAddress) allAddresses.add(item.playerAddress);
+            if (item.targetAddress) allAddresses.add(item.targetAddress);
+          });
+          
+          if (allAddresses.size > 0) {
+            const profilesData = await getProfilesBatch(Array.from(allAddresses));
+            setProfiles(profilesData);
+          }
         }
       } catch (error) {
         console.error('❌ Error fetching from backend:', error);
@@ -279,7 +308,29 @@ export function LiveFeed() {
                 'border-amber-400'
               }`}
             >
-              {item.message}
+              <div className="flex items-center gap-2">
+                {/* Profile Picture */}
+                {item.playerAddress && (
+                  <div className="w-6 h-6 rounded-full overflow-hidden bg-purple-500/20 border border-purple-500/30 flex-shrink-0">
+                    {profiles[item.playerAddress]?.profilePicture ? (
+                      <img 
+                        src={profiles[item.playerAddress].profilePicture} 
+                        alt="Profile"
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-purple-300 text-[10px] font-bold">
+                        {getDisplayName(item.playerAddress).slice(0, 2).toUpperCase()}
+                      </div>
+                    )}
+                  </div>
+                )}
+                
+                {/* Message */}
+                <div className="flex-1 min-w-0">
+                  {item.message}
+                </div>
+              </div>
             </div>
           ))}
         </div>
