@@ -37,7 +37,7 @@ import {
 // Backend storage utilities
 import { storeAction, eventToAction } from '@/utils/actionsStorage';
 import { BorshCoder, EventParser } from '@coral-xyz/anchor';
-import idl from '@/types/memeopoly_program.json';
+import idl from '@/types/defipoly_program.json';
 
 export function useDefipoly() {
   const { connection } = useConnection();

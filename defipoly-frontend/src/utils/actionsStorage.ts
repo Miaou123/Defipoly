@@ -1,7 +1,5 @@
-// ============================================
-// FILE: defipoly-frontend/src/utils/actionsStorage.ts
-// New utility for storing and retrieving game actions
-// ============================================
+// defipoly-frontend/src/utils/actionsStorage.ts
+// Updated to properly track slots while keeping all original functionality
 
 const API_URL = process.env.NEXT_PUBLIC_PROFILE_API_URL || 'http://localhost:3001';
 
@@ -31,6 +29,8 @@ export interface PlayerStats {
   shieldsActivated: number;
   totalSpent: number;
   totalEarned: number;
+  totalSlotsOwned: number;
+  dailyIncome: number; // ✅ Calculated daily income with set bonuses
   lastActionTime?: number;
   updatedAt?: number;
 }
@@ -141,16 +141,11 @@ export async function getPlayerStats(walletAddress: string): Promise<PlayerStats
 }
 
 /**
- * Get leaderboard
+ * Get leaderboard (by daily income)
  */
-export async function getLeaderboard(
-  type: 'actions' | 'steals' | 'bought' = 'actions',
-  limit: number = 10
-): Promise<PlayerStats[]> {
+export async function getLeaderboard(limit: number = 10): Promise<PlayerStats[]> {
   try {
-    const response = await fetch(
-      `${API_URL}/api/leaderboard?type=${type}&limit=${limit}`
-    );
+    const response = await fetch(`${API_URL}/api/leaderboard?limit=${limit}`);
 
     if (response.ok) {
       const data = await response.json();
@@ -163,101 +158,125 @@ export async function getLeaderboard(
   }
 }
 
+/**
+ * Convert blockchain event to GameAction
+ */
 export function eventToAction(
-    event: any,
-    txSignature: string,
-    blockTime: number
-  ): GameAction | null {
-    const eventName = event.name;
-    
-    switch (eventName) {
-      case 'PropertyBoughtEvent':
-      case 'propertyBoughtEvent':
-        return {
-          txSignature,
-          actionType: 'buy',
-          playerAddress: event.data.player.toString(),
-          propertyId: event.data.propertyId ?? event.data.property_id,  // ← FIXED
-          amount: Number(event.data.price),
-          slots: event.data.slotsOwned ?? event.data.slots_owned,  // ← FIXED
-          blockTime,
-          metadata: { price: event.data.price.toString() }
-        };
+  event: any,
+  txSignature: string,
+  blockTime: number
+): GameAction | null {
+  const eventName = event.name;
   
-      case 'PropertySoldEvent':
-      case 'propertySoldEvent':
-        return {
-          txSignature,
-          actionType: 'sell',
-          playerAddress: event.data.player.toString(),
-          propertyId: event.data.propertyId ?? event.data.property_id,  // ← FIXED
-          slots: event.data.slots,
-          amount: Number(event.data.received),
-          blockTime,
-          metadata: {
-            received: event.data.received.toString(),
-            burned: event.data.burned.toString()
-          }
-        };
-  
-      case 'ShieldActivatedEvent':
-      case 'shieldActivatedEvent':
-        return {
-          txSignature,
-          actionType: 'shield',
-          playerAddress: event.data.player.toString(),
-          propertyId: event.data.propertyId ?? event.data.property_id,  // ← FIXED
-          amount: Number(event.data.cost),
-          blockTime,
-          metadata: {
-            expiry: event.data.expiry,
-            cycles: event.data.cycles
-          }
-        };
-  
-      case 'StealSuccessEvent':
-      case 'stealSuccessEvent':
-        return {
-          txSignature,
-          actionType: 'steal_success',
-          playerAddress: event.data.attacker.toString(),
-          targetAddress: event.data.target.toString(),
-          propertyId: event.data.propertyId ?? event.data.property_id,  // ← FIXED
-          amount: Number(event.data.stealCost ?? event.data.steal_cost),  // ← FIXED
-          success: true,
-          blockTime
-        };
-  
-      case 'StealFailedEvent':
-      case 'stealFailedEvent':
-        return {
-          txSignature,
-          actionType: 'steal_failed',
-          playerAddress: event.data.attacker.toString(),
-          targetAddress: event.data.target.toString(),
-          propertyId: event.data.propertyId ?? event.data.property_id,  // ← FIXED
-          amount: Number(event.data.stealCost ?? event.data.steal_cost),  // ← FIXED
-          success: false,
-          blockTime
-        };
-  
-      case 'RewardsClaimedEvent':
-      case 'rewardsClaimedEvent':
-        return {
-          txSignature,
-          actionType: 'claim',
-          playerAddress: event.data.player.toString(),
-          amount: Number(event.data.amount),
-          blockTime,
-          metadata: {
-            hoursElapsed: event.data.hoursElapsed ?? event.data.hours_elapsed  // ← FIXED
-          }
-        };
-  
-      default:
-        return null;
-    }
+  switch (eventName) {
+    case 'PropertyBoughtEvent':
+    case 'propertyBoughtEvent':
+      return {
+        txSignature,
+        actionType: 'buy',
+        playerAddress: event.data.player.toString(),
+        propertyId: event.data.propertyId ?? event.data.property_id,
+        amount: Number(event.data.totalCost ?? event.data.price),
+        // ✅ UPDATED: Track the actual slots bought from the new 'slots' field
+        slots: event.data.slots ?? event.data.slotsOwned ?? event.data.slots_owned ?? 1,
+        blockTime,
+        metadata: { 
+          price: event.data.price?.toString(),
+          totalCost: event.data.totalCost?.toString(),
+          totalSlotsOwned: event.data.totalSlotsOwned ?? event.data.total_slots_owned
+        }
+      };
+
+    case 'PropertySoldEvent':
+    case 'propertySoldEvent':
+      return {
+        txSignature,
+        actionType: 'sell',
+        playerAddress: event.data.player.toString(),
+        propertyId: event.data.propertyId ?? event.data.property_id,
+        slots: event.data.slots, // ✅ Slots sold
+        amount: Number(event.data.received),
+        blockTime,
+        metadata: {
+          received: event.data.received?.toString(),
+          burned: event.data.burned?.toString(),
+          sellValuePercent: event.data.sellValuePercent ?? event.data.sell_value_percent,
+          daysHeld: event.data.daysHeld ?? event.data.days_held
+        }
+      };
+
+    case 'ShieldActivatedEvent':
+    case 'shieldActivatedEvent':
+      return {
+        txSignature,
+        actionType: 'shield',
+        playerAddress: event.data.player.toString(),
+        propertyId: event.data.propertyId ?? event.data.property_id,
+        amount: Number(event.data.cost),
+        slots: event.data.slotsShielded ?? event.data.slots_shielded, // ✅ Slots shielded
+        blockTime,
+        metadata: {
+          expiry: event.data.expiry?.toString(),
+          slotsShielded: event.data.slotsShielded ?? event.data.slots_shielded
+        }
+      };
+
+    case 'StealSuccessEvent':
+    case 'stealSuccessEvent':
+      return {
+        txSignature,
+        actionType: 'steal_success',
+        playerAddress: event.data.attacker.toString(),
+        targetAddress: event.data.target.toString(),
+        propertyId: event.data.propertyId ?? event.data.property_id,
+        amount: Number(event.data.stealCost ?? event.data.steal_cost),
+        slots: 1, // ✅ Always 1 slot per successful steal
+        success: true,
+        blockTime,
+        metadata: {
+          targeted: event.data.targeted ?? event.data.is_targeted,
+          vrfResult: event.data.vrfResult?.toString()
+        }
+      };
+
+    case 'StealFailedEvent':
+    case 'stealFailedEvent':
+      return {
+        txSignature,
+        actionType: 'steal_failed',
+        playerAddress: event.data.attacker.toString(),
+        targetAddress: event.data.target.toString(),
+        propertyId: event.data.propertyId ?? event.data.property_id,
+        amount: Number(event.data.stealCost ?? event.data.steal_cost),
+        slots: 0, // ✅ No slots gained on failure
+        success: false,
+        blockTime,
+        metadata: {
+          targeted: event.data.targeted ?? event.data.is_targeted,
+          vrfResult: event.data.vrfResult?.toString()
+        }
+      };
+
+    case 'RewardsClaimedEvent':
+    case 'rewardsClaimedEvent':
+      return {
+        txSignature,
+        actionType: 'claim',
+        playerAddress: event.data.player.toString(),
+        amount: Number(event.data.amount),
+        slots: 0, // ✅ Claims don't affect slots
+        blockTime,
+        metadata: {
+          secondsElapsed: event.data.secondsElapsed ?? event.data.seconds_elapsed,
+          hoursElapsed: event.data.hoursElapsed ?? event.data.hours_elapsed
+        }
+      };
+
+    default:
+      console.warn('Unknown event type:', eventName);
+      return null;
   }
+}
 
 /**
  * Sync blockchain events to database

@@ -110,6 +110,10 @@ export function deserializePlayer(data: Buffer): PlayerAccount {
   const totalSlotsOwned = data.readUInt16LE(offset);
   offset += 2;
 
+  // ⭐ NEW: total_base_daily_income: u64 (8 bytes)
+  const totalBaseDailyIncome = new BN(data.slice(offset, offset + 8), 'le');
+  offset += 8;
+
   // last_claim_timestamp: i64 (8 bytes)
   const lastClaimTimestamp = new BN(data.slice(offset, offset + 8), 'le');
   offset += 8;
@@ -140,6 +144,7 @@ export function deserializePlayer(data: Buffer): PlayerAccount {
   return {
     owner,
     totalSlotsOwned,
+    totalBaseDailyIncome,
     lastClaimTimestamp,
     totalRewardsClaimed,
     completeSetsOwned,

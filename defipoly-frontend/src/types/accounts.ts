@@ -40,6 +40,7 @@ export interface Property {
 export interface PlayerAccount {
   owner: PublicKey;
   totalSlotsOwned: number;
+  totalBaseDailyIncome: BN;
   lastClaimTimestamp: BN;
   totalRewardsClaimed: BN;
   completeSetsOwned: number;

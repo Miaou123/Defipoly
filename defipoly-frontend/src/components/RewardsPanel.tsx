@@ -8,7 +8,7 @@ import { useNotification } from './NotificationProvider';
 import { StyledWalletButton } from './StyledWalletButton';
 import { PROGRAM_ID } from '@/utils/constants';
 import { BorshCoder, EventParser } from '@coral-xyz/anchor';
-import idl from '@/types/memeopoly_program.json';
+import idl from '@/types/defipoly_program.json';
 
 export function RewardsPanel() {
   const { connected, publicKey } = useWallet();
