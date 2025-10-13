@@ -123,10 +123,14 @@ pub mod memeopoly_program {
         // Cooldown check
         if set_cooldown.last_purchase_timestamp != 0 {
             let time_since_last_purchase = clock.unix_timestamp - set_cooldown.last_purchase_timestamp;
-            require!(
-                time_since_last_purchase >= set_cooldown.cooldown_duration,
-                ErrorCode::CooldownActive
-            );
+            
+            // Only enforce cooldown if buying a DIFFERENT property than the last one purchased
+            if property.property_id != set_cooldown.last_purchased_property_id {
+                require!(
+                    time_since_last_purchase >= set_cooldown.cooldown_duration,
+                    ErrorCode::CooldownActive
+                );
+            }
         }
     
         // Calculate total cost for all slots
@@ -980,7 +984,7 @@ pub struct BuyProperty<'info> {
         init_if_needed,
         payer = player,
         space = 8 + SetStats::SIZE,
-        seeds = [b"set_stats", property.set_id.to_le_bytes().as_ref()],
+        seeds = [b"set_stats_v2", property.set_id.to_le_bytes().as_ref()], 
         bump
     )]
     pub set_stats: Account<'info, SetStats>,
@@ -1312,7 +1316,7 @@ pub struct SetStats {
 }
 
 impl SetStats {
-    pub const SIZE: usize = 1 + 8 + 8 + 4 + 1;
+    pub const SIZE: usize = 1 + 8 + 8 + 4 + 4 + 1;
 }
 
 #[account]

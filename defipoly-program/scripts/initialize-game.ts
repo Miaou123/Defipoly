@@ -84,261 +84,261 @@ async function main() {
   
   const properties = [
     // ========== SET 0: BROWN (2 properties) ==========
-    { 
-      id: 0, 
-      setId: 0, 
-      maxSlots: 100, 
-      maxPerPlayer: 50, 
-      price: "1000000000000",      // 1,000 tokens
-      yieldBps: 1000,               // 10% daily yield
-      shieldCostBps: 500,           // 5% shield cost
-      cooldown: 60,                 // 1 min cooldown
-      name: "Mediterranean Avenue" 
+    {
+      id: 0,
+      setId: 0,
+      maxSlots: 100,
+      maxPerPlayer: 50,
+      price: "1000000000000", // 1,000 tokens
+      yieldBps: 1000, // 10% daily yield
+      shieldCostBps: 2000, // 20% shield cost
+      cooldown: 1 * 3600, // 1 hour
+      name: "Mediterranean Avenue"
     },
-    { 
-      id: 1, 
-      setId: 0, 
-      maxSlots: 100, 
-      maxPerPlayer: 50, 
-      price: "1500000000000",       // 1,500 tokens
-      yieldBps: 1000, 
-      shieldCostBps: 500, 
-      cooldown: 60, 
-      name: "Baltic Avenue" 
+    {
+      id: 1,
+      setId: 0,
+      maxSlots: 100,
+      maxPerPlayer: 50,
+      price: "1500000000000", // 1,500 tokens
+      yieldBps: 1000, // 10% daily yield
+      shieldCostBps: 2000, // 20% shield cost
+      cooldown: 1 * 3600, // 1 hour
+      name: "Baltic Avenue"
     },
-    
+  
     // ========== SET 1: LIGHT BLUE (3 properties) ==========
-    { 
-      id: 2, 
-      setId: 1, 
-      maxSlots: 90, 
-      maxPerPlayer: 45, 
-      price: "2000000000000",       // 2,000 tokens
-      yieldBps: 1100,               // 11% daily yield
-      shieldCostBps: 500, 
-      cooldown: 120,                // 2 min cooldown
-      name: "Oriental Avenue" 
+    {
+      id: 2,
+      setId: 1,
+      maxSlots: 90,
+      maxPerPlayer: 45,
+      price: "2000000000000", // 2,000 tokens
+      yieldBps: 1100, // 11% daily yield
+      shieldCostBps: 1800, // 18% shield cost
+      cooldown: 2 * 3600, // 2 hours
+      name: "Oriental Avenue"
     },
-    { 
-      id: 3, 
-      setId: 1, 
-      maxSlots: 90, 
-      maxPerPlayer: 45, 
-      price: "2500000000000",       // 2,500 tokens
-      yieldBps: 1100, 
-      shieldCostBps: 500, 
-      cooldown: 120, 
-      name: "Vermont Avenue" 
+    {
+      id: 3,
+      setId: 1,
+      maxSlots: 90,
+      maxPerPlayer: 45,
+      price: "2500000000000", // 2,500 tokens
+      yieldBps: 1100, // 11% daily yield
+      shieldCostBps: 1800, // 18% shield cost
+      cooldown: 2 * 3600, // 2 hours
+      name: "Vermont Avenue"
     },
-    { 
-      id: 4, 
-      setId: 1, 
-      maxSlots: 90, 
-      maxPerPlayer: 45, 
-      price: "3000000000000",       // 3,000 tokens
-      yieldBps: 1100, 
-      shieldCostBps: 500, 
-      cooldown: 120, 
-      name: "Connecticut Avenue" 
+    {
+      id: 4,
+      setId: 1,
+      maxSlots: 90,
+      maxPerPlayer: 45,
+      price: "3000000000000", // 3,000 tokens
+      yieldBps: 1100, // 11% daily yield
+      shieldCostBps: 1800, // 18% shield cost
+      cooldown: 2 * 3600, // 2 hours
+      name: "Connecticut Avenue"
     },
-    
+  
     // ========== SET 2: PINK (3 properties) ==========
-    { 
-      id: 5, 
-      setId: 2, 
-      maxSlots: 80, 
-      maxPerPlayer: 40, 
-      price: "5000000000000",       // 5,000 tokens
-      yieldBps: 1200,               // 12% daily yield
-      shieldCostBps: 500, 
-      cooldown: 180,                // 3 min cooldown
-      name: "St. Charles Place" 
+    {
+      id: 5,
+      setId: 2,
+      maxSlots: 80,
+      maxPerPlayer: 40,
+      price: "3500000000000", // 3,500 tokens
+      yieldBps: 1200, // 12% daily yield
+      shieldCostBps: 1600, // 16% shield cost
+      cooldown: 4 * 3600, // 4 hours
+      name: "St. Charles Place"
     },
-    { 
-      id: 6, 
-      setId: 2, 
-      maxSlots: 80, 
-      maxPerPlayer: 40, 
-      price: "5500000000000",       // 5,500 tokens
-      yieldBps: 1200, 
-      shieldCostBps: 500, 
-      cooldown: 180, 
-      name: "States Avenue" 
+    {
+      id: 6,
+      setId: 2,
+      maxSlots: 80,
+      maxPerPlayer: 40,
+      price: "4000000000000", // 4,000 tokens
+      yieldBps: 1200, // 12% daily yield
+      shieldCostBps: 1600, // 16% shield cost
+      cooldown: 4 * 3600, // 4 hours
+      name: "States Avenue"
     },
-    { 
-      id: 7, 
-      setId: 2, 
-      maxSlots: 80, 
-      maxPerPlayer: 40, 
-      price: "6000000000000",       // 6,000 tokens
-      yieldBps: 1200, 
-      shieldCostBps: 500, 
-      cooldown: 180, 
-      name: "Virginia Avenue" 
+    {
+      id: 7,
+      setId: 2,
+      maxSlots: 80,
+      maxPerPlayer: 40,
+      price: "4500000000000", // 4,500 tokens
+      yieldBps: 1200, // 12% daily yield
+      shieldCostBps: 1600, // 16% shield cost
+      cooldown: 4 * 3600, // 4 hours
+      name: "Virginia Avenue"
     },
-
+  
     // ========== SET 3: ORANGE (3 properties) ==========
-    { 
-      id: 8, 
-      setId: 3, 
-      maxSlots: 70, 
-      maxPerPlayer: 35, 
-      price: "10000000000000",      // 10,000 tokens
-      yieldBps: 1300,               // 13% daily yield
-      shieldCostBps: 500, 
-      cooldown: 240,                // 4 min cooldown
-      name: "St. James Place" 
+    {
+      id: 8,
+      setId: 3,
+      maxSlots: 70,
+      maxPerPlayer: 35,
+      price: "5000000000000", // 5,000 tokens
+      yieldBps: 1300, // 13% daily yield
+      shieldCostBps: 1400, // 14% shield cost
+      cooldown: 4 * 3600, // 4 hours
+      name: "St. James Place"
     },
-    { 
-      id: 9, 
-      setId: 3, 
-      maxSlots: 70, 
-      maxPerPlayer: 35, 
-      price: "11000000000000",      // 11,000 tokens
-      yieldBps: 1300, 
-      shieldCostBps: 500, 
-      cooldown: 240, 
-      name: "Tennessee Avenue" 
+    {
+      id: 9,
+      setId: 3,
+      maxSlots: 70,
+      maxPerPlayer: 35,
+      price: "5500000000000", // 5,500 tokens
+      yieldBps: 1300, // 13% daily yield
+      shieldCostBps: 1400, // 14% shield cost
+      cooldown: 4 * 3600, // 4 hours
+      name: "Tennessee Avenue"
     },
-    { 
-      id: 10, 
-      setId: 3, 
-      maxSlots: 70, 
-      maxPerPlayer: 35, 
-      price: "12000000000000",      // 12,000 tokens
-      yieldBps: 1300, 
-      shieldCostBps: 500, 
-      cooldown: 240, 
-      name: "New York Avenue" 
+    {
+      id: 10,
+      setId: 3,
+      maxSlots: 70,
+      maxPerPlayer: 35,
+      price: "6000000000000", // 6,000 tokens
+      yieldBps: 1300, // 13% daily yield
+      shieldCostBps: 1400, // 14% shield cost
+      cooldown: 4 * 3600, // 4 hours
+      name: "New York Avenue"
     },
-
+  
     // ========== SET 4: RED (3 properties) ==========
-    { 
-      id: 11, 
-      setId: 4, 
-      maxSlots: 60, 
-      maxPerPlayer: 30, 
-      price: "15000000000000",      // 15,000 tokens
-      yieldBps: 1400,               // 14% daily yield
-      shieldCostBps: 500, 
-      cooldown: 300,                // 5 min cooldown
-      name: "Kentucky Avenue" 
+    {
+      id: 11,
+      setId: 4,
+      maxSlots: 60,
+      maxPerPlayer: 30,
+      price: "7000000000000", // 7,000 tokens
+      yieldBps: 1400, // 14% daily yield
+      shieldCostBps: 1200, // 12% shield cost
+      cooldown: 5 * 3600, // 5 hours
+      name: "Kentucky Avenue"
     },
-    { 
-      id: 12, 
-      setId: 4, 
-      maxSlots: 60, 
-      maxPerPlayer: 30, 
-      price: "16000000000000",      // 16,000 tokens
-      yieldBps: 1400, 
-      shieldCostBps: 500, 
-      cooldown: 300, 
-      name: "Indiana Avenue" 
+    {
+      id: 12,
+      setId: 4,
+      maxSlots: 60,
+      maxPerPlayer: 30,
+      price: "7500000000000", // 7,500 tokens
+      yieldBps: 1400, // 14% daily yield
+      shieldCostBps: 1200, // 12% shield cost
+      cooldown: 5 * 3600, // 5 hours
+      name: "Indiana Avenue"
     },
-    { 
-      id: 13, 
-      setId: 4, 
-      maxSlots: 60, 
-      maxPerPlayer: 30, 
-      price: "17000000000000",      // 17,000 tokens
-      yieldBps: 1400, 
-      shieldCostBps: 500, 
-      cooldown: 300, 
-      name: "Illinois Avenue" 
+    {
+      id: 13,
+      setId: 4,
+      maxSlots: 60,
+      maxPerPlayer: 30,
+      price: "8000000000000", // 8,000 tokens
+      yieldBps: 1400, // 14% daily yield
+      shieldCostBps: 1200, // 12% shield cost
+      cooldown: 5 * 3600, // 5 hours
+      name: "Illinois Avenue"
     },
-
+  
     // ========== SET 5: YELLOW (3 properties) ==========
-    { 
-      id: 14, 
-      setId: 5, 
-      maxSlots: 50, 
-      maxPerPlayer: 25, 
-      price: "20000000000000",      // 20,000 tokens
-      yieldBps: 1500,               // 15% daily yield
-      shieldCostBps: 500, 
-      cooldown: 360,                // 6 min cooldown
-      name: "Atlantic Avenue" 
+    {
+      id: 14,
+      setId: 5,
+      maxSlots: 50,
+      maxPerPlayer: 25,
+      price: "9000000000000", // 9,000 tokens
+      yieldBps: 1500, // 15% daily yield
+      shieldCostBps: 1000, // 10% shield cost
+      cooldown: 6 * 3600, // 6 hours
+      name: "Atlantic Avenue"
     },
-    { 
-      id: 15, 
-      setId: 5, 
-      maxSlots: 50, 
-      maxPerPlayer: 25, 
-      price: "22000000000000",      // 22,000 tokens
-      yieldBps: 1500, 
-      shieldCostBps: 500, 
-      cooldown: 360, 
-      name: "Ventnor Avenue" 
+    {
+      id: 15,
+      setId: 5,
+      maxSlots: 50,
+      maxPerPlayer: 25,
+      price: "9500000000000", // 9,500 tokens
+      yieldBps: 1500, // 15% daily yield
+      shieldCostBps: 1000, // 10% shield cost
+      cooldown: 6 * 3600, // 6 hours
+      name: "Ventnor Avenue"
     },
-    { 
-      id: 16, 
-      setId: 5, 
-      maxSlots: 50, 
-      maxPerPlayer: 25, 
-      price: "24000000000000",      // 24,000 tokens
-      yieldBps: 1500, 
-      shieldCostBps: 500, 
-      cooldown: 360, 
-      name: "Marvin Gardens" 
+    {
+      id: 16,
+      setId: 5,
+      maxSlots: 50,
+      maxPerPlayer: 25,
+      price: "10000000000000", // 10,000 tokens
+      yieldBps: 1500, // 15% daily yield
+      shieldCostBps: 1000, // 10% shield cost
+      cooldown: 6 * 3600, // 6 hours
+      name: "Marvin Gardens"
     },
-
+  
     // ========== SET 6: GREEN (3 properties) ==========
-    { 
-      id: 17, 
-      setId: 6, 
-      maxSlots: 40, 
-      maxPerPlayer: 20, 
-      price: "30000000000000",      // 30,000 tokens
-      yieldBps: 1600,               // 16% daily yield
-      shieldCostBps: 500, 
-      cooldown: 420,                // 7 min cooldown
-      name: "Pacific Avenue" 
+    {
+      id: 17,
+      setId: 6,
+      maxSlots: 40,
+      maxPerPlayer: 20,
+      price: "12000000000000", // 12,000 tokens
+      yieldBps: 1600, // 16% daily yield
+      shieldCostBps: 800, // 8% shield cost
+      cooldown: 7 * 3600, // 7 hours
+      name: "Pacific Avenue"
     },
-    { 
-      id: 18, 
-      setId: 6, 
-      maxSlots: 40, 
-      maxPerPlayer: 20, 
-      price: "32000000000000",      // 32,000 tokens
-      yieldBps: 1600, 
-      shieldCostBps: 500, 
-      cooldown: 420, 
-      name: "North Carolina Avenue" 
+    {
+      id: 18,
+      setId: 6,
+      maxSlots: 40,
+      maxPerPlayer: 20,
+      price: "13000000000000", // 13,000 tokens
+      yieldBps: 1600, // 16% daily yield
+      shieldCostBps: 800, // 8% shield cost
+      cooldown: 7 * 3600, // 7 hours
+      name: "North Carolina Avenue"
     },
-    { 
-      id: 19, 
-      setId: 6, 
-      maxSlots: 40, 
-      maxPerPlayer: 20, 
-      price: "35000000000000",      // 35,000 tokens
-      yieldBps: 1600, 
-      shieldCostBps: 500, 
-      cooldown: 420, 
-      name: "Pennsylvania Avenue" 
+    {
+      id: 19,
+      setId: 6,
+      maxSlots: 40,
+      maxPerPlayer: 20,
+      price: "14000000000000", // 14,000 tokens
+      yieldBps: 1600, // 16% daily yield
+      shieldCostBps: 800, // 8% shield cost
+      cooldown: 7 * 3600, // 7 hours
+      name: "Pennsylvania Avenue"
     },
-
+  
     // ========== SET 7: DARK BLUE (2 properties) ==========
-    { 
-      id: 20, 
-      setId: 7, 
-      maxSlots: 30, 
-      maxPerPlayer: 15, 
-      price: "50000000000000",      // 50,000 tokens
-      yieldBps: 1700,               // 17% daily yield
-      shieldCostBps: 500, 
-      cooldown: 480,                // 8 min cooldown
-      name: "Park Place" 
+    {
+      id: 20,
+      setId: 7,
+      maxSlots: 30,
+      maxPerPlayer: 15,
+      price: "17000000000000", // 17,000 tokens
+      yieldBps: 1800, // 18% daily yield
+      shieldCostBps: 600, // 6% shield cost
+      cooldown: 24 * 3600, // 24 hours
+      name: "Park Place"
     },
-    { 
-      id: 21, 
-      setId: 7, 
-      maxSlots: 30, 
-      maxPerPlayer: 15, 
-      price: "70000000000000",      // 70,000 tokens
-      yieldBps: 1700, 
-      shieldCostBps: 500, 
-      cooldown: 480, 
-      name: "Boardwalk" 
+    {
+      id: 21,
+      setId: 7,
+      maxSlots: 30,
+      maxPerPlayer: 15,
+      price: "20000000000000", // 20,000 tokens
+      yieldBps: 1800, // 18% daily yield
+      shieldCostBps: 600, // 6% shield cost
+      cooldown: 24 * 3600, // 24 hours
+      name: "Boardwalk"
     },
   ];
 

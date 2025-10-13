@@ -4,9 +4,9 @@
     "build": "anchor build",
     "deploy": "anchor deploy",
 
-    "bot:setup": "tsx scripts/bot-setup.ts",
-    "bot:init": "tsx scripts/bot-interactions.ts init all",
-    "bot": "tsx scripts/bot-interactions.ts"
+    "bot:setup": "tsx scripts/bot/setup-test-wallets.ts",
+    "bot:init": "tsx scripts/bot/bot-interactions.ts init all",
+    "bot": "tsx scripts/bot/bot-interactions.ts"
   
   },
   "dependencies": {
