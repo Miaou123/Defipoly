@@ -17,7 +17,7 @@ dotenv.config();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const TOKEN_MINT = new anchor.web3.PublicKey(process.env.TOKEN_MINT || "HJhZC9TfGMvHh8VYTshxDWg9RFxmUSNFtYzPVo7h2MUv");
+const TOKEN_MINT = new anchor.web3.PublicKey(process.env.TOKEN_MINT || "8SVK8CUtNbwCsBz1NUtdeCKbMN4kn9h7AoMc6MvmgGrN");
 const WALLETS_DIR = path.join(__dirname, "../../test-wallets");
 
 async function main() {

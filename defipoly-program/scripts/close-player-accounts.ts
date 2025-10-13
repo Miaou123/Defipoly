@@ -1,5 +1,5 @@
 // scripts/close-player-accounts.ts
-// Closes old player accounts using the close_player_account instruction
+// Closes old player accounts using the admin_close_player_account instruction
 // Run with: npx ts-node scripts/close-player-accounts.ts
 
 import * as anchor from "@coral-xyz/anchor";
@@ -7,7 +7,6 @@ import { Program } from "@coral-xyz/anchor";
 import { Connection, PublicKey, Keypair } from '@solana/web3.js';
 import * as fs from 'fs';
 
-const PROGRAM_ID = new PublicKey('Fx8rVmiwHiBuB28MWDAaY68PXRmZLTsXsf2SJ6694oFi');
 const RPC_URL = 'https://api.devnet.solana.com';
 
 // All the old player accounts (69 bytes)
@@ -67,12 +66,12 @@ const OLD_ACCOUNTS = [
 
 async function closeAccount(
   program: Program,
+  gameConfig: PublicKey,
   playerAccountPubkey: PublicKey,
-  playerWallet: Keypair,
+  authority: Keypair,
   rentReceiver: PublicKey
 ): Promise<boolean> {
   try {
-    // Read the player account to get the owner
     const connection = program.provider.connection;
     const accountInfo = await connection.getAccountInfo(playerAccountPubkey);
     
@@ -81,29 +80,22 @@ async function closeAccount(
       return false;
     }
 
-    // Get the owner from the account data (skip 8 bytes discriminator, read 32 bytes pubkey)
+    // Get the owner from the account data for display purposes
     const ownerPubkey = new PublicKey(accountInfo.data.slice(8, 40));
     
     console.log(`   👤 Owner: ${ownerPubkey.toBase58()}`);
     console.log(`   💰 Rent: ${(accountInfo.lamports / 1e9).toFixed(6)} SOL`);
 
-    // Check if we're the owner (or have permission)
-    // For this to work, you need to have access to the owner's keypair
-    // If not, skip this account
-    if (!ownerPubkey.equals(playerWallet.publicKey)) {
-      console.log(`   ⚠️  Not your account - skipping`);
-      return false;
-    }
-
-    // Call close_player_account instruction
+    // Call admin_close_player_account instruction (can close ANY account)
     const tx = await program.methods
-      .closePlayerAccount()
+      .adminClosePlayerAccount()
       .accounts({
         playerAccount: playerAccountPubkey,
-        player: playerWallet.publicKey,
+        gameConfig: gameConfig,
+        authority: authority.publicKey,
         rentReceiver: rentReceiver,
       })
-      .signers([playerWallet])
+      .signers([authority])
       .rpc();
 
     console.log(`   ✅ Closed! Transaction: ${tx}`);
@@ -115,7 +107,7 @@ async function closeAccount(
 }
 
 async function main() {
-  console.log('🧹 Closing Old Player Accounts\n');
+  console.log('🧹 Closing Old Player Accounts (Admin Mode)\n');
   console.log('=' .repeat(70));
 
   // Setup provider
@@ -130,22 +122,23 @@ async function main() {
   );
   anchor.setProvider(provider);
 
-  // Load the program
+  // Load the program IDL
   const idl = JSON.parse(
     fs.readFileSync('./target/idl/defipoly_program.json', 'utf-8')
   );
   
-  // Try to load the program (works with different Anchor versions)
-  let program: Program;
-  try {
-    // Anchor 0.30+
-    program = new anchor.Program(idl as anchor.Idl, provider);
-  } catch {
-    // Older Anchor versions
-    program = new anchor.Program(idl as anchor.Idl, PROGRAM_ID, provider);
-  }
+  const program = new anchor.Program(idl as anchor.Idl, provider);
+  
+  // Get the program ID and game config PDA
+  const programId = new PublicKey(idl.address || idl.metadata?.address);
+  const [gameConfig] = PublicKey.findProgramAddressSync(
+    [Buffer.from('game_config')],
+    programId
+  );
 
-  console.log(`\n💳 Wallet: ${wallet.publicKey.toBase58()}`);
+  console.log(`📝 Program ID: ${programId.toBase58()}`);
+  console.log(`🎮 Game Config: ${gameConfig.toBase58()}`);
+  console.log(`💳 Admin Wallet: ${wallet.publicKey.toBase58()}`);
   
   const balance = await connection.getBalance(wallet.publicKey);
   console.log(`💰 Current Balance: ${(balance / 1e9).toFixed(4)} SOL`);
@@ -171,6 +164,7 @@ async function main() {
 
       const success = await closeAccount(
         program,
+        gameConfig,
         pubkey,
         wallet,
         wallet.publicKey // Rent goes back to your wallet

@@ -11,10 +11,10 @@ async function main() {
   
   // Your wallet and token mint
   const recipientAddress = new anchor.web3.PublicKey("FoPKSQ5HDSVyZgaQobX64YEBVQ2iiKMZp8VHWtd6jLQE");
-  const tokenMint = new anchor.web3.PublicKey("743D9e7PCGgh2V3TY2tUeg31e63tmFjJ9rTZJkwhRVLX");
+  const tokenMint = new anchor.web3.PublicKey(process.env.TOKEN_MINT || "8SVK8CUtNbwCsBz1NUtdeCKbMN4kn9h7AoMc6MvmgGrN");
   
-  // Amount to mint (100,000 tokens with 9 decimals)
-  const amount = 100_000 * 1e9;
+  // Amount to mint (10,000,000 tokens with 9 decimals)
+  const amount = 10_000_000 * 1e9;
 
   // Create connection
   const connection = new anchor.web3.Connection(rpcUrl, "confirmed");

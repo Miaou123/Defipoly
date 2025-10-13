@@ -30,7 +30,7 @@ async function main() {
   anchor.setProvider(provider);
 
   // Load the correct IDL
-  const idlPath = path.join(__dirname, "../target/idl/memeopoly_program.json");
+  const idlPath = path.join(__dirname, "../target/idl/defipoly_program.json");
   const idlString = fs.readFileSync(idlPath, "utf8");
   const idl = JSON.parse(idlString);
   

@@ -10,7 +10,7 @@ async function main() {
   const walletPath = process.env.ANCHOR_WALLET || path.join(homedir(), ".config/solana/id.json");
   
   // Your wallet and token mint
-  const tokenMint = new anchor.web3.PublicKey("743D9e7PCGgh2V3TY2tUeg31e63tmFjJ9rTZJkwhRVLX");
+  const tokenMint = new anchor.web3.PublicKey(process.env.TOKEN_MINT || "8SVK8CUtNbwCsBz1NUtdeCKbMN4kn9h7AoMc6MvmgGrN");
   
   // Amount to mint: 50M tokens (for 50 wallets × 1M each)
   const amount = 50_000_000 * 1e9;

@@ -6,7 +6,7 @@ use anchor_lang::prelude::*;
 use anchor_spl::token::{self, Token, TokenAccount, Transfer, Mint};
 use anchor_spl::associated_token::AssociatedToken;
 
-declare_id!("Fx8rVmiwHiBuB28MWDAaY68PXRmZLTsXsf2SJ6694oFi");
+declare_id!("HpacCgxUuzwoMeryvQtC94RxFmpxC6dYPX5E17JBzBmQ");
 
 const DEV_WALLET: &str = "CgWTFX7JJQHed3qyMDjJkNCxK4sFe3wbDFABmWAAmrdS";
 const MAX_PROPERTIES_PER_CLAIM: u8 = 22;
@@ -912,9 +912,28 @@ pub mod defipoly_program {
     }
 
     pub fn admin_close_player_account(ctx: Context<AdminClosePlayerAccount>) -> Result<()> {
-        msg!("🧹 Admin closing player account: {}", ctx.accounts.player_account.owner);
+        msg!("🧹 Admin force closing player account");
+        
+        // Verify the account is owned by this program (safety check)
+        require!(
+            ctx.accounts.player_account.owner == ctx.program_id,
+            ErrorCode::Unauthorized
+        );
+        
+        // Manually transfer lamports and clear account data
+        let dest_starting_lamports = ctx.accounts.rent_receiver.lamports();
+        let account_lamports = ctx.accounts.player_account.lamports();
+        
+        **ctx.accounts.rent_receiver.lamports.borrow_mut() = dest_starting_lamports
+            .checked_add(account_lamports)
+            .unwrap();
+        **ctx.accounts.player_account.lamports.borrow_mut() = 0;
+        
+        let mut data = ctx.accounts.player_account.try_borrow_mut_data()?;
+        data.fill(0);
+        
         Ok(())
-    }    
+    }
 }
 
 // ========== ACCOUNT CONTEXTS ==========
@@ -1262,14 +1281,12 @@ pub struct ClosePlayerAccount<'info> {
     pub rent_receiver: AccountInfo<'info>,
 }
 
-
 #[derive(Accounts)]
 pub struct AdminClosePlayerAccount<'info> {
-    #[account(
-        mut,
-        close = rent_receiver
-    )]
-    pub player_account: Account<'info, PlayerAccount>,
+    /// CHECK: We're force closing this account, no need to deserialize
+    /// We verify it's owned by our program in the instruction handler
+    #[account(mut)]
+    pub player_account: AccountInfo<'info>,
     
     #[account(constraint = game_config.authority == authority.key() @ ErrorCode::Unauthorized)]
     pub game_config: Account<'info, GameConfig>,
@@ -1281,6 +1298,7 @@ pub struct AdminClosePlayerAccount<'info> {
     #[account(mut)]
     pub rent_receiver: AccountInfo<'info>,
 }
+
 
 // ========== STATE ACCOUNTS ==========
 

@@ -10,6 +10,82 @@ import dotenv from "dotenv";
 // Suppress dotenv output
 dotenv.config({ debug: false });
 
+// Backend integration
+const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:3001';
+
+// Property prices (matching backend constants)
+const PROPERTIES = [
+  { id: 0, setId: 0, price: 1000000000000 },      // Mediterranean
+  { id: 1, setId: 0, price: 1200000000000 },      // Baltic
+  { id: 2, setId: 1, price: 2500000000000 },      // Oriental
+  { id: 3, setId: 1, price: 2500000000000 },      // Vermont
+  { id: 4, setId: 1, price: 3000000000000 },      // Connecticut
+  { id: 5, setId: 2, price: 3500000000000 },      // St. Charles
+  { id: 6, setId: 2, price: 3500000000000 },      // States
+  { id: 7, setId: 2, price: 4000000000000 },      // Virginia
+  { id: 8, setId: 3, price: 4500000000000 },      // St. James
+  { id: 9, setId: 3, price: 4500000000000 },      // Tennessee
+  { id: 10, setId: 3, price: 5000000000000 },     // New York
+  { id: 11, setId: 4, price: 5500000000000 },     // Kentucky
+  { id: 12, setId: 4, price: 5500000000000 },     // Indiana
+  { id: 13, setId: 4, price: 6000000000000 },     // Illinois
+  { id: 14, setId: 5, price: 6500000000000 },     // Atlantic
+  { id: 15, setId: 5, price: 6500000000000 },     // Ventnor
+  { id: 16, setId: 5, price: 7000000000000 },     // Marvin Gardens
+  { id: 17, setId: 6, price: 7500000000000 },     // Pacific
+  { id: 18, setId: 6, price: 8000000000000 },     // North Carolina
+  { id: 19, setId: 6, price: 8500000000000 },     // Pennsylvania
+  { id: 20, setId: 7, price: 9000000000000 },     // Park Place
+  { id: 21, setId: 7, price: 10000000000000 },    // Boardwalk
+];
+
+function getPropertyPrice(propertyId: number): number {
+  const property = PROPERTIES.find(p => p.id === propertyId);
+  return property ? property.price : 0;
+}
+
+async function sendActionToBackend(
+  txSignature: string,
+  actionType: string, 
+  playerAddress: string,
+  propertyId?: number,
+  targetAddress?: string,
+  amount?: number,
+  slots?: number,
+  success: boolean = true,
+  metadata?: any
+) {
+  try {
+    const response = await fetch(`${BACKEND_URL}/api/actions`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        txSignature,
+        actionType,
+        playerAddress,
+        propertyId,
+        targetAddress,
+        amount,
+        slots,
+        success,
+        metadata,
+        blockTime: Math.floor(Date.now() / 1000)
+      })
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.log(`    🔴 Backend error: ${response.status} - ${errorText}`);
+    } else {
+      console.log(`    📊 Action logged to backend`);
+    }
+  } catch (error: any) {
+    console.log(`    🔴 Backend connection failed: ${error.message}`);
+  }
+}
+
 // ES module path fix
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -179,8 +255,8 @@ async function buyProperties(walletIds: number[], propertyId: number, slots: num
   console.log(`🏠 Buying property ${propertyId} (${slots} slot${slots > 1 ? 's' : ''}) for ${walletIds.length} wallets...`);
 
   for (const id of walletIds) {
+    const wallet = loadWallet(id);
     try {
-      const wallet = loadWallet(id);
       const program = await getProgram(connection, wallet);
       
       const [playerPDA] = getPlayerPDA(wallet.publicKey);
@@ -221,8 +297,42 @@ async function buyProperties(walletIds: number[], propertyId: number, slots: num
         .rpc();
 
       console.log(`  Wallet ${id}: ✅ Bought ${slots} slot${slots > 1 ? 's' : ''} of property ${propertyId}`);
+      
+      // Calculate total cost
+      const propertyPrice = getPropertyPrice(propertyId);
+      const totalCost = propertyPrice * slots;
+      
+      // Send action to backend
+      await sendActionToBackend(
+        `bot_buy_${Date.now()}_${id}_${propertyId}`, // Generate unique tx signature
+        'buy',
+        wallet.publicKey.toString(),
+        propertyId,
+        undefined, // no target for buy
+        totalCost, // actual cost calculated from property price * slots
+        slots,
+        true,
+        { botWallet: id, timestamp: Date.now(), propertyPrice, totalCost }
+      );
     } catch (error: any) {
       console.log(`  Wallet ${id}: ❌ Error: ${error?.message || error}`);
+      
+      // Calculate total cost for failed attempts too
+      const propertyPrice = getPropertyPrice(propertyId);
+      const totalCost = propertyPrice * slots;
+      
+      // Log failed action to backend
+      await sendActionToBackend(
+        `bot_buy_failed_${Date.now()}_${id}_${propertyId}`,
+        'buy',
+        wallet.publicKey.toString(),
+        propertyId,
+        undefined,
+        totalCost,
+        slots,
+        false,
+        { botWallet: id, error: error?.message || error.toString(), timestamp: Date.now(), propertyPrice, totalCost }
+      );
     }
   }
 }
@@ -235,8 +345,8 @@ async function activateShields(walletIds: number[], propertyId: number, slotsToS
   console.log(`🛡️  Activating shields for property ${propertyId}...`);
 
   for (const id of walletIds) {
+    const wallet = loadWallet(id);
     try {
-      const wallet = loadWallet(id);
       const program = await getProgram(connection, wallet);
       
       const [playerPDA] = getPlayerPDA(wallet.publicKey);
@@ -265,6 +375,19 @@ async function activateShields(walletIds: number[], propertyId: number, slotsToS
         .rpc();
 
       console.log(`  Wallet ${id}: ✅ Shield activated for ${slotsToShield} slots`);
+      
+      // Send action to backend
+      await sendActionToBackend(
+        `bot_shield_${Date.now()}_${id}_${propertyId}`,
+        'shield',
+        wallet.publicKey.toString(),
+        propertyId,
+        undefined,
+        undefined, // shield cost would need calculation
+        slotsToShield,
+        true,
+        { botWallet: id, timestamp: Date.now() }
+      );
     } catch (error: any) {
       console.log(`  Wallet ${id}: ❌ Error: ${error?.message || error}`);
     }
@@ -279,8 +402,8 @@ async function claimRewards(walletIds: number[]) {
   console.log(`💰 Claiming rewards for ${walletIds.length} wallets...`);
 
   for (const id of walletIds) {
+    const wallet = loadWallet(id);
     try {
-      const wallet = loadWallet(id);
       const program = await getProgram(connection, wallet);
       
       const [playerPDA] = getPlayerPDA(wallet.publicKey);
@@ -315,6 +438,19 @@ async function claimRewards(walletIds: number[]) {
         .rpc();
 
       console.log(`  Wallet ${id}: ✅ Rewards claimed`);
+      
+      // Send action to backend
+      await sendActionToBackend(
+        `bot_claim_${Date.now()}_${id}`,
+        'claim',
+        wallet.publicKey.toString(),
+        undefined, // no specific property for claims
+        undefined,
+        undefined, // reward amount would need calculation
+        undefined,
+        true,
+        { botWallet: id, timestamp: Date.now() }
+      );
     } catch (error: any) {
       console.log(`  Wallet ${id}: ❌ Error: ${error?.message || error}`);
     }

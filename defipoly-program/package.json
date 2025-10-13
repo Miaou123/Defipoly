@@ -5,7 +5,8 @@
     "deploy": "anchor deploy",
     "bot:setup": "tsx scripts/bot/setup-test-wallets.ts",
     "bot:init": "tsx scripts/bot/bot-interactions.ts init all",
-    "bot": "tsx scripts/bot/bot-interactions.ts"
+    "bot": "tsx scripts/bot/bot-interactions.ts",
+    "initialize":  "tsx scripts/initialize-game.ts"
   },
   "dependencies": {
     "@coral-xyz/anchor": "^0.31.1",
