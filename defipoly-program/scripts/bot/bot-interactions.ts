@@ -6,6 +6,7 @@ import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 import dotenv from "dotenv";
+import crypto from "crypto";
 
 // Suppress dotenv output
 dotenv.config({ debug: false });
@@ -183,6 +184,13 @@ function getSetStatsPDA(setId: number): [PublicKey, number] {
 function getGameConfigPDA(): [PublicKey, number] {
   return PublicKey.findProgramAddressSync(
     [Buffer.from("game_config")],
+    PROGRAM_ID
+  );
+}
+
+function getStealRequestPDA(attacker: PublicKey, propertyId: number): [PublicKey, number] {
+  return PublicKey.findProgramAddressSync(
+    [Buffer.from("steal_request"), attacker.toBuffer(), Buffer.from([propertyId])],
     PROGRAM_ID
   );
 }
@@ -515,6 +523,247 @@ async function getWalletInfo(walletId: number) {
   }
 }
 
+// Command: Targeted steal (specify target wallet)
+async function stealPropertyTargeted(
+  attackerWalletId: number, 
+  targetWalletId: number, 
+  propertyId: number
+) {
+  const rpcUrl = process.env.ANCHOR_PROVIDER_URL || "https://api.devnet.solana.com";
+  const connection = new anchor.web3.Connection(rpcUrl, "confirmed");
+  
+  const attackerWallet = loadWallet(attackerWalletId);
+  const targetWallet = loadWallet(targetWalletId);
+  
+  console.log(`🎯 Wallet ${attackerWalletId} attempting targeted steal from wallet ${targetWalletId} (property ${propertyId})...`);
+
+  try {
+    const program = await getProgram(connection, attackerWallet);
+    
+    // Generate user randomness
+    const userRandomness = Array.from(crypto.getRandomValues(new Uint8Array(32)));
+    
+    // Get required PDAs
+    const [propertyPDA] = getPropertyPDA(propertyId);
+    const [attackerPlayerPDA] = getPlayerPDA(attackerWallet.publicKey);
+    const [targetPlayerPDA] = getPlayerPDA(targetWallet.publicKey);
+    const [targetOwnershipPDA] = getOwnershipPDA(targetWallet.publicKey, propertyId);
+    const [stealRequestPDA] = getStealRequestPDA(attackerWallet.publicKey, propertyId);
+    const [gameConfigPDA] = getGameConfigPDA();
+    
+    // Get token accounts
+    const attackerTokenAccount = getAssociatedTokenAddress(TOKEN_MINT, attackerWallet.publicKey);
+    const devWallet = new PublicKey("CgWTFX7JJQHed3qyMDjJkNCxK4sFe3wbDFABmWAAmrdS");
+    const devTokenAccount = getAssociatedTokenAddress(TOKEN_MINT, devWallet);
+    
+    const gameConfig = await (program.account as any).gameConfig.fetch(gameConfigPDA);
+    const rewardPoolVault = gameConfig.rewardPoolVault;
+    
+    console.log("  Step 1: Requesting steal...");
+    // Step 1: Request steal
+    const requestTx = await program.methods
+      .stealPropertyRequest(
+        targetWallet.publicKey,
+        true, // is_targeted = true for targeted steal
+        userRandomness
+      )
+      .accountsPartial({
+        property: propertyPDA,
+        targetOwnership: targetOwnershipPDA,
+        stealRequest: stealRequestPDA,
+        playerAccount: attackerPlayerPDA,
+        attacker: attackerWallet.publicKey,
+        playerTokenAccount: attackerTokenAccount,
+        rewardPoolVault: rewardPoolVault,
+        devTokenAccount: devTokenAccount,
+        gameConfig: gameConfigPDA,
+        tokenProgram: TOKEN_PROGRAM_ID,
+        systemProgram: anchor.web3.SystemProgram.programId,
+      })
+      .rpc();
+    
+    console.log(`  Request transaction: ${requestTx}`);
+    
+    // Wait for VRF fulfillment
+    console.log("  Step 2: Waiting for VRF fulfillment...");
+    await new Promise(resolve => setTimeout(resolve, 3000));
+    
+    // Step 2: Fulfill steal
+    const [attackerOwnershipPDA] = getOwnershipPDA(attackerWallet.publicKey, propertyId);
+    
+    const fulfillTx = await program.methods
+      .stealPropertyFulfill()
+      .accountsPartial({
+        property: propertyPDA,
+        targetOwnership: targetOwnershipPDA,
+        attackerOwnership: attackerOwnershipPDA,
+        stealRequest: stealRequestPDA,
+        attackerAccount: attackerPlayerPDA,
+        targetAccount: targetPlayerPDA,
+        gameConfig: gameConfigPDA,
+        slotHashes: anchor.web3.SYSVAR_SLOT_HASHES_PUBKEY,
+        payer: attackerWallet.publicKey,
+        systemProgram: anchor.web3.SystemProgram.programId,
+      })
+      .rpc();
+    
+    console.log(`  Fulfill transaction: ${fulfillTx}`);
+    
+    // Check result
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    const stealRequest = await (program.account as any).stealRequest.fetch(stealRequestPDA);
+    
+    if (stealRequest.success) {
+      console.log(`  ✅ Steal successful! VRF: ${stealRequest.vrfResult.toString()}`);
+    } else {
+      console.log(`  ❌ Steal failed. VRF: ${stealRequest.vrfResult.toString()}`);
+    }
+    
+    // Send to backend
+    await sendActionToBackend(
+      fulfillTx,
+      'steal',
+      attackerWallet.publicKey.toString(),
+      propertyId,
+      1, // slots attempted
+      getPropertyPrice(propertyId) * 0.5, // steal cost
+      {
+        target: targetWallet.publicKey.toString(),
+        targeted: true,
+        success: stealRequest.success,
+        vrfResult: stealRequest.vrfResult.toString()
+      }
+    );
+    
+    return stealRequest.success;
+  } catch (error) {
+    console.error(`  ❌ Error: ${error}`);
+    return false;
+  }
+}
+
+// Command: Random steal (bot selects random target)
+async function stealPropertyRandom(attackerWalletId: number, propertyId: number) {
+  const rpcUrl = process.env.ANCHOR_PROVIDER_URL || "https://api.devnet.solana.com";
+  const connection = new anchor.web3.Connection(rpcUrl, "confirmed");
+  
+  const attackerWallet = loadWallet(attackerWalletId);
+  
+  console.log(`🎲 Wallet ${attackerWalletId} attempting random steal (property ${propertyId})...`);
+
+  try {
+    const program = await getProgram(connection, attackerWallet);
+    
+    // For simplicity, we'll pick a random target wallet from available test wallets
+    // In practice, you'd query the blockchain to find actual property owners
+    const availableWallets = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9].filter(id => id !== attackerWalletId);
+    const randomTargetId = availableWallets[Math.floor(Math.random() * availableWallets.length)];
+    const targetWallet = loadWallet(randomTargetId);
+    
+    console.log(`  Selected random target: wallet ${randomTargetId}`);
+    
+    // Generate user randomness
+    const userRandomness = Array.from(crypto.getRandomValues(new Uint8Array(32)));
+    
+    // Get required PDAs
+    const [propertyPDA] = getPropertyPDA(propertyId);
+    const [attackerPlayerPDA] = getPlayerPDA(attackerWallet.publicKey);
+    const [targetPlayerPDA] = getPlayerPDA(targetWallet.publicKey);
+    const [targetOwnershipPDA] = getOwnershipPDA(targetWallet.publicKey, propertyId);
+    const [stealRequestPDA] = getStealRequestPDA(attackerWallet.publicKey, propertyId);
+    const [gameConfigPDA] = getGameConfigPDA();
+    
+    // Get token accounts
+    const attackerTokenAccount = getAssociatedTokenAddress(TOKEN_MINT, attackerWallet.publicKey);
+    const devWallet = new PublicKey("CgWTFX7JJQHed3qyMDjJkNCxK4sFe3wbDFABmWAAmrdS");
+    const devTokenAccount = getAssociatedTokenAddress(TOKEN_MINT, devWallet);
+    
+    const gameConfig = await (program.account as any).gameConfig.fetch(gameConfigPDA);
+    const rewardPoolVault = gameConfig.rewardPoolVault;
+    
+    console.log("  Step 1: Requesting random steal...");
+    // Step 1: Request steal
+    const requestTx = await program.methods
+      .stealPropertyRequest(
+        targetWallet.publicKey,
+        false, // is_targeted = false for random steal (higher success rate)
+        userRandomness
+      )
+      .accountsPartial({
+        property: propertyPDA,
+        targetOwnership: targetOwnershipPDA,
+        stealRequest: stealRequestPDA,
+        playerAccount: attackerPlayerPDA,
+        attacker: attackerWallet.publicKey,
+        playerTokenAccount: attackerTokenAccount,
+        rewardPoolVault: rewardPoolVault,
+        devTokenAccount: devTokenAccount,
+        gameConfig: gameConfigPDA,
+        tokenProgram: TOKEN_PROGRAM_ID,
+        systemProgram: anchor.web3.SystemProgram.programId,
+      })
+      .rpc();
+    
+    console.log(`  Request transaction: ${requestTx}`);
+    
+    // Wait for VRF fulfillment
+    console.log("  Step 2: Waiting for VRF fulfillment...");
+    await new Promise(resolve => setTimeout(resolve, 3000));
+    
+    // Step 2: Fulfill steal
+    const [attackerOwnershipPDA] = getOwnershipPDA(attackerWallet.publicKey, propertyId);
+    
+    const fulfillTx = await program.methods
+      .stealPropertyFulfill()
+      .accountsPartial({
+        property: propertyPDA,
+        targetOwnership: targetOwnershipPDA,
+        attackerOwnership: attackerOwnershipPDA,
+        stealRequest: stealRequestPDA,
+        attackerAccount: attackerPlayerPDA,
+        targetAccount: targetPlayerPDA,
+        gameConfig: gameConfigPDA,
+        slotHashes: anchor.web3.SYSVAR_SLOT_HASHES_PUBKEY,
+        payer: attackerWallet.publicKey,
+        systemProgram: anchor.web3.SystemProgram.programId,
+      })
+      .rpc();
+    
+    console.log(`  Fulfill transaction: ${fulfillTx}`);
+    
+    // Check result
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    const stealRequest = await (program.account as any).stealRequest.fetch(stealRequestPDA);
+    
+    if (stealRequest.success) {
+      console.log(`  ✅ Random steal successful! VRF: ${stealRequest.vrfResult.toString()}`);
+    } else {
+      console.log(`  ❌ Random steal failed. VRF: ${stealRequest.vrfResult.toString()}`);
+    }
+    
+    // Send to backend
+    await sendActionToBackend(
+      fulfillTx,
+      'steal',
+      attackerWallet.publicKey.toString(),
+      propertyId,
+      1, // slots attempted
+      getPropertyPrice(propertyId) * 0.5, // steal cost
+      {
+        target: targetWallet.publicKey.toString(),
+        targeted: false,
+        success: stealRequest.success,
+        vrfResult: stealRequest.vrfResult.toString()
+      }
+    );
+    
+    return stealRequest.success;
+  } catch (error) {
+    console.error(`  ❌ Error: ${error}`);
+    return false;
+  }
+}
+
 // Main CLI
 async function main() {
   const args = process.argv.slice(2);
@@ -588,6 +837,21 @@ async function main() {
       break;
     }
     
+    case "steal-targeted": {
+      const attackerWalletId = Number(args[1]);
+      const targetWalletId = Number(args[2]);
+      const propertyId = Number(args[3]);
+      await stealPropertyTargeted(attackerWalletId, targetWalletId, propertyId);
+      break;
+    }
+    
+    case "steal-random": {
+      const attackerWalletId = Number(args[1]);
+      const propertyId = Number(args[2]);
+      await stealPropertyRandom(attackerWalletId, propertyId);
+      break;
+    }
+    
     default:
       console.log(`
 🎮 Defipoly Bot CLI (Updated for Current Program)
@@ -600,6 +864,8 @@ Commands:
   buy <propertyId> [slots] <wallets> Buy properties (slots defaults to 1)
   shield <propertyId> <slots> <wallets> Activate shields
   claim <wallets>                   Claim rewards
+  steal-targeted <attacker> <target> <propertyId> Targeted steal (25% success)
+  steal-random <attacker> <propertyId> Random steal (33% success)
   info <walletId>                   Get wallet info
 
 Wallet Options:
@@ -611,6 +877,8 @@ Examples:
   tsx scripts/bot/bot-interactions.ts buy 0 1 all          # Buy 1 slot for all wallets
   tsx scripts/bot/bot-interactions.ts buy 0 5 0 1 2 3      # Buy 5 slots for wallets 0-3
   tsx scripts/bot/bot-interactions.ts shield 0 1 0 1 2     # Shield 1 slot for wallets 0-2
+  tsx scripts/bot/bot-interactions.ts steal-targeted 0 1 0 # Wallet 0 steals from wallet 1 (property 0)
+  tsx scripts/bot/bot-interactions.ts steal-random 0 0     # Wallet 0 random steal (property 0)
   tsx scripts/bot/bot-interactions.ts claim all
   tsx scripts/bot/bot-interactions.ts info 5
       `);
