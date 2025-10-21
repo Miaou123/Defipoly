@@ -10,7 +10,7 @@ interface LeaderboardEntry {
   propertiesBought: number;
 }
 
-const API_URL = process.env.NEXT_PUBLIC_PROFILE_API_URL || 'http://localhost:3001';
+const API_URL = process.env.NEXT_PUBLIC_PROFILE_API_URL || 'http://localhost:3005';
 
 export function Leaderboard() {
   const [leaders, setLeaders] = useState<LeaderboardEntry[]>([]);
@@ -117,7 +117,7 @@ export function Leaderboard() {
                   <div className="w-10 h-10 rounded-full overflow-hidden bg-purple-500/20 border border-purple-500/30 flex-shrink-0">
                     {profiles[leader.walletAddress]?.profilePicture ? (
                       <img 
-                        src={profiles[leader.walletAddress].profilePicture} 
+                        src={profiles[leader.walletAddress].profilePicture || undefined} 
                         alt="Profile"
                         className="w-full h-full object-cover"
                       />

@@ -1,6 +1,6 @@
 // ============================================
 // FILE: defipoly-frontend/src/components/PropertyModal.tsx
-// With Set Bonus Display
+// With Split Card Availability Display
 // ============================================
 
 'use client';
@@ -146,7 +146,30 @@ export function PropertyModal({ propertyId, onClose }: PropertyModalProps) {
   if (!property || propertyId === null) return null;
 
   const dailyIncome = property.dailyIncome;
+  
+  // Calculate income per slot (used for yield display)
+  const baseIncomePerSlot = dailyIncome;
+  const boostedIncomePerSlot = setBonusInfo?.hasCompleteSet ? Math.floor(baseIncomePerSlot * 1.4) : baseIncomePerSlot;
+
+  // Calculate total daily income for owned slots
+  let totalDailyIncome = 0;
+  if (propertyData?.owned > 0 && setBonusInfo) {
+    if (setBonusInfo.hasCompleteSet) {
+      const boostedSlots = setBonusInfo.boostedSlots;
+      const unboostedSlots = setBonusInfo.totalSlots - boostedSlots;
+      totalDailyIncome = (boostedSlots * boostedIncomePerSlot) + (unboostedSlots * baseIncomePerSlot);
+    } else {
+      totalDailyIncome = propertyData.owned * baseIncomePerSlot;
+    }
+  }
+
   const propertyColor = getColorFromClass(property.color);
+
+  // Calculate availability values for the display
+  const globalAvailable = propertyData?.availableSlots || 0;
+  const totalSlots = property.totalSlots;
+  const personalOwned = propertyData?.owned || 0;
+  const personalMax = propertyData?.maxSlotsPerProperty || property.totalSlots;
 
   return (
     <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={onClose}>
@@ -182,95 +205,128 @@ export function PropertyModal({ propertyId, onClose }: PropertyModalProps) {
 
         {/* Content */}
         <div className="p-6 space-y-4 max-h-[60vh] overflow-y-auto">
-          {/* Property Stats */}
+          {/* REPLACED: Property Stats with Split Card Availability Display */}
           <div className="grid grid-cols-3 gap-3">
+            {/* Price per Slot */}
             <div className="bg-purple-900/20 backdrop-blur rounded-xl p-3 border border-purple-500/20">
               <div className="text-purple-400 text-xs font-semibold uppercase tracking-wider mb-1">Price/Slot</div>
               <div className="text-lg font-black text-purple-100">{property.price.toLocaleString()}</div>
             </div>
+
+            {/* Daily Income */}
             <div className="bg-purple-900/20 backdrop-blur rounded-xl p-3 border border-purple-500/20">
               <div className="text-purple-400 text-xs font-semibold uppercase tracking-wider mb-1">Daily Income</div>
               <div className="text-lg font-black text-green-400">{dailyIncome.toLocaleString()}</div>
             </div>
+
+            {/* Global Available */}
             <div className="bg-purple-900/20 backdrop-blur rounded-xl p-3 border border-purple-500/20">
               <div className="text-purple-400 text-xs font-semibold uppercase tracking-wider mb-1">Available</div>
               <div className="text-lg font-black text-blue-400">
-                {propertyData?.availableSlots ?? '...'}
+                {globalAvailable}
               </div>
             </div>
           </div>
 
-          {/* Ownership Info */}
-          {connected && propertyData && propertyData.owned > 0 && (
-            <div className="bg-gradient-to-br from-purple-900/40 to-purple-800/40 backdrop-blur rounded-xl p-4 border border-purple-500/30">
-              <h3 className="font-black text-base text-purple-100 mb-3">Your Ownership</h3>
-              <div className="space-y-2 text-sm">
-                {/* Slots Owned with Boosted Badge */}
-                <div className="flex justify-between items-center">
-                  <span className="text-purple-300">Slots Owned:</span>
-                  <div className="flex items-center gap-2">
-                    <span className="font-bold text-purple-100 text-lg">{propertyData.owned}</span>
-                    {setBonusInfo?.hasCompleteSet && setBonusInfo.boostedSlots > 0 && (
-                      <span 
-                        className="text-white text-xs font-bold px-2.5 py-1 rounded-xl"
-                        style={{ backgroundColor: propertyColor }}
-                      >
-                        {setBonusInfo.boostedSlots} boosted
-                      </span>
-                    )}
-                  </div>
+          {/* NEW: Split Card Layout for Detailed Availability */}
+          <div className="grid grid-cols-2 gap-3">
+            {/* Global Availability */}
+            <div className="bg-purple-900/20 rounded-xl p-4 border border-purple-500/20">
+              <div className="text-xs text-purple-400 mb-1">🌍 Global Pool</div>
+              <div className="text-2xl font-bold text-purple-100">
+                {globalAvailable}
+              </div>
+              <div className="text-xs text-purple-400 mt-1">
+                of {totalSlots} total slots
+              </div>
+              <div className="mt-2 w-full bg-purple-950/50 rounded-full h-1.5 overflow-hidden">
+                <div 
+                  className={`h-full transition-all ${
+                    globalAvailable < totalSlots * 0.2 
+                      ? 'bg-red-500' 
+                      : globalAvailable < totalSlots * 0.5
+                      ? 'bg-amber-500'
+                      : 'bg-green-500'
+                  }`}
+                  style={{ width: `${(globalAvailable / totalSlots) * 100}%` }}
+                />
+              </div>
+            </div>
+            
+            {/* Your Personal Ownership */}
+            <div className="bg-purple-900/20 rounded-xl p-4 border border-purple-500/20">
+              <div className="text-xs text-purple-400 mb-1">👤 Your Ownership</div>
+              <div className="text-2xl font-bold text-emerald-400">
+                {personalOwned}
+              </div>
+              <div className="text-xs text-purple-400 mt-1">
+                of {personalMax} max allowed
+              </div>
+              <div className="mt-2 w-full bg-purple-950/50 rounded-full h-1.5 overflow-hidden">
+                <div 
+                  className="h-full bg-emerald-500 transition-all"
+                  style={{ width: `${(personalOwned / personalMax) * 100}%` }}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Set Bonus Info */}
+          {setBonusInfo && propertyData?.owned > 0 && (
+            <div className={`rounded-xl p-3 border ${
+              setBonusInfo.hasCompleteSet 
+                ? 'bg-green-900/20 border-green-500/30' 
+                : 'bg-purple-900/20 border-purple-500/20'
+            }`}>
+              <div className="flex items-center justify-between">
+                <div className="text-sm">
+                  {setBonusInfo.hasCompleteSet ? (
+                    <>
+                      <span className="text-green-300 font-bold">✅ Set Bonus Active</span>
+                      <div className="text-xs text-green-400 mt-1">
+                        +40% income on {setBonusInfo.boostedSlots} slot{setBonusInfo.boostedSlots !== 1 ? 's' : ''}
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <span className="text-purple-300 font-bold">Set Bonus Available</span>
+                      <div className="text-xs text-purple-400 mt-1">
+                        Own all properties in this color set for +40% income
+                      </div>
+                    </>
+                  )}
                 </div>
-                
-                {/* Daily Income with Breakdown */}
-                <div className="flex justify-between items-start">
-                  <span className="text-purple-300 pt-1">Daily Income:</span>
-                  <div className="flex flex-col items-end gap-0.5">
-                    {setBonusInfo?.hasCompleteSet && setBonusInfo.boostedSlots > 0 ? (
-                      <>
-                        {/* Boosted slots income */}
-                        <div 
-                          className="text-sm"
-                          style={{ color: propertyColor }}
-                        >
-                          {setBonusInfo.boostedSlots} slot{setBonusInfo.boostedSlots > 1 ? 's' : ''} × {(dailyIncome * 1.4).toLocaleString()}
-                        </div>
-                        
-                        {/* Regular slots income (if any) */}
-                        {(propertyData.owned - setBonusInfo.boostedSlots) > 0 && (
-                          <div className="text-sm text-purple-300/70">
-                            {propertyData.owned - setBonusInfo.boostedSlots} slot{(propertyData.owned - setBonusInfo.boostedSlots) > 1 ? 's' : ''} × {dailyIncome.toLocaleString()}
-                          </div>
-                        )}
-                        
-                        {/* Total */}
-                        <div className="font-bold text-white text-lg border-t border-purple-500/20 pt-1 mt-0.5 w-full text-right">
-                          {(
-                            (setBonusInfo.boostedSlots * dailyIncome * 1.4) + 
-                            ((propertyData.owned - setBonusInfo.boostedSlots) * dailyIncome)
-                          ).toLocaleString()} DEFI
-                        </div>
-                      </>
-                    ) : (
-                      <span className="font-bold text-green-400 text-lg">
-                        +{(dailyIncome * propertyData.owned).toLocaleString()} DEFI
-                      </span>
-                    )}
-                  </div>
-                </div>
-                
-                {propertyData.shieldActive && (
-                  <div className="bg-green-900/30 border border-green-500/50 rounded-lg p-2 mt-2">
-                    <div className="flex justify-between items-center">
-                      <span className="text-green-400 font-bold text-xs">🛡️ Shield Active</span>
-                      <span className="text-green-300 text-xs">{propertyData.slotsShielded} slots</span>
+                {totalDailyIncome > 0 && (
+                  <div className="text-right">
+                    <div className="text-xs text-purple-400">Your Income</div>
+                    <div className="text-lg font-bold text-green-400">
+                      {totalDailyIncome.toLocaleString()}
                     </div>
+                    <div className="text-xs text-purple-500">DEFI/day</div>
                   </div>
                 )}
               </div>
             </div>
           )}
 
-          {/* Action Buttons */}
+          {/* Shield Status */}
+          {propertyData?.shieldActive && (
+            <div className="bg-blue-900/20 rounded-xl p-3 border border-blue-500/30 flex items-center justify-between">
+              <div>
+                <div className="text-blue-300 font-bold text-sm flex items-center gap-2">
+                  🛡️ Shield Active
+                </div>
+                <div className="text-xs text-blue-400 mt-1">
+                  {propertyData.slotsShielded} slot{propertyData.slotsShielded !== 1 ? 's' : ''} protected from theft
+                </div>
+              </div>
+              <div className="text-blue-300 text-xs">
+                Protected
+              </div>
+            </div>
+          )}
+
+          {/* Action Sections */}
           {!connected ? (
             <div className="flex flex-col items-center py-8 space-y-4">
               <p className="text-purple-200 mb-2 text-center text-base">Connect your wallet to interact with this property</p>

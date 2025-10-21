@@ -1,12 +1,15 @@
+// ============================================
+// FILE: defipoly-frontend/src/utils/program.ts
+// ============================================
+
 import { Connection, PublicKey } from '@solana/web3.js';
 import { Program, AnchorProvider, Idl } from '@coral-xyz/anchor';
 import { PROGRAM_ID } from './constants';
-import idl from '../../../defipoly-program/target/idl/defipoly_program.json';
+// ✅ Import from types folder (auto-synced from backend)
+import idl from '@/types/defipoly_program.json';
 import type { Property, PropertyOwnership, PlayerAccount, PlayerSetCooldown } from '@/types/accounts';
 import { deserializeOwnership, deserializeProperty, deserializePlayer } from './deserialize';
 
-
-// ✅ SIMPLE: Just use Idl type and cast when needed
 export type MemeopolyProgram = Program<Idl>;
 
 export function getProgram(provider: AnchorProvider): MemeopolyProgram {
