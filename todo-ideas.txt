@@ -1,8 +1,11 @@
 Current focus:
 
+Need to rework the steal system (choose between targeted and untargetted and have it working)
 Need to work on the backend and make sure it works properly
+Need to test the new full deploy system with deploy:full
 
 Todo:
+Work on security (backend / frontend / program)
 Quests system
 Add 3d scaling houses when clicking on the property menu
 fix the disparition bug from claiming when it's updated from blockchain every 30 sec/ same for leaderboard
@@ -17,3 +20,5 @@ Add the expand phase system for adding properties
 Add an airdrop properties system for admin wallet (and other admins commands)
 Steal system
 Different family bonuses
+
+

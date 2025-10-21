@@ -1,18 +1,24 @@
 import { useCallback } from 'react';
-import { PublicKey, SYSVAR_SLOT_HASHES_PUBKEY, SystemProgram } from '@solana/web3.js';
+import { PublicKey, SystemProgram, SYSVAR_SLOT_HASHES_PUBKEY } from '@solana/web3.js';
 import { TOKEN_PROGRAM_ID, getAssociatedTokenAddress } from '@solana/spl-token';
 import { Program, AnchorProvider } from '@coral-xyz/anchor';
 import { Connection } from '@solana/web3.js';
 import { EventParser } from '@coral-xyz/anchor';
-import { 
-  getPropertyPDA,
-  getPlayerPDA,
-  getOwnershipPDA,
-  getStealRequestPDA
-} from '@/utils/program';
-import { fetchPropertyOwners, selectRandomOwnerUnweighted } from '@/utils/propertyOwners';
+import { getPropertyPDA, getPlayerPDA, getOwnershipPDA } from '@/utils/program';
 import { GAME_CONFIG, REWARD_POOL, TOKEN_MINT } from '@/utils/constants';
 import { storeTransactionEvents } from '@/utils/eventStorage';
+
+// Helper function to get steal request PDA
+function getStealRequestPDA(attacker: PublicKey, propertyId: number): [PublicKey, number] {
+  return PublicKey.findProgramAddressSync(
+    [
+      Buffer.from('steal_request'),
+      attacker.toBuffer(),
+      Buffer.from([propertyId]),
+    ],
+    new PublicKey('HpacCgxUuzwoMeryvQtC94RxFmpxC6dYPX5E17JBzBmQ') // Your program ID
+  );
+}
 
 export const useStealActions = (
   program: Program | null,
@@ -23,252 +29,103 @@ export const useStealActions = (
   playerInitialized: boolean,
   setLoading: (loading: boolean) => void
 ) => {
-  const stealPropertyTargeted = useCallback(async (propertyId: number, targetPlayer: string, isTargeted: boolean = true) => {
-    if (!program || !wallet || !provider) throw new Error('Wallet not connected');
-    if (!playerInitialized) throw new Error('Initialize player first');
-  
+  const stealPropertyRandom = useCallback(async (propertyId: number) => {
+    if (!program || !wallet || !provider) {
+      throw new Error('Wallet or program not connected');
+    }
+
+    if (!playerInitialized) {
+      throw new Error('Please initialize your player account first');
+    }
+
     setLoading(true);
+    
     try {
-      const targetPlayerPubkey = new PublicKey(targetPlayer);
+      // Step 1: Find all players who own this property
+      console.log(`🔍 Finding players who own property ${propertyId}...`);
       
-      // Prevent self-stealing
-      if (targetPlayerPubkey.equals(wallet.publicKey)) {
-        throw new Error('Cannot steal from yourself');
-      }
+      const [propertyPDATemp] = getPropertyPDA(propertyId);
+      const propertyAccount = await (program.account as any).property.fetch(propertyPDATemp);
       
-      // Validate that target player actually owns this property
-      console.log(`🔍 Validating that ${targetPlayer} owns property ${propertyId}...`);
-      const [targetOwnershipPDA] = getOwnershipPDA(targetPlayerPubkey, propertyId);
+      const allOwners: PublicKey[] = [];
       
-      try {
-        const targetOwnership = await (program.account as any).propertyOwnership.fetch(targetOwnershipPDA);
-        if (!targetOwnership || targetOwnership.slotsOwned === 0) {
-          throw new Error(`Target player ${targetPlayer} does not own any slots in property ${propertyId}`);
+      // Fetch all ownership accounts for this property
+      const allAccounts = await connection.getProgramAccounts(program.programId, {
+        filters: [
+          { dataSize: 8 + 32 + 1 + 2 + 2 + 8 + 8 + 1 }, // Ownership account size
+          {
+            memcmp: {
+              offset: 8 + 32, // Skip discriminator + player pubkey
+              bytes: propertyPDATemp.toBase58(),
+            },
+          },
+        ],
+      });
+
+      for (const account of allAccounts) {
+        try {
+          const ownership = await (program.account as any).propertyOwnership.fetch(account.pubkey);
+          if (ownership.slotsOwned > 0 && !ownership.player.equals(wallet.publicKey)) {
+            allOwners.push(ownership.player);
+          }
+        } catch (e) {
+          console.warn('Could not fetch ownership account:', e);
         }
+      }
+
+      if (allOwners.length === 0) {
+        throw new Error('No players own unshielded slots in this property');
+      }
+
+      console.log(`✅ Found ${allOwners.length} potential target(s)`);
+
+      // Step 2: Filter out players whose slots are all shielded
+      const eligibleTargets: PublicKey[] = [];
+      const currentTimestamp = Math.floor(Date.now() / 1000);
+
+      for (const targetPlayer of allOwners) {
+        try {
+          const [targetOwnershipPDATemp] = getOwnershipPDA(targetPlayer, propertyId);
+          const targetOwnership = await (program.account as any).propertyOwnership.fetch(targetOwnershipPDATemp);
+          
+          const effectiveShieldedSlots = currentTimestamp < targetOwnership.shieldExpiry 
+            ? targetOwnership.slotsShielded : 0;
+          const unshieldedSlots = targetOwnership.slotsOwned - effectiveShieldedSlots;
+          
+          if (unshieldedSlots > 0) {
+            eligibleTargets.push(targetPlayer);
+          }
+        } catch (e) {
+          console.warn('Could not check target shields:', e);
+        }
+      }
+
+      if (eligibleTargets.length === 0) {
+        throw new Error('No eligible targets found - all slots are shielded');
+      }
+
+      // Step 3: Randomly select a target
+      const randomIndex = Math.floor(Math.random() * eligibleTargets.length);
+      const targetPlayerPubkey = eligibleTargets[randomIndex];
+      
+      console.log(`🎯 Randomly selected target: ${targetPlayerPubkey.toBase58()}`);
+
+      // Verify target still has unshielded slots
+      try {
+        const [targetOwnershipPDAVerify] = getOwnershipPDA(targetPlayerPubkey, propertyId);
+        const targetOwnership = await (program.account as any).propertyOwnership.fetch(targetOwnershipPDAVerify);
         
-        // Check if target has unshielded slots
-        const currentTime = Math.floor(Date.now() / 1000);
-        const shieldActive = targetOwnership.shieldExpiry > currentTime;
-        const effectiveShieldedSlots = shieldActive ? targetOwnership.slotsShielded : 0;
+        const effectiveShieldedSlots = currentTimestamp < targetOwnership.shieldExpiry 
+          ? targetOwnership.slotsShielded : 0;
         const unshieldedSlots = targetOwnership.slotsOwned - effectiveShieldedSlots;
         
         if (unshieldedSlots <= 0) {
-          throw new Error(`All slots owned by ${targetPlayer} in property ${propertyId} are shielded`);
+          throw new Error(`Selected random target's slots in property ${propertyId} are all shielded`);
         }
         
-        console.log(`✅ Target has ${unshieldedSlots} unshielded slots available to steal`);
+        console.log(`✅ Random target confirmed with ${unshieldedSlots} unshielded slots`);
       } catch (fetchError) {
-        throw new Error(`Target player ${targetPlayer} does not own property ${propertyId} or account doesn't exist`);
-      }
-      
-      // Get all required accounts
-      const playerTokenAccount = await getAssociatedTokenAddress(TOKEN_MINT, wallet.publicKey);
-      const devWallet = new PublicKey("CgWTFX7JJQHed3qyMDjJkNCxK4sFe3wbDFABmWAAmrdS");
-      const devTokenAccount = await getAssociatedTokenAddress(TOKEN_MINT, devWallet);
-      
-      const [propertyPDA] = getPropertyPDA(propertyId);
-      const [playerPDA] = getPlayerPDA(wallet.publicKey);
-      const [stealRequestPDA] = getStealRequestPDA(wallet.publicKey, propertyId);
-      // targetOwnershipPDA already declared above in validation
-      
-      // Generate user randomness
-      const userRandomness = new Uint8Array(32);
-      crypto.getRandomValues(userRandomness);
-      
-      console.log(`🎲 Initiating ${isTargeted ? 'TARGETED' : 'RANDOM'} steal with randomness...`);
-      
-      let requestTx: string;
-      try {
-        // Step 1: Request steal
-        requestTx = await program.methods
-          .stealPropertyRequest(
-            targetPlayerPubkey, 
-            isTargeted,
-            Array.from(userRandomness)
-          )
-          .accountsPartial({
-            property: propertyPDA,
-            targetOwnership: targetOwnershipPDA,
-            stealRequest: stealRequestPDA,
-            playerAccount: playerPDA,
-            attacker: wallet.publicKey,
-            playerTokenAccount,
-            rewardPoolVault: REWARD_POOL,
-            devTokenAccount,
-            gameConfig: GAME_CONFIG,
-            tokenProgram: TOKEN_PROGRAM_ID,
-            systemProgram: SystemProgram.programId,
-          })
-          .rpc();
-        
-        console.log('✅ Steal requested:', requestTx);
-      } catch (requestError) {
-        const errorMessage = String(requestError instanceof Error ? requestError.message : requestError);
-        if (errorMessage.includes('already been processed')) {
-          console.log('✅ Request transaction already processed');
-          requestTx = 'already-processed';
-        } else {
-          throw requestError;
-        }
-      }
-      
-      // Wait for VRF fulfillment
-      console.log('⏳ Waiting for VRF fulfillment...');
-      await new Promise(resolve => setTimeout(resolve, 3000));
-      
-      let fulfillTx: string;
-      try {
-        // Step 2: Fulfill the steal request
-        const [attackerOwnershipPDA] = getOwnershipPDA(wallet.publicKey, propertyId);
-        const [targetPlayerPDA] = getPlayerPDA(targetPlayerPubkey);
-        
-        fulfillTx = await program.methods
-          .stealPropertyFulfill()
-          .accountsPartial({
-            property: propertyPDA,
-            targetOwnership: targetOwnershipPDA,
-            attackerOwnership: attackerOwnershipPDA,
-            stealRequest: stealRequestPDA,
-            attackerAccount: playerPDA,
-            targetAccount: targetPlayerPDA,
-            gameConfig: GAME_CONFIG,
-            slotHashes: SYSVAR_SLOT_HASHES_PUBKEY,
-            payer: wallet.publicKey,
-            systemProgram: SystemProgram.programId,
-          })
-          .rpc();
-        
-        console.log('✅ Steal fulfilled:', fulfillTx);
-      } catch (fulfillError) {
-        const errorMessage = String(fulfillError instanceof Error ? fulfillError.message : fulfillError);
-        if (errorMessage.includes('already been processed')) {
-          console.log('✅ Fulfill transaction already processed');
-          fulfillTx = 'already-processed';
-        } else {
-          throw fulfillError;
-        }
-      }
-      
-      // Backend logging in background
-      (async () => {
-        try {
-          if (requestTx && requestTx !== 'already-processed') {
-            await storeTransactionEvents(connection, eventParser, requestTx);
-          }
-          if (fulfillTx && fulfillTx !== 'already-processed') {
-            await storeTransactionEvents(connection, eventParser, fulfillTx);
-          }
-        } catch (backendError) {
-          console.warn('⚠️ Backend storage failed (non-critical):', backendError);
-        }
-      })();
-      
-      // Fetch the result
-      try {
-        await new Promise(resolve => setTimeout(resolve, 2000));
-        const stealRequest = await (program.account as any).stealRequest.fetch(stealRequestPDA);
-        
-        if (stealRequest.success) {
-          console.log('✅ Steal successful! VRF:', stealRequest.vrfResult.toString());
-        } else {
-          console.log('❌ Steal failed. VRF:', stealRequest.vrfResult.toString());
-        }
-        
-        return {
-          requestTx,
-          fulfillTx,
-          success: stealRequest.success,
-          vrfResult: stealRequest.vrfResult.toString(),
-        };
-      } catch (fetchError) {
-        console.warn('⚠️ Could not fetch steal result, checking logs instead...');
-        
-        // Fallback: check transaction logs
-        const txDetails = await connection.getTransaction(fulfillTx, {
-          commitment: 'confirmed',
-          maxSupportedTransactionVersion: 0
-        });
-        
-        const logs = txDetails?.meta?.logMessages || [];
-        const success = logs.some(log => log.includes('STEAL SUCCESS'));
-        
-        return {
-          requestTx,
-          fulfillTx,
-          success,
-          vrfResult: 'Check transaction logs',
-        };
-      }
-    } catch (error) {
-      console.error('Error stealing property:', error);
-      
-      const errorMessage = String(error instanceof Error ? error.message : error);
-      if (errorMessage.includes('already been processed')) {
-        console.log('✅ Steal transactions already processed');
-        return {
-          requestTx: 'already-processed',
-          fulfillTx: 'already-processed',
-          success: true,
-          vrfResult: 'unknown',
-        };
-      }
-      
-      throw error;
-    } finally {
-      setTimeout(() => setLoading(false), 1000);
-    }
-  }, [program, wallet, provider, connection, eventParser, playerInitialized, setLoading]);
-
-  const stealPropertyRandom = useCallback(async (propertyId: number, specificTarget?: string) => {
-    if (!program || !wallet || !provider) throw new Error('Wallet not connected');
-    if (!playerInitialized) throw new Error('Initialize player first');
-  
-    setLoading(true);
-    try {
-      // If no specific target provided, we need to find someone who owns the property
-      let targetPlayerPubkey: PublicKey;
-      
-      if (specificTarget) {
-        targetPlayerPubkey = new PublicKey(specificTarget);
-      } else {
-        // For true random steal, fetch all owners and select one randomly
-        console.log('🎲 Finding random target for property', propertyId);
-        const owners = await fetchPropertyOwners(connection, program, propertyId);
-        
-        if (owners.length === 0) {
-          throw new Error(`No players own unshielded slots in property ${propertyId}. Cannot perform random steal.`);
-        }
-        
-        const randomTarget = selectRandomOwnerUnweighted(owners, wallet.publicKey);
-        if (!randomTarget) {
-          throw new Error('No eligible targets found (excluding yourself). You might be the only owner or all slots are shielded.');
-        }
-        
-        targetPlayerPubkey = randomTarget;
-        console.log('🎯 Random target selected:', randomTarget.toString());
-        
-        // Double-check the selected target (since fetchPropertyOwners might be cached/outdated)
-        const [selectedTargetOwnershipPDA] = getOwnershipPDA(targetPlayerPubkey, propertyId);
-        try {
-          const targetOwnership = await (program.account as any).propertyOwnership.fetch(selectedTargetOwnershipPDA);
-          if (!targetOwnership || targetOwnership.slotsOwned === 0) {
-            throw new Error(`Selected random target no longer owns property ${propertyId}`);
-          }
-          
-          // Check if target has unshielded slots
-          const currentTime = Math.floor(Date.now() / 1000);
-          const shieldActive = targetOwnership.shieldExpiry > currentTime;
-          const effectiveShieldedSlots = shieldActive ? targetOwnership.slotsShielded : 0;
-          const unshieldedSlots = targetOwnership.slotsOwned - effectiveShieldedSlots;
-          
-          if (unshieldedSlots <= 0) {
-            throw new Error(`Selected random target's slots in property ${propertyId} are all shielded`);
-          }
-          
-          console.log(`✅ Random target confirmed with ${unshieldedSlots} unshielded slots`);
-        } catch (fetchError) {
-          throw new Error(`Selected random target no longer owns property ${propertyId} or account is invalid`);
-        }
+        throw new Error(`Selected random target no longer owns property ${propertyId} or account is invalid`);
       }
       
       // Get all required accounts
@@ -285,15 +142,14 @@ export const useStealActions = (
       const userRandomness = new Uint8Array(32);
       crypto.getRandomValues(userRandomness);
       
-      console.log('🎲 Initiating RANDOM steal with randomness...');
+      console.log('🎲 Initiating random steal with randomness...');
       
       let requestTx: string = '';
       try {
-        // Step 1: Request steal with is_targeted = false for RANDOM steal
+        // Step 1: Request steal WITHOUT is_targeted parameter
         requestTx = await program.methods
           .stealPropertyRequest(
             targetPlayerPubkey,
-            false, // is_targeted = false means RANDOM STEAL (higher success rate)
             Array.from(userRandomness)
           )
           .accountsPartial({
@@ -312,6 +168,15 @@ export const useStealActions = (
           .rpc();
         
         console.log('✅ Random steal requested:', requestTx);
+        
+        // Store transaction events
+        if (eventParser) {
+          await storeTransactionEvents(
+            connection,
+            eventParser,
+            requestTx
+          );
+        }
       } catch (requestError) {
         const errorMessage = String(requestError instanceof Error ? requestError.message : requestError);
         console.error('Failed to request random steal:', errorMessage);
@@ -332,6 +197,7 @@ export const useStealActions = (
       
       // Step 2: Fulfill steal
       const [attackerOwnershipPDA] = getOwnershipPDA(wallet.publicKey, propertyId);
+      const [targetPlayerPDA] = getPlayerPDA(targetPlayerPubkey);
       
       let fulfillTx: string;
       try {
@@ -343,7 +209,7 @@ export const useStealActions = (
             attackerOwnership: attackerOwnershipPDA,
             stealRequest: stealRequestPDA,
             attackerAccount: playerPDA,
-            targetAccount: getPlayerPDA(targetPlayerPubkey)[0],
+            targetAccount: targetPlayerPDA,
             gameConfig: GAME_CONFIG,
             slotHashes: SYSVAR_SLOT_HASHES_PUBKEY,
             payer: wallet.publicKey,
@@ -352,6 +218,15 @@ export const useStealActions = (
           .rpc({ skipPreflight: true });
         
         console.log('✅ Random steal fulfilled:', fulfillTx);
+        
+        // Store transaction events
+        if (eventParser) {
+          await storeTransactionEvents(
+            connection,
+            eventParser,
+            fulfillTx
+          );
+        }
         
         await new Promise(resolve => setTimeout(resolve, 2000));
         
@@ -385,7 +260,7 @@ export const useStealActions = (
           }
           
           const logs = txDetails?.meta?.logMessages || [];
-          const success = logs.some(log => log.includes('STEAL SUCCESS'));
+          const success = logs.some((log: string) => log.includes('RANDOM STEAL SUCCESS'));
           
           return {
             requestTx,
@@ -414,9 +289,6 @@ export const useStealActions = (
   }, [program, wallet, provider, connection, eventParser, playerInitialized, setLoading]);
 
   return {
-    stealPropertyTargeted,
-    stealPropertyRandom,
-    // Legacy alias
-    stealProperty: stealPropertyTargeted
+    stealPropertyRandom
   };
 };

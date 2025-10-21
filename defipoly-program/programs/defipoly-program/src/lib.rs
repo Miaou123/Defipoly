@@ -1,6 +1,7 @@
 // Defipoly Solana Program - v7 Optimized (No External Dependencies)
 // Anchor 0.31.1
 // Secure commit-reveal randomness using slot hashes
+// UPDATED: Random steal only (no targeted steal)
 
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, Token, TokenAccount, Transfer, Mint};
@@ -32,8 +33,8 @@ pub mod defipoly_program {
         game_config.reward_pool_initial = initial_reward_pool_amount;
         game_config.current_phase = 1;
         game_config.game_paused = false;
-        game_config.steal_chance_targeted_bps = 2500; // 25%
-        game_config.steal_chance_random_bps = 3300; // 33%
+        game_config.steal_chance_targeted_bps = 2500; // 25% (kept for backward compatibility)
+        game_config.steal_chance_random_bps = 3300; // 33% (always used now)
         game_config.steal_cost_percent_bps = 5000; // 50%
         game_config.set_bonus_bps = 4000; // 40%
         game_config.max_properties_per_claim = MAX_PROPERTIES_PER_CLAIM;
@@ -343,13 +344,12 @@ pub mod defipoly_program {
         Ok(())
     }
 
-    // ========== SECURE COMMIT-REVEAL STEAL MECHANICS ==========
+    // ========== SECURE COMMIT-REVEAL STEAL MECHANICS (RANDOM ONLY) ==========
     
-    /// Step 1: Commit to steal with user randomness
+    /// Step 1: Commit to steal with user randomness (RANDOM STEAL ONLY - 33% success rate)
     pub fn steal_property_request(
         ctx: Context<StealPropertyRequest>,
         target_player: Pubkey,
-        is_targeted: bool,
         user_randomness: [u8; 32],
     ) -> Result<()> {
         let game_config = &ctx.accounts.game_config;
@@ -417,7 +417,7 @@ pub mod defipoly_program {
         steal_request.attacker = player.owner;
         steal_request.target = target_player;
         steal_request.property_id = property.property_id;
-        steal_request.is_targeted = is_targeted;
+        steal_request.is_targeted = false; // Always false (random steal only)
         steal_request.steal_cost = steal_cost;
         steal_request.timestamp = clock.unix_timestamp;
         steal_request.request_slot = clock.slot;
@@ -433,18 +433,18 @@ pub mod defipoly_program {
             target: target_player,
             property_id: property.property_id,
             steal_cost,
-            is_targeted,
+            is_targeted: false, // Always false
             request_slot: clock.slot,
         });
 
-        msg!("🎲 Steal committed by {} targeting {} (property {})", 
+        msg!("🎲 Random steal committed by {} targeting {} (property {})", 
              player.owner, target_player, property.property_id);
         msg!("⏳ Wait 1 slot, then reveal for randomness...");
         
         Ok(())
     }
 
-    /// Step 2: Reveal and execute steal with secure randomness
+    /// Step 2: Reveal and execute steal with secure randomness (ALWAYS 33% success rate)
     pub fn steal_property_fulfill(ctx: Context<StealPropertyFulfill>) -> Result<()> {
         let game_config = &ctx.accounts.game_config;
         let steal_request = &mut ctx.accounts.steal_request;
@@ -464,7 +464,7 @@ pub mod defipoly_program {
             ErrorCode::VrfNotReady
         );
         
-        // NEW: Can't wait too long (slot hash expires)
+        // Can't wait too long (slot hash expires)
         let slots_elapsed = clock.slot - steal_request.request_slot;
         require!(
             slots_elapsed < 150,
@@ -474,7 +474,7 @@ pub mod defipoly_program {
         let slot_hashes = &ctx.accounts.slot_hashes;
         let slot_hashes_data = slot_hashes.data.borrow();
         
-        // NEW: Verify slot hash data is available
+        // Verify slot hash data is available
         require!(
             slot_hashes_data.len() >= 40,
             ErrorCode::SlotHashUnavailable
@@ -495,12 +495,8 @@ pub mod defipoly_program {
         
         let random_u64 = u64::from_le_bytes(combined_entropy[0..8].try_into().unwrap());
 
-        let success_threshold = if steal_request.is_targeted {
-            game_config.steal_chance_targeted_bps as u64
-        } else {
-            game_config.steal_chance_random_bps as u64
-        };
-
+        // ALWAYS use random steal success rate (33%)
+        let success_threshold = game_config.steal_chance_random_bps as u64;
         let success = (random_u64 % 10000) < success_threshold;
 
         steal_request.vrf_result = random_u64;
@@ -553,11 +549,11 @@ pub mod defipoly_program {
                 target: steal_request.target,
                 property_id: property.property_id,
                 steal_cost: steal_request.steal_cost,
-                targeted: steal_request.is_targeted,
+                targeted: false, // Always false (random steal)
                 vrf_result: random_u64,
             });
 
-            msg!("✅ STEAL SUCCESS: {} stole 1 slot from {} (entropy: {})", 
+            msg!("✅ RANDOM STEAL SUCCESS: {} stole 1 slot from {} (entropy: {})", 
                  steal_request.attacker, steal_request.target, random_u64);
         } else {
             emit!(StealFailedEvent {
@@ -565,11 +561,11 @@ pub mod defipoly_program {
                 target: steal_request.target,
                 property_id: property.property_id,
                 steal_cost: steal_request.steal_cost,
-                targeted: steal_request.is_targeted,
+                targeted: false, // Always false (random steal)
                 vrf_result: random_u64,
             });
 
-            msg!("❌ STEAL FAILED: {} (entropy: {})", 
+            msg!("❌ RANDOM STEAL FAILED: {} (entropy: {})", 
                  steal_request.attacker, random_u64);
         }
 
@@ -592,9 +588,6 @@ pub mod defipoly_program {
             ErrorCode::TooManyProperties
         );
     
-        // ❌ REMOVE THIS - we'll calculate per property instead
-        // let minutes_elapsed = (clock.unix_timestamp - player.last_claim_timestamp) / 60;
-        
         require!(
             (clock.unix_timestamp - player.last_claim_timestamp) >= game_config.min_claim_interval_minutes * 60,
             ErrorCode::ClaimTooSoon
@@ -609,7 +602,7 @@ pub mod defipoly_program {
             set_id: u8,
             slots_owned: u16,
             daily_income_per_slot: u64,
-            purchase_timestamp: i64,  // ✅ ADD THIS
+            purchase_timestamp: i64,
         }
         
         let mut ownerships: Vec<OwnershipInfo> = Vec::with_capacity(num_props);
@@ -635,7 +628,7 @@ pub mod defipoly_program {
                 set_id: property.set_id,
                 slots_owned: ownership.slots_owned,
                 daily_income_per_slot,
-                purchase_timestamp: ownership.purchase_timestamp,  // ✅ ADD THIS
+                purchase_timestamp: ownership.purchase_timestamp,
             });
         }
         
@@ -662,7 +655,7 @@ pub mod defipoly_program {
         let mut total_bonus_slots: u32 = 0;
         
         for ownership in &ownerships {
-            // ✅ FIX: Use the later of purchase time or last claim time
+            // Use the later of purchase time or last claim time
             let time_start = std::cmp::max(
                 ownership.purchase_timestamp,
                 player.last_claim_timestamp

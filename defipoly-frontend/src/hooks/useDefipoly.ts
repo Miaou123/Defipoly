@@ -168,15 +168,6 @@ export function useDefipoly() {
   
   const dataFetchers = useDataFetchers(program, wallet);
 
-
-
-
-
-
-
-
-
-
   return {
     program,
     tokenBalance,
@@ -191,8 +182,8 @@ export function useDefipoly() {
     ...shieldActions,
     // Reward actions
     ...rewardActions,
-    // Steal actions
-    ...stealActions,
+    // Steal actions - ONLY random steal now
+    stealPropertyRandom: stealActions.stealPropertyRandom,
     // Data fetchers
     ...dataFetchers
   };

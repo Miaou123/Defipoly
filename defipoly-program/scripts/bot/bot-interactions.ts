@@ -523,126 +523,6 @@ async function getWalletInfo(walletId: number) {
   }
 }
 
-// Command: Targeted steal (specify target wallet)
-async function stealPropertyTargeted(
-  attackerWalletId: number, 
-  targetWalletId: number, 
-  propertyId: number
-) {
-  const rpcUrl = process.env.ANCHOR_PROVIDER_URL || "https://api.devnet.solana.com";
-  const connection = new anchor.web3.Connection(rpcUrl, "confirmed");
-  
-  const attackerWallet = loadWallet(attackerWalletId);
-  const targetWallet = loadWallet(targetWalletId);
-  
-  console.log(`🎯 Wallet ${attackerWalletId} attempting targeted steal from wallet ${targetWalletId} (property ${propertyId})...`);
-
-  try {
-    const program = await getProgram(connection, attackerWallet);
-    
-    // Generate user randomness
-    const userRandomness = Array.from(crypto.getRandomValues(new Uint8Array(32)));
-    
-    // Get required PDAs
-    const [propertyPDA] = getPropertyPDA(propertyId);
-    const [attackerPlayerPDA] = getPlayerPDA(attackerWallet.publicKey);
-    const [targetPlayerPDA] = getPlayerPDA(targetWallet.publicKey);
-    const [targetOwnershipPDA] = getOwnershipPDA(targetWallet.publicKey, propertyId);
-    const [stealRequestPDA] = getStealRequestPDA(attackerWallet.publicKey, propertyId);
-    const [gameConfigPDA] = getGameConfigPDA();
-    
-    // Get token accounts
-    const attackerTokenAccount = getAssociatedTokenAddress(TOKEN_MINT, attackerWallet.publicKey);
-    const devWallet = new PublicKey("CgWTFX7JJQHed3qyMDjJkNCxK4sFe3wbDFABmWAAmrdS");
-    const devTokenAccount = getAssociatedTokenAddress(TOKEN_MINT, devWallet);
-    
-    const gameConfig = await (program.account as any).gameConfig.fetch(gameConfigPDA);
-    const rewardPoolVault = gameConfig.rewardPoolVault;
-    
-    console.log("  Step 1: Requesting steal...");
-    // Step 1: Request steal
-    const requestTx = await program.methods
-      .stealPropertyRequest(
-        targetWallet.publicKey,
-        true, // is_targeted = true for targeted steal
-        userRandomness
-      )
-      .accountsPartial({
-        property: propertyPDA,
-        targetOwnership: targetOwnershipPDA,
-        stealRequest: stealRequestPDA,
-        playerAccount: attackerPlayerPDA,
-        attacker: attackerWallet.publicKey,
-        playerTokenAccount: attackerTokenAccount,
-        rewardPoolVault: rewardPoolVault,
-        devTokenAccount: devTokenAccount,
-        gameConfig: gameConfigPDA,
-        tokenProgram: TOKEN_PROGRAM_ID,
-        systemProgram: anchor.web3.SystemProgram.programId,
-      })
-      .rpc();
-    
-    console.log(`  Request transaction: ${requestTx}`);
-    
-    // Wait for VRF fulfillment
-    console.log("  Step 2: Waiting for VRF fulfillment...");
-    await new Promise(resolve => setTimeout(resolve, 3000));
-    
-    // Step 2: Fulfill steal
-    const [attackerOwnershipPDA] = getOwnershipPDA(attackerWallet.publicKey, propertyId);
-    
-    const fulfillTx = await program.methods
-      .stealPropertyFulfill()
-      .accountsPartial({
-        property: propertyPDA,
-        targetOwnership: targetOwnershipPDA,
-        attackerOwnership: attackerOwnershipPDA,
-        stealRequest: stealRequestPDA,
-        attackerAccount: attackerPlayerPDA,
-        targetAccount: targetPlayerPDA,
-        gameConfig: gameConfigPDA,
-        slotHashes: anchor.web3.SYSVAR_SLOT_HASHES_PUBKEY,
-        payer: attackerWallet.publicKey,
-        systemProgram: anchor.web3.SystemProgram.programId,
-      })
-      .rpc();
-    
-    console.log(`  Fulfill transaction: ${fulfillTx}`);
-    
-    // Check result
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    const stealRequest = await (program.account as any).stealRequest.fetch(stealRequestPDA);
-    
-    if (stealRequest.success) {
-      console.log(`  ✅ Steal successful! VRF: ${stealRequest.vrfResult.toString()}`);
-    } else {
-      console.log(`  ❌ Steal failed. VRF: ${stealRequest.vrfResult.toString()}`);
-    }
-    
-    // Send to backend
-    await sendActionToBackend(
-      fulfillTx,
-      'steal',
-      attackerWallet.publicKey.toString(),
-      propertyId,
-      1, // slots attempted
-      getPropertyPrice(propertyId) * 0.5, // steal cost
-      {
-        target: targetWallet.publicKey.toString(),
-        targeted: true,
-        success: stealRequest.success,
-        vrfResult: stealRequest.vrfResult.toString()
-      }
-    );
-    
-    return stealRequest.success;
-  } catch (error) {
-    console.error(`  ❌ Error: ${error}`);
-    return false;
-  }
-}
-
-// Command: Random steal (bot selects random target)
 async function stealPropertyRandom(attackerWalletId: number, propertyId: number) {
   const rpcUrl = process.env.ANCHOR_PROVIDER_URL || "https://api.devnet.solana.com";
   const connection = new anchor.web3.Connection(rpcUrl, "confirmed");
@@ -655,7 +535,6 @@ async function stealPropertyRandom(attackerWalletId: number, propertyId: number)
     const program = await getProgram(connection, attackerWallet);
     
     // For simplicity, we'll pick a random target wallet from available test wallets
-    // In practice, you'd query the blockchain to find actual property owners
     const availableWallets = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9].filter(id => id !== attackerWalletId);
     const randomTargetId = availableWallets[Math.floor(Math.random() * availableWallets.length)];
     const targetWallet = loadWallet(randomTargetId);
@@ -682,11 +561,10 @@ async function stealPropertyRandom(attackerWalletId: number, propertyId: number)
     const rewardPoolVault = gameConfig.rewardPoolVault;
     
     console.log("  Step 1: Requesting random steal...");
-    // Step 1: Request steal
+    // Step 1: Request steal (removed is_targeted parameter)
     const requestTx = await program.methods
       .stealPropertyRequest(
         targetWallet.publicKey,
-        false, // is_targeted = false for random steal (higher success rate)
         userRandomness
       )
       .accountsPartial({
@@ -741,18 +619,18 @@ async function stealPropertyRandom(attackerWalletId: number, propertyId: number)
       console.log(`  ❌ Random steal failed. VRF: ${stealRequest.vrfResult.toString()}`);
     }
     
-    // Send to backend
+    // ✅ FIXED: Correct parameter order and removed 'targeted' field
     await sendActionToBackend(
       fulfillTx,
-      'steal',
+      stealRequest.success ? 'steal_success' : 'steal_failed',
       attackerWallet.publicKey.toString(),
       propertyId,
-      1, // slots attempted
-      getPropertyPrice(propertyId) * 0.5, // steal cost
+      targetWallet.publicKey.toString(), // targetAddress
+      getPropertyPrice(propertyId) * 0.5, // amount (steal cost)
+      1, // slots
+      stealRequest.success,
       {
-        target: targetWallet.publicKey.toString(),
-        targeted: false,
-        success: stealRequest.success,
+        // ✅ REMOVED: targeted field
         vrfResult: stealRequest.vrfResult.toString()
       }
     );
@@ -780,42 +658,17 @@ async function main() {
     
     case "buy": {
       const propertyId = Number(args[1]);
-      
-      // Parse slots and wallets
-      // Format: buy <propertyId> [slots] <wallets>
-      // Examples: 
-      //   buy 0 all        -> propertyId=0, slots=1, wallets=all
-      //   buy 0 1 all      -> propertyId=0, slots=1, wallets=all
-      //   buy 0 5 0 1 2    -> propertyId=0, slots=5, wallets=[0,1,2]
-      
-      let slots = 1;
-      let walletIds: number[] = [];
-      
-      if (args[2] === "all") {
-        // buy 0 all -> all wallets, 1 slot each
-        slots = 1;
-        walletIds = Array.from({ length: 50 }, (_, i) => i);
-      } else if (!isNaN(Number(args[2])) && args[3] === "all") {
-        // buy 0 5 all -> all wallets, 5 slots each
-        slots = Number(args[2]);
-        walletIds = Array.from({ length: 50 }, (_, i) => i);
-      } else if (!isNaN(Number(args[2])) && args.length > 3) {
-        // buy 0 5 0 1 2 -> wallets 0,1,2, 5 slots each
-        slots = Number(args[2]);
-        walletIds = args.slice(3).map(Number);
-      } else {
-        // buy 0 0 1 2 -> wallets 0,1,2, 1 slot each (no slots specified)
-        slots = 1;
-        walletIds = args.slice(2).map(Number);
-      }
-      
+      const slots = Number(args[2]) || 1;
+      const walletIds = args[3] === "all"
+        ? Array.from({ length: 50 }, (_, i) => i)
+        : args.slice(3).map(Number);
       await buyProperties(walletIds, propertyId, slots);
       break;
     }
     
     case "shield": {
       const propertyId = Number(args[1]);
-      const slotsToShield = Number(args[2]) || 1;
+      const slotsToShield = Number(args[2]);
       const walletIds = args[3] === "all"
         ? Array.from({ length: 50 }, (_, i) => i)
         : args.slice(3).map(Number);
@@ -837,15 +690,7 @@ async function main() {
       break;
     }
     
-    case "steal-targeted": {
-      const attackerWalletId = Number(args[1]);
-      const targetWalletId = Number(args[2]);
-      const propertyId = Number(args[3]);
-      await stealPropertyTargeted(attackerWalletId, targetWalletId, propertyId);
-      break;
-    }
-    
-    case "steal-random": {
+    case "steal": {
       const attackerWalletId = Number(args[1]);
       const propertyId = Number(args[2]);
       await stealPropertyRandom(attackerWalletId, propertyId);
@@ -854,7 +699,7 @@ async function main() {
     
     default:
       console.log(`
-🎮 Defipoly Bot CLI (Updated for Current Program)
+🎮 Defipoly Bot CLI (Random Steal Only)
 
 Usage:
   tsx scripts/bot/bot-interactions.ts <command> [options]
@@ -864,8 +709,7 @@ Commands:
   buy <propertyId> [slots] <wallets> Buy properties (slots defaults to 1)
   shield <propertyId> <slots> <wallets> Activate shields
   claim <wallets>                   Claim rewards
-  steal-targeted <attacker> <target> <propertyId> Targeted steal (25% success)
-  steal-random <attacker> <propertyId> Random steal (33% success)
+  steal <attacker> <propertyId>     Random steal (33% success)
   info <walletId>                   Get wallet info
 
 Wallet Options:
@@ -877,8 +721,7 @@ Examples:
   tsx scripts/bot/bot-interactions.ts buy 0 1 all          # Buy 1 slot for all wallets
   tsx scripts/bot/bot-interactions.ts buy 0 5 0 1 2 3      # Buy 5 slots for wallets 0-3
   tsx scripts/bot/bot-interactions.ts shield 0 1 0 1 2     # Shield 1 slot for wallets 0-2
-  tsx scripts/bot/bot-interactions.ts steal-targeted 0 1 0 # Wallet 0 steals from wallet 1 (property 0)
-  tsx scripts/bot/bot-interactions.ts steal-random 0 0     # Wallet 0 random steal (property 0)
+  tsx scripts/bot/bot-interactions.ts steal 0 0            # Wallet 0 random steal (property 0)
   tsx scripts/bot/bot-interactions.ts claim all
   tsx scripts/bot/bot-interactions.ts info 5
       `);

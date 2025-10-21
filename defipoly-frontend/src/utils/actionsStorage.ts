@@ -234,7 +234,6 @@ export function eventToAction(
         success: true,
         blockTime,
         metadata: {
-          targeted: event.data.targeted ?? event.data.is_targeted,
           vrfResult: event.data.vrfResult?.toString()
         }
       };
@@ -252,7 +251,6 @@ export function eventToAction(
         success: false,
         blockTime,
         metadata: {
-          targeted: event.data.targeted ?? event.data.is_targeted,
           vrfResult: event.data.vrfResult?.toString()
         }
       };

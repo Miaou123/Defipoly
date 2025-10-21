@@ -12,7 +12,7 @@ import { useWallet } from '@solana/wallet-adapter-react';
 import { useAnchorWallet } from '@solana/wallet-adapter-react';
 import { useTokenBalance } from '@/hooks/useTokenBalance';
 import { StyledWalletButton } from './StyledWalletButton';
-import { X } from 'lucide-react';
+import { X, TrendingUp, DollarSign, Zap } from 'lucide-react';
 import { PropertyCard } from './PropertyCard';
 import {
   BuyPropertySection,
@@ -205,25 +205,56 @@ export function PropertyModal({ propertyId, onClose }: PropertyModalProps) {
 
         {/* Content */}
         <div className="p-6 space-y-4 max-h-[60vh] overflow-y-auto">
-          {/* REPLACED: Property Stats with Split Card Availability Display */}
+          {/* Property Stats - NEW COMPACT DESIGN */}
           <div className="grid grid-cols-3 gap-3">
             {/* Price per Slot */}
-            <div className="bg-purple-900/20 backdrop-blur rounded-xl p-3 border border-purple-500/20">
-              <div className="text-purple-400 text-xs font-semibold uppercase tracking-wider mb-1">Price/Slot</div>
-              <div className="text-lg font-black text-purple-100">{property.price.toLocaleString()}</div>
+            <div className="bg-purple-900/30 backdrop-blur rounded-xl p-3 border border-purple-500/20">
+              <div className="flex items-center gap-1.5 mb-1">
+                <DollarSign className="w-4 h-4 text-purple-400" />
+                <div className="text-purple-400 text-xs font-semibold uppercase tracking-wider">
+                  Price
+                </div>
+              </div>
+              <div className="flex items-baseline gap-1.5">
+                <div className="text-xl font-black text-purple-100">
+                  {property.price.toLocaleString()}
+                </div>
+                <div className="text-[10px] text-purple-400">per slot</div>
+              </div>
             </div>
 
-            {/* Daily Income */}
-            <div className="bg-purple-900/20 backdrop-blur rounded-xl p-3 border border-purple-500/20">
-              <div className="text-purple-400 text-xs font-semibold uppercase tracking-wider mb-1">Daily Income</div>
-              <div className="text-lg font-black text-green-400">{dailyIncome.toLocaleString()}</div>
+            {/* Base Income */}
+            <div className="bg-purple-900/30 backdrop-blur rounded-xl p-3 border border-purple-500/20">
+              <div className="flex items-center gap-1.5 mb-1">
+                <TrendingUp className="w-4 h-4 text-purple-400" />
+                <div className="text-purple-400 text-xs font-semibold uppercase tracking-wider">
+                  Base
+                </div>
+              </div>
+              <div className="flex items-baseline gap-1.5">
+                <div className="text-xl font-black text-purple-100">
+                  {baseIncomePerSlot.toLocaleString()}
+                </div>
+                <div className="text-[10px] text-purple-400">per slot/day</div>
+              </div>
             </div>
 
-            {/* Global Available */}
-            <div className="bg-purple-900/20 backdrop-blur rounded-xl p-3 border border-purple-500/20">
-              <div className="text-purple-400 text-xs font-semibold uppercase tracking-wider mb-1">Available</div>
-              <div className="text-lg font-black text-blue-400">
-                {globalAvailable}
+            {/* Boosted Income */}
+            <div className="bg-gradient-to-br from-amber-900/30 to-purple-900/30 backdrop-blur rounded-xl p-3 border border-amber-500/30 relative">
+              <div className="absolute -top-1 -right-1 bg-amber-500 text-amber-950 text-[9px] font-black px-1.5 py-0.5 rounded-full">
+                +40%
+              </div>
+              <div className="flex items-center gap-1.5 mb-1">
+                <Zap className="w-4 h-4 text-amber-400" />
+                <div className="text-amber-400 text-xs font-semibold uppercase tracking-wider">
+                  Boosted
+                </div>
+              </div>
+              <div className="flex items-baseline gap-1.5">
+                <div className="text-xl font-black text-amber-400">
+                  {boostedIncomePerSlot.toLocaleString()}
+                </div>
+                <div className="text-[10px] text-purple-400">per slot/day</div>
               </div>
             </div>
           </div>
