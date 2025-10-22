@@ -1,9 +1,15 @@
 Current focus:
 
-Add shielding tracking in my backend (so ppl know if they can steal or not)
-Need to rework the steal system (choose between targeted and untargetted and have it working)
-Need to work on the backend and make sure it works properly
+Add shielding tracking in my backend (so ppl know if they can steal or not, added providers and propertystats for this, need to add it to the backend and store it properly etc): working (just need more test)
+
+When shielding, even one property it shows the shield in modal but don't propose to shield more slots
+
+show the steal option even when owning a property
+
+Show the steal cooldown on the UI
+
 Need to test the new full deploy system with deploy:full
+
 
 Todo:
 Work on security (backend / frontend / program)
