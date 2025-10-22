@@ -1,13 +1,33 @@
-/** @type {import('next').NextConfig} */
-const nextConfig = {
+import type { NextConfig } from 'next';
+
+const nextConfig: NextConfig = {
   eslint: {
-    // Temporarily ignore ESLint errors during builds
     ignoreDuringBuilds: true,
   },
   typescript: {
-    // Temporarily ignore TypeScript errors during builds
-    ignoreBuildErrors: false, // Keep this false to catch real errors
+    ignoreBuildErrors: false,
   },
-}
+  // Webpack configuration for better HMR and chunk loading
+  webpack: (config, { dev, isServer }) => {
+    if (dev && !isServer) {
+      // Improve watch options for development
+      config.watchOptions = {
+        poll: 1000,
+        aggregateTimeout: 300,
+      };
+    }
+    return config;
+  },
+  // Increase timeout for on-demand entries (prevents chunk timeout on idle)
+  onDemandEntries: {
+    maxInactiveAge: 60 * 1000, // 60 seconds (default is 15s)
+    pagesBufferLength: 5,
+  },
+  // Improve dev indicators
+  devIndicators: {
+    buildActivity: true,
+    buildActivityPosition: 'bottom-right',
+  },
+};
 
-module.exports = nextConfig
+export default nextConfig;

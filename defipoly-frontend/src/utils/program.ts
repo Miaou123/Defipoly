@@ -166,3 +166,23 @@ export async function fetchSetCooldownData(
     return null;
   }
 }
+
+/**
+ * Get the PDA for a player's steal cooldown for a specific set
+ * @param playerPubkey - The player's public key
+ * @param setId - The property set ID (0-7)
+ * @returns [PDA, bump]
+ */
+export function getStealCooldownPDA(
+  playerPubkey: PublicKey,
+  setId: number
+): [PublicKey, number] {
+  return PublicKey.findProgramAddressSync(
+    [
+      Buffer.from('steal_cooldown'),
+      playerPubkey.toBuffer(),
+      Buffer.from([setId]),
+    ],
+    PROGRAM_ID
+  );
+}

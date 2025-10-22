@@ -1,12 +1,14 @@
 // ============================================
 // FILE: defipoly-frontend/src/components/property-actions/StealPropertySection.tsx
+// Updated for new single-transaction instant steal system with backend stats
 // ============================================
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useDefipoly } from '@/hooks/useDefipoly';
 import { useNotification } from '../NotificationProvider';
 import { usePropertyRefresh } from '../PropertyRefreshContext';
 import { PROPERTIES } from '@/utils/constants';
+import { fetchPropertyStats } from '@/utils/propertyStats';
 
 interface StealPropertySectionProps {
   propertyId: number;
@@ -27,28 +29,46 @@ export function StealPropertySection({
   setLoading,
   onClose
 }: StealPropertySectionProps) {
-  const { stealPropertyRandom } = useDefipoly();
+  const { stealPropertyInstant } = useDefipoly();
   const { showSuccess, showError } = useNotification();
   const { triggerRefresh } = usePropertyRefresh();
   
   const [showStealOptions, setShowStealOptions] = useState(false);
+  const [availableTargets, setAvailableTargets] = useState<number | null>(null);
+  const [loadingStats, setLoadingStats] = useState(false);
 
   const stealCost = property.price * 0.5;
   const canSteal = balance >= stealCost;
+
+  // Fetch property stats when component shows steal options
+  useEffect(() => {
+    if (showStealOptions && availableTargets === null) {
+      setLoadingStats(true);
+      fetchPropertyStats(propertyId)
+        .then(stats => {
+          if (stats) {
+            setAvailableTargets(stats.ownersWithUnshieldedSlots);
+          }
+        })
+        .catch(err => console.error('Failed to fetch property stats:', err))
+        .finally(() => setLoadingStats(false));
+    }
+  }, [showStealOptions, propertyId, availableTargets]);
 
   const handleSteal = async () => {
     if (loading) return;
     setLoading(true);
     
     try {
-      const result = await stealPropertyRandom(propertyId);
+      // NEW: Single transaction call instead of request + fulfill
+      const result = await stealPropertyInstant(propertyId);
       
       if (result) {
         if (result.success) {
           showSuccess(
             'Steal Successful!', 
             `You successfully stole 1 slot! VRF: ${result.vrfResult}`,
-            result.fulfillTx !== 'already-processed' ? result.fulfillTx : undefined
+            result.tx // UPDATED: Use tx instead of fulfillTx
           );
         } else {
           showError(
@@ -65,22 +85,27 @@ export function StealPropertySection({
       const errorString = error?.message || error?.toString() || '';
       let errorMessage = 'Failed to execute steal';
       
+      // Updated error messages for new system
       if (errorString.includes('TargetDoesNotOwnProperty')) {
         errorMessage = 'Target does not own this property';
-      } else if (errorString.includes('PropertyIsShielded') || errorString.includes('shielded')) {
-        errorMessage = 'Property is shielded and cannot be stolen';
+      } else if (errorString.includes('AllSlotsShielded') || errorString.includes('shielded')) {
+        errorMessage = 'All slots are shielded and cannot be stolen';
       } else if (errorString.includes('does not own any slots') || errorString.includes('does not own property')) {
         errorMessage = 'Target player does not own this property';
-      } else if (errorString.includes('No players own unshielded slots')) {
-        errorMessage = 'No one owns unshielded slots in this property';
-      } else if (errorString.includes('Cannot steal from yourself')) {
-        errorMessage = 'Cannot steal from yourself';
       } else if (errorString.includes('No eligible targets found')) {
         errorMessage = 'No eligible targets found for random steal';
+      } else if (errorString.includes('CannotStealFromSelf')) {
+        errorMessage = 'Cannot steal from yourself';
+      } else if (errorString.includes('StealCooldownActive')) {
+        errorMessage = 'Steal cooldown is active. Please wait before attempting again';
+      } else if (errorString.includes('No players own unshielded slots')) {
+        errorMessage = 'No one owns unshielded slots in this property';
       } else if (errorString.includes('User rejected')) {
         errorMessage = 'Transaction was cancelled';
       } else if (errorString.includes('insufficient')) {
         errorMessage = 'Insufficient balance';
+      } else if (errorString.includes('SlotHashUnavailable')) {
+        errorMessage = 'Randomness unavailable - please try again';
       }
       
       showError('Steal Failed', errorMessage);
@@ -99,70 +124,92 @@ export function StealPropertySection({
         disabled={!canSteal || loading}
         className={`w-full py-3 rounded-xl font-bold text-base transition-all shadow-lg ${
           !canSteal || loading
-            ? 'bg-purple-900/30 cursor-not-allowed text-purple-500 border border-purple-700/30'
-            : 'bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white border border-red-400/30 hover:shadow-red-500/50 hover:scale-[1.02]'
+            ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
+            : 'bg-gradient-to-r from-red-600 to-orange-600 hover:from-red-700 hover:to-orange-700 text-white transform hover:scale-105'
         }`}
       >
-        🎲 Steal Property
+        💰 Steal Property ({stealCost.toLocaleString()} POL)
       </button>
     );
   }
 
   return (
-    <div className="bg-gradient-to-br from-purple-900/40 to-purple-800/40 backdrop-blur-xl rounded-xl p-4 border-2 border-purple-500/40 space-y-3">
-      <h4 className="font-black text-lg text-purple-100 flex items-center gap-2">
-        <span className="text-xl">🎲</span> 
-        Random Steal
-      </h4>
+    <div className="space-y-4">
+      <div className="bg-gradient-to-br from-red-900/30 to-orange-900/30 rounded-lg p-4 border border-red-500/30">
+        <h3 className="text-lg font-bold mb-3 text-red-300">🎯 Steal Property</h3>
+        
+        <div className="space-y-2 text-sm text-gray-300 mb-4">
+          <div className="flex justify-between">
+            <span>Cost:</span>
+            <span className="font-bold text-white">{stealCost.toLocaleString()} POL</span>
+          </div>
+          <div className="flex justify-between">
+            <span>Success Rate:</span>
+            <span className="font-bold text-yellow-400">33%</span>
+          </div>
+          <div className="flex justify-between">
+            <span>Reward if Successful:</span>
+            <span className="font-bold text-green-400">1 slot from random owner</span>
+          </div>
+          {availableTargets !== null && (
+            <div className="flex justify-between">
+              <span>Available Targets:</span>
+              <span className={`font-bold ${
+                availableTargets > 0 ? 'text-green-400' : 'text-red-400'
+              }`}>
+                {availableTargets > 0 
+                  ? `${availableTargets} owner${availableTargets > 1 ? 's' : ''} with unshielded slots`
+                  : 'All slots are shielded ❌'}
+              </span>
+            </div>
+          )}
+          {loadingStats && (
+            <div className="flex justify-between">
+              <span>Available Targets:</span>
+              <span className="text-gray-400">Loading...</span>
+            </div>
+          )}
+        </div>
+
+        <div className="bg-black/30 rounded p-3 mb-4 text-xs text-gray-400">
+          <p>💡 <strong>How it works:</strong> Pay the cost and attempt to steal 1 slot from a random owner. 
+          You have a 33% chance of success. Whether you win or lose, you pay the cost. 
+          Cooldown applies after each attempt.</p>
+        </div>
+        
+        <div className="flex gap-2">
+          <button
+            onClick={handleSteal}
+            disabled={!canSteal || loading || availableTargets === 0}
+            className={`flex-1 py-3 rounded-lg font-bold transition-all ${
+              !canSteal || loading || availableTargets === 0
+                ? 'bg-gray-700 text-gray-500 cursor-not-allowed'
+                : 'bg-gradient-to-r from-red-600 to-orange-600 hover:from-red-700 hover:to-orange-700 text-white'
+            }`}
+          >
+            {loading ? 'Processing...' : availableTargets === 0 ? 'No Targets Available' : `🎲 Attempt Steal (${stealCost.toLocaleString()} POL)`}
+          </button>
+          
+          <button
+            onClick={() => setShowStealOptions(false)}
+            className="px-4 py-3 bg-gray-700 hover:bg-gray-600 rounded-lg font-bold transition-all"
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
+
+      {!canSteal && (
+        <div className="text-sm text-red-400 text-center">
+          Insufficient balance. Need {stealCost.toLocaleString()} POL
+        </div>
+      )}
       
-      <div className="bg-blue-900/20 border border-blue-500/30 rounded-lg p-3 text-sm">
-        <div className="flex items-center gap-2 text-blue-300 font-bold mb-2">
-          <span>🎲</span> Random Target Selection
+      {availableTargets === 0 && (
+        <div className="text-sm text-red-400 text-center">
+          All slots in this property are currently shielded. Try again later!
         </div>
-        <p className="text-blue-200 text-xs">
-          The system will randomly select a player who owns unshielded slots in this property. 
-          You can't choose the target, but you get a 33% chance of success!
-        </p>
-      </div>
-
-      <div className="bg-black/30 rounded-lg p-2.5 border border-purple-500/20 text-sm space-y-1.5">
-        <div className="flex justify-between items-center">
-          <span className="text-purple-300">Steal Cost:</span>
-          <span className="font-black text-lg text-red-300">{stealCost.toLocaleString()} DEFI</span>
-        </div>
-        <div className="flex justify-between items-center text-xs">
-          <span className="text-purple-400">Success Chance:</span>
-          <span className="text-yellow-300 font-bold">33%</span>
-        </div>
-        <div className="text-xs text-purple-400">
-          Two transactions required (commit + reveal)
-        </div>
-      </div>
-
-      <div className="text-xs text-red-300 bg-red-900/20 border border-red-500/30 rounded-lg p-2">
-        ⚠️ You pay the cost regardless of success. Cannot steal shielded properties.
-      </div>
-
-      <div className="flex gap-2">
-        <button
-          onClick={handleSteal}
-          disabled={loading || !canSteal}
-          className={`flex-1 py-2.5 rounded-lg font-black text-base transition-all ${
-            loading || !canSteal
-              ? 'bg-gray-800/50 cursor-not-allowed text-gray-500'
-              : 'bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white shadow-lg hover:shadow-red-500/50'
-          }`}
-        >
-          {loading ? 'Stealing...' : 'Confirm Random Steal'}
-        </button>
-        <button
-          onClick={() => setShowStealOptions(false)}
-          disabled={loading}
-          className="px-4 bg-purple-800/60 hover:bg-purple-700/60 py-2.5 rounded-lg font-bold text-purple-100 transition-all"
-        >
-          Cancel
-        </button>
-      </div>
+      )}
     </div>
   );
 }

@@ -7,91 +7,206 @@ import { usePropertyRefresh } from '@/components/PropertyRefreshContext';
 import { useCooldown } from '@/hooks/useCooldown';
 import { PROPERTIES } from '@/utils/constants';
 
-// Building SVGs for levels 0-5
+// Building SVGs for levels 0-5 (Classic Monopoly Style)
 const BUILDING_SVGS: { [key: number]: React.ReactNode } = {
   0: <></>,
   1: (
-    <svg width="40" height="40" viewBox="0 0 40 40" className="w-full h-auto">
-      <ellipse cx="20" cy="36" rx="12" ry="3" fill="black" opacity="0.2"/>
-      <path d="M 20 20 L 30 25 L 30 35 L 20 36 L 10 35 L 10 25 Z" fill="#D2691E"/>
-      <path d="M 20 20 L 30 25 L 30 35 L 20 30 Z" fill="#A0522D"/>
-      <path d="M 20 13 L 30 18 L 30 25 L 20 20 L 10 25 L 10 18 Z" fill="#8B4513"/>
-      <path d="M 20 13 L 30 18 L 30 25 L 20 20 Z" fill="#654321"/>
-      <rect x="17" y="30" width="6" height="6" fill="#654321"/>
-      <rect x="12" y="27" width="4" height="4" fill="#FFFFCC"/>
-      <rect x="24" y="27" width="4" height="4" fill="#FFFFCC"/>
+    // Small Single House
+    <svg width="35" height="35" viewBox="0 0 35 35" className="w-full h-auto">
+      <ellipse cx="17.5" cy="32" rx="10" ry="2.5" fill="black" opacity="0.2"/>
+      {/* Main structure */}
+      <path d="M 17.5 15 L 26 18 L 26 30 L 17.5 32 L 9 30 L 9 18 Z" fill="#D2691E"/>
+      <path d="M 17.5 15 L 26 18 L 26 30 L 17.5 25 Z" fill="#A0522D"/>
+      {/* Roof */}
+      <path d="M 17.5 8 L 28 13 L 26 18 L 17.5 15 L 9 18 L 7 13 Z" fill="#8B4513"/>
+      <path d="M 17.5 8 L 28 13 L 26 18 L 17.5 15 Z" fill="#654321"/>
+      {/* Door */}
+      <rect x="15" y="26" width="5" height="6" fill="#654321"/>
+      {/* Windows */}
+      <rect x="11" y="22" width="3" height="3" fill="#FFFFCC"/>
+      <rect x="21" y="22" width="3" height="3" fill="#FFFFCC"/>
     </svg>
   ),
   2: (
+    // Larger House with Chimney
     <svg width="45" height="45" viewBox="0 0 45 45" className="w-full h-auto">
-      <ellipse cx="22" cy="42" rx="14" ry="3" fill="black" opacity="0.2"/>
-      <path d="M 22 20 L 34 25 L 34 40 L 22 42 L 10 40 L 10 25 Z" fill="#D2691E"/>
-      <path d="M 22 20 L 34 25 L 34 40 L 22 35 Z" fill="#A0522D"/>
-      <rect x="12" y="11" width="3" height="8" fill="#8B4513"/>
-      <path d="M 22 13 L 34 18 L 34 25 L 22 20 L 10 25 L 10 18 Z" fill="#8B4513"/>
-      <path d="M 22 13 L 34 18 L 34 25 L 22 20 Z" fill="#654321"/>
-      <rect x="19" y="36" width="6" height="6" fill="#654321"/>
-      <rect x="12" y="28" width="4" height="3" fill="#FFFFCC"/>
-      <rect x="28" y="28" width="4" height="3" fill="#FFFFCC"/>
-      <rect x="12" y="33" width="4" height="3" fill="#FFFFCC"/>
-      <rect x="28" y="33" width="4" height="3" fill="#FFFFCC"/>
+      <ellipse cx="22.5" cy="42" rx="13" ry="3" fill="black" opacity="0.25"/>
+      {/* Main structure */}
+      <path d="M 22.5 18 L 34 22 L 34 39 L 22.5 41 L 11 39 L 11 22 Z" fill="#D2691E"/>
+      <path d="M 22.5 18 L 34 22 L 34 39 L 22.5 32 Z" fill="#A0522D"/>
+      {/* Chimney */}
+      <rect x="14" y="10" width="4" height="10" fill="#8B4513"/>
+      <rect x="13" y="9" width="6" height="2" fill="#654321"/>
+      {/* Roof */}
+      <path d="M 22.5 11 L 36 17 L 34 22 L 22.5 18 L 11 22 L 9 17 Z" fill="#8B4513"/>
+      <path d="M 22.5 11 L 36 17 L 34 22 L 22.5 18 Z" fill="#654321"/>
+      {/* Door */}
+      <rect x="19" y="34" width="7" height="7" fill="#654321"/>
+      <circle cx="24" cy="37.5" r="0.5" fill="#FFD700"/>
+      {/* Windows */}
+      <rect x="13" y="27" width="4" height="4" fill="#FFFFCC"/>
+      <rect x="28" y="27" width="4" height="4" fill="#FFFFCC"/>
+      <rect x="13" y="33" width="4" height="4" fill="#FFFFCC"/>
+      <rect x="28" y="33" width="4" height="4" fill="#FFFFCC"/>
     </svg>
   ),
   3: (
-    <svg width="48" height="50" viewBox="0 0 48 50" className="w-full h-auto">
-      <ellipse cx="24" cy="47" rx="15" ry="3.5" fill="black" opacity="0.2"/>
-      <path d="M 24 19 L 37 24 L 37 45 L 24 47 L 11 45 L 11 24 Z" fill="#D2691E"/>
-      <path d="M 24 19 L 37 24 L 37 45 L 24 38 Z" fill="#A0522D"/>
-      <rect x="13" y="11" width="3" height="10" fill="#8B4513"/>
-      <path d="M 24 12 L 37 17 L 37 24 L 24 19 L 11 24 L 11 17 Z" fill="#8B4513"/>
-      <path d="M 24 12 L 37 17 L 37 24 L 24 19 Z" fill="#654321"/>
-      <rect x="21" y="41" width="6" height="6" fill="#654321"/>
-      <rect x="14" y="28" width="3" height="3" fill="#FFFFCC"/>
-      <rect x="31" y="28" width="3" height="3" fill="#FFFFCC"/>
-      <rect x="14" y="33" width="3" height="3" fill="#FFFFCC"/>
-      <rect x="31" y="33" width="3" height="3" fill="#FFFFCC"/>
-      <rect x="14" y="38" width="3" height="3" fill="#FFFFCC"/>
-      <rect x="31" y="38" width="3" height="3" fill="#FFFFCC"/>
+    // Small Apartment Building (3 floors)
+    <svg width="50" height="55" viewBox="0 0 50 55" className="w-full h-auto">
+      <ellipse cx="25" cy="52" rx="15" ry="3.5" fill="black" opacity="0.3"/>
+      {/* Main building */}
+      <path d="M 25 15 L 40 21 L 40 50 L 25 52 L 10 50 L 10 21 Z" fill="#CD853F"/>
+      <path d="M 25 15 L 40 21 L 40 50 L 25 43 Z" fill="#A0522D"/>
+      {/* Roof */}
+      <path d="M 25 12 L 42 19 L 40 21 L 25 15 L 10 21 L 8 19 Z" fill="#8B4513"/>
+      <path d="M 25 12 L 42 19 L 40 21 L 25 15 Z" fill="#654321"/>
+      {/* Door */}
+      <rect x="21" y="45" width="8" height="7" fill="#654321"/>
+      {/* Windows - 3 floors, properly aligned */}
+      <rect x="12" y="27" width="4" height="4" fill="#FFFFCC"/>
+      <rect x="22" y="27" width="4" height="4" fill="#FFFFCC"/>
+      <rect x="34" y="27" width="4" height="4" fill="#FFFFCC"/>
+      
+      <rect x="12" y="34" width="4" height="4" fill="#FFFFCC"/>
+      <rect x="22" y="34" width="4" height="4" fill="#FFFFCC"/>
+      <rect x="34" y="34" width="4" height="4" fill="#FFFFCC"/>
+      
+      <rect x="12" y="41" width="4" height="4" fill="#FFFFCC"/>
+      <rect x="34" y="41" width="4" height="4" fill="#FFFFCC"/>
     </svg>
   ),
   4: (
-    <svg width="50" height="55" viewBox="0 0 50 55" className="w-full h-auto">
-      <ellipse cx="25" cy="52" rx="16" ry="4" fill="black" opacity="0.2"/>
-      <path d="M 25 18 L 40 25 L 40 50 L 25 52 L 10 50 L 10 25 Z" fill="#D2691E"/>
-      <path d="M 25 18 L 40 25 L 40 50 L 25 43 Z" fill="#A0522D"/>
-      <rect x="12" y="11" width="3" height="10" fill="#8B4513"/>
-      <path d="M 25 11 L 40 18 L 40 25 L 25 18 L 10 25 L 10 18 Z" fill="#8B4513"/>
-      <path d="M 25 11 L 40 18 L 40 25 L 25 18 Z" fill="#654321"/>
-      <rect x="22" y="46" width="6" height="6" fill="#654321"/>
-      <rect x="12" y="28" width="4" height="3" fill="#FFFFCC"/>
-      <rect x="34" y="28" width="4" height="3" fill="#FFFFCC"/>
-      <rect x="12" y="34" width="4" height="3" fill="#FFFFCC"/>
-      <rect x="34" y="34" width="4" height="3" fill="#FFFFCC"/>
-      <rect x="12" y="40" width="4" height="3" fill="#FFFFCC"/>
-      <rect x="34" y="40" width="4" height="3" fill="#FFFFCC"/>
-      <rect x="23" y="31" width="4" height="3" fill="#FFFFCC"/>
+    // Tall Tower Building (5 floors) - Enhanced with balconies and details
+    <svg width="55" height="65" viewBox="0 0 55 65" className="w-full h-auto">
+      <ellipse cx="27.5" cy="62" rx="17" ry="4" fill="black" opacity="0.35"/>
+      {/* Main tower */}
+      <path d="M 27.5 12 L 45 19 L 45 60 L 27.5 62 L 10 60 L 10 19 Z" fill="#D2B48C"/>
+      <path d="M 27.5 12 L 45 19 L 45 60 L 27.5 50 Z" fill="#BC9B6D"/>
+      
+      {/* Decorative vertical stripes */}
+      <rect x="19" y="19" width="1" height="41" fill="#A0826D" opacity="0.5"/>
+      <rect x="36" y="19" width="1" height="41" fill="#8B6F47" opacity="0.5"/>
+      
+      {/* Top crown */}
+      <path d="M 27.5 8 L 47 16 L 45 19 L 27.5 12 L 10 19 L 8 16 Z" fill="#8B7355"/>
+      <path d="M 27.5 8 L 47 16 L 45 19 L 27.5 12 Z" fill="#6B5843"/>
+      
+      {/* Decorative crown details */}
+      <rect x="14" y="16" width="2" height="3" fill="#6B5843"/>
+      <rect x="26.5" y="14" width="2" height="3" fill="#6B5843"/>
+      <rect x="39" y="16" width="2" height="3" fill="#6B5843"/>
+      
+      {/* Balcony accents */}
+      <rect x="9" y="35" width="2" height="0.5" fill="#8B7355"/>
+      <rect x="44" y="35" width="2" height="0.5" fill="#8B7355"/>
+      
+      {/* Entrance with columns */}
+      <rect x="21" y="56" width="2" height="6" fill="#8B7355"/>
+      <rect x="32.5" y="56" width="2" height="6" fill="#8B7355"/>
+      <rect x="23" y="55" width="9" height="7" fill="#654321"/>
+      <path d="M 23 55 L 27.5 53 L 32 55 Z" fill="#8B7355"/>
+      
+      {/* Windows - 5 floors, 3 columns, perfectly aligned */}
+      <rect x="13" y="23" width="4" height="3.5" fill="#FFFFCC"/>
+      <rect x="25.5" y="23" width="4" height="3.5" fill="#FFFFCC"/>
+      <rect x="38" y="23" width="4" height="3.5" fill="#FFFFCC"/>
+      
+      <rect x="13" y="29.5" width="4" height="3.5" fill="#FFFFCC"/>
+      <rect x="25.5" y="29.5" width="4" height="3.5" fill="#FFFFCC"/>
+      <rect x="38" y="29.5" width="4" height="3.5" fill="#FFFFCC"/>
+      
+      <rect x="13" y="36" width="4" height="3.5" fill="#FFFFCC"/>
+      <rect x="25.5" y="36" width="4" height="3.5" fill="#FFFFCC"/>
+      <rect x="38" y="36" width="4" height="3.5" fill="#FFFFCC"/>
+      
+      <rect x="13" y="42.5" width="4" height="3.5" fill="#FFFFCC"/>
+      <rect x="25.5" y="42.5" width="4" height="3.5" fill="#FFFFCC"/>
+      <rect x="38" y="42.5" width="4" height="3.5" fill="#FFFFCC"/>
+      
+      <rect x="13" y="49" width="4" height="3.5" fill="#FFFFCC"/>
+      <rect x="38" y="49" width="4" height="3.5" fill="#FFFFCC"/>
     </svg>
   ),
   5: (
-    <svg width="55" height="58" viewBox="0 0 55 58" className="w-full h-auto">
-      <ellipse cx="27" cy="55" rx="18" ry="4" fill="black" opacity="0.3"/>
-      <path d="M 27 17 L 44 24 L 44 53 L 27 55 L 10 53 L 10 24 Z" fill="#CD853F"/>
-      <path d="M 27 17 L 44 24 L 44 53 L 27 46 Z" fill="#A0522D"/>
-      <rect x="12" y="10" width="3" height="11" fill="#8B4513"/>
-      <path d="M 27 10 L 44 17 L 44 24 L 27 17 L 10 24 L 10 17 Z" fill="#8B4513"/>
-      <path d="M 27 10 L 44 17 L 44 24 L 27 17 Z" fill="#654321"/>
-      <rect x="24" y="49" width="6" height="6" fill="#654321"/>
-      <rect x="13" y="27" width="4" height="3" fill="#FFFFCC"/>
-      <rect x="25" y="27" width="4" height="3" fill="#FFFFCC"/>
-      <rect x="37" y="27" width="4" height="3" fill="#FFFFCC"/>
-      <rect x="13" y="33" width="4" height="3" fill="#FFFFCC"/>
-      <rect x="25" y="33" width="4" height="3" fill="#FFFFCC"/>
-      <rect x="37" y="33" width="4" height="3" fill="#FFFFCC"/>
-      <rect x="13" y="39" width="4" height="3" fill="#FFFFCC"/>
-      <rect x="25" y="39" width="4" height="3" fill="#FFFFCC"/>
-      <rect x="37" y="39" width="4" height="3" fill="#FFFFCC"/>
-      <rect x="13" y="45" width="4" height="3" fill="#FFFFCC"/>
-      <rect x="37" y="45" width="4" height="3" fill="#FFFFCC"/>
+    // Luxury Hotel with Helipad - Enhanced with more luxury details
+    <svg width="65" height="75" viewBox="0 0 65 75" className="w-full h-auto">
+      <ellipse cx="32.5" cy="72" rx="20" ry="4.5" fill="black" opacity="0.4"/>
+      {/* Main hotel structure */}
+      <path d="M 32.5 10 L 52 18 L 52 70 L 32.5 72 L 13 70 L 13 18 Z" fill="#DAA520"/>
+      <path d="M 32.5 10 L 52 18 L 52 70 L 32.5 58 Z" fill="#B8860B"/>
+      
+      {/* Decorative gold trim lines */}
+      <rect x="20" y="18" width="1.5" height="52" fill="#FFD700" opacity="0.6"/>
+      <rect x="43.5" y="18" width="1.5" height="52" fill="#CD9A00" opacity="0.6"/>
+      
+      {/* Helipad on top with details */}
+      <ellipse cx="32.5" cy="10" rx="8" ry="2" fill="#FF6B6B"/>
+      <ellipse cx="32.5" cy="10" rx="6" ry="1.5" fill="#FF4444"/>
+      <text x="32.5" y="11.5" fontSize="4" fill="white" textAnchor="middle" fontWeight="bold">H</text>
+      
+      {/* Crown/Top decoration */}
+      <path d="M 32.5 5 L 54 14 L 52 18 L 32.5 10 L 13 18 L 11 14 Z" fill="#8B7355"/>
+      <path d="M 32.5 5 L 54 14 L 52 18 L 32.5 10 Z" fill="#6B5843"/>
+      
+      {/* Crown ornaments */}
+      <circle cx="18" cy="16" r="1.5" fill="#FFD700"/>
+      <circle cx="32.5" cy="12" r="1.5" fill="#FFD700"/>
+      <circle cx="47" cy="16" r="1.5" fill="#FFD700"/>
+      
+      {/* Luxury entrance with awning and columns */}
+      <rect x="24" y="66" width="2.5" height="6" fill="#8B7355"/>
+      <rect x="38.5" y="66" width="2.5" height="6" fill="#8B7355"/>
+      <path d="M 25 65 L 28 63 L 37 63 L 40 65 Z" fill="#DC143C"/>
+      <rect x="26" y="65" width="13" height="7" fill="#654321"/>
+      <rect x="28" y="67" width="9" height="5" fill="#2C1810"/>
+      
+      {/* Gold door trim */}
+      <rect x="27.5" y="66.5" width="10" height="0.5" fill="#FFD700"/>
+      
+      {/* Balconies on sides */}
+      <rect x="11" y="38" width="2" height="0.5" fill="#8B7355"/>
+      <rect x="51" y="38" width="2" height="0.5" fill="#8B7355"/>
+      
+      {/* Windows - 6 floors, 4 columns, perfectly aligned */}
+      <rect x="16" y="22" width="3.5" height="3.5" fill="#FFFFCC"/>
+      <rect x="26" y="22" width="3.5" height="3.5" fill="#FFFFCC"/>
+      <rect x="35" y="22" width="3.5" height="3.5" fill="#FFFFCC"/>
+      <rect x="45" y="22" width="3.5" height="3.5" fill="#FFFFCC"/>
+      
+      <rect x="16" y="28.5" width="3.5" height="3.5" fill="#FFFFCC"/>
+      <rect x="26" y="28.5" width="3.5" height="3.5" fill="#FFFFCC"/>
+      <rect x="35" y="28.5" width="3.5" height="3.5" fill="#FFFFCC"/>
+      <rect x="45" y="28.5" width="3.5" height="3.5" fill="#FFFFCC"/>
+      
+      <rect x="16" y="35" width="3.5" height="3.5" fill="#FFFFCC"/>
+      <rect x="26" y="35" width="3.5" height="3.5" fill="#FFFFCC"/>
+      <rect x="35" y="35" width="3.5" height="3.5" fill="#FFFFCC"/>
+      <rect x="45" y="35" width="3.5" height="3.5" fill="#FFFFCC"/>
+      
+      <rect x="16" y="41.5" width="3.5" height="3.5" fill="#FFFFCC"/>
+      <rect x="26" y="41.5" width="3.5" height="3.5" fill="#FFFFCC"/>
+      <rect x="35" y="41.5" width="3.5" height="3.5" fill="#FFFFCC"/>
+      <rect x="45" y="41.5" width="3.5" height="3.5" fill="#FFFFCC"/>
+      
+      <rect x="16" y="48" width="3.5" height="3.5" fill="#FFFFCC"/>
+      <rect x="26" y="48" width="3.5" height="3.5" fill="#FFFFCC"/>
+      <rect x="35" y="48" width="3.5" height="3.5" fill="#FFFFCC"/>
+      <rect x="45" y="48" width="3.5" height="3.5" fill="#FFFFCC"/>
+      
+      <rect x="16" y="54.5" width="3.5" height="3.5" fill="#FFFFCC"/>
+      <rect x="26" y="54.5" width="3.5" height="3.5" fill="#FFFFCC"/>
+      <rect x="35" y="54.5" width="3.5" height="3.5" fill="#FFFFCC"/>
+      <rect x="45" y="54.5" width="3.5" height="3.5" fill="#FFFFCC"/>
+      
+      {/* Decorative flags on corners */}
+      <rect x="14" y="16" width="1" height="6" fill="#8B4513"/>
+      <path d="M 15 16 L 19 17.5 L 15 19 Z" fill="#DC143C"/>
+      <rect x="50" y="16" width="1" height="6" fill="#8B4513"/>
+      <path d="M 50 16 L 46 17.5 L 50 19 Z" fill="#DC143C"/>
+      
+      {/* Stars on flags */}
+      <circle cx="17" cy="17.5" r="0.5" fill="#FFD700"/>
+      <circle cx="48" cy="17.5" r="0.5" fill="#FFD700"/>
     </svg>
   ),
 };
@@ -103,7 +218,7 @@ interface PropertyCardProps {
 
 export function PropertyCard({ propertyId, onSelect }: PropertyCardProps) {
   const { connected, publicKey } = useWallet();
-  const { getOwnershipData, program } = useDefipoly();
+  const { getOwnershipData, getPropertyData, program } = useDefipoly();
   const { refreshKey } = usePropertyRefresh();
   
   const [buildingLevel, setBuildingLevel] = useState(0);
@@ -139,13 +254,23 @@ export function PropertyCard({ propertyId, onSelect }: PropertyCardProps) {
     const fetchOwnership = async () => {
       try {
         const ownershipData = await getOwnershipData(propertyId);
+        const propertyData = await getPropertyData(propertyId);
         
-        if (ownershipData?.slotsOwned && ownershipData.slotsOwned > 0) {
+        if (ownershipData?.slotsOwned && ownershipData.slotsOwned > 0 && propertyData) {
           const slotsOwned = ownershipData.slotsOwned;
+          const maxPerPlayer = propertyData.maxPerPlayer;
           
-          // Calculate building level (1 slot = 1 level, up to 5)
-          const level = Math.min(5, slotsOwned);
+          // Calculate building level based on percentage of maxPerPlayer (1-5 levels)
+          // Formula: level = ceil((slotsOwned / maxPerPlayer) * 5)
+          // This ensures that owning at least 1 slot shows level 1, and progression is smooth
+          // Examples:
+          // - Brown (50 max): 1-10 slots=level 1, 11-20=level 2, 21-30=level 3, 31-40=level 4, 41-50=level 5
+          // - Dark Blue (5 max): 1 slot=level 1, 2=level 2, 3=level 3, 4=level 4, 5=level 5
+          const progressRatio = slotsOwned / maxPerPlayer;
+          const level = Math.ceil(progressRatio * 5);
           setBuildingLevel(level);
+          
+          console.log(`🏠 Property ${propertyId}: ${slotsOwned}/${maxPerPlayer} slots → Level ${level}`);
           
           // Check if shield is active
           const now = Date.now() / 1000;
@@ -186,7 +311,7 @@ export function PropertyCard({ propertyId, onSelect }: PropertyCardProps) {
     };
 
     fetchOwnership();
-  }, [connected, publicKey, propertyId, program, getOwnershipData, refreshKey, property.name, property.setId]);
+  }, [connected, publicKey, propertyId, program, getOwnershipData, getPropertyData, refreshKey, property.name, property.setId]);
 
   return (
     <button

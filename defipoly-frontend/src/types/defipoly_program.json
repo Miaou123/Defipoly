@@ -1,7 +1,7 @@
 {
   "address": "HpacCgxUuzwoMeryvQtC94RxFmpxC6dYPX5E17JBzBmQ",
   "metadata": {
-    "name": "memeopoly_program",
+    "name": "defipoly_program",
     "version": "0.1.0",
     "spec": "0.1.0",
     "description": "Created with Anchor"
@@ -61,6 +61,41 @@
           "type": "u16"
         }
       ]
+    },
+    {
+      "name": "admin_close_player_account",
+      "discriminator": [
+        119,
+        200,
+        216,
+        104,
+        183,
+        222,
+        59,
+        100
+      ],
+      "accounts": [
+        {
+          "name": "player_account",
+          "docs": [
+            "We verify it's owned by our program in the instruction handler"
+          ],
+          "writable": true
+        },
+        {
+          "name": "game_config"
+        },
+        {
+          "name": "authority",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "rent_receiver",
+          "writable": true
+        }
+      ],
+      "args": []
     },
     {
       "name": "buy_property",
@@ -291,21 +326,26 @@
       ]
     },
     {
-      "name": "close_steal_request",
+      "name": "close_player_account",
       "discriminator": [
-        21,
-        231,
-        225,
-        194,
-        62,
-        54,
-        152,
-        17
+        244,
+        181,
+        162,
+        146,
+        184,
+        133,
+        216,
+        95
       ],
       "accounts": [
         {
-          "name": "steal_request",
+          "name": "player_account",
           "writable": true
+        },
+        {
+          "name": "player",
+          "writable": true,
+          "signer": true
         },
         {
           "name": "rent_receiver",
@@ -722,31 +762,26 @@
       ]
     },
     {
-      "name": "steal_property_fulfill",
+      "name": "steal_property_instant",
       "docs": [
-        "Step 2: Reveal and execute steal with secure randomness"
+        "Instant steal with cooldown protection (SINGLE TRANSACTION - 33% success rate)"
       ],
       "discriminator": [
-        236,
-        199,
-        187,
+        213,
+        104,
+        60,
+        144,
+        178,
+        218,
         146,
-        16,
-        9,
-        162,
-        165
+        63
       ],
       "accounts": [
         {
           "name": "property"
         },
         {
-          "name": "steal_request",
-          "writable": true
-        },
-        {
-          "name": "target_ownership",
-          "writable": true
+          "name": "target_ownership"
         },
         {
           "name": "attacker_ownership",
@@ -769,8 +804,7 @@
               },
               {
                 "kind": "account",
-                "path": "steal_request.attacker",
-                "account": "StealRequest"
+                "path": "attacker"
               },
               {
                 "kind": "account",
@@ -781,52 +815,7 @@
           }
         },
         {
-          "name": "attacker_account",
-          "writable": true
-        },
-        {
-          "name": "game_config"
-        },
-        {
-          "name": "slot_hashes",
-          "address": "SysvarS1otHashes111111111111111111111111111"
-        },
-        {
-          "name": "payer",
-          "writable": true,
-          "signer": true
-        },
-        {
-          "name": "system_program",
-          "address": "11111111111111111111111111111111"
-        }
-      ],
-      "args": []
-    },
-    {
-      "name": "steal_property_request",
-      "docs": [
-        "Step 1: Commit to steal with user randomness"
-      ],
-      "discriminator": [
-        230,
-        1,
-        72,
-        63,
-        142,
-        62,
-        71,
-        192
-      ],
-      "accounts": [
-        {
-          "name": "property"
-        },
-        {
-          "name": "target_ownership"
-        },
-        {
-          "name": "steal_request",
+          "name": "steal_cooldown",
           "writable": true,
           "pda": {
             "seeds": [
@@ -839,13 +828,14 @@
                   97,
                   108,
                   95,
-                  114,
-                  101,
-                  113,
-                  117,
-                  101,
-                  115,
-                  116
+                  99,
+                  111,
+                  111,
+                  108,
+                  100,
+                  111,
+                  119,
+                  110
                 ]
               },
               {
@@ -854,7 +844,7 @@
               },
               {
                 "kind": "account",
-                "path": "property.property_id",
+                "path": "property.set_id",
                 "account": "Property"
               }
             ]
@@ -862,6 +852,10 @@
         },
         {
           "name": "player_account",
+          "writable": true
+        },
+        {
+          "name": "target_account",
           "writable": true
         },
         {
@@ -878,6 +872,10 @@
         },
         {
           "name": "game_config"
+        },
+        {
+          "name": "slot_hashes",
+          "address": "SysvarS1otHashes111111111111111111111111111"
         },
         {
           "name": "attacker",
@@ -897,10 +895,6 @@
         {
           "name": "target_player",
           "type": "pubkey"
-        },
-        {
-          "name": "is_targeted",
-          "type": "bool"
         },
         {
           "name": "user_randomness",
@@ -1126,6 +1120,19 @@
       ]
     },
     {
+      "name": "PlayerStealCooldown",
+      "discriminator": [
+        133,
+        168,
+        157,
+        46,
+        40,
+        81,
+        149,
+        245
+      ]
+    },
+    {
       "name": "Property",
       "discriminator": [
         195,
@@ -1162,19 +1169,6 @@
         11,
         2,
         222
-      ]
-    },
-    {
-      "name": "StealRequest",
-      "discriminator": [
-        239,
-        138,
-        203,
-        189,
-        107,
-        137,
-        18,
-        158
       ]
     }
   ],
@@ -1245,6 +1239,19 @@
       ]
     },
     {
+      "name": "StealAttemptEvent",
+      "discriminator": [
+        17,
+        164,
+        32,
+        158,
+        5,
+        217,
+        200,
+        87
+      ]
+    },
+    {
       "name": "StealFailedEvent",
       "discriminator": [
         102,
@@ -1255,19 +1262,6 @@
         242,
         245,
         123
-      ]
-    },
-    {
-      "name": "StealRequestedEvent",
-      "discriminator": [
-        220,
-        209,
-        112,
-        136,
-        155,
-        133,
-        194,
-        155
       ]
     },
     {
@@ -1427,6 +1421,11 @@
     },
     {
       "code": 6028,
+      "name": "StealCooldownActive",
+      "msg": "Steal cooldown active - wait before attempting again"
+    },
+    {
+      "code": 6029,
       "name": "SlotHashUnavailable",
       "msg": "Slot hash unavailable - try again"
     }
@@ -1542,6 +1541,10 @@
             "type": "u16"
           },
           {
+            "name": "total_base_daily_income",
+            "type": "u64"
+          },
+          {
             "name": "last_claim_timestamp",
             "type": "i64"
           },
@@ -1653,6 +1656,34 @@
           },
           {
             "name": "first_property_timestamp",
+            "type": "i64"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "PlayerStealCooldown",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "player",
+            "type": "pubkey"
+          },
+          {
+            "name": "set_id",
+            "type": "u8"
+          },
+          {
+            "name": "last_steal_attempt_timestamp",
+            "type": "i64"
+          },
+          {
+            "name": "cooldown_duration",
             "type": "i64"
           },
           {
@@ -1895,6 +1926,38 @@
       }
     },
     {
+      "name": "StealAttemptEvent",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "attacker",
+            "type": "pubkey"
+          },
+          {
+            "name": "target",
+            "type": "pubkey"
+          },
+          {
+            "name": "property_id",
+            "type": "u8"
+          },
+          {
+            "name": "steal_cost",
+            "type": "u64"
+          },
+          {
+            "name": "is_targeted",
+            "type": "bool"
+          },
+          {
+            "name": "request_slot",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
       "name": "StealFailedEvent",
       "type": {
         "kind": "struct",
@@ -1921,103 +1984,6 @@
           },
           {
             "name": "vrf_result",
-            "type": "u64"
-          }
-        ]
-      }
-    },
-    {
-      "name": "StealRequest",
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "attacker",
-            "type": "pubkey"
-          },
-          {
-            "name": "target",
-            "type": "pubkey"
-          },
-          {
-            "name": "property_id",
-            "type": "u8"
-          },
-          {
-            "name": "is_targeted",
-            "type": "bool"
-          },
-          {
-            "name": "steal_cost",
-            "type": "u64"
-          },
-          {
-            "name": "timestamp",
-            "type": "i64"
-          },
-          {
-            "name": "request_slot",
-            "type": "u64"
-          },
-          {
-            "name": "fulfilled",
-            "type": "bool"
-          },
-          {
-            "name": "success",
-            "type": "bool"
-          },
-          {
-            "name": "vrf_result",
-            "type": "u64"
-          },
-          {
-            "name": "attempt_number",
-            "type": "u32"
-          },
-          {
-            "name": "user_randomness",
-            "type": {
-              "array": [
-                "u8",
-                32
-              ]
-            }
-          },
-          {
-            "name": "bump",
-            "type": "u8"
-          }
-        ]
-      }
-    },
-    {
-      "name": "StealRequestedEvent",
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "attacker",
-            "type": "pubkey"
-          },
-          {
-            "name": "target",
-            "type": "pubkey"
-          },
-          {
-            "name": "property_id",
-            "type": "u8"
-          },
-          {
-            "name": "steal_cost",
-            "type": "u64"
-          },
-          {
-            "name": "is_targeted",
-            "type": "bool"
-          },
-          {
-            "name": "request_slot",
             "type": "u64"
           }
         ]

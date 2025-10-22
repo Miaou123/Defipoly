@@ -183,7 +183,7 @@ export function useDefipoly() {
     // Reward actions
     ...rewardActions,
     // Steal actions - ONLY random steal now
-    stealPropertyRandom: stealActions.stealPropertyRandom,
+    ...stealActions,
     // Data fetchers
     ...dataFetchers
   };
