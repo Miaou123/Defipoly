@@ -345,232 +345,181 @@ pub mod defipoly_program {
     }
 
     // ========== SECURE COMMIT-REVEAL STEAL MECHANICS (RANDOM ONLY) ==========
+
+/// Instant steal with cooldown protection (SINGLE TRANSACTION - 33% success rate)
+pub fn steal_property_instant(
+    ctx: Context<StealPropertyInstant>,
+    target_player: Pubkey,
+    user_randomness: [u8; 32],
+) -> Result<()> {
+    let game_config = &ctx.accounts.game_config;
+    let property = &ctx.accounts.property;
+    let player = &mut ctx.accounts.player_account;
+    let target_account = &mut ctx.accounts.target_account;
+    let target_ownership = &mut ctx.accounts.target_ownership;
+    let attacker_ownership = &mut ctx.accounts.attacker_ownership;
+    let steal_cooldown = &mut ctx.accounts.steal_cooldown;
+    let clock = Clock::get()?;
+
+    require!(!game_config.game_paused, ErrorCode::GamePaused);
+    require!(target_ownership.slots_owned > 0, ErrorCode::TargetDoesNotOwnProperty);
+    require!(
+        target_player != ctx.accounts.attacker.key(),
+        ErrorCode::CannotStealFromSelf
+    );
+
+    // Check shielded slots
+    let shielded_slots = if clock.unix_timestamp < target_ownership.shield_expiry {
+        target_ownership.slots_shielded
+    } else {
+        0
+    };
+    require!(
+        target_ownership.slots_owned > shielded_slots,
+        ErrorCode::AllSlotsShielded
+    );
+
+    // Check cooldown (half of buy cooldown)
+    let cooldown_duration = property.cooldown_seconds / 2;
+    if steal_cooldown.player != Pubkey::default() {
+        let time_since_last_steal = clock.unix_timestamp - steal_cooldown.last_steal_attempt_timestamp;
+        require!(
+            time_since_last_steal >= cooldown_duration,
+            ErrorCode::StealCooldownActive
+        );
+    } else {
+        // First time initialization
+        steal_cooldown.player = ctx.accounts.attacker.key();
+        steal_cooldown.set_id = property.set_id;
+        steal_cooldown.cooldown_duration = cooldown_duration;
+        steal_cooldown.bump = ctx.bumps.steal_cooldown;
+    }
+
+    // Update cooldown timestamp
+    steal_cooldown.last_steal_attempt_timestamp = clock.unix_timestamp;
+
+    // Calculate steal cost
+    let steal_cost = (property.price * game_config.steal_cost_percent_bps as u64) / 10000;
+    let to_reward_pool = (steal_cost * 90) / 100;
+    let to_dev = steal_cost - to_reward_pool;
+
+    // Transfer steal cost
+    let transfer_ctx_pool = CpiContext::new(
+        ctx.accounts.token_program.to_account_info(),
+        Transfer {
+            from: ctx.accounts.player_token_account.to_account_info(),
+            to: ctx.accounts.reward_pool_vault.to_account_info(),
+            authority: ctx.accounts.attacker.to_account_info(),
+        },
+    );
+    token::transfer(transfer_ctx_pool, to_reward_pool)?;
+
+    let transfer_ctx_dev = CpiContext::new(
+        ctx.accounts.token_program.to_account_info(),
+        Transfer {
+            from: ctx.accounts.player_token_account.to_account_info(),
+            to: ctx.accounts.dev_token_account.to_account_info(),
+            authority: ctx.accounts.attacker.to_account_info(),
+        },
+    );
+    token::transfer(transfer_ctx_dev, to_dev)?;
+
+    // Generate randomness using current slot hash + user randomness
+    let slot_hashes = &ctx.accounts.slot_hashes;
+    let slot_hashes_data = slot_hashes.data.borrow();
     
-    /// Step 1: Commit to steal with user randomness (RANDOM STEAL ONLY - 33% success rate)
-    pub fn steal_property_request(
-        ctx: Context<StealPropertyRequest>,
-        target_player: Pubkey,
-        user_randomness: [u8; 32],
-    ) -> Result<()> {
-        let game_config = &ctx.accounts.game_config;
-        let property = &ctx.accounts.property;
-        let player = &mut ctx.accounts.player_account;
-        let target_ownership = &ctx.accounts.target_ownership;
-        let steal_request = &mut ctx.accounts.steal_request;
-        let clock = Clock::get()?;
+    require!(
+        slot_hashes_data.len() >= 40,
+        ErrorCode::SlotHashUnavailable
+    );
 
-        require!(!game_config.game_paused, ErrorCode::GamePaused);
-        require!(target_ownership.slots_owned > 0, ErrorCode::TargetDoesNotOwnProperty);
-        require!(
-            target_player != ctx.accounts.attacker.key(),
-            ErrorCode::CannotStealFromSelf
-        );
+    let mut slot_hash_bytes = [0u8; 32];
+    slot_hash_bytes.copy_from_slice(&slot_hashes_data[8..40]);
 
-        let shielded_slots = if clock.unix_timestamp < target_ownership.shield_expiry {
-            target_ownership.slots_shielded
-        } else {
-            0
-        };
-        require!(
-            target_ownership.slots_owned > shielded_slots,
-            ErrorCode::AllSlotsShielded
-        );
+    // Combine entropy sources
+    let mut combined_entropy = [0u8; 32];
+    for i in 0..32 {
+        combined_entropy[i] = user_randomness[i]
+            ^ slot_hash_bytes[i]
+            ^ ((clock.slot >> (i % 8)) as u8)
+            ^ ((clock.unix_timestamp >> (i % 8)) as u8);
+    }
+    
+    let random_u64 = u64::from_le_bytes(combined_entropy[0..8].try_into().unwrap());
 
-        if steal_request.attacker != Pubkey::default() {
-            require!(
-                steal_request.can_initiate_new_steal(clock.unix_timestamp),
-                ErrorCode::PendingStealExists
-            );
-            steal_request.attempt_number = steal_request.attempt_number.saturating_add(1);
-            msg!("🔄 Reusing StealRequest account (attempt #{})", steal_request.attempt_number);
-        } else {
-            steal_request.attempt_number = 1;
-            steal_request.bump = ctx.bumps.steal_request;
-            msg!("🆕 Creating new StealRequest account");
+    // Determine success (33% chance)
+    let success_threshold = game_config.steal_chance_random_bps as u64;
+    let success = (random_u64 % 10000) < success_threshold;
+
+    // Update player stats
+    player.total_steals_attempted += 1;
+
+    if success {
+        // Transfer slot from target to attacker
+        target_ownership.slots_owned -= 1;
+
+        if target_ownership.slots_shielded > target_ownership.slots_owned {
+            target_ownership.slots_shielded = target_ownership.slots_owned;
         }
 
-        let steal_cost = (property.price * game_config.steal_cost_percent_bps as u64) / 10000;
+        // Initialize or update attacker ownership
+        if attacker_ownership.slots_owned == 0 {
+            attacker_ownership.player = ctx.accounts.attacker.key();
+            attacker_ownership.property_id = property.property_id;
+            attacker_ownership.slots_owned = 1;
+            attacker_ownership.slots_shielded = 0;
+            attacker_ownership.purchase_timestamp = clock.unix_timestamp;
+            attacker_ownership.shield_expiry = 0;
+            attacker_ownership.bump = ctx.bumps.attacker_ownership;
+        } else {
+            attacker_ownership.slots_owned += 1;
+        }
 
-        let to_reward_pool = (steal_cost * 90) / 100;
-        let to_dev = steal_cost - to_reward_pool;
+        player.total_slots_owned += 1;
+        player.total_steals_successful += 1;
 
-        let transfer_ctx_pool = CpiContext::new(
-            ctx.accounts.token_program.to_account_info(),
-            Transfer {
-                from: ctx.accounts.player_token_account.to_account_info(),
-                to: ctx.accounts.reward_pool_vault.to_account_info(),
-                authority: ctx.accounts.attacker.to_account_info(),
-            },
-        );
-        token::transfer(transfer_ctx_pool, to_reward_pool)?;
+        // Calculate daily income for stolen slot
+        let daily_income_per_slot = (property.price * property.yield_percent_bps as u64) / 10000;
 
-        let transfer_ctx_dev = CpiContext::new(
-            ctx.accounts.token_program.to_account_info(),
-            Transfer {
-                from: ctx.accounts.player_token_account.to_account_info(),
-                to: ctx.accounts.dev_token_account.to_account_info(),
-                authority: ctx.accounts.attacker.to_account_info(),
-            },
-        );
-        token::transfer(transfer_ctx_dev, to_dev)?;
+        player.total_base_daily_income = player.total_base_daily_income
+            .checked_add(daily_income_per_slot)
+            .ok_or(ErrorCode::Overflow)?;
 
-        steal_request.attacker = player.owner;
-        steal_request.target = target_player;
-        steal_request.property_id = property.property_id;
-        steal_request.is_targeted = false; // Always false (random steal only)
-        steal_request.steal_cost = steal_cost;
-        steal_request.timestamp = clock.unix_timestamp;
-        steal_request.request_slot = clock.slot;
-        steal_request.fulfilled = false;
-        steal_request.success = false;
-        steal_request.vrf_result = 0;
-        steal_request.user_randomness = user_randomness;
+        target_account.total_base_daily_income = target_account.total_base_daily_income
+            .checked_sub(daily_income_per_slot)
+            .ok_or(ErrorCode::Overflow)?;
+        
+        target_account.total_slots_owned = target_account.total_slots_owned
+            .checked_sub(1)
+            .ok_or(ErrorCode::Overflow)?;
 
-        player.total_steals_attempted += 1;
-
-        emit!(StealRequestedEvent {
-            attacker: player.owner,
+        emit!(StealSuccessEvent {
+            attacker: ctx.accounts.attacker.key(),
             target: target_player,
             property_id: property.property_id,
             steal_cost,
-            is_targeted: false, // Always false
-            request_slot: clock.slot,
+            targeted: false,
+            vrf_result: random_u64,
         });
 
-        msg!("🎲 Random steal committed by {} targeting {} (property {})", 
-             player.owner, target_player, property.property_id);
-        msg!("⏳ Wait 1 slot, then reveal for randomness...");
-        
-        Ok(())
+        msg!("✅ INSTANT STEAL SUCCESS: {} stole 1 slot from {} (entropy: {})", 
+             ctx.accounts.attacker.key(), target_player, random_u64);
+    } else {
+        emit!(StealFailedEvent {
+            attacker: ctx.accounts.attacker.key(),
+            target: target_player,
+            property_id: property.property_id,
+            steal_cost,
+            targeted: false,
+            vrf_result: random_u64,
+        });
+
+        msg!("❌ INSTANT STEAL FAILED: {} (entropy: {})", 
+             ctx.accounts.attacker.key(), random_u64);
     }
 
-    /// Step 2: Reveal and execute steal with secure randomness (ALWAYS 33% success rate)
-    pub fn steal_property_fulfill(ctx: Context<StealPropertyFulfill>) -> Result<()> {
-        let game_config = &ctx.accounts.game_config;
-        let steal_request = &mut ctx.accounts.steal_request;
-        let clock = Clock::get()?;
-
-        let property = &ctx.accounts.property;
-        let target_ownership = &mut ctx.accounts.target_ownership;
-        let attacker_ownership = &mut ctx.accounts.attacker_ownership;
-        let attacker_account = &mut ctx.accounts.attacker_account;
-    
-        require!(!steal_request.fulfilled, ErrorCode::AlreadyFulfilled);
-        require!(!game_config.game_paused, ErrorCode::GamePaused);
-    
-        // Must wait at least 1 slot
-        require!(
-            clock.slot > steal_request.request_slot,
-            ErrorCode::VrfNotReady
-        );
-        
-        // Can't wait too long (slot hash expires)
-        let slots_elapsed = clock.slot - steal_request.request_slot;
-        require!(
-            slots_elapsed < 150,
-            ErrorCode::StealRequestExpired
-        );
-    
-        let slot_hashes = &ctx.accounts.slot_hashes;
-        let slot_hashes_data = slot_hashes.data.borrow();
-        
-        // Verify slot hash data is available
-        require!(
-            slot_hashes_data.len() >= 40,
-            ErrorCode::SlotHashUnavailable
-        );
-
-        let mut slot_hash_bytes = [0u8; 32];
-        if slot_hashes_data.len() >= 40 {
-            slot_hash_bytes.copy_from_slice(&slot_hashes_data[8..40]);
-        }
-
-        let mut combined_entropy = [0u8; 32];
-        for i in 0..32 {
-            combined_entropy[i] = steal_request.user_randomness[i]
-                ^ slot_hash_bytes[i]
-                ^ ((clock.slot >> (i % 8)) as u8)
-                ^ ((clock.unix_timestamp >> (i % 8)) as u8);
-        }
-        
-        let random_u64 = u64::from_le_bytes(combined_entropy[0..8].try_into().unwrap());
-
-        // ALWAYS use random steal success rate (33%)
-        let success_threshold = game_config.steal_chance_random_bps as u64;
-        let success = (random_u64 % 10000) < success_threshold;
-
-        steal_request.vrf_result = random_u64;
-        steal_request.success = success;
-        steal_request.fulfilled = true;
-
-        if success {
-            target_ownership.slots_owned -= 1;
-
-            if target_ownership.slots_shielded > target_ownership.slots_owned {
-                target_ownership.slots_shielded = target_ownership.slots_owned;
-            }
-
-            if attacker_ownership.slots_owned == 0 {
-                attacker_ownership.player = steal_request.attacker;
-                attacker_ownership.property_id = property.property_id;
-                attacker_ownership.slots_owned = 1;
-                attacker_ownership.slots_shielded = 0;
-                attacker_ownership.purchase_timestamp = clock.unix_timestamp;
-                attacker_ownership.shield_expiry = 0;
-                attacker_ownership.bump = ctx.bumps.attacker_ownership;
-            } else {
-                attacker_ownership.slots_owned += 1;
-            }
-
-            attacker_account.total_slots_owned += 1;
-            attacker_account.total_steals_successful += 1;
-
-            // Calculate daily income for 1 stolen slot
-            let daily_income_per_slot = (property.price * property.yield_percent_bps as u64) / 10000;
-
-            // Add to attacker's daily income
-            attacker_account.total_base_daily_income = attacker_account.total_base_daily_income
-                .checked_add(daily_income_per_slot)
-                .ok_or(ErrorCode::Overflow)?;
-
-            let target_account = &mut ctx.accounts.target_account;
-            target_account.total_base_daily_income = target_account.total_base_daily_income
-                .checked_sub(daily_income_per_slot)
-                .ok_or(ErrorCode::Overflow)?;
-            
-            // Also update target's total slots
-            target_account.total_slots_owned = target_account.total_slots_owned
-                .checked_sub(1)
-                .ok_or(ErrorCode::Overflow)?;
-
-
-            emit!(StealSuccessEvent {
-                attacker: steal_request.attacker,
-                target: steal_request.target,
-                property_id: property.property_id,
-                steal_cost: steal_request.steal_cost,
-                targeted: false, // Always false (random steal)
-                vrf_result: random_u64,
-            });
-
-            msg!("✅ RANDOM STEAL SUCCESS: {} stole 1 slot from {} (entropy: {})", 
-                 steal_request.attacker, steal_request.target, random_u64);
-        } else {
-            emit!(StealFailedEvent {
-                attacker: steal_request.attacker,
-                target: steal_request.target,
-                property_id: property.property_id,
-                steal_cost: steal_request.steal_cost,
-                targeted: false, // Always false (random steal)
-                vrf_result: random_u64,
-            });
-
-            msg!("❌ RANDOM STEAL FAILED: {} (entropy: {})", 
-                 steal_request.attacker, random_u64);
-        }
-
-        Ok(())
-    }
+    Ok(())
+}
 
     // ========== CLAIM REWARDS ==========
 
@@ -891,14 +840,6 @@ pub mod defipoly_program {
         Ok(())
     }
 
-    pub fn close_steal_request(
-        ctx: Context<CloseStealRequest>,
-    ) -> Result<()> {
-        require!(ctx.accounts.steal_request.fulfilled, ErrorCode::NotFulfilled);
-        msg!("🧹 Closing fulfilled steal request");
-        Ok(())
-    }
-
     pub fn close_player_account(ctx: Context<ClosePlayerAccount>) -> Result<()> {
         msg!("🧹 Closing player account: {}", ctx.accounts.player_account.owner);
         Ok(())
@@ -1099,25 +1040,42 @@ pub struct ActivateShield<'info> {
 }
 
 #[derive(Accounts)]
-pub struct StealPropertyRequest<'info> {
+#[instruction(target_player: Pubkey)] 
+pub struct StealPropertyInstant<'info> {
     pub property: Account<'info, Property>,
+    
+    #[account(
+        mut,
+        constraint = target_ownership.player == target_player @ ErrorCode::InvalidTarget
+    )]
     pub target_ownership: Account<'info, PropertyOwnership>,
     
     #[account(
         init_if_needed,
         payer = attacker,
-        space = 8 + StealRequest::SIZE,
-        seeds = [
-            b"steal_request",
-            attacker.key().as_ref(),
-            property.property_id.to_le_bytes().as_ref()
-        ],
+        space = 8 + PropertyOwnership::SIZE,
+        seeds = [b"ownership", attacker.key().as_ref(), property.property_id.to_le_bytes().as_ref()],
         bump
     )]
-    pub steal_request: Account<'info, StealRequest>,
+    pub attacker_ownership: Account<'info, PropertyOwnership>,
+    
+    #[account(
+        init_if_needed,
+        payer = attacker,
+        space = 8 + PlayerStealCooldown::SIZE,
+        seeds = [b"steal_cooldown", attacker.key().as_ref(), property.set_id.to_le_bytes().as_ref()],
+        bump
+    )]
+    pub steal_cooldown: Account<'info, PlayerStealCooldown>,
     
     #[account(mut)]
     pub player_account: Account<'info, PlayerAccount>,
+    
+    #[account(
+        mut,
+        constraint = target_account.owner == target_player @ ErrorCode::InvalidTarget
+    )]
+    pub target_account: Account<'info, PlayerAccount>,
     
     #[account(mut)]
     pub player_token_account: Account<'info, TokenAccount>,
@@ -1130,50 +1088,14 @@ pub struct StealPropertyRequest<'info> {
     
     pub game_config: Account<'info, GameConfig>,
     
-    #[account(mut)]
-    pub attacker: Signer<'info>,
-    
-    pub token_program: Program<'info, Token>,
-    pub system_program: Program<'info, System>,
-}
-
-#[derive(Accounts)]
-pub struct StealPropertyFulfill<'info> {
-    pub property: Account<'info, Property>,
-    
-    #[account(mut)]
-    pub steal_request: Account<'info, StealRequest>,
-    
-    #[account(mut)]
-    pub target_ownership: Account<'info, PropertyOwnership>,
-    
-    #[account(
-        init_if_needed,
-        payer = payer,
-        space = 8 + PropertyOwnership::SIZE,
-        seeds = [b"ownership", steal_request.attacker.as_ref(), property.property_id.to_le_bytes().as_ref()],
-        bump
-    )]
-    pub attacker_ownership: Account<'info, PropertyOwnership>,
-    
-    #[account(mut)]
-    pub attacker_account: Account<'info, PlayerAccount>,
-
-    #[account(
-        mut,
-        constraint = target_account.owner == steal_request.target @ ErrorCode::InvalidTarget
-    )]
-    pub target_account: Account<'info, PlayerAccount>,
-    
-    pub game_config: Account<'info, GameConfig>,
-    
     /// CHECK: Slot hashes sysvar for entropy
     #[account(address = anchor_lang::solana_program::sysvar::slot_hashes::ID)]
     pub slot_hashes: AccountInfo<'info>,
     
     #[account(mut)]
-    pub payer: Signer<'info>,
+    pub attacker: Signer<'info>,
     
+    pub token_program: Program<'info, Token>,
     pub system_program: Program<'info, System>,
 }
 
@@ -1241,20 +1163,6 @@ pub struct AdminUpdateGame<'info> {
     )]
     pub game_config: Account<'info, GameConfig>,
     pub authority: Signer<'info>,
-}
-
-#[derive(Accounts)]
-pub struct CloseStealRequest<'info> {
-    #[account(
-        mut,
-        close = rent_receiver,
-        constraint = steal_request.fulfilled @ ErrorCode::NotFulfilled
-    )]
-    pub steal_request: Account<'info, StealRequest>,
-    
-    /// CHECK: Rent receiver
-    #[account(mut)]
-    pub rent_receiver: AccountInfo<'info>,
 }
 
 #[derive(Accounts)]
@@ -1411,6 +1319,19 @@ impl PlayerSetOwnership {
 }
 
 #[account]
+pub struct PlayerStealCooldown {
+    pub player: Pubkey,
+    pub set_id: u8,
+    pub last_steal_attempt_timestamp: i64,
+    pub cooldown_duration: i64,
+    pub bump: u8,
+}
+
+impl PlayerStealCooldown {
+    pub const SIZE: usize = 32 + 1 + 8 + 8 + 1;
+}
+
+#[account]
 pub struct SetStats {
     pub set_id: u8,
     pub total_slots_sold: u64,
@@ -1422,31 +1343,6 @@ pub struct SetStats {
 
 impl SetStats {
     pub const SIZE: usize = 1 + 8 + 8 + 4 + 4 + 1;
-}
-
-#[account]
-pub struct StealRequest {
-    pub attacker: Pubkey,
-    pub target: Pubkey,
-    pub property_id: u8,
-    pub is_targeted: bool,
-    pub steal_cost: u64,
-    pub timestamp: i64,
-    pub request_slot: u64,
-    pub fulfilled: bool,
-    pub success: bool,
-    pub vrf_result: u64,
-    pub attempt_number: u32,
-    pub user_randomness: [u8; 32],
-    pub bump: u8,
-}
-
-impl StealRequest {
-    pub const SIZE: usize = 32 + 32 + 1 + 1 + 8 + 8 + 8 + 1 + 1 + 8 + 4 + 32 + 1;
-    
-    pub fn can_initiate_new_steal(&self, current_time: i64) -> bool {
-        self.fulfilled || (current_time - self.timestamp) > 300
-    }
 }
 
 // ========== EVENTS ==========
@@ -1472,7 +1368,7 @@ pub struct ShieldActivatedEvent {
 }
 
 #[event]
-pub struct StealRequestedEvent {
+pub struct StealAttemptEvent {
     pub attacker: Pubkey,
     pub target: Pubkey,
     pub property_id: u8,
@@ -1585,6 +1481,8 @@ pub enum ErrorCode {
     NotFulfilled,
     #[msg("Steal request expired - must fulfill within 150 slots (~60 sec)")]
     StealRequestExpired,
+    #[msg("Steal cooldown active - wait before attempting again")]
+    StealCooldownActive,
     #[msg("Slot hash unavailable - try again")]
     SlotHashUnavailable,
 }
