@@ -1,6 +1,6 @@
 // ============================================
 // FILE: defipoly-frontend/src/components/property-actions/StealPropertySection.tsx
-// Updated with steal cooldown support
+// FIXED VERSION - Added refetchStealCooldown after steal transaction
 // ============================================
 
 import { useState, useEffect } from 'react';
@@ -35,17 +35,16 @@ export function StealPropertySection({
   const { showSuccess, showError } = useNotification();
   const { triggerRefresh } = usePropertyRefresh();
   
-  // ADD: Get steal cooldown for this property's set
-  const { isOnStealCooldown, stealCooldownRemaining } = useStealCooldown(property.setId);
+  // FIXED: Added refetchStealCooldown to the destructured values
+  const { isOnStealCooldown, stealCooldownRemaining, refetchStealCooldown } = useStealCooldown(property.setId);
   
   const [showStealOptions, setShowStealOptions] = useState(false);
   const [availableTargets, setAvailableTargets] = useState<number | null>(null);
   const [loadingStats, setLoadingStats] = useState(false);
 
   const stealCost = property.price * 0.5;
-  const canSteal = balance >= stealCost && !isOnStealCooldown; // ADD: Check cooldown
+  const canSteal = balance >= stealCost && !isOnStealCooldown;
 
-  // ADD: Format cooldown time
   const formatCooldown = (seconds: number) => {
     const hours = Math.floor(seconds / 3600);
     const mins = Math.floor((seconds % 3600) / 60);
@@ -72,13 +71,16 @@ export function StealPropertySection({
   }, [showStealOptions, propertyId, availableTargets]);
 
   const handleSteal = async () => {
-    if (loading || isOnStealCooldown) return; // ADD: Check cooldown
+    if (loading || isOnStealCooldown) return;
     setLoading(true);
     
     try {
       const result = await stealPropertyInstant(propertyId);
       
       if (result) {
+        // FIXED: Added refetchStealCooldown here to update cooldown state
+        await refetchStealCooldown();
+        
         if (result.success) {
           showSuccess(
             'Steal Successful!', 
@@ -96,6 +98,9 @@ export function StealPropertySection({
       }
     } catch (error: any) {
       console.error('Error stealing property:', error);
+      
+      // FIXED: Added refetchStealCooldown here too in case error was cooldown-related
+      await refetchStealCooldown();
       
       const errorString = error?.message || error?.toString() || '';
       let errorMessage = 'Failed to execute steal';
@@ -131,7 +136,7 @@ export function StealPropertySection({
   // Don't show if user already owns slots in this property
   if (propertyData && propertyData.owned > 0) return null;
 
-  // ADD: Show cooldown warning if on cooldown
+  // Show cooldown warning if on cooldown
   if (isOnStealCooldown && !showStealOptions) {
     return (
       <div className="bg-red-900/20 border border-red-500/30 rounded-xl p-4">
@@ -170,7 +175,7 @@ export function StealPropertySection({
       <div className="bg-gradient-to-br from-red-900/30 to-orange-900/30 rounded-lg p-4 border border-red-500/30">
         <h3 className="text-lg font-bold mb-3 text-red-300">🎯 Steal Property</h3>
         
-        {/* ADD: Show cooldown warning in the steal panel */}
+        {/* Show cooldown warning in the steal panel */}
         {isOnStealCooldown && (
           <div className="bg-red-900/40 border border-red-500/50 rounded-lg p-3 mb-4">
             <div className="flex items-center gap-2 text-red-300 mb-1">

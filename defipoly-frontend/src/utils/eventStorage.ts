@@ -2,7 +2,7 @@ import { BorshCoder, EventParser } from '@coral-xyz/anchor';
 import { Connection } from '@solana/web3.js';
 import { storeAction, eventToAction } from '@/utils/actionsStorage';
 import { PROGRAM_ID } from '@/utils/constants';
-import idl from '../../../defipoly-program/target/idl/defipoly_program.json';
+import idl from '@/idl/defipoly_program.json';
 
 export const storeTransactionEvents = async (
   connection: Connection,

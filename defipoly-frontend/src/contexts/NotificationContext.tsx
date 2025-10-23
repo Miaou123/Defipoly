@@ -71,23 +71,50 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     <NotificationContext.Provider value={{ showNotification, showSuccess, showError, showInfo }}>
       {children}
       
-      <div className="fixed top-4 right-4 z-[9999] space-y-3 pointer-events-none">
-        {notifications.map((notification) => (
-          <div
-            key={notification.id}
-            className="pointer-events-auto animate-in slide-in-from-right-full duration-300"
-          >
-            <div className={`
-              min-w-[320px] max-w-md rounded-xl shadow-2xl backdrop-blur-xl border-2 overflow-hidden
-              ${notification.type === 'success' 
-                ? 'bg-gradient-to-r from-green-900/95 to-emerald-900/95 border-green-500/50' 
-                : notification.type === 'error'
-                ? 'bg-gradient-to-r from-red-900/95 to-rose-900/95 border-red-500/50'
-                : 'bg-gradient-to-r from-purple-900/95 to-purple-800/95 border-purple-500/50'
-              }
-            `}>
-              <div className="flex items-start justify-between p-4 pb-2">
-                <div className="flex items-center gap-3">
+      {/* Notification Container */}
+      <div 
+        className="fixed top-4 right-4 z-[9999] space-y-3 pointer-events-none"
+        style={{
+          position: 'fixed',
+          top: '16px',
+          right: '16px',
+          zIndex: 9999
+        }}
+      >
+        {notifications.map((notification, index) => (
+            <div
+              key={notification.id}
+              className="pointer-events-auto"
+              style={{
+                minWidth: '320px',
+                maxWidth: '28rem',
+                background: notification.type === 'success' 
+                  ? 'linear-gradient(to right, rgba(6, 78, 59, 0.95), rgba(6, 95, 70, 0.95))'
+                  : notification.type === 'error'
+                  ? 'linear-gradient(to right, rgba(127, 29, 29, 0.95), rgba(159, 18, 57, 0.95))'
+                  : 'linear-gradient(to right, rgba(88, 28, 135, 0.95), rgba(107, 33, 168, 0.95))',
+                borderRadius: '12px',
+                boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+                backdropFilter: 'blur(24px)',
+                border: notification.type === 'success'
+                  ? '2px solid rgba(34, 197, 94, 0.5)'
+                  : notification.type === 'error'
+                  ? '2px solid rgba(239, 68, 68, 0.5)'
+                  : '2px solid rgba(168, 85, 247, 0.5)',
+                overflow: 'hidden',
+                pointerEvents: 'auto',
+                marginBottom: '12px',
+                animation: 'slideInFromRight 0.3s ease-out'
+              }}
+            >
+              <div style={{
+                display: 'flex',
+                alignItems: 'flex-start',
+                justifyContent: 'space-between',
+                padding: '16px',
+                paddingBottom: '8px'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                   {notification.type === 'success' ? (
                     <CheckCircle className="w-6 h-6 text-green-400 flex-shrink-0" />
                   ) : notification.type === 'error' ? (
@@ -95,52 +122,111 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
                   ) : (
                     <AlertCircle className="w-6 h-6 text-purple-400 flex-shrink-0" />
                   )}
-                  <h3 className="font-bold text-white text-lg">{notification.title}</h3>
+                  <h3 style={{
+                    fontWeight: 'bold',
+                    color: 'white',
+                    fontSize: '18px',
+                    margin: 0
+                  }}>
+                    {notification.title}
+                  </h3>
                 </div>
                 <button
                   onClick={() => removeNotification(notification.id)}
-                  className="text-white/60 hover:text-white transition-colors"
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: 'rgba(255, 255, 255, 0.6)',
+                    cursor: 'pointer',
+                    padding: '4px'
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.color = 'white'}
+                  onMouseLeave={(e) => e.currentTarget.style.color = 'rgba(255, 255, 255, 0.6)'}
                 >
                   <X size={20} />
                 </button>
               </div>
 
-              <div className="px-4 pb-4">
-                <p className="text-white/80 text-sm mb-3">{notification.message}</p>
+              <div style={{ padding: '0 16px 16px 16px' }}>
+                <p style={{
+                  color: 'rgba(255, 255, 255, 0.8)',
+                  fontSize: '14px',
+                  marginBottom: '12px'
+                }}>
+                  {notification.message}
+                </p>
                 
                 {notification.txHash && (
                   <a
                     href={getSolscanUrl(notification.txHash)}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 rounded-lg text-white text-sm font-semibold transition-all hover:scale-105 border border-white/20"
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      padding: '8px 16px',
+                      background: 'rgba(255, 255, 255, 0.1)',
+                      borderRadius: '8px',
+                      color: 'white',
+                      fontSize: '14px',
+                      fontWeight: '600',
+                      textDecoration: 'none',
+                      border: '1px solid rgba(255, 255, 255, 0.2)',
+                      transition: 'all 0.2s'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = 'rgba(255, 255, 255, 0.2)';
+                      e.currentTarget.style.transform = 'scale(1.05)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
+                      e.currentTarget.style.transform = 'scale(1)';
+                    }}
                   >
-                    <span className="font-mono">{notification.txHash.slice(0, 4)}...{notification.txHash.slice(-4)}</span>
+                    <span style={{ fontFamily: 'monospace' }}>
+                      {notification.txHash.slice(0, 4)}...{notification.txHash.slice(-4)}
+                    </span>
                     <ExternalLink size={14} />
                   </a>
                 )}
               </div>
 
-              <div className="h-1 bg-white/10">
+              <div style={{
+                height: '4px',
+                background: 'rgba(255, 255, 255, 0.1)'
+              }}>
                 <div 
-                  className={`h-full ${
-                    notification.type === 'success' ? 'bg-green-400' :
-                    notification.type === 'error' ? 'bg-red-400' : 'bg-purple-400'
-                  }`}
                   style={{
+                    height: '100%',
+                    background: notification.type === 'success' 
+                      ? 'rgb(74, 222, 128)'
+                      : notification.type === 'error'
+                      ? 'rgb(248, 113, 113)'
+                      : 'rgb(192, 132, 252)',
                     animation: `shrink ${notification.duration || 5000}ms linear forwards`
                   }}
                 />
               </div>
             </div>
-          </div>
         ))}
       </div>
 
-      <style jsx global>{`
+      <style>{`
         @keyframes shrink {
           from { width: 100%; }
           to { width: 0%; }
+        }
+        
+        @keyframes slideInFromRight {
+          from {
+            transform: translateX(100%);
+            opacity: 0;
+          }
+          to {
+            transform: translateX(0);
+            opacity: 1;
+          }
         }
       `}</style>
     </NotificationContext.Provider>
