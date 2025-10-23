@@ -1,6 +1,6 @@
 // ============================================
-// FILE: defipoly-frontend/src/hooks/actions/useStealActions.ts
-// Updated for new single-transaction steal system
+// FIXED useStealActions.ts
+// Manually stores steal actions since events aren't being parsed
 // ============================================
 
 import { useCallback } from 'react';
@@ -20,6 +20,7 @@ import {
 import { GAME_CONFIG, REWARD_POOL, TOKEN_MINT } from '@/utils/constants';
 import { fetchPropertyOwners } from '@/utils/propertyOwners';
 import { storeTransactionEvents } from '@/utils/eventStorage';
+import { storeAction } from '@/utils/actionsStorage'; // ← ADD THIS IMPORT
 
 interface StealResult {
   tx: string;
@@ -37,61 +38,44 @@ export const useStealActions = (
   setLoading: (loading: boolean) => void
 ) => {
 
-  /**
-   * New single-transaction steal system
-   * Replaces the old 2-step request/fulfill approach
-   */
   const stealPropertyInstant = useCallback(async (
     propertyId: number,
     targetPlayerPubkey?: PublicKey
-  ): Promise<StealResult> => {
-    if (!program || !wallet || !provider || !playerInitialized) {
-      throw new Error('Wallet not connected or player not initialized');
-    }
+  ): Promise<StealResult | null> => {
+    if (!program || !wallet || !provider) throw new Error('Wallet not connected');
+    if (!playerInitialized) throw new Error('Initialize player first');
 
     setLoading(true);
-
     try {
-      // Step 1: Select a target if not provided
+      // [... keep all the existing code until the transaction is sent ...]
+      
+      // Find eligible targets
       let selectedTarget: PublicKey;
       
       if (targetPlayerPubkey) {
-        // Targeted steal
         selectedTarget = targetPlayerPubkey;
-        console.log('🎯 Targeted steal at:', selectedTarget.toString());
       } else {
-        // Random steal - fetch all eligible owners
-        console.log('🎲 Random steal - selecting target...');
         const owners = await fetchPropertyOwners(connection, program, propertyId);
-        
-        if (owners.length === 0) {
-          throw new Error('No eligible targets found for this property');
-        }
-
-        // Filter out the current player
-        const eligibleOwners = owners.filter(
+        const eligibleTargets = owners.filter(
           owner => !owner.owner.equals(wallet.publicKey) && owner.unshieldedSlots > 0
         );
-
-        if (eligibleOwners.length === 0) {
-          throw new Error('No eligible targets with unshielded slots');
+        
+        if (eligibleTargets.length === 0) {
+          throw new Error('No eligible targets found for random steal');
         }
-
-        // Select random target
-        const randomIndex = Math.floor(Math.random() * eligibleOwners.length);
-        selectedTarget = eligibleOwners[randomIndex].owner;
-        console.log(`✅ Selected random target: ${selectedTarget.toString()}`);
+        
+        const randomIndex = Math.floor(Math.random() * eligibleTargets.length);
+        selectedTarget = eligibleTargets[randomIndex].owner;
       }
 
-      // Step 2: Verify target still owns unshielded slots
+      console.log(`🎯 Selected target:`, selectedTarget.toString());
+
       const targetOwnership = await fetchOwnershipData(program, selectedTarget, propertyId);
-      
       if (!targetOwnership || targetOwnership.slotsOwned === 0) {
         throw new Error(`Target does not own property ${propertyId}`);
       }
-      
+
       const currentTime = Math.floor(Date.now() / 1000);
-      // Convert BN to number for comparison
       const shieldExpiryTime = typeof targetOwnership.shieldExpiry === 'number' 
         ? targetOwnership.shieldExpiry 
         : targetOwnership.shieldExpiry.toNumber();
@@ -105,7 +89,6 @@ export const useStealActions = (
       
       console.log(`✅ Target confirmed with ${unshieldedSlots} unshielded slots`);
 
-      // Step 3: Get all required accounts
       const playerTokenAccount = await getAssociatedTokenAddress(TOKEN_MINT, wallet.publicKey);
       const devWallet = new PublicKey("CgWTFX7JJQHed3qyMDjJkNCxK4sFe3wbDFABmWAAmrdS");
       const devTokenAccount = await getAssociatedTokenAddress(TOKEN_MINT, devWallet);
@@ -116,20 +99,17 @@ export const useStealActions = (
       const [targetOwnershipPDA] = getOwnershipPDA(selectedTarget, propertyId);
       const [targetPlayerPDA] = getPlayerPDA(selectedTarget);
       
-      // Get property info for set_id
       const property = await fetchPropertyData(program, propertyId);
       if (!property) {
         throw new Error(`Property ${propertyId} not found`);
       }
       const [stealCooldownPDA] = getStealCooldownPDA(wallet.publicKey, propertyId);
 
-      // Step 4: Generate user randomness for VRF
       const userRandomness = new Uint8Array(32);
       crypto.getRandomValues(userRandomness);
       
       console.log('🎲 Executing instant steal with on-chain randomness...');
 
-      // Step 5: Execute single-transaction steal
       const tx = await program.methods
         .stealPropertyInstant(
           selectedTarget,
@@ -155,12 +135,16 @@ export const useStealActions = (
       
       console.log('✅ Instant steal executed:', tx);
 
-      // Step 6: Store transaction events
+      // Try to store events (may or may not work)
       if (eventParser) {
-        await storeTransactionEvents(connection, eventParser, tx);
+        try {
+          await storeTransactionEvents(connection, eventParser, tx);
+        } catch (eventError) {
+          console.warn('⚠️ Event storage failed (expected), falling back to manual storage');
+        }
       }
 
-      // Step 7: Wait and check result from transaction logs
+      // Wait and check result from transaction logs
       await new Promise(resolve => setTimeout(resolve, 2000));
       
       const txDetails = await provider.connection.getTransaction(tx, {
@@ -178,9 +162,6 @@ export const useStealActions = (
       }
 
       const logs = txDetails.meta.logMessages;
-      console.log('Transaction logs:', logs);
-
-      // Check for success/failure in logs
       const successLog = logs.find(log => log.includes('✅ INSTANT STEAL SUCCESS'));
       const failLog = logs.find(log => log.includes('❌ INSTANT STEAL FAILED'));
       
@@ -189,7 +170,6 @@ export const useStealActions = (
 
       if (successLog) {
         success = true;
-        // Extract VRF result from log if present
         const match = successLog.match(/entropy: (\d+)/);
         if (match) {
           vrfResult = match[1];
@@ -202,6 +182,38 @@ export const useStealActions = (
           vrfResult = match[1];
         }
         console.log('❌ Instant steal failed. VRF:', vrfResult);
+      }
+
+      // 🔥 MANUAL STORAGE: Store the steal action directly
+      const blockTime = txDetails.blockTime || Math.floor(Date.now() / 1000);
+      const stealCost = Number(property.price) * 0.5; // 50% of property price
+      
+      console.log('💾 Manually storing steal action to backend...');
+      
+      try {
+        const stored = await storeAction({
+          txSignature: tx,
+          actionType: success ? 'steal_success' : 'steal_failed',
+          playerAddress: wallet.publicKey.toString(),
+          targetAddress: selectedTarget.toString(),
+          propertyId,
+          amount: stealCost,
+          slots: success ? 1 : 0,
+          success,
+          blockTime,
+          metadata: {
+            vrfResult,
+            targeted: !!targetPlayerPubkey
+          }
+        });
+        
+        if (stored) {
+          console.log('✅ Successfully stored steal action to backend');
+        } else {
+          console.error('❌ Failed to store steal action');
+        }
+      } catch (storeError) {
+        console.error('❌ Error storing steal action:', storeError);
       }
 
       return {
@@ -219,17 +231,15 @@ export const useStealActions = (
         console.log('⏳ Transaction already processed - fetching result...');
         
         try {
-          // Extract transaction signature
           const txSig = error.signature || error.txid;
           if (!txSig) {
             throw new Error('No transaction signature available');
           }
     
-          // Retry fetching transaction with exponential backoff
           let txDetails = null;
           const maxRetries = 5;
           for (let i = 0; i < maxRetries; i++) {
-            await new Promise(resolve => setTimeout(resolve, 1000 * (i + 1))); // 1s, 2s, 3s, 4s, 5s
+            await new Promise(resolve => setTimeout(resolve, 1000 * (i + 1)));
             
             txDetails = await provider.connection.getTransaction(txSig, {
               commitment: 'confirmed',
@@ -262,13 +272,28 @@ export const useStealActions = (
               if (match) vrfResult = match[1];
             }
     
-            // Store events to backend
-            if (eventParser) {
-              try {
-                await storeTransactionEvents(connection, eventParser, txSig);
-              } catch (backendError) {
-                console.warn('⚠️ Backend storage failed:', backendError);
-              }
+            // Manual storage for retry case too
+            try {
+              const blockTime = txDetails.blockTime || Math.floor(Date.now() / 1000);
+              const property = await fetchPropertyData(program, propertyId);
+              const stealCost = property ? Number(property.price) * 0.5 : 0;
+              
+              await storeAction({
+                txSignature: txSig,
+                actionType: success ? 'steal_success' : 'steal_failed',
+                playerAddress: wallet.publicKey.toString(),
+                targetAddress: 'unknown', // We don't have it in retry case
+                propertyId,
+                amount: stealCost,
+                slots: success ? 1 : 0,
+                success,
+                blockTime,
+                metadata: { vrfResult }
+              });
+              
+              console.log('✅ Stored retry steal action');
+            } catch (storeError) {
+              console.error('⚠️ Failed to store retry action:', storeError);
             }
     
             return {
@@ -281,7 +306,6 @@ export const useStealActions = (
           console.error('Failed to fetch transaction after retries:', fetchError);
         }
         
-        // If still couldn't get result, return unknown
         return {
           tx: 'already-processed',
           success: false,

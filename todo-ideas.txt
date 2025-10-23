@@ -18,6 +18,8 @@ Add 3d scaling houses when clicking on the property menu
 fix the disparition bug from claiming when it's updated from blockchain every 30 sec/ same for leaderboard
 Instead of 25% sell scaling (ui not right yet)
 
+Use helius webhooks to store data in the backend to make sure everything is running clean
+
 To much helius API calls
 
 When claiming reward need to instantly put it back to 0 (no keep counting until we check program for exact number)

@@ -234,7 +234,6 @@ export function PropertyCard({ propertyId, onSelect }: PropertyCardProps) {
 
   // Get steal cooldown info 
   const { isOnStealCooldown, stealCooldownRemaining } = useStealCooldown(propertyId); 
-  console.log('🔒 PropertyCard', propertyId, ':', { isOnStealCooldown, stealCooldownRemaining });
   
   // Format cooldown time
   const formatCooldown = (seconds: number) => {
@@ -275,8 +274,6 @@ export function PropertyCard({ propertyId, onSelect }: PropertyCardProps) {
           const level = Math.ceil(progressRatio * 5);
           setBuildingLevel(level);
           
-          console.log(`🏠 Property ${propertyId}: ${slotsOwned}/${maxPerPlayer} slots → Level ${level}`);
-          
           // Check if shield is active
           const now = Date.now() / 1000;
           const isShielded = ownershipData.slotsShielded > 0 && ownershipData.shieldExpiry.toNumber() > now;
@@ -301,7 +298,6 @@ export function PropertyCard({ propertyId, onSelect }: PropertyCardProps) {
           
           setHasCompleteSet(ownedInSet >= requiredProps);
           
-          console.log(`🏠 Property ${propertyId} (${property.name}): ${slotsOwned} slots, Level ${level}, Shield: ${isShielded}, Complete Set: ${ownedInSet >= requiredProps}`);
         } else {
           setBuildingLevel(0);
           setShieldActive(false);
