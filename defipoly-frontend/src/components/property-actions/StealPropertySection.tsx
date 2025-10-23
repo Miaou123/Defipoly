@@ -1,6 +1,6 @@
 // ============================================
 // FILE: defipoly-frontend/src/components/property-actions/StealPropertySection.tsx
-// FIXED VERSION - Added refetchStealCooldown after steal transaction
+// FIXED VERSION - Allow stealing up to max slots & use propertyId for cooldown
 // ============================================
 
 import { useState, useEffect } from 'react';
@@ -35,8 +35,8 @@ export function StealPropertySection({
   const { showSuccess, showError } = useNotification();
   const { triggerRefresh } = usePropertyRefresh();
   
-  // FIXED: Added refetchStealCooldown to the destructured values
-  const { isOnStealCooldown, stealCooldownRemaining, refetchStealCooldown } = useStealCooldown(property.setId);
+  // FIXED: Use propertyId instead of property.setId for correct cooldown data
+  const { isOnStealCooldown, stealCooldownRemaining, refetchStealCooldown } = useStealCooldown(propertyId);
   
   const [showStealOptions, setShowStealOptions] = useState(false);
   const [availableTargets, setAvailableTargets] = useState<number | null>(null);
@@ -44,6 +44,9 @@ export function StealPropertySection({
 
   const stealCost = property.price * 0.5;
   const canSteal = balance >= stealCost && !isOnStealCooldown;
+  
+  // FIXED: Check if user would exceed max slots per property if they steal
+  const wouldExceedMaxSlots = propertyData && (propertyData.owned >= propertyData.maxSlotsPerProperty);
 
   const formatCooldown = (seconds: number) => {
     const hours = Math.floor(seconds / 3600);
@@ -78,12 +81,11 @@ export function StealPropertySection({
       const result = await stealPropertyInstant(propertyId);
       
       if (result) {
-        // FIXED: Added refetchStealCooldown here to update cooldown state
         await refetchStealCooldown();
         
         if (result.success) {
           showSuccess(
-            'Steal Successful!', 
+            'Steal Successful!',
             `You successfully stole 1 slot of ${property.name}! VRF: ${result.vrfResult}`,
             result.tx
           );
@@ -99,7 +101,6 @@ export function StealPropertySection({
     } catch (error: any) {
       console.error('Error stealing property:', error);
       
-      // FIXED: Added refetchStealCooldown here too in case error was cooldown-related
       await refetchStealCooldown();
       
       const errorString = error?.message || error?.toString() || '';
@@ -133,8 +134,8 @@ export function StealPropertySection({
     }
   };
 
-  // Don't show if user already owns slots in this property
-  if (propertyData && propertyData.owned > 0) return null;
+  // FIXED: Don't show if user has reached max slots per property
+  if (wouldExceedMaxSlots) return null;
 
   // Show cooldown warning if on cooldown
   if (isOnStealCooldown && !showStealOptions) {
@@ -158,14 +159,17 @@ export function StealPropertySection({
     return (
       <button
         onClick={() => setShowStealOptions(true)}
-        disabled={!canSteal || loading}
+        disabled={!canSteal || loading || isOnStealCooldown}
         className={`w-full py-3 rounded-xl font-bold text-base transition-all shadow-lg ${
-          !canSteal || loading
+          !canSteal || loading || isOnStealCooldown
             ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
             : 'bg-gradient-to-r from-red-600 to-orange-600 hover:from-red-700 hover:to-orange-700 text-white transform hover:scale-105'
         }`}
       >
-        💰 Steal Property ({stealCost.toLocaleString()} POL)
+        {isOnStealCooldown 
+          ? `Cooldown: ${formatCooldown(stealCooldownRemaining)}`
+          : `💰 Steal Property (${stealCost.toLocaleString()} POL)`
+        }
       </button>
     );
   }

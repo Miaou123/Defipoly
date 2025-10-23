@@ -233,7 +233,8 @@ export function PropertyCard({ propertyId, onSelect }: PropertyCardProps) {
   const { cooldownRemaining, isOnCooldown, lastPurchasedPropertyId } = useCooldown(property.setId);
 
   // Get steal cooldown info 
-  const { isOnStealCooldown, stealCooldownRemaining } = useStealCooldown(property.setId);
+  const { isOnStealCooldown, stealCooldownRemaining } = useStealCooldown(propertyId); 
+  console.log('🔒 PropertyCard', propertyId, ':', { isOnStealCooldown, stealCooldownRemaining });
   
   // Format cooldown time
   const formatCooldown = (seconds: number) => {
