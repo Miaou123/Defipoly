@@ -7,7 +7,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useWallet, useConnection } from '@solana/wallet-adapter-react';
-import { usePropertyRefresh } from '@/components/PropertyRefreshContext';
+import { usePropertyRefresh } from '@/contexts/PropertyRefreshContext';
 import { PROPERTIES } from '@/utils/constants';
 import { PublicKey } from '@solana/web3.js';
 import { PROGRAM_ID } from '@/utils/constants';

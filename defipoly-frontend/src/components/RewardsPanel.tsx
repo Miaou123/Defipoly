@@ -4,11 +4,11 @@ import { useState, useRef } from 'react';
 import { useWallet, useConnection } from '@solana/wallet-adapter-react';
 import { useRewards } from '@/hooks/useRewards';
 import { useDefipoly } from '@/hooks/useDefipoly';
-import { useNotification } from './NotificationProvider';
+import { useNotification } from '../contexts/NotificationContext';
 import { StyledWalletButton } from './StyledWalletButton';
 import { PROGRAM_ID } from '@/utils/constants';
 import { BorshCoder, EventParser } from '@coral-xyz/anchor';
-import idl from '@/types/defipoly_program.json';
+import idl from '@/idl/defipoly_program.json';
 
 export function RewardsPanel() {
   const { connected, publicKey } = useWallet();

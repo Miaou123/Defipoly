@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Defipoly Bot Batch Operations - Updated for Monopoly (22 properties)
+# Defipoly Bot Batch Operations - Updated for ALL 22 Monopoly Properties
 # This script provides convenient batch operations for testing
 
 set -e
@@ -51,45 +51,93 @@ setup_all() {
   print_success "Setup complete! All 50 wallets are ready."
 }
 
-# Command: distribute-properties (UPDATED for 22 Monopoly properties)
+# Command: distribute-properties (UPDATED - ALL 22 properties with parallel execution)
 distribute_properties() {
-  print_header "🏠 Distributing Monopoly Properties"
+  print_header "🏠 Distributing ALL Monopoly Properties"
   
   cd "$PROJECT_ROOT"
   
-  echo "Distributing across Monopoly board (22 properties, 8 sets)..."
+  echo "Distributing 50 wallets across all 22 properties (8 sets)..."
+  echo "Using parallel execution for speed..."
+  echo ""
   
-  # Set 0: Brown (Properties 0-1) - Wallets 0-9
+  # Set 0: Brown (Properties 0-1)
   echo -e "${CYAN}Set 0 (Brown): Mediterranean & Baltic${NC}"
-  npm run bot buy 0 1 0 1 2 3 4 > /dev/null 2>&1 || echo "  Some purchases may have failed"
-  npm run bot buy 1 1 5 6 7 8 9 > /dev/null 2>&1 || echo "  Some purchases may have failed"
+  npm run bot buy 0 2 0 1 2 &
+  npm run bot buy 1 2 3 4 &
+  wait
+  sleep 1
   
-  # Set 1: Light Blue (Properties 2-4) - Wallets 10-19
+  # Set 1: Light Blue (Properties 2-4)
   echo -e "${CYAN}Set 1 (Light Blue): Oriental, Vermont, Connecticut${NC}"
-  npm run bot buy 2 1 10 11 12 13 > /dev/null 2>&1 || echo "  Some purchases may have failed"
-  npm run bot buy 3 1 14 15 16 > /dev/null 2>&1 || echo "  Some purchases may have failed"
-  npm run bot buy 4 1 17 18 19 > /dev/null 2>&1 || echo "  Some purchases may have failed"
+  npm run bot buy 2 2 5 6 &
+  npm run bot buy 3 2 7 8 &
+  npm run bot buy 4 2 9 10 &
+  wait
+  sleep 1
   
-  # Set 2: Pink (Properties 5-7) - Wallets 20-29
+  # Set 2: Pink (Properties 5-7)
   echo -e "${CYAN}Set 2 (Pink): St. Charles, States, Virginia${NC}"
-  npm run bot buy 5 1 20 21 22 23 > /dev/null 2>&1 || echo "  Some purchases may have failed"
-  npm run bot buy 6 1 24 25 26 > /dev/null 2>&1 || echo "  Some purchases may have failed"
-  npm run bot buy 7 1 27 28 29 > /dev/null 2>&1 || echo "  Some purchases may have failed"
+  npm run bot buy 5 2 11 12 &
+  npm run bot buy 6 2 13 14 &
+  npm run bot buy 7 2 15 16 &
+  wait
+  sleep 1
   
-  # Set 3: Orange (Properties 8-10) - Wallets 30-39
+  # Set 3: Orange (Properties 8-10)
   echo -e "${CYAN}Set 3 (Orange): St. James, Tennessee, New York${NC}"
-  npm run bot buy 8 1 30 31 32 33 > /dev/null 2>&1 || echo "  Some purchases may have failed"
-  npm run bot buy 9 1 34 35 36 > /dev/null 2>&1 || echo "  Some purchases may have failed"
-  npm run bot buy 10 1 37 38 39 > /dev/null 2>&1 || echo "  Some purchases may have failed"
+  npm run bot buy 8 2 17 18 &
+  npm run bot buy 9 2 19 20 &
+  npm run bot buy 10 2 21 22 &
+  wait
+  sleep 1
   
-  # Set 4: Red (Properties 11-13) - Wallets 40-49
+  # Set 4: Red (Properties 11-13)
   echo -e "${CYAN}Set 4 (Red): Kentucky, Indiana, Illinois${NC}"
-  npm run bot buy 11 1 40 41 42 > /dev/null 2>&1 || echo "  Some purchases may have failed"
-  npm run bot buy 12 1 43 44 45 > /dev/null 2>&1 || echo "  Some purchases may have failed"
-  npm run bot buy 13 1 46 47 48 49 > /dev/null 2>&1 || echo "  Some purchases may have failed"
+  npm run bot buy 11 2 23 24 &
+  npm run bot buy 12 2 25 26 &
+  npm run bot buy 13 2 27 28 &
+  wait
+  sleep 1
   
-  print_warning "Sets 5-7 (Yellow, Green, Dark Blue) not distributed - only 50 wallets"
-  print_success "Properties distributed! (Sets 0-4 covered)"
+  # Set 5: Yellow (Properties 14-16)
+  echo -e "${CYAN}Set 5 (Yellow): Atlantic, Ventnor, Marvin Gardens${NC}"
+  npm run bot buy 14 2 29 30 &
+  npm run bot buy 15 2 31 32 &
+  npm run bot buy 16 2 33 34 &
+  wait
+  sleep 1
+  
+  # Set 6: Green (Properties 17-19)
+  echo -e "${CYAN}Set 6 (Green): Pacific, N. Carolina, Pennsylvania${NC}"
+  npm run bot buy 17 2 35 36 &
+  npm run bot buy 18 2 37 38 &
+  npm run bot buy 19 2 39 40 &
+  wait
+  sleep 1
+  
+  # Set 7: Dark Blue (Properties 20-21)
+  echo -e "${CYAN}Set 7 (Dark Blue): Park Place, Boardwalk${NC}"
+  npm run bot buy 20 2 41 42 43 &
+  npm run bot buy 21 2 44 45 46 &
+  wait
+  sleep 1
+  
+  # Extra variety - remaining wallets
+  echo -e "${CYAN}Additional purchases for variety...${NC}"
+  npm run bot buy 0 1 47 &
+  npm run bot buy 10 1 48 &
+  npm run bot buy 21 1 49 &
+  wait
+  
+  echo ""
+  print_success "ALL properties distributed! All 8 sets covered"
+  echo ""
+  echo "Distribution summary:"
+  echo "  • Properties 0-21: All have 2-3 owners each"
+  echo "  • Each bot owns 2 slots of 1-2 properties"
+  echo "  • All 8 color sets populated"
+  echo "  • Ready for steal/shield testing!"
 }
 
 # Command: fill-property
@@ -149,7 +197,7 @@ claim_all() {
   print_success "All rewards claimed!"
 }
 
-# Command: status (FIXED for better reliability)
+# Command: status
 check_status() {
   cd "$PROJECT_ROOT"
   
@@ -160,22 +208,17 @@ check_status() {
   local has_properties=0
   
   for i in {0..49}; do
-    # Run bot info command and capture output
     output=$(npm run bot info $i 2>/dev/null || echo "")
     
-    # Check if player is initialized
     if echo "$output" | grep -q "Player Account:"; then
       total_initialized=$((total_initialized + 1))
       
-      # Try to extract slot count
       slots=$(echo "$output" | grep -i "total.*slots.*owned\|slots owned:" | grep -oP '\d+' | head -1 || echo "0")
       
-      # Fallback: count Property lines
       if [ -z "$slots" ] || [ "$slots" -eq 0 ]; then
         slots=$(echo "$output" | grep -c "Property" || echo "0")
       fi
       
-      # Ensure slots is numeric
       slots=${slots:-0}
       
       if [ "$slots" -gt 0 ]; then
@@ -206,7 +249,7 @@ detail_status() {
   done
 }
 
-# Command: check-set (NEW - Check complete set ownership)
+# Command: check-set
 check_set() {
   if [ -z "$1" ]; then
     print_error "Usage: $0 check-set <wallet_id>"
@@ -221,7 +264,6 @@ check_set() {
   
   output=$(npm run bot info $wallet 2>/dev/null)
   
-  # Check each set
   sets=(
     "0:Brown:0,1"
     "1:Light Blue:2,3,4"
@@ -237,7 +279,6 @@ check_set() {
     IFS=':' read -r set_id set_name props <<< "$set_info"
     IFS=',' read -ra prop_array <<< "$props"
     
-    # Check if owns all properties in set
     owns_all=true
     for prop in "${prop_array[@]}"; do
       if ! echo "$output" | grep -q "Property $prop:"; then
@@ -292,7 +333,7 @@ test_scenario() {
       ;;
     
     2)
-      print_header "🎮 Scenario 2: Monopoly Distribution"
+      print_header "🎮 Scenario 2: Full Board Distribution"
       distribute_properties
       print_success "Scenario 2 complete"
       ;;
@@ -321,25 +362,26 @@ test_scenario() {
       ;;
     
     5)
-      print_header "🎮 Scenario 5: Cooldown Testing"
-      echo "Testing cooldown enforcement..."
-      echo "Wallet 20 buys Property 0 (Mediterranean)"
-      npm run bot buy 0 1 20
+      print_header "🎮 Scenario 5: Steal Cooldown Testing"
+      echo "Testing property-based steal cooldown..."
+      echo "Bot 20 steals from Property 0"
+      npm run bot steal 0 20
       sleep 2
-      echo "Wallet 20 tries Property 1 (Baltic) - should be blocked by cooldown"
-      npm run bot buy 1 1 20
+      echo "Bot 20 tries to steal Property 0 again - should be blocked"
+      npm run bot steal 0 20
       echo ""
-      print_warning "Second purchase should fail with CooldownActive error"
-      print_success "Scenario 5 complete"
+      echo "Bot 20 tries to steal Property 1 - should SUCCEED (different property)"
+      npm run bot steal 1 20
+      print_success "Scenario 5 complete - Verify cooldown is per-property"
       ;;
     
     *)
       echo "Available scenarios:"
       echo "  1 - Basic testing (all buy 1 slot of Property 0)"
-      echo "  2 - Monopoly distribution (spread across sets)"
+      echo "  2 - Full board distribution (ALL 22 properties)"
       echo "  3 - Complete set purchase (test set bonus)"
       echo "  4 - Shield & rewards flow"
-      echo "  5 - Cooldown testing (verify cooldown works)"
+      echo "  5 - Steal cooldown testing (property-based)"
       echo ""
       echo "Usage: $0 scenario <1-5>"
       ;;
@@ -356,7 +398,7 @@ fund_wallets() {
   print_success "Wallets funded!"
 }
 
-# Command: quick-buy (NEW - Quick property purchase)
+# Command: quick-buy
 quick_buy() {
   if [ -z "$1" ] || [ -z "$2" ]; then
     print_error "Usage: $0 quick-buy <property_id> <wallet_id> [slots]"
@@ -431,7 +473,7 @@ case "$1" in
     echo ""
     echo "Commands:"
     echo "  ${GREEN}setup-all${NC}                    Complete setup (create wallets, fund, initialize)"
-    echo "  ${GREEN}distribute${NC}                   Distribute properties across Monopoly sets"
+    echo "  ${GREEN}distribute${NC}                   Distribute ALL 22 properties across 50 bots"
     echo "  ${GREEN}fill <id> [slots]${NC}            Fill a property (all wallets buy X slots)"
     echo "  ${GREEN}quick-buy <id> <wallet> [slots]${NC}  Single wallet purchase"
     echo "  ${GREEN}shields <id> <slots> [wallets]${NC}  Activate shields for property"
@@ -445,11 +487,13 @@ case "$1" in
     echo ""
     echo "Examples:"
     echo "  ${YELLOW}$0 setup-all${NC}"
+    echo "  ${YELLOW}$0 distribute${NC}                (populate ALL 22 properties)"
     echo "  ${YELLOW}$0 fill 0 1${NC}                 (all wallets buy 1 slot of Property 0)"
     echo "  ${YELLOW}$0 quick-buy 0 10 3${NC}         (wallet 10 buys 3 slots of Property 0)"
     echo "  ${YELLOW}$0 shields 0 1 10 11 12${NC}     (wallets 10-12 shield 1 slot)"
     echo "  ${YELLOW}$0 check-set 10${NC}             (check if wallet 10 owns any complete sets)"
-    echo "  ${YELLOW}$0 scenario 3${NC}               (test complete set bonus)"
+    echo "  ${YELLOW}$0 scenario 2${NC}               (distribute all properties)"
+    echo "  ${YELLOW}$0 scenario 5${NC}               (test steal cooldown)"
     echo ""
     echo "Monopoly Property Reference:"
     echo "  Set 0 (Brown):      0-1     (Mediterranean, Baltic)"

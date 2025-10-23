@@ -390,7 +390,7 @@ pub fn steal_property_instant(
     } else {
         // First time initialization
         steal_cooldown.player = ctx.accounts.attacker.key();
-        steal_cooldown.set_id = property.set_id;
+        steal_cooldown.property_id = property.property_id;
         steal_cooldown.cooldown_duration = cooldown_duration;
         steal_cooldown.bump = ctx.bumps.steal_cooldown;
     }
@@ -1063,7 +1063,7 @@ pub struct StealPropertyInstant<'info> {
         init_if_needed,
         payer = attacker,
         space = 8 + PlayerStealCooldown::SIZE,
-        seeds = [b"steal_cooldown", attacker.key().as_ref(), property.set_id.to_le_bytes().as_ref()],
+        seeds = [b"steal_cooldown", attacker.key().as_ref(), property.property_id.to_le_bytes().as_ref()],
         bump
     )]
     pub steal_cooldown: Account<'info, PlayerStealCooldown>,
@@ -1321,7 +1321,7 @@ impl PlayerSetOwnership {
 #[account]
 pub struct PlayerStealCooldown {
     pub player: Pubkey,
-    pub set_id: u8,
+    pub property_id: u8,
     pub last_steal_attempt_timestamp: i64,
     pub cooldown_duration: i64,
     pub bump: u8,

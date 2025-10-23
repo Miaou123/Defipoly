@@ -6,7 +6,7 @@ import { Connection, PublicKey } from '@solana/web3.js';
 import { Program, AnchorProvider, Idl } from '@coral-xyz/anchor';
 import { PROGRAM_ID } from './constants';
 // ✅ Import from types folder (auto-synced from backend)
-import idl from '@/types/defipoly_program.json';
+import idl from '@/idl/defipoly_program.json';
 import type { Property, PropertyOwnership, PlayerAccount, PlayerSetCooldown } from '@/types/accounts';
 import { deserializeOwnership, deserializeProperty, deserializePlayer } from './deserialize';
 
@@ -175,13 +175,13 @@ export async function fetchSetCooldownData(
  */
 export function getStealCooldownPDA(
   playerPubkey: PublicKey,
-  setId: number
+  propertyId: number
 ): [PublicKey, number] {
   return PublicKey.findProgramAddressSync(
     [
       Buffer.from('steal_cooldown'),
       playerPubkey.toBuffer(),
-      Buffer.from([setId]),
+      Buffer.from([propertyId]),
     ],
     PROGRAM_ID
   );

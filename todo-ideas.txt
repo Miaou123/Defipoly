@@ -20,6 +20,10 @@ Instead of 25% sell scaling (ui not right yet)
 
 Maybe add a system to adjust rewards depending on the rewards pool size (more tokens in reward pool mode rewards, less tokens less rewards)
 
+Add blockchain checks call every X minutes to check for all backend data if its accurate (shield cooldown / steal cooldown / cooldowns etc) and give me warnings logs when there are disprecancies
+
+Add system like addicted where people have to enter a code to play and then get 5 code etc
+
 Give admin all rights (airdrop properties etc)
 
 PDA changes:

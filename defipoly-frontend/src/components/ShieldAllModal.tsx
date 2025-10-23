@@ -8,8 +8,8 @@
 import { useState } from 'react';
 import { Shield, X, AlertCircle, CheckCircle, Loader, Trophy, Clock } from 'lucide-react';
 import { useDefipoly } from '@/hooks/useDefipoly';
-import { useNotification } from './NotificationProvider';
-import { usePropertyRefresh } from './PropertyRefreshContext';
+import { useNotification } from '../contexts/NotificationContext';
+import { usePropertyRefresh } from '../contexts/PropertyRefreshContext';
 import { PROPERTIES } from '@/utils/constants';
 
 interface OwnedProperty {

@@ -781,7 +781,8 @@
           "name": "property"
         },
         {
-          "name": "target_ownership"
+          "name": "target_ownership",
+          "writable": true
         },
         {
           "name": "attacker_ownership",
@@ -844,7 +845,7 @@
               },
               {
                 "kind": "account",
-                "path": "property.set_id",
+                "path": "property.property_id",
                 "account": "Property"
               }
             ]
@@ -1675,7 +1676,7 @@
             "type": "pubkey"
           },
           {
-            "name": "set_id",
+            "name": "property_id",
             "type": "u8"
           },
           {

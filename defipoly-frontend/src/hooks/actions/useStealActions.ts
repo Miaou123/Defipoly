@@ -121,7 +121,7 @@ export const useStealActions = (
       if (!property) {
         throw new Error(`Property ${propertyId} not found`);
       }
-      const [stealCooldownPDA] = getStealCooldownPDA(wallet.publicKey, property.setId);
+      const [stealCooldownPDA] = getStealCooldownPDA(wallet.publicKey, propertyId);
 
       // Step 4: Generate user randomness for VRF
       const userRandomness = new Uint8Array(32);
@@ -210,8 +210,85 @@ export const useStealActions = (
         vrfResult,
       };
 
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error in instant steal:', error);
+      
+      const errorMessage = error?.message || error?.toString() || '';
+      if (errorMessage.includes('already been processed') || 
+          errorMessage.includes('AlreadyProcessed')) {
+        console.log('⏳ Transaction already processed - fetching result...');
+        
+        try {
+          // Extract transaction signature
+          const txSig = error.signature || error.txid;
+          if (!txSig) {
+            throw new Error('No transaction signature available');
+          }
+    
+          // Retry fetching transaction with exponential backoff
+          let txDetails = null;
+          const maxRetries = 5;
+          for (let i = 0; i < maxRetries; i++) {
+            await new Promise(resolve => setTimeout(resolve, 1000 * (i + 1))); // 1s, 2s, 3s, 4s, 5s
+            
+            txDetails = await provider.connection.getTransaction(txSig, {
+              commitment: 'confirmed',
+              maxSupportedTransactionVersion: 0,
+            });
+            
+            if (txDetails?.meta?.logMessages) {
+              console.log(`✅ Transaction fetched on attempt ${i + 1}`);
+              break;
+            }
+            
+            console.log(`⏳ Retry ${i + 1}/${maxRetries} - transaction not found yet...`);
+          }
+          
+          if (txDetails?.meta?.logMessages) {
+            const logs = txDetails.meta.logMessages;
+            const successLog = logs.find(log => log.includes('✅ INSTANT STEAL SUCCESS'));
+            const failLog = logs.find(log => log.includes('❌ INSTANT STEAL FAILED'));
+            
+            let success = false;
+            let vrfResult = 'unknown';
+    
+            if (successLog) {
+              success = true;
+              const match = successLog.match(/entropy: (\d+)/);
+              if (match) vrfResult = match[1];
+            } else if (failLog) {
+              success = false;
+              const match = failLog.match(/entropy: (\d+)/);
+              if (match) vrfResult = match[1];
+            }
+    
+            // Store events to backend
+            if (eventParser) {
+              try {
+                await storeTransactionEvents(connection, eventParser, txSig);
+              } catch (backendError) {
+                console.warn('⚠️ Backend storage failed:', backendError);
+              }
+            }
+    
+            return {
+              tx: txSig,
+              success,
+              vrfResult,
+            };
+          }
+        } catch (fetchError) {
+          console.error('Failed to fetch transaction after retries:', fetchError);
+        }
+        
+        // If still couldn't get result, return unknown
+        return {
+          tx: 'already-processed',
+          success: false,
+          vrfResult: 'unknown',
+        };
+      }
+      
       throw error;
     } finally {
       setTimeout(() => setLoading(false), 1000);

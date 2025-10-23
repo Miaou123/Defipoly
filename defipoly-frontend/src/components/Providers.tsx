@@ -1,8 +1,8 @@
 'use client';
 
-import { WalletContextProvider } from "@/components/WalletProvider";
-import { NotificationProvider } from "@/components/NotificationProvider";
-import { PropertyRefreshProvider } from '@/components/PropertyRefreshContext';
+import { WalletContextProvider } from "@/contexts/WalletContext";
+import { NotificationProvider } from "@/contexts/NotificationContext";
+import { PropertyRefreshProvider } from '@/contexts/PropertyRefreshContext';
 
 export function Providers({ children }: { children: React.ReactNode }) {
   return (

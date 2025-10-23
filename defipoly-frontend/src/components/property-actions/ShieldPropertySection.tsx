@@ -5,8 +5,8 @@
 
 import { useState, useEffect } from 'react';
 import { useDefipoly } from '@/hooks/useDefipoly';
-import { useNotification } from '../NotificationProvider';
-import { usePropertyRefresh } from '../PropertyRefreshContext';
+import { useNotification } from '../../contexts/NotificationContext';
+import { usePropertyRefresh } from '../../contexts/PropertyRefreshContext';
 import { PROPERTIES } from '@/utils/constants';
 import { Clock, Shield } from 'lucide-react';
 

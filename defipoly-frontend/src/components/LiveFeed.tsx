@@ -5,7 +5,7 @@ import { useConnection } from '@solana/wallet-adapter-react';
 import { PROGRAM_ID, getPropertyById } from '@/utils/constants';
 import { BorshCoder, EventParser } from '@coral-xyz/anchor';
 import { getProfilesBatch, ProfileData } from '@/utils/profileStorage';
-import idl from '@/types/defipoly_program.json';
+import idl from '@/idl/defipoly_program.json';
 
 interface FeedItem {
   message: string;

@@ -3,8 +3,9 @@
 import { useState, useEffect } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { useDefipoly } from '@/hooks/useDefipoly';
-import { usePropertyRefresh } from '@/components/PropertyRefreshContext';
+import { usePropertyRefresh } from '@/contexts/PropertyRefreshContext';
 import { useCooldown } from '@/hooks/useCooldown';
+import { useStealCooldown } from '@/hooks/useStealCooldown';
 import { PROPERTIES } from '@/utils/constants';
 
 // Building SVGs for levels 0-5 (Classic Monopoly Style)
@@ -230,6 +231,9 @@ export function PropertyCard({ propertyId, onSelect }: PropertyCardProps) {
 
   // Get cooldown info (optimized - fetches once, calculates client-side)
   const { cooldownRemaining, isOnCooldown, lastPurchasedPropertyId } = useCooldown(property.setId);
+
+  // Get steal cooldown info 
+  const { isOnStealCooldown, stealCooldownRemaining } = useStealCooldown(property.setId);
   
   // Format cooldown time
   const formatCooldown = (seconds: number) => {
@@ -367,6 +371,18 @@ export function PropertyCard({ propertyId, onSelect }: PropertyCardProps) {
             <span className="text-[7px]">⏳</span>
             <span className="text-[6px] font-semibold text-orange-700">
               {formatCooldown(cooldownRemaining)}
+            </span>
+          </div>
+        </div>
+      )}
+
+      {/* ADD THIS: Steal Cooldown Indicator */}
+      {isOnStealCooldown && (
+        <div className="px-1 py-1 bg-red-50 border-t border-red-200 flex-shrink-0">
+          <div className="flex items-center justify-center gap-0.5">
+            <span className="text-[7px]">🔒</span>
+            <span className="text-[6px] font-semibold text-red-700">
+              Steal: {formatCooldown(stealCooldownRemaining)}
             </span>
           </div>
         </div>
