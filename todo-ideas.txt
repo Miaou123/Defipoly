@@ -18,7 +18,9 @@ Add 3d scaling houses when clicking on the property menu
 fix the disparition bug from claiming when it's updated from blockchain every 30 sec/ same for leaderboard
 Instead of 25% sell scaling (ui not right yet)
 
-Use helius webhooks to store data in the backend to make sure everything is running clean?
+show the number of unshielded slots
+
+Add wss in addition to websockets? wss = 100%
 
 To much helius API calls
 

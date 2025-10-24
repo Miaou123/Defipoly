@@ -7,7 +7,7 @@ import { useState, useEffect } from 'react';
 import { useDefipoly } from '@/hooks/useDefipoly';
 import { useNotification } from '../../contexts/NotificationContext';
 import { usePropertyRefresh } from '../../contexts/PropertyRefreshContext';
-import { useStealCooldown } from '@/hooks/useStealCooldown';
+import { useStealCooldownFromContext } from '@/contexts/StealCooldownContext';
 import { PROPERTIES } from '@/utils/constants';
 import { fetchPropertyStats } from '@/utils/propertyStats';
 import { Clock } from 'lucide-react';
@@ -36,7 +36,7 @@ export function StealPropertySection({
   const { triggerRefresh } = usePropertyRefresh();
   
   // FIXED: Use propertyId instead of property.setId for correct cooldown data
-  const { isOnStealCooldown, stealCooldownRemaining, refetchStealCooldown } = useStealCooldown(propertyId);
+  const { isOnStealCooldown, stealCooldownRemaining, refetchStealCooldown } = useStealCooldownFromContext(propertyId);
   
   const [showStealOptions, setShowStealOptions] = useState(false);
   const [availableTargets, setAvailableTargets] = useState<number | null>(null);

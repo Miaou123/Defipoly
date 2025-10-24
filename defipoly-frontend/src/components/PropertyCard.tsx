@@ -5,7 +5,8 @@ import { useWallet } from '@solana/wallet-adapter-react';
 import { useDefipoly } from '@/hooks/useDefipoly';
 import { usePropertyRefresh } from '@/contexts/PropertyRefreshContext';
 import { useCooldown } from '@/hooks/useCooldown';
-import { useStealCooldown } from '@/hooks/useStealCooldown';
+import { useStealCooldownFromContext } from '@/contexts/StealCooldownContext';
+
 import { PROPERTIES } from '@/utils/constants';
 
 // Building SVGs for levels 0-5 (Classic Monopoly Style)
@@ -233,7 +234,7 @@ export function PropertyCard({ propertyId, onSelect }: PropertyCardProps) {
   const { cooldownRemaining, isOnCooldown, lastPurchasedPropertyId } = useCooldown(property.setId);
 
   // Get steal cooldown info 
-  const { isOnStealCooldown, stealCooldownRemaining } = useStealCooldown(propertyId); 
+  const { isOnStealCooldown, stealCooldownRemaining } = useStealCooldownFromContext(propertyId);
   
   // Format cooldown time
   const formatCooldown = (seconds: number) => {
