@@ -114,3 +114,9 @@ config/devnet.json
 config/mainnet.json
 !config/devnet.example.json
 !config/mainnet.example.json
+
+
+# ========================================
+# Update ideas
+# ========================================
+*todo-ideas.txt

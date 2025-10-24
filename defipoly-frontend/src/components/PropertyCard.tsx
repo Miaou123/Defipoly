@@ -48,32 +48,32 @@ const BUILDING_SVGS: { [key: number]: React.ReactNode } = {
       <rect x="13" y="27" width="4" height="4" fill="#FFFFCC"/>
       <rect x="28" y="27" width="4" height="4" fill="#FFFFCC"/>
       <rect x="13" y="33" width="4" height="4" fill="#FFFFCC"/>
-      <rect x="28" y="33" width="4" height="4" fill="#FFFFCC"/>
     </svg>
   ),
   3: (
-    // Small Apartment Building (3 floors)
-    <svg width="50" height="55" viewBox="0 0 50 55" className="w-full h-auto">
-      <ellipse cx="25" cy="52" rx="15" ry="3.5" fill="black" opacity="0.3"/>
-      {/* Main building */}
-      <path d="M 25 15 L 40 21 L 40 50 L 25 52 L 10 50 L 10 21 Z" fill="#CD853F"/>
-      <path d="M 25 15 L 40 21 L 40 50 L 25 43 Z" fill="#A0522D"/>
+    // Apartment Building (3-story)
+    <svg width="55" height="55" viewBox="0 0 55 55" className="w-full h-auto">
+      <ellipse cx="27.5" cy="52" rx="16" ry="3" fill="black" opacity="0.3"/>
+      {/* Main structure */}
+      <path d="M 27.5 16 L 42 20 L 42 50 L 27.5 52 L 13 50 L 13 20 Z" fill="#D2691E"/>
+      <path d="M 27.5 16 L 42 20 L 42 50 L 27.5 40 Z" fill="#A0522D"/>
       {/* Roof */}
-      <path d="M 25 12 L 42 19 L 40 21 L 25 15 L 10 21 L 8 19 Z" fill="#8B4513"/>
-      <path d="M 25 12 L 42 19 L 40 21 L 25 15 Z" fill="#654321"/>
+      <path d="M 27.5 10 L 45 16 L 42 20 L 27.5 16 L 13 20 L 10 16 Z" fill="#8B4513"/>
+      <path d="M 27.5 10 L 45 16 L 42 20 L 27.5 16 Z" fill="#654321"/>
       {/* Door */}
-      <rect x="21" y="45" width="8" height="7" fill="#654321"/>
-      {/* Windows - 3 floors, properly aligned */}
-      <rect x="12" y="27" width="4" height="4" fill="#FFFFCC"/>
-      <rect x="22" y="27" width="4" height="4" fill="#FFFFCC"/>
-      <rect x="34" y="27" width="4" height="4" fill="#FFFFCC"/>
+      <rect x="23" y="45" width="9" height="7" fill="#654321"/>
+      <circle cx="29" cy="48.5" r="0.6" fill="#FFD700"/>
+      {/* Windows - 3 floors */}
+      <rect x="15" y="24" width="4" height="4" fill="#FFFFCC"/>
+      <rect x="24" y="24" width="4" height="4" fill="#FFFFCC"/>
+      <rect x="33" y="24" width="4" height="4" fill="#FFFFCC"/>
       
-      <rect x="12" y="34" width="4" height="4" fill="#FFFFCC"/>
-      <rect x="22" y="34" width="4" height="4" fill="#FFFFCC"/>
-      <rect x="34" y="34" width="4" height="4" fill="#FFFFCC"/>
+      <rect x="15" y="31" width="4" height="4" fill="#FFFFCC"/>
+      <rect x="24" y="31" width="4" height="4" fill="#FFFFCC"/>
+      <rect x="33" y="31" width="4" height="4" fill="#FFFFCC"/>
       
-      <rect x="12" y="41" width="4" height="4" fill="#FFFFCC"/>
-      <rect x="34" y="41" width="4" height="4" fill="#FFFFCC"/>
+      <rect x="15" y="38" width="4" height="4" fill="#FFFFCC"/>
+      <rect x="33" y="38" width="4" height="4" fill="#FFFFCC"/>
     </svg>
   ),
   4: (
@@ -243,8 +243,20 @@ export function PropertyCard({ propertyId, onSelect }: PropertyCardProps) {
     return `${mins}m`;
   };
 
-  // Only show cooldown if there's a cooldown AND this is NOT the property that was just bought
+  // Only show buy cooldown if there's a cooldown AND this is NOT the property that was just bought
   const isThisPropertyBlocked = isOnCooldown && lastPurchasedPropertyId !== propertyId;
+
+  // Determine which cooldowns are active
+  const activeCooldowns = [];
+  if (shieldActive) {
+    activeCooldowns.push({ icon: '🛡️', label: 'Shield' });
+  }
+  if (isThisPropertyBlocked) {
+    activeCooldowns.push({ icon: '💰', time: formatCooldown(cooldownRemaining) });
+  }
+  if (isOnStealCooldown) {
+    activeCooldowns.push({ icon: '🔥', time: formatCooldown(stealCooldownRemaining) });
+  }
 
   // Fetch ownership data AND check for complete set
   useEffect(() => {
@@ -265,11 +277,6 @@ export function PropertyCard({ propertyId, onSelect }: PropertyCardProps) {
           const maxPerPlayer = propertyData.maxPerPlayer;
           
           // Calculate building level based on percentage of maxPerPlayer (1-5 levels)
-          // Formula: level = ceil((slotsOwned / maxPerPlayer) * 5)
-          // This ensures that owning at least 1 slot shows level 1, and progression is smooth
-          // Examples:
-          // - Brown (50 max): 1-10 slots=level 1, 11-20=level 2, 21-30=level 3, 31-40=level 4, 41-50=level 5
-          // - Dark Blue (5 max): 1 slot=level 1, 2=level 2, 3=level 3, 4=level 4, 5=level 5
           const progressRatio = slotsOwned / maxPerPlayer;
           const level = Math.ceil(progressRatio * 5);
           setBuildingLevel(level);
@@ -351,36 +358,25 @@ export function PropertyCard({ propertyId, onSelect }: PropertyCardProps) {
         )}
       </div>
 
-      {/* Shield Indicator */}
-      {shieldActive && (
-        <div className="px-1 py-1 bg-amber-50 border-t border-amber-200 flex-shrink-0">
-          <div className="flex items-center justify-center gap-0.5">
-            <span className="text-[7px]">🛡️</span>
-            <span className="text-[6px] font-semibold text-amber-700">Shield</span>
-          </div>
-        </div>
-      )}
-
-      {/* Cooldown Indicator - Only show if THIS property is blocked */}
-      {isThisPropertyBlocked && (
-        <div className="px-1 py-1 bg-orange-50 border-t border-orange-200 flex-shrink-0">
-          <div className="flex items-center justify-center gap-0.5">
-            <span className="text-[7px]">⏳</span>
-            <span className="text-[6px] font-semibold text-orange-700">
-              {formatCooldown(cooldownRemaining)}
-            </span>
-          </div>
-        </div>
-      )}
-
-      {/* ADD THIS: Steal Cooldown Indicator */}
-      {isOnStealCooldown && (
-        <div className="px-1 py-1 bg-red-50 border-t border-red-200 flex-shrink-0">
-          <div className="flex items-center justify-center gap-0.5">
-            <span className="text-[7px]">🔒</span>
-            <span className="text-[6px] font-semibold text-red-700">
-              Steal: {formatCooldown(stealCooldownRemaining)}
-            </span>
+      {/* Combined Cooldown/Status Indicator - Only show when there's at least one cooldown */}
+      {activeCooldowns.length > 0 && (
+        <div className="px-1 py-0.5 bg-gradient-to-r from-slate-50 to-slate-100 border-t border-gray-200 flex-shrink-0">
+          <div className="flex items-center justify-center gap-1">
+            {activeCooldowns.map((cooldown, index) => (
+              <div key={index} className="flex items-center gap-0.5">
+                <span className="text-[8px]">{cooldown.icon}</span>
+                {cooldown.time && (
+                  <span className="text-[6px] font-semibold text-gray-700">
+                    {cooldown.time}
+                  </span>
+                )}
+                {cooldown.label && (
+                  <span className="text-[6px] font-semibold text-amber-700">
+                    {cooldown.label}
+                  </span>
+                )}
+              </div>
+            ))}
           </div>
         </div>
       )}

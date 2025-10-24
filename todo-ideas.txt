@@ -18,7 +18,7 @@ Add 3d scaling houses when clicking on the property menu
 fix the disparition bug from claiming when it's updated from blockchain every 30 sec/ same for leaderboard
 Instead of 25% sell scaling (ui not right yet)
 
-Use helius webhooks to store data in the backend to make sure everything is running clean
+Use helius webhooks to store data in the backend to make sure everything is running clean?
 
 To much helius API calls
 
@@ -41,3 +41,49 @@ Different family bonuses
 Need to rethink prices etc because stealing would be too weak (need to add a cooldown to make sense but some users would already have 50+ of the property so it would be impossible to catch up)
 
 
+padding tech for future update:
+
+// VERSION 1
+#[derive(BorshSerialize, BorshDeserialize)]
+pub struct GlobalState {
+    pub authority: Pubkey,
+    // ... all your fields ...
+    pub bump: u8,
+    
+    // Reserve space for future fields
+    pub padding: [u8; 256],  // ← Add this
+}
+
+impl GlobalState {
+    pub const LEN: usize = 543 + 256; // 799 bytes
+}
+
+ca c'est comment on fait normalement
+sans le pu padding ni le +256 en dessous
+
+
+// VERSION 2
+pub struct GlobalState {
+    pub authority: Pubkey,
+    // ... existing fields ...
+    pub bump: u8,
+    
+    // New fields (using 16 bytes from padding)
+    pub new_feature: u64,      // 8 bytes
+    pub another_feature: u64,  // 8 bytes
+    
+    pub padding: [u8; 240],    // 256 - 16 = 240 remaining
+}
+
+ta pu ajouter des fields et tout
+dans le meme account
+et ajouter 256 de padding ca coute 0.0001 sol quoi
+oui sur ta v1 tu prevois le padding sur tous
+et des fonctions withdraw et aussi modif de toutes les fields et tout
+et apres oui tu peux vrmt tout changer tout upgrade tout quoi
+demande lui en mode anchor ptet ouai
+au moins voir comment ca secrit juste pour voir
+du coup ouai en fait si tu fais fonction withdraw et modif de toutes fieldds et le padding le seul point que faut voir c'est tes pda
+jai une fonction pause aussi ca resout le truc de pda de ce que je viens de dire en fait
+
+check si j'ai les foncitons essencielles (pause / withdraw etc)
