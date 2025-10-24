@@ -1,6 +1,6 @@
 // ============================================
 // FIXED useStealActions.ts
-// Manually stores steal actions since events aren't being parsed
+// Webhook now handles all storage automatically
 // ============================================
 
 import { useCallback } from 'react';
@@ -19,8 +19,6 @@ import {
 } from '@/utils/program';
 import { GAME_CONFIG, REWARD_POOL, TOKEN_MINT } from '@/utils/constants';
 import { fetchPropertyOwners } from '@/utils/propertyOwners';
-import { storeTransactionEvents } from '@/utils/eventStorage';
-import { storeAction } from '@/utils/actionsStorage'; // ← ADD THIS IMPORT
 
 interface StealResult {
   tx: string;
@@ -47,8 +45,6 @@ export const useStealActions = (
 
     setLoading(true);
     try {
-      // [... keep all the existing code until the transaction is sent ...]
-      
       // Find eligible targets
       let selectedTarget: PublicKey;
       
@@ -135,15 +131,6 @@ export const useStealActions = (
       
       console.log('✅ Instant steal executed:', tx);
 
-      // Try to store events (may or may not work)
-      if (eventParser) {
-        try {
-          await storeTransactionEvents(connection, eventParser, tx);
-        } catch (eventError) {
-          console.warn('⚠️ Event storage failed (expected), falling back to manual storage');
-        }
-      }
-
       // Wait and check result from transaction logs
       await new Promise(resolve => setTimeout(resolve, 2000));
       
@@ -184,126 +171,71 @@ export const useStealActions = (
         console.log('❌ Instant steal failed. VRF:', vrfResult);
       }
 
-      // 🔥 MANUAL STORAGE: Store the steal action directly
-      const blockTime = txDetails.blockTime || Math.floor(Date.now() / 1000);
-      const stealCost = Number(property.price) * 0.5; // 50% of property price
-      
-      console.log('💾 Manually storing steal action to backend...');
-      
-      try {
-        const stored = await storeAction({
-          txSignature: tx,
-          actionType: success ? 'steal_success' : 'steal_failed',
-          playerAddress: wallet.publicKey.toString(),
-          targetAddress: selectedTarget.toString(),
-          propertyId,
-          amount: stealCost,
-          slots: success ? 1 : 0,
-          success,
-          blockTime,
-          metadata: {
-            vrfResult,
-            targeted: !!targetPlayerPubkey
-          }
-        });
-        
-        if (stored) {
-          console.log('✅ Successfully stored steal action to backend');
-        } else {
-          console.error('❌ Failed to store steal action');
-        }
-      } catch (storeError) {
-        console.error('❌ Error storing steal action:', storeError);
-      }
+      // ✅ WEBHOOK HANDLES ALL STORAGE AUTOMATICALLY - No manual storage needed!
 
       return {
         tx,
         success,
         vrfResult,
       };
-
+      
     } catch (error: any) {
-      console.error('Error in instant steal:', error);
+      console.error('❌ Error in steal operation:', error);
       
       const errorMessage = error?.message || error?.toString() || '';
+      
+      // Handle "already processed" case
       if (errorMessage.includes('already been processed') || 
           errorMessage.includes('AlreadyProcessed')) {
-        console.log('⏳ Transaction already processed - fetching result...');
+        console.log('✅ Transaction already processed, fetching result...');
         
-        try {
-          const txSig = error.signature || error.txid;
-          if (!txSig) {
-            throw new Error('No transaction signature available');
-          }
-    
-          let txDetails = null;
-          const maxRetries = 5;
-          for (let i = 0; i < maxRetries; i++) {
-            await new Promise(resolve => setTimeout(resolve, 1000 * (i + 1)));
-            
-            txDetails = await provider.connection.getTransaction(txSig, {
-              commitment: 'confirmed',
-              maxSupportedTransactionVersion: 0,
-            });
-            
-            if (txDetails?.meta?.logMessages) {
-              console.log(`✅ Transaction fetched on attempt ${i + 1}`);
-              break;
-            }
-            
-            console.log(`⏳ Retry ${i + 1}/${maxRetries} - transaction not found yet...`);
-          }
+        // Try to get the transaction signature from the error
+        const txSigMatch = errorMessage.match(/[1-9A-HJ-NP-Za-km-z]{87,88}/);
+        
+        if (txSigMatch) {
+          const txSig = txSigMatch[0];
+          console.log('🔍 Found transaction signature:', txSig);
           
-          if (txDetails?.meta?.logMessages) {
-            const logs = txDetails.meta.logMessages;
-            const successLog = logs.find(log => log.includes('✅ INSTANT STEAL SUCCESS'));
-            const failLog = logs.find(log => log.includes('❌ INSTANT STEAL FAILED'));
-            
-            let success = false;
-            let vrfResult = 'unknown';
-    
-            if (successLog) {
-              success = true;
-              const match = successLog.match(/entropy: (\d+)/);
-              if (match) vrfResult = match[1];
-            } else if (failLog) {
-              success = false;
-              const match = failLog.match(/entropy: (\d+)/);
-              if (match) vrfResult = match[1];
-            }
-    
-            // Manual storage for retry case too
+          // Retry fetching transaction a few times
+          for (let i = 0; i < 3; i++) {
             try {
-              const blockTime = txDetails.blockTime || Math.floor(Date.now() / 1000);
-              const property = await fetchPropertyData(program, propertyId);
-              const stealCost = property ? Number(property.price) * 0.5 : 0;
+              await new Promise(resolve => setTimeout(resolve, 1000 * (i + 1)));
               
-              await storeAction({
-                txSignature: txSig,
-                actionType: success ? 'steal_success' : 'steal_failed',
-                playerAddress: wallet.publicKey.toString(),
-                targetAddress: 'unknown', // We don't have it in retry case
-                propertyId,
-                amount: stealCost,
-                slots: success ? 1 : 0,
-                success,
-                blockTime,
-                metadata: { vrfResult }
+              const txDetails = await provider.connection.getTransaction(txSig, {
+                commitment: 'confirmed',
+                maxSupportedTransactionVersion: 0,
               });
               
-              console.log('✅ Stored retry steal action');
-            } catch (storeError) {
-              console.error('⚠️ Failed to store retry action:', storeError);
+              if (txDetails?.meta?.logMessages) {
+                const logs = txDetails.meta.logMessages;
+                const successLog = logs.find(log => log.includes('✅ INSTANT STEAL SUCCESS'));
+                const failLog = logs.find(log => log.includes('❌ INSTANT STEAL FAILED'));
+                
+                let success = false;
+                let vrfResult = 'unknown';
+
+                if (successLog) {
+                  success = true;
+                  const match = successLog.match(/entropy: (\d+)/);
+                  if (match) vrfResult = match[1];
+                } else if (failLog) {
+                  success = false;
+                  const match = failLog.match(/entropy: (\d+)/);
+                  if (match) vrfResult = match[1];
+                }
+
+                // ✅ WEBHOOK HANDLES ALL STORAGE AUTOMATICALLY
+                
+                return {
+                  tx: txSig,
+                  success,
+                  vrfResult,
+                };
+              }
+            } catch (fetchError) {
+              console.error('Failed to fetch transaction after retries:', fetchError);
             }
-    
-            return {
-              tx: txSig,
-              success,
-              vrfResult,
-            };
           }
-        } catch (fetchError) {
-          console.error('Failed to fetch transaction after retries:', fetchError);
         }
         
         return {

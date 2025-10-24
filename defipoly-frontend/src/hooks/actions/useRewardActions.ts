@@ -1,3 +1,8 @@
+// ============================================
+// FIXED useRewardActions.ts
+// Webhook now handles all storage automatically
+// ============================================
+
 import { useCallback } from 'react';
 import { TOKEN_PROGRAM_ID, getAssociatedTokenAddress } from '@solana/spl-token';
 import { Program } from '@coral-xyz/anchor';
@@ -11,7 +16,6 @@ import {
   fetchOwnershipData
 } from '@/utils/program';
 import { GAME_CONFIG, REWARD_POOL, TOKEN_MINT } from '@/utils/constants';
-import { storeTransactionEvents } from '@/utils/eventStorage';
 
 export const useRewardActions = (
   program: Program | null,
@@ -93,12 +97,7 @@ export const useRewardActions = (
   
       console.log('✅ Rewards claimed successfully:', tx);
   
-      // Try to store to backend
-      try {
-        await storeTransactionEvents(connection, eventParser, tx);
-      } catch (backendError) {
-        console.warn('⚠️ Backend storage failed (non-critical):', backendError);
-      }
+      // ✅ WEBHOOK HANDLES ALL STORAGE AUTOMATICALLY - No manual storage needed!
   
       return tx;
     } catch (error: any) {

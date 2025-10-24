@@ -1,3 +1,9 @@
+// ============================================
+// FIXED usePropertyActions.ts (v2 - Corrected)
+// Webhook now handles all storage automatically
+// Fixed: getSetStatsPDA only takes setId parameter
+// ============================================
+
 import { useCallback } from 'react';
 import { PublicKey, SystemProgram, Transaction } from '@solana/web3.js';
 import { TOKEN_PROGRAM_ID, getAssociatedTokenAddress } from '@solana/spl-token';
@@ -5,17 +11,15 @@ import { Program, AnchorProvider } from '@coral-xyz/anchor';
 import { Connection } from '@solana/web3.js';
 import { EventParser } from '@coral-xyz/anchor';
 import { 
-  getPropertyPDA,
-  getPlayerPDA,
-  getOwnershipPDA,
+  getPropertyPDA, 
+  getPlayerPDA, 
+  getOwnershipPDA, 
   getSetCooldownPDA,
   getSetOwnershipPDA,
   getSetStatsPDA,
   fetchPlayerData
 } from '@/utils/program';
-import { checkTokenAccountExists, createTokenAccountInstruction } from '@/utils/token';
 import { GAME_CONFIG, REWARD_POOL, TOKEN_MINT } from '@/utils/constants';
-import { storeTransactionEvents } from '@/utils/eventStorage';
 
 export const usePropertyActions = (
   program: Program | null,
@@ -31,28 +35,26 @@ export const usePropertyActions = (
 ) => {
   const buyProperty = useCallback(async (propertyId: number, slots: number = 1) => {
     if (!program || !wallet || !provider) throw new Error('Wallet not connected');
-    
+    if (!tokenAccountExists) throw new Error('Create token account first');
+
     setLoading(true);
     try {
-      const transaction = new Transaction();
-  
-      // Check token account exists
-      const hasTokenAccount = await checkTokenAccountExists(connection, wallet.publicKey);
+      const playerTokenAccount = await getAssociatedTokenAddress(TOKEN_MINT, wallet.publicKey);
       
-      // Add create token account instruction if needed
-      if (!hasTokenAccount) {
-        console.log('Creating token account...');
-        const createATAIx = await createTokenAccountInstruction(wallet.publicKey);
-        transaction.add(createATAIx);
-      }
-  
-      // Check if player account exists
+      const devWallet = new PublicKey("CgWTFX7JJQHed3qyMDjJkNCxK4sFe3wbDFABmWAAmrdS");
+      const devTokenAccount = await getAssociatedTokenAddress(TOKEN_MINT, devWallet);
+
+      const [propertyPDA] = getPropertyPDA(propertyId);
       const [playerPDA] = getPlayerPDA(wallet.publicKey);
+      const [ownershipPDA] = getOwnershipPDA(wallet.publicKey, propertyId);
+
+      const transaction = new Transaction();
       const playerData = await fetchPlayerData(program, wallet.publicKey);
-      
-      // Add initialize player instruction if needed
+      const hasTokenAccount = tokenAccountExists;
+
+      // Initialize player if needed
       if (!playerData) {
-        console.log('Initializing player...');
+        console.log('🆕 Adding initialize player instruction');
         const initPlayerIx = await program.methods
           .initializePlayer()
           .accountsPartial({
@@ -63,30 +65,16 @@ export const usePropertyActions = (
           .instruction();
         transaction.add(initPlayerIx);
       }
-  
-      // Get token account address
-      const playerTokenAccount = await getAssociatedTokenAddress(
-        TOKEN_MINT,
-        wallet.publicKey
-      );
-  
-      // Get PDAs
-      const [propertyPDA] = getPropertyPDA(propertyId);
-      const [ownershipPDA] = getOwnershipPDA(wallet.publicKey, propertyId);
-      
-      // Fetch property to get setId
+
+      // ✅ FIXED: Fetch property to get setId first
       const propertyData = await (program.account as any).property.fetch(propertyPDA);
       const setId = propertyData.setId;
-      
-      // Get the 3 new required PDAs
+
+      // Get all set-related PDAs using the correct parameters
       const [setCooldownPDA] = getSetCooldownPDA(wallet.publicKey, setId);
       const [setOwnershipPDA] = getSetOwnershipPDA(wallet.publicKey, setId);
-      const [setStatsPDA] = getSetStatsPDA(setId);
-      
-      // Get dev token account
-      const devWallet = new PublicKey("CgWTFX7JJQHed3qyMDjJkNCxK4sFe3wbDFABmWAAmrdS");
-      const devTokenAccount = await getAssociatedTokenAddress(TOKEN_MINT, devWallet);
-  
+      const [setStatsPDA] = getSetStatsPDA(setId); // ✅ Only takes setId, not wallet.publicKey
+
       // Add buy property instruction with slots parameter
       const buyPropertyIx = await program.methods
         .buyProperty(slots)
@@ -116,15 +104,7 @@ export const usePropertyActions = (
       
       console.log(`✅ Bought ${slots} slot(s) successfully:`, signature);
       
-      // Backend logging in background - don't block success
-      (async () => {
-        try {
-          await storeTransactionEvents(connection, eventParser, signature);
-          console.log('✅ Events stored to backend');
-        } catch (backendError) {
-          console.warn('⚠️ Backend storage failed (non-critical):', backendError);
-        }
-      })();
+      // ✅ WEBHOOK HANDLES ALL STORAGE AUTOMATICALLY - No manual storage needed!
       
       // Update states
       if (!hasTokenAccount) setTokenAccountExists(true);
@@ -179,14 +159,7 @@ export const usePropertyActions = (
 
       console.log('✅ Property sold successfully:', tx);
 
-      // Backend logging in background
-      (async () => {
-        try {
-          await storeTransactionEvents(connection, eventParser, tx);
-        } catch (backendError) {
-          console.warn('⚠️ Backend storage failed (non-critical):', backendError);
-        }
-      })();
+      // ✅ WEBHOOK HANDLES ALL STORAGE AUTOMATICALLY - No manual storage needed!
 
       return tx;
     } catch (error: any) {
