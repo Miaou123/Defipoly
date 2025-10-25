@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { Header } from '@/components/Header';
 import { getPropertyById } from '@/utils/constants';
 import { compressImage } from '@/utils/profileStorage';
-import { useNotification } from '@/components/NotificationProvider';
+import { useNotification } from '@/contexts/NotificationContext';
 
 interface Activity {
   signature: string;
@@ -18,15 +18,14 @@ interface Activity {
 }
 
 interface PlayerStats {
+  walletAddress: string;
   totalActions: number;
   propertiesBought: number;
-  propertiesSold: number;
-  successfulSteals: number;
-  failedSteals: number;
-  rewardsClaimed: number;
-  shieldsActivated: number;
   totalSpent: number;
   totalEarned: number;
+  totalSlotsOwned: number;
+  successfulSteals: number;
+  failedSteals: number;
 }
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_PROFILE_API_URL || 'http://localhost:3001';
@@ -45,15 +44,14 @@ export default function ProfilePage() {
   const [activities, setActivities] = useState<Activity[]>([]);
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState<PlayerStats>({
+    walletAddress: '',
     totalActions: 0,
     propertiesBought: 0,
-    propertiesSold: 0,
-    successfulSteals: 0,
-    failedSteals: 0,
-    rewardsClaimed: 0,
-    shieldsActivated: 0,
     totalSpent: 0,
     totalEarned: 0,
+    totalSlotsOwned: 0,
+    successfulSteals: 0,
+    failedSteals: 0,
   });
 
   // Redirect if not connected
@@ -94,29 +92,38 @@ export default function ProfilePage() {
 
     const fetchUserData = async () => {
       setLoading(true);
+      
       try {
         const walletAddress = publicKey.toString();
         console.log('📊 Fetching user data from backend...');
         
-        // Fetch actions
-        const actionsResponse = await fetch(`${BACKEND_URL}/api/actions/player/${walletAddress}?limit=100`);
-        
-        if (!actionsResponse.ok) {
-          throw new Error(`Failed to fetch actions: ${actionsResponse.status}`);
-        }
-        
-        const actionsData = await actionsResponse.json();
-        console.log('📦 Received actions:', actionsData.actions?.length || 0);
-        
-        // Fetch stats
+        // Fetch stats from /api/stats/:wallet
         const statsResponse = await fetch(`${BACKEND_URL}/api/stats/${walletAddress}`);
-        
         if (!statsResponse.ok) {
           throw new Error(`Failed to fetch stats: ${statsResponse.status}`);
         }
-        
         const statsData = await statsResponse.json();
         console.log('📈 Received stats:', statsData);
+        
+        // Fetch actions from /api/actions/player/:wallet
+        const actionsResponse = await fetch(`${BACKEND_URL}/api/actions/player/${walletAddress}?limit=50`);
+        if (!actionsResponse.ok) {
+          throw new Error(`Failed to fetch actions: ${actionsResponse.status}`);
+        }
+        const actionsData = await actionsResponse.json();
+        console.log('📦 Received actions:', actionsData.actions?.length || 0);
+        
+        // Set stats
+        setStats({
+          walletAddress: statsData.walletAddress || walletAddress,
+          totalActions: statsData.totalActions || 0,
+          propertiesBought: statsData.propertiesBought || 0,
+          totalSpent: statsData.totalSpent || 0,
+          totalEarned: statsData.totalEarned || 0,
+          totalSlotsOwned: statsData.totalSlotsOwned || 0,
+          successfulSteals: statsData.successfulSteals || 0,
+          failedSteals: statsData.failedSteals || 0,
+        });
         
         // Convert actions to activities
         const userActivities: Activity[] = actionsData.actions.map((action: any) => {
@@ -141,17 +148,17 @@ export default function ProfilePage() {
 
           switch (action.actionType) {
             case 'buy':
-              message = `Bought ${propertyName} for ${formatAmount(action.amount || 0)} DEFI`;
+              message = `Bought ${action.slots || 1} slot${(action.slots || 1) > 1 ? 's' : ''} on ${propertyName} 🏠`;
               type = 'buy';
               break;
             
             case 'sell':
-              message = `Sold ${action.slots || 0} slots of ${propertyName} for ${formatAmount(action.amount || 0)} DEFI`;
+              message = `Sold ${action.slots || 1} slot${(action.slots || 1) > 1 ? 's' : ''} on ${propertyName} for ${formatAmount(action.amount || 0)} DEFI 💰`;
               type = 'sell';
               break;
             
             case 'steal_success':
-              message = `Successfully stole from ${formatAddress(action.targetAddress)} on ${propertyName}! 💰`;
+              message = `Successfully stole from ${formatAddress(action.targetAddress)} on ${propertyName} 💰`;
               type = 'steal';
               break;
             
@@ -166,12 +173,13 @@ export default function ProfilePage() {
               break;
             
             case 'claim':
-              message = `Claimed ${formatAmount(action.amount || 0)} DEFI in rewards 💰`;
+              message = `Claimed ${formatAmount(action.amount || 0)} DEFI in rewards 💎`;
               type = 'claim';
               break;
             
             default:
               message = `Unknown action: ${action.actionType}`;
+              type = 'buy';
           }
 
           return {
@@ -185,28 +193,17 @@ export default function ProfilePage() {
         });
 
         setActivities(userActivities);
-        setStats({
-          totalActions: statsData.totalActions || 0,
-          propertiesBought: statsData.propertiesBought || 0,
-          propertiesSold: statsData.propertiesSold || 0,
-          successfulSteals: statsData.successfulSteals || 0,
-          failedSteals: statsData.failedSteals || 0,
-          rewardsClaimed: statsData.rewardsClaimed || 0,
-          shieldsActivated: statsData.shieldsActivated || 0,
-          totalSpent: statsData.totalSpent || 0,
-          totalEarned: statsData.totalEarned || 0,
-        });
-
         console.log('✅ User data loaded successfully');
       } catch (error) {
         console.error('❌ Error fetching user data:', error);
+        showError('Failed to Load', 'Could not load profile data from backend');
       } finally {
         setLoading(false);
       }
     };
 
     fetchUserData();
-  }, [publicKey]);
+  }, [publicKey, showError]);
 
   const handleSaveUsername = async () => {
     if (!publicKey || !tempUsername.trim()) return;
@@ -224,12 +221,14 @@ export default function ProfilePage() {
       if (response.ok) {
         setUsername(tempUsername.trim());
         setEditingUsername(false);
+        showSuccess('Username Saved', 'Your username has been updated');
         console.log('✅ Username saved to backend');
       } else {
-        console.error('Failed to save username');
+        showError('Save Failed', 'Failed to save username');
       }
     } catch (error) {
       console.error('Error saving username:', error);
+      showError('Error', 'An error occurred while saving username');
     }
   };
 
@@ -269,6 +268,7 @@ export default function ProfilePage() {
 
       if (response.ok) {
         setProfilePicture(compressedImage);
+        showSuccess('Upload Success', 'Profile picture updated');
         console.log('✅ Profile picture uploaded');
       } else {
         showError('Upload Failed', 'Failed to upload profile picture');
@@ -296,6 +296,7 @@ export default function ProfilePage() {
 
       if (response.ok) {
         setProfilePicture(null);
+        showSuccess('Removed', 'Profile picture removed');
         console.log('✅ Profile picture removed');
       }
     } catch (error) {
@@ -341,44 +342,45 @@ export default function ProfilePage() {
     <div className="min-h-screen bg-gradient-to-br from-purple-950 via-purple-900 to-slate-950">
       <Header />
       
-      <div className="container mx-auto px-4 py-12 max-w-5xl">
-        {/* Profile Header */}
-        <div className="bg-purple-900/20 backdrop-blur-xl rounded-2xl border border-purple-500/20 p-8 mb-8">
-          {/* Header with Back Button */}
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h1 className="text-3xl font-bold text-purple-100 mb-2">Your Profile</h1>
-              <p className="text-purple-400 font-mono text-sm">
-                {publicKey.toString()}
-              </p>
-            </div>
-            <button
-              onClick={() => router.push('/')}
-              className="px-8 py-3 bg-purple-600 hover:bg-purple-500 rounded-lg transition-colors text-white font-semibold flex items-center gap-2 shadow-lg"
-            >
-              <span>←</span> Back to Game
-            </button>
+      <div className="container mx-auto px-4 py-8 max-w-6xl">
+        {/* Header with Back Button */}
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h1 className="text-3xl font-bold text-purple-100 mb-1">Your Profile</h1>
+            <p className="text-purple-400 font-mono text-sm">
+              {publicKey.toString()}
+            </p>
           </div>
+          <button
+            onClick={() => router.push('/')}
+            className="px-6 py-2 bg-purple-600 hover:bg-purple-500 rounded-lg transition-colors text-white font-semibold flex items-center gap-2"
+          >
+            <span>←</span> Back to Game
+          </button>
+        </div>
 
-          {/* Profile Picture and Username on Same Row */}
-          <div className="flex items-center gap-8 pb-6 border-b border-purple-500/20 mb-6">
-            {/* Profile Picture Section */}
-            <div className="flex items-center gap-4">
-              {/* Avatar Display */}
-              <div className="w-20 h-20 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center overflow-hidden border-4 border-purple-500/30">
-                {profilePicture ? (
-                  <img 
-                    src={profilePicture} 
-                    alt="Profile" 
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <span className="text-3xl">👤</span>
-                )}
-              </div>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Left Column - Profile Info */}
+          <div className="lg:col-span-1 space-y-6">
+            {/* Profile Card */}
+            <div className="bg-purple-900/20 backdrop-blur-xl rounded-2xl border border-purple-500/20 p-6">
+              <h2 className="text-lg font-bold text-purple-100 mb-4">Profile</h2>
+              
+              {/* Avatar */}
+              <div className="flex flex-col items-center mb-4">
+                <div className="w-24 h-24 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center overflow-hidden border-4 border-purple-500/30 mb-3">
+                  {profilePicture ? (
+                    <img 
+                      src={profilePicture} 
+                      alt="Profile" 
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <span className="text-4xl">👤</span>
+                  )}
+                </div>
 
-              {/* Upload Buttons */}
-              <div>
+                {/* Upload Buttons */}
                 <input
                   ref={fileInputRef}
                   type="file"
@@ -390,159 +392,145 @@ export default function ProfilePage() {
                   <button
                     onClick={() => fileInputRef.current?.click()}
                     disabled={uploadingPicture}
-                    className="px-4 py-2 bg-purple-600 hover:bg-purple-500 rounded-lg transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="px-3 py-1.5 bg-purple-600 hover:bg-purple-500 rounded-lg transition-colors text-sm disabled:opacity-50"
                   >
-                    {uploadingPicture ? '⏳' : profilePicture ? 'Change' : 'Upload'}
+                    {uploadingPicture ? 'Uploading...' : profilePicture ? 'Change' : 'Upload'}
                   </button>
                   {profilePicture && (
                     <button
                       onClick={handleRemoveProfilePicture}
-                      className="px-4 py-2 bg-red-600/80 hover:bg-red-600 rounded-lg transition-colors text-sm"
+                      className="px-3 py-1.5 bg-red-600/80 hover:bg-red-600 rounded-lg transition-colors text-sm"
                     >
                       Remove
                     </button>
                   )}
                 </div>
               </div>
+
+              {/* Username */}
+              <div className="border-t border-purple-500/20 pt-4">
+                {editingUsername ? (
+                  <div className="space-y-3">
+                    <input
+                      type="text"
+                      value={tempUsername}
+                      onChange={(e) => setTempUsername(e.target.value)}
+                      placeholder="Enter username"
+                      className="w-full px-3 py-2 bg-purple-900/50 border border-purple-500/30 rounded-lg text-purple-100 placeholder-purple-500 focus:outline-none focus:border-purple-400 text-sm"
+                      maxLength={20}
+                    />
+                    <div className="flex gap-2">
+                      <button
+                        onClick={handleSaveUsername}
+                        className="flex-1 px-3 py-2 bg-green-600 hover:bg-green-500 rounded-lg transition-colors text-sm"
+                      >
+                        Save
+                      </button>
+                      <button
+                        onClick={() => {
+                          setEditingUsername(false);
+                          setTempUsername(username);
+                        }}
+                        className="flex-1 px-3 py-2 bg-gray-600 hover:bg-gray-500 rounded-lg transition-colors text-sm"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div>
+                    <div className="text-xs text-purple-400 mb-1">Username</div>
+                    {username ? (
+                      <div className="text-lg font-bold text-purple-100 mb-2">{username}</div>
+                    ) : (
+                      <div className="text-purple-500 italic text-sm mb-2">No username set</div>
+                    )}
+                    <button
+                      onClick={() => setEditingUsername(true)}
+                      className="w-full px-3 py-2 bg-purple-600 hover:bg-purple-500 rounded-lg transition-colors text-sm"
+                    >
+                      {username ? 'Edit Username' : 'Set Username'}
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
 
-            {/* Username Section */}
-            <div className="flex-1">
-              {editingUsername ? (
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={tempUsername}
-                    onChange={(e) => setTempUsername(e.target.value)}
-                    placeholder="Enter username..."
-                    maxLength={20}
-                    className="flex-1 px-4 py-2 bg-purple-900/50 border border-purple-500/30 rounded-lg text-purple-100 placeholder-purple-400 focus:outline-none focus:border-purple-400"
-                  />
-                  <button
-                    onClick={handleSaveUsername}
-                    className="px-6 py-2 bg-purple-600 hover:bg-purple-500 rounded-lg transition-colors"
-                  >
-                    Save
-                  </button>
-                  <button
-                    onClick={() => {
-                      setEditingUsername(false);
-                      setTempUsername(username);
-                    }}
-                    className="px-4 py-2 bg-purple-900/50 hover:bg-purple-800 rounded-lg transition-colors"
-                  >
-                    Cancel
-                  </button>
+            {/* Quick Stats Card */}
+            <div className="bg-purple-900/20 backdrop-blur-xl rounded-2xl border border-purple-500/20 p-6">
+              <h2 className="text-lg font-bold text-purple-100 mb-4">Quick Stats</h2>
+              
+              <div className="space-y-4">
+                <div className="flex justify-between items-center">
+                  <span className="text-purple-300 text-sm">Total Slots</span>
+                  <span className="text-purple-100 font-bold text-lg">{stats.totalSlotsOwned}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-purple-300 text-sm">Total Steals</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-purple-100 font-bold text-lg">{stats.successfulSteals + stats.failedSteals}</span>
+                    <span className="text-purple-400 text-sm">
+                      (<span className="text-red-400 font-semibold">{stats.failedSteals}</span>
+                      {' / '}
+                      <span className="text-green-400 font-semibold">{stats.successfulSteals}</span>)
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Right Column - Activity History */}
+          <div className="lg:col-span-2">
+            <div className="bg-purple-900/20 backdrop-blur-xl rounded-2xl border border-purple-500/20 p-6">
+              <h2 className="text-xl font-bold text-purple-100 mb-4">Activity History</h2>
+              
+              {loading ? (
+                <div className="text-center py-16">
+                  <div className="text-4xl mb-4">⏳</div>
+                  <div className="text-purple-300">Loading your activity...</div>
+                </div>
+              ) : activities.length === 0 ? (
+                <div className="text-center py-16">
+                  <div className="text-6xl mb-4 opacity-50">📋</div>
+                  <div className="text-purple-400 text-lg">No activity yet</div>
+                  <div className="text-sm text-purple-500 mt-2">Start playing to see your history!</div>
                 </div>
               ) : (
-                <div className="flex items-center gap-4">
-                  <div className="flex-1">
-                    <div className="text-xs text-purple-400 mb-1">Display Name</div>
-                    {username ? (
-                      <div className="text-2xl font-bold text-purple-100">{username}</div>
-                    ) : (
-                      <div className="text-purple-500 italic">No username set</div>
-                    )}
-                  </div>
-                  <button
-                    onClick={() => setEditingUsername(true)}
-                    className="px-6 py-2 bg-purple-600 hover:bg-purple-500 rounded-lg transition-colors"
-                  >
-                    {username ? 'Edit' : 'Set Username'}
-                  </button>
-                </div>
-              )}
-              <p className="text-xs text-purple-400 mt-2">
-                Your username will appear on the leaderboard
-              </p>
-            </div>
-          </div>
-
-          {/* Stats Grid */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="bg-purple-900/30 rounded-xl p-4 text-center">
-              <div className="text-3xl font-bold text-purple-100">{stats.totalActions}</div>
-              <div className="text-sm text-purple-400 mt-1">Total Actions</div>
-            </div>
-            <div className="bg-purple-900/30 rounded-xl p-4 text-center">
-              <div className="text-3xl font-bold text-green-400">{stats.propertiesBought}</div>
-              <div className="text-sm text-purple-400 mt-1">Bought</div>
-            </div>
-            <div className="bg-purple-900/30 rounded-xl p-4 text-center">
-              <div className="text-3xl font-bold text-emerald-400">{stats.successfulSteals}</div>
-              <div className="text-sm text-purple-400 mt-1">Steals ✓</div>
-            </div>
-            <div className="bg-purple-900/30 rounded-xl p-4 text-center">
-              <div className="text-3xl font-bold text-red-400">{stats.failedSteals}</div>
-              <div className="text-sm text-purple-400 mt-1">Steals ✗</div>
-            </div>
-            <div className="bg-purple-900/30 rounded-xl p-4 text-center">
-              <div className="text-3xl font-bold text-blue-400">{stats.rewardsClaimed}</div>
-              <div className="text-sm text-purple-400 mt-1">Claimed</div>
-            </div>
-            <div className="bg-purple-900/30 rounded-xl p-4 text-center">
-              <div className="text-3xl font-bold text-amber-400">{stats.shieldsActivated}</div>
-              <div className="text-sm text-purple-400 mt-1">Shields</div>
-            </div>
-            <div className="bg-purple-900/30 rounded-xl p-4 text-center">
-              <div className="text-3xl font-bold text-red-300">{(stats.totalSpent / 1e9).toFixed(0)}</div>
-              <div className="text-sm text-purple-400 mt-1">DEFI Spent</div>
-            </div>
-            <div className="bg-purple-900/30 rounded-xl p-4 text-center">
-              <div className="text-3xl font-bold text-green-300">{(stats.totalEarned / 1e9).toFixed(0)}</div>
-              <div className="text-sm text-purple-400 mt-1">DEFI Earned</div>
-            </div>
-          </div>
-        </div>
-
-        {/* Activity History */}
-        <div className="bg-purple-900/20 backdrop-blur-xl rounded-2xl border border-purple-500/20 p-8">
-          <h2 className="text-2xl font-bold text-purple-100 mb-6">Activity History</h2>
-          
-          {loading ? (
-            <div className="text-center py-12">
-              <div className="text-4xl mb-4">⏳</div>
-              <div className="text-purple-300">Loading your activity...</div>
-            </div>
-          ) : activities.length === 0 ? (
-            <div className="text-center py-12">
-              <div className="text-6xl mb-4 opacity-50">📋</div>
-              <div className="text-purple-400">No activity yet</div>
-              <div className="text-sm text-purple-500 mt-2">Start playing to see your history!</div>
-            </div>
-          ) : (
-            <div className="space-y-3 max-h-[600px] overflow-y-auto">
-              {activities.map((activity) => (
-                <div
-                  key={activity.signature}
-                  className={`p-4 bg-purple-900/10 rounded-xl border-l-4 hover:bg-purple-900/20 transition-all ${
-                    activity.type === 'buy' ? 'border-green-400' :
-                    activity.type === 'steal' ? (activity.success ? 'border-emerald-400' : 'border-red-400') :
-                    activity.type === 'claim' ? 'border-blue-400' :
-                    activity.type === 'sell' ? 'border-orange-400' :
-                    'border-amber-400'
-                  }`}
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex-1">
-                      <div className="text-purple-100">{activity.message}</div>
-                      <div className="text-xs text-purple-400 mt-1">
-                        {formatTimestamp(activity.timestamp)}
+                <div className="space-y-2 max-h-[700px] overflow-y-auto pr-2">
+                  {activities.map((activity) => (
+                    <div
+                      key={activity.signature}
+                      className={`p-3 bg-purple-900/10 rounded-lg border-l-4 hover:bg-purple-900/20 transition-all ${
+                        activity.type === 'buy' ? 'border-green-400' :
+                        activity.type === 'steal' ? (activity.success ? 'border-emerald-400' : 'border-red-400') :
+                        activity.type === 'claim' ? 'border-blue-400' :
+                        activity.type === 'sell' ? 'border-orange-400' :
+                        'border-amber-400'
+                      }`}
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex-1 min-w-0">
+                          <div className="text-purple-100 text-sm leading-relaxed">{activity.message}</div>
+                          <div className="text-xs text-purple-400 mt-1">
+                            {formatTimestamp(activity.timestamp)}
+                          </div>
+                        </div>
+                        <a
+                          href={`https://explorer.solana.com/tx/${activity.signature}?cluster=devnet`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex-shrink-0 px-2 py-1 bg-purple-600/50 hover:bg-purple-600 rounded text-xs transition-colors"
+                        >
+                          TX
+                        </a>
                       </div>
                     </div>
-                    <a
-                      href={`https://explorer.solana.com/tx/${activity.signature}?cluster=devnet`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="ml-4 px-3 py-1 bg-purple-600/50 hover:bg-purple-600 rounded text-xs transition-colors"
-                    >
-                      View TX
-                    </a>
-                  </div>
+                  ))}
                 </div>
-              ))}
+              )}
             </div>
-          )}
+          </div>
         </div>
       </div>
     </div>
