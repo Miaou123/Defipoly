@@ -6,8 +6,6 @@ import { getProfilesBatch, ProfileData } from '@/utils/profileStorage';
 interface LeaderboardEntry {
   walletAddress: string;
   dailyIncome: number;
-  totalSlotsOwned: number;
-  propertiesBought: number;
 }
 
 const API_URL = process.env.NEXT_PUBLIC_PROFILE_API_URL || 'http://localhost:3005';
@@ -146,9 +144,7 @@ export function Leaderboard() {
                       <div className="text-green-400 font-semibold">
                         💰 {formatIncome(leader.dailyIncome)}/day
                       </div>
-                      <div className="text-purple-400">
-                        🏠 {leader.totalSlotsOwned} slots
-                      </div>
+
                     </div>
                   </div>
                 </div>
