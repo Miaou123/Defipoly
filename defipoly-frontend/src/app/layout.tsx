@@ -18,6 +18,11 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${inter.className} text-white min-h-screen overflow-x-hidden`}>
+        {/* Glowing orbs */}
+        <div className="orb orb-1"></div>
+        <div className="orb orb-2"></div>
+        <div className="orb orb-3"></div>
+        
         <Providers>
           {children}
         </Providers>
