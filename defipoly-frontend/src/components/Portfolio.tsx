@@ -181,36 +181,15 @@ export function Portfolio({ onSelectProperty }: PortfolioProps) {
   const calculateShieldCost = (property: typeof PROPERTIES[0], slots: number): number => {
     const shieldCostBps = 500; // 5% of daily income per slot
     const dailyIncomePerSlot = property.dailyIncome;
-    return Math.floor((dailyIncomePerSlot * shieldCostBps / 10000) * slots);
+    return Math.floor((dailyIncomePerSlot * shieldCostBps * slots) / 10000);
   };
 
-  // Check if shield is in cooldown (12 hours after expiry)
-  const isShieldInCooldown = (owned: OwnedProperty): boolean => {
-    const now = Date.now() / 1000;
-    const shieldExpiryTimestamp = owned.shieldExpiry.toNumber();
-    const SHIELD_COOLDOWN_HOURS = 12;
-    const SHIELD_COOLDOWN_SECONDS = SHIELD_COOLDOWN_HOURS * 3600;
-    const cooldownEndTime = shieldExpiryTimestamp + SHIELD_COOLDOWN_SECONDS;
-    
-    // Shield is in cooldown if:
-    // 1. Shield is not currently active (expired)
-    // 2. Shield expiry timestamp exists (has been shielded before)
-    // 3. Current time is still within the cooldown period
-    const isActive = isShieldActive(owned);
-    return !isActive && shieldExpiryTimestamp > 0 && now < cooldownEndTime;
-  };
-
-  // Prepare data for Shield All Modal - ONLY include properties that can be shielded
+  // Calculate shieldable properties with costs for ShieldAllModal
   const shieldAllData = ownedProperties
     .filter(owned => {
-      // Exclude properties that already have active shields
-      if (isShieldActive(owned)) return false;
-      
-      // Exclude properties in cooldown period
-      if (isShieldInCooldown(owned)) return false;
-      
-      // Include all other properties
-      return true;
+      const shieldActive = isShieldActive(owned);
+      const unshieldedSlots = owned.slotsOwned - (shieldActive ? owned.slotsShielded : 0);
+      return unshieldedSlots > 0;
     })
     .map(owned => ({
       propertyId: owned.propertyId,
@@ -219,20 +198,18 @@ export function Portfolio({ onSelectProperty }: PortfolioProps) {
       shieldCost: calculateShieldCost(owned.propertyInfo, owned.slotsOwned)
     }));
 
-  // Count properties available to shield
+  const hasShieldableProperties = shieldAllData.length > 0;
   const shieldablePropertiesCount = shieldAllData.length;
 
-  // Button UI for Shield All - Updated to show count and disable when no properties available
+  // Render Shield All Button
   const renderShieldAllButton = () => {
     if (ownedProperties.length === 0) return null;
 
-    const hasShieldableProperties = shieldablePropertiesCount > 0;
-
     return (
-      <button 
-        onClick={() => setShowShieldAllModal(true)}
+      <button
+        onClick={() => hasShieldableProperties && setShowShieldAllModal(true)}
         disabled={!hasShieldableProperties}
-        className={`w-full py-2 rounded-lg font-bold text-sm mb-4 flex items-center justify-center gap-2 transition-all ${
+        className={`w-full mb-4 px-4 py-2.5 rounded-lg font-semibold text-sm transition-all flex items-center justify-center gap-2 ${
           hasShieldableProperties
             ? 'bg-gradient-to-r from-yellow-600 to-amber-600 hover:from-yellow-500 hover:to-amber-500 text-white'
             : 'bg-gray-800/50 text-gray-500 cursor-not-allowed'
@@ -261,15 +238,20 @@ export function Portfolio({ onSelectProperty }: PortfolioProps) {
 
   return (
     <>
-      <div className="bg-purple-900/8 backdrop-blur-xl rounded-2xl border border-purple-500/20 p-6 max-h-[650px] overflow-y-auto">
-        <div className="flex justify-between items-center mb-5 pb-4 border-b border-purple-500/20">
-          <h2 className="text-lg font-semibold text-purple-200">My Portfolio</h2>
-          <span className="text-sm text-purple-400">{totalSlots} slots</span>
+      <div className="bg-purple-900/8 backdrop-blur-xl rounded-2xl border border-purple-500/20 max-h-[650px] overflow-hidden flex flex-col">
+        {/* Header + Shield Button - Sticky */}
+        <div className="p-6 pb-4">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-xl font-bold text-white">My Portfolio</h2>
+            <span className="text-sm text-purple-400">{totalSlots} slots</span>
+          </div>
+          
+          {/* Shield All Button */}
+          {renderShieldAllButton()}
         </div>
-        
-        {/* Shield All Button */}
-        {renderShieldAllButton()}
 
+        {/* Scrollable Content */}
+        <div className="flex-1 overflow-y-auto px-6 pb-6">
         {/* Loading State */}
         {loading && ownedProperties.length === 0 && (
           <div className="text-center py-12">
@@ -291,7 +273,7 @@ export function Portfolio({ onSelectProperty }: PortfolioProps) {
 
         {/* Owned Properties Grouped by Set */}
         {ownedProperties.length > 0 && (
-          <div className="space-y-2">
+          <div className="space-y-1">
             {Object.entries(groupedProperties).map(([setIdStr, setProperties]) => {
               const setId = parseInt(setIdStr);
               const setName = getSetName(setId);
@@ -311,18 +293,16 @@ export function Portfolio({ onSelectProperty }: PortfolioProps) {
               return (
                 <div 
                   key={setId} 
-                  className={`rounded-lg overflow-hidden border transition-all ${
+                  className={`rounded-lg overflow-hidden transition-all ${
                     isComplete 
-                      ? 'bg-green-950/20 border-green-500/30' 
-                      : 'bg-purple-950/30 border-purple-700/30'
+                      ? 'bg-white/[0.05]' 
+                      : 'bg-white/[0.02]'
                   }`}
                 >
                   {/* Set Header - Clickable */}
                   <button
                     onClick={() => toggleSet(setId)}
-                    className={`w-full px-3 py-2 flex items-center justify-between transition-all ${
-                      isComplete ? 'hover:bg-green-900/20' : 'hover:bg-purple-800/30'
-                    }`}
+                    className="w-full px-3 py-2 flex items-center justify-between hover:bg-white/[0.03] transition-all"
                   >
                     <div className="flex items-center gap-2">
                       {isExpanded ? 
@@ -331,12 +311,6 @@ export function Portfolio({ onSelectProperty }: PortfolioProps) {
                       }
                       <div className={`${setColorClass} w-3 h-3 rounded-full`} />
                       <span className="font-bold text-sm text-purple-100">{setName} Set</span>
-                      {isComplete && (
-                        <div className="flex items-center gap-1 bg-white/20 px-2 py-0.5 rounded">
-                          <Trophy className="w-3 h-3" />
-                          <span className="text-[10px]">+40% × {minSlots}</span>
-                        </div>
-                      )}
                     </div>
                     <div className="text-xs">
                       <span className="text-purple-400">{totalSlotsInSet} slots • </span>
@@ -351,10 +325,10 @@ export function Portfolio({ onSelectProperty }: PortfolioProps) {
                     <div className="px-3 pb-2">
                       {/* Set Bonus Info Banner */}
                       {isComplete && (
-                        <div className="bg-green-900/30 border border-green-500/30 rounded px-2 py-1.5 mb-2">
+                        <div className="bg-green-900/30 rounded px-2 py-1.5 mb-2">
                           <div className="text-[10px] text-green-300 font-bold uppercase tracking-wide flex items-center gap-1">
                             <Award className="w-3 h-3" />
-                            Complete Set Bonus: +40% on {minSlots} slot{minSlots > 1 ? 's' : ''} per property
+                            Complete Set Bonus: +40%
                           </div>
                         </div>
                       )}
@@ -372,7 +346,7 @@ export function Portfolio({ onSelectProperty }: PortfolioProps) {
                             <div 
                               key={`property-${owned.propertyId}`}
                               onClick={() => onSelectProperty(owned.propertyId)}
-                              className="bg-purple-950/40 rounded-lg px-2 py-2 hover:bg-purple-800/40 transition-all cursor-pointer"
+                              className="bg-white/[0.02] rounded-lg px-2 py-2 hover:bg-white/[0.06] transition-all cursor-pointer"
                             >
                               <div className="flex items-center justify-between mb-1">
                                 <div className="flex-1 min-w-0">
@@ -438,6 +412,7 @@ export function Portfolio({ onSelectProperty }: PortfolioProps) {
             })}
           </div>
         )}
+        </div>
       </div>
 
       {/* Shield All Modal */}

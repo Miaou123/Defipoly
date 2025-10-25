@@ -72,15 +72,17 @@ export function Leaderboard() {
   };
 
   return (
-    <div className="bg-purple-900/8 backdrop-blur-xl rounded-2xl border border-purple-500/20 p-6 max-h-[450px] overflow-y-auto">
-      <div className="mb-5 pb-4 border-b border-purple-500/20">
-        <h2 className="text-lg font-semibold text-purple-200">
+    <div className="bg-purple-900/8 backdrop-blur-xl rounded-2xl border border-purple-500/20 max-h-[450px] overflow-hidden flex flex-col">
+      {/* Header - Sticky */}
+      <div className="p-6 pb-4">
+        <h2 className="text-xl font-bold text-white">
           Leaderboard
         </h2>
-        <p className="text-xs text-purple-400 mt-1">Top players by daily income</p>
+        <p className="text-sm text-purple-400 mt-1">Top players by daily income</p>
       </div>
 
-      {loading ? (
+      {/* Scrollable Content */}
+      <div className="flex-1 overflow-y-auto px-6 pb-6">{loading ? (
         <div className="text-center py-12">
           <div className="text-2xl mb-2">⏳</div>
           <div className="text-sm text-purple-300">Loading...</div>
@@ -92,75 +94,73 @@ export function Leaderboard() {
           <div className="text-xs text-purple-500 mt-1">Be the first!</div>
         </div>
       ) : (
-        <div className="space-y-3">
+        <div className="space-y-1">
           {leaders.map((leader, index) => {
             const isTop3 = index < 3;
-            const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : '🏅';
+            const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : '';
             
             return (
               <div
                 key={leader.walletAddress}
-                className={`flex items-center gap-3 p-3 rounded-xl transition-all ${
+                className={`flex items-center gap-4 py-3 px-2 rounded-lg transition-all ${
                   isTop3 
-                    ? 'bg-gradient-to-r from-yellow-500/10 to-orange-500/10 border border-yellow-500/30' 
-                    : 'bg-purple-900/20 border border-purple-500/10'
-                } hover:border-purple-500/40`}
+                    ? 'bg-white/[0.03] hover:bg-white/[0.08]' 
+                    : 'bg-white/[0.01] hover:bg-white/[0.05]'
+                }`}
               >
-                <div className="flex items-center justify-center w-8 h-8 text-lg">
-                  {medal}
-                </div>
-                
-                <div className="flex items-center gap-3 flex-1 min-w-0">
-                  {/* Profile Picture */}
-                  <div className="w-10 h-10 rounded-full overflow-hidden bg-purple-500/20 border border-purple-500/30 flex-shrink-0">
-                    {profiles[leader.walletAddress]?.profilePicture ? (
-                      <img 
-                        src={profiles[leader.walletAddress].profilePicture || undefined} 
-                        alt="Profile"
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-purple-300 text-xs font-bold">
-                        {getDisplayName(leader.walletAddress).slice(0, 2).toUpperCase()}
-                      </div>
-                    )}
-                  </div>
-                  
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <div className={`font-semibold text-sm truncate ${
-                        isTop3 ? 'text-yellow-200' : 'text-purple-200'
-                      }`}>
-                        {getDisplayName(leader.walletAddress)}
-                      </div>
-                      {profiles[leader.walletAddress]?.username && (
-                        <div className="text-xs text-purple-400 font-mono">
-                          {formatAddress(leader.walletAddress)}
-                        </div>
-                      )}
-                    </div>
-                    
-                    <div className="flex items-center gap-3 mt-1 text-xs">
-                      <div className="text-green-400 font-semibold">
-                        💰 {formatIncome(leader.dailyIncome)}/day
-                      </div>
-
-                    </div>
-                  </div>
-                </div>
-                
-                <div className={`text-xs font-semibold px-2 py-1 rounded ${
-                  isTop3 
-                    ? 'bg-yellow-500/20 text-yellow-200' 
-                    : 'bg-purple-500/20 text-purple-300'
+                {/* Rank - No background container */}
+                <div className={`text-sm font-bold w-8 text-center ${
+                  isTop3 ? 'text-yellow-400' : 'text-purple-400'
                 }`}>
-                  #{index + 1}
+                  {medal || `#${index + 1}`}
+                </div>
+                
+                {/* Profile Picture - Minimal */}
+                <div className="w-10 h-10 rounded-full overflow-hidden bg-purple-500/10 flex-shrink-0">
+                  {profiles[leader.walletAddress]?.profilePicture ? (
+                    <img 
+                      src={profiles[leader.walletAddress].profilePicture || undefined} 
+                      alt="Profile"
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-purple-400 text-xs font-bold">
+                      {getDisplayName(leader.walletAddress).slice(0, 2).toUpperCase()}
+                    </div>
+                  )}
+                </div>
+                
+                {/* Name and Address - Clean */}
+                <div className="flex-1 min-w-0">
+                  <div className={`font-semibold text-sm truncate ${
+                    isTop3 ? 'text-white' : 'text-purple-100'
+                  }`}>
+                    {getDisplayName(leader.walletAddress)}
+                  </div>
+                  {profiles[leader.walletAddress]?.username && (
+                    <div className="text-xs text-purple-500 font-mono">
+                      {formatAddress(leader.walletAddress)}
+                    </div>
+                  )}
+                </div>
+                
+                {/* Income - Clean, no background */}
+                <div className="text-right">
+                  <div className={`text-sm font-bold font-mono ${
+                    isTop3 ? 'text-green-400' : 'text-green-500'
+                  }`}>
+                    {formatIncome(leader.dailyIncome)}
+                  </div>
+                  <div className="text-[10px] text-purple-500 uppercase tracking-wider">
+                    per day
+                  </div>
                 </div>
               </div>
             );
           })}
         </div>
       )}
+      </div>
     </div>
   );
 }

@@ -11,8 +11,14 @@ interface BoardProps {
 
 export function Board({ onSelectProperty }: BoardProps) {
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-900">
-      <div className="w-full max-w-[95vw] aspect-square bg-gray-900 rounded-lg shadow-2xl border-8 border-gray-800">
+    <div className="flex items-center justify-center min-h-screen">
+      <div 
+        className="w-full max-w-[95vw] aspect-square rounded-lg shadow-2xl border-8 border-purple-900/50"
+        style={{
+          background: 'rgba(12, 5, 25, 0.75)',
+          boxShadow: 'inset 0 0 100px rgba(147, 51, 234, 0.2), 0 0 60px rgba(147, 51, 234, 0.3)'
+        }}
+      >
         <div className="w-full h-full grid grid-cols-8 grid-rows-8 gap-0">
           
           {/* ========== TOP-LEFT CORNER: Liquidity Pool ========== */}
@@ -42,7 +48,7 @@ export function Board({ onSelectProperty }: BoardProps) {
           <div className="col-start-1 row-start-7"><PropertyCard propertyId={5} onSelect={onSelectProperty} /></div>
 
           {/* ========== CENTER: Logo & Rewards ========== */}
-          <div className="col-start-2 col-span-6 row-start-2 row-span-6 bg-gradient-to-br from-purple-600 via-purple-700 to-purple-800 flex flex-col items-center justify-center border-2 border-purple-900 shadow-inner relative">
+          <div className="col-start-2 col-span-6 row-start-2 row-span-6 bg-gradient-to-br from-purple-950 via-purple-950 to-purple-900 flex flex-col items-center justify-center border-2 border-purple-900 shadow-inner relative">
             <div className="absolute inset-0 bg-gradient-to-r from-green-500/0 via-green-500/10 to-green-500/0 animate-pulse"></div>
             
 

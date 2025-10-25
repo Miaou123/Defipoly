@@ -8,7 +8,7 @@ interface CornerSquareProps {
 
 export function CornerSquare({ icon, label, bgColor }: CornerSquareProps) {
   return (
-    <div className={`${bgColor} border-2 border-gray-700 flex flex-col items-center justify-center p-2 h-full relative overflow-hidden`}>
+    <div className={`${bgColor} border border-gray-700/30 flex flex-col items-center justify-center p-2 h-full relative overflow-hidden`}>
       {bgColor.includes('red') && (
         <div className="absolute inset-0 bg-gradient-to-br from-red-400/30 animate-pulse"></div>
       )}
@@ -30,7 +30,7 @@ interface FillerSquareProps {
 
 export function FillerSquare({ icon, label, bgColor }: FillerSquareProps) {
   return (
-    <div className={`${bgColor} border-2 border-gray-700 flex flex-col items-center justify-center p-2 h-full`}>
+    <div className={`${bgColor} border border-gray-700/30 flex flex-col items-center justify-center p-2 h-full`}>
       <div className="text-2xl mb-1">{icon}</div>
       <div className="text-[7px] font-black text-center uppercase text-gray-800 leading-tight">
         {label}

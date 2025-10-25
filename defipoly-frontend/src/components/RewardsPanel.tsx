@@ -3,6 +3,7 @@
 import { useState, useRef } from 'react';
 import { useWallet, useConnection } from '@solana/wallet-adapter-react';
 import { useRewards } from '@/hooks/useRewards';
+import { usePlayerStats } from '@/hooks/usePlayerStats';
 import { useDefipoly } from '@/hooks/useDefipoly';
 import { useNotification } from '../contexts/NotificationContext';
 import { StyledWalletButton } from './StyledWalletButton';
@@ -14,6 +15,7 @@ export function RewardsPanel() {
   const { connected, publicKey } = useWallet();
   const { connection } = useConnection();
   const { unclaimedRewards, dailyIncome, loading: rewardsLoading } = useRewards();
+  const { totalEarned } = usePlayerStats();
   const { claimRewards, loading: claimLoading } = useDefipoly();
   const { showSuccess, showError } = useNotification();
   const [claiming, setClaiming] = useState(false);
@@ -144,47 +146,139 @@ export function RewardsPanel() {
   }
 
   return (
-    <div className="relative w-full max-w-md px-4">
+    <div className="relative w-full max-w-sm px-4">
       {rewardsLoading ? (
         <div className="text-white/60 text-center">Loading rewards...</div>
       ) : (
         <div className="space-y-3">
-          <div className="bg-black/40 backdrop-blur-md rounded-2xl p-6 border-2 border-green-400/50 shadow-lg">
-            <div className="text-center">
-              <div className="text-xs text-green-300 uppercase tracking-widest font-bold mb-2">
-                💎 Unclaimed Rewards
-              </div>
-              <div className="text-5xl font-black text-green-400 tabular-nums mb-1">
-                {unclaimedRewards.toLocaleString()}
-              </div>
-              <div className="text-sm text-green-300 font-bold mb-4">DEFI</div>
-              
-              {unclaimedRewards > 0 && (
-                <button
-                  onClick={handleClaimRewards}
-                  disabled={claiming || claimLoading || unclaimedRewards === 0}
-                  className="w-full py-3 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-400 hover:to-emerald-400 disabled:from-gray-700 disabled:to-gray-800 disabled:cursor-not-allowed rounded-xl font-black text-white shadow-lg hover:shadow-green-500/50 transition-all transform hover:scale-105 disabled:scale-100 disabled:opacity-50"
-                >
-                  {claiming ? '⏳ Claiming...' : '🎁 CLAIM NOW'}
-                </button>
-              )}
+          {/* Electric Cyan Rewards Box */}
+          <div className="relative rounded-[16px] p-5 overflow-hidden" style={{
+            background: 'linear-gradient(135deg, rgba(20, 10, 40, 0.9), rgba(40, 10, 60, 0.9))',
+            boxShadow: '0 0 30px rgba(147, 51, 234, 0.3), inset 0 0 20px rgba(147, 51, 234, 0.1)'
+          }}>
+            {/* Animated Glow Ring - Cyan/Purple */}
+            <div className="absolute inset-[-3px] rounded-[16px] animate-glow-rotate" style={{
+              background: 'linear-gradient(135deg, #9333ea, #06b6d4, #9333ea)',
+              zIndex: -1
+            }}></div>
+            
+            {/* Radial glowing spots in background - like Option 1 */}
+            <div className="absolute inset-0 pointer-events-none" style={{
+              background: 'radial-gradient(circle at 20% 30%, rgba(147, 51, 234, 0.2) 0%, transparent 50%), radial-gradient(circle at 80% 70%, rgba(236, 72, 153, 0.2) 0%, transparent 50%)',
+              zIndex: -1
+            }}></div>
+            
+            {/* Header */}
+            <div className="text-center text-[9px] tracking-[3px] text-cyan-400 font-bold mb-2 uppercase">
+              ◆ UNCLAIMED REWARDS ◆
             </div>
+            
+            {/* Amount */}
+            <div className="text-center text-[48px] font-black leading-none mb-1 tabular-nums text-white" style={{
+              fontFamily: 'Courier New, monospace'
+            }}>
+              {unclaimedRewards.toLocaleString()}
+            </div>
+            
+            {/* Currency */}
+            <div className="text-center text-sm font-bold tracking-[2px] mb-4 text-white/70">
+              DEFI
+            </div>
+            
+            {/* Claim Button - Electric Cyan */}
+            {unclaimedRewards > 0 && (
+              <button
+                onClick={handleClaimRewards}
+                disabled={claiming || claimLoading || unclaimedRewards === 0}
+                className="w-full py-3 rounded-lg font-black text-base uppercase tracking-[2px] transition-all disabled:opacity-50 disabled:cursor-not-allowed relative overflow-hidden"
+                style={{
+                  background: 'linear-gradient(135deg, #06b6d4, #0891b2)',
+                  border: '2px solid #06b6d4',
+                  color: '#0a0015',
+                  fontFamily: 'Courier New, monospace'
+                }}
+                onMouseEnter={(e) => {
+                  if (!claiming && !claimLoading && unclaimedRewards > 0) {
+                    e.currentTarget.style.transform = 'translateY(-2px)';
+                    e.currentTarget.style.boxShadow = '0 0 30px rgba(6, 182, 212, 0.6)';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = 'translateY(0)';
+                  e.currentTarget.style.boxShadow = 'none';
+                }}
+              >
+                {/* Shine effect */}
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/40 to-transparent -translate-x-full transition-transform duration-500 hover:translate-x-full pointer-events-none"></div>
+                <span className="relative z-10">
+                  {claiming ? '⏳ CLAIMING...' : 'COLLECT REWARDS'}
+                </span>
+              </button>
+            )}
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div className="bg-black/30 backdrop-blur-md rounded-xl p-4 border border-white/10">
-              <div className="text-[10px] text-purple-300 uppercase font-bold mb-1">Daily Income</div>
-              <div className="text-2xl font-black text-white tabular-nums">{dailyIncome.toLocaleString()}</div>
-              <div className="text-[10px] text-purple-400">DEFI/day</div>
+          {/* Stats Cards */}
+          <div className="flex gap-3">
+            <div className="flex-1 rounded-lg p-3 text-center relative overflow-hidden" style={{
+              background: 'rgba(0, 0, 0, 0.5)',
+              border: '2px solid rgba(147, 51, 234, 0.6)'
+            }}>
+              {/* Scanline animation */}
+              <div className="absolute top-0 left-0 w-full h-[2px] animate-scanline" style={{
+                background: 'linear-gradient(90deg, transparent, #9333ea, transparent)'
+              }}></div>
+              
+              <div className="text-[9px] text-purple-300 uppercase tracking-wide font-bold mb-1">DAILY</div>
+              <div className="text-[22px] font-black tabular-nums text-white" style={{
+                fontFamily: 'Courier New, monospace'
+              }}>
+                {dailyIncome >= 1000 ? `${Math.floor(dailyIncome / 1000)}K` : dailyIncome.toLocaleString()}
+              </div>
+              <div className="text-[9px] text-purple-400 mt-[2px]">DEFI/day</div>
             </div>
-            <div className="bg-black/30 backdrop-blur-md rounded-xl p-4 border border-white/10">
-              <div className="text-[10px] text-purple-300 uppercase font-bold mb-1">Hourly Rate</div>
-              <div className="text-2xl font-black text-white tabular-nums">{Math.floor(dailyIncome / 24).toLocaleString()}</div>
-              <div className="text-[10px] text-purple-400">DEFI/hr</div>
+            
+            <div className="flex-1 rounded-lg p-3 text-center relative overflow-hidden" style={{
+              background: 'rgba(0, 0, 0, 0.5)',
+              border: '2px solid rgba(147, 51, 234, 0.6)'
+            }}>
+              {/* Scanline animation */}
+              <div className="absolute top-0 left-0 w-full h-[2px] animate-scanline" style={{
+                background: 'linear-gradient(90deg, transparent, #9333ea, transparent)',
+                animationDelay: '1s'
+              }}></div>
+              
+              <div className="text-[9px] text-purple-300 uppercase tracking-wide font-bold mb-1">TOTAL CLAIMED</div>
+              <div className="text-[22px] font-black tabular-nums text-white" style={{
+                fontFamily: 'Courier New, monospace'
+              }}>
+                {totalEarned >= 1000 ? `${Math.floor(totalEarned / 1000)}K` : Math.floor(totalEarned).toLocaleString()}
+              </div>
+              <div className="text-[9px] text-purple-400 mt-[2px]">DEFI</div>
             </div>
           </div>
         </div>
       )}
+      
+      {/* CSS Animations */}
+      <style jsx>{`
+        @keyframes glow-rotate {
+          0% { filter: hue-rotate(0deg); }
+          100% { filter: hue-rotate(360deg); }
+        }
+        
+        .animate-glow-rotate {
+          animation: glow-rotate 4s linear infinite;
+        }
+        
+        @keyframes scanline {
+          0% { left: -100%; }
+          100% { left: 100%; }
+        }
+        
+        .animate-scanline {
+          animation: scanline 2s linear infinite;
+        }
+      `}</style>
     </div>
   );
 }
