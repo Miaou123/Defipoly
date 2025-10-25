@@ -266,19 +266,7 @@ export function Portfolio({ onSelectProperty }: PortfolioProps) {
           <h2 className="text-lg font-semibold text-purple-200">My Portfolio</h2>
           <span className="text-sm text-purple-400">{totalSlots} slots</span>
         </div>
-
-        {/* Stats */}
-        <div className="grid grid-cols-2 gap-3 mb-5">
-          <div className="bg-purple-900/15 p-3 rounded-xl border border-purple-500/30">
-            <div className="text-[11px] text-purple-300 uppercase tracking-wider mb-1">Daily Income</div>
-            <div className="text-xl font-bold text-purple-100">{dailyIncome.toLocaleString()}</div>
-          </div>
-          <div className="bg-purple-900/15 p-3 rounded-xl border border-purple-500/30">
-            <div className="text-[11px] text-purple-300 uppercase tracking-wider mb-1">Total Value</div>
-            <div className="text-xl font-bold text-purple-100">{portfolioValue.toLocaleString()}</div>
-          </div>
-        </div>
-
+        
         {/* Shield All Button */}
         {renderShieldAllButton()}
 
