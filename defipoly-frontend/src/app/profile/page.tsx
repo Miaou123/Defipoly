@@ -3,7 +3,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { useRouter } from 'next/navigation';
-import { Header } from '@/components/Header';
 import { getPropertyById } from '@/utils/constants';
 import { compressImage } from '@/utils/profileStorage';
 import { useNotification } from '@/contexts/NotificationContext';
@@ -340,23 +339,34 @@ export default function ProfilePage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-950 via-purple-900 to-slate-950">
-      <Header />
-      
-      <div className="container mx-auto px-4 py-8 max-w-6xl">
-        {/* Header with Back Button */}
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h1 className="text-3xl font-bold text-purple-100 mb-1">Your Profile</h1>
-            <p className="text-purple-400 font-mono text-sm">
-              {publicKey.toString()}
-            </p>
+      {/* Compact Top Bar */}
+      <div className="border-b border-purple-500/20 bg-black/30 backdrop-blur-xl">
+        <div className="container mx-auto px-6 py-4 flex items-center justify-between max-w-6xl">
+          {/* Logo */}
+          <div className="flex items-center gap-3">
+            <div className="text-2xl">🎲</div>
+            <div>
+              <h1 className="text-lg font-bold text-purple-100 leading-tight">Defipoly</h1>
+              <p className="text-xs text-purple-400 leading-tight">Profile</p>
+            </div>
           </div>
+
+          {/* Back Button */}
           <button
             onClick={() => router.push('/')}
-            className="px-6 py-2 bg-purple-600 hover:bg-purple-500 rounded-lg transition-colors text-white font-semibold flex items-center gap-2"
+            className="px-6 py-2.5 bg-purple-600 hover:bg-purple-500 rounded-xl transition-colors text-white font-semibold flex items-center gap-2 shadow-lg"
           >
             <span>←</span> Back to Game
           </button>
+        </div>
+      </div>
+      
+      <div className="container mx-auto px-4 py-8 max-w-6xl">
+        {/* Wallet Address Header */}
+        <div className="mb-6 text-center">
+          <p className="text-purple-400 font-mono text-sm">
+            {publicKey.toString()}
+          </p>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

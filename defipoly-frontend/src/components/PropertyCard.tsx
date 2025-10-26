@@ -322,84 +322,208 @@ export function PropertyCard({ propertyId, onSelect }: PropertyCardProps) {
     fetchOwnership();
   }, [connected, publicKey, propertyId, program, getOwnershipData, getPropertyData, refreshKey, property.name, property.setId]);
 
+  // Extract color from Tailwind classes for holographic effects
+  const getColorHex = (colorClass: string) => {
+    const colorMap: { [key: string]: string } = {
+      'bg-amber-700': '#b45309',
+      'bg-sky-400': '#38bdf8',
+      'bg-pink-500': '#ec4899',
+      'bg-orange-500': '#f97316',
+      'bg-red-600': '#dc2626',
+      'bg-yellow-400': '#facc15',
+      'bg-green-500': '#22c55e',
+      'bg-blue-600': '#2563eb',
+    };
+    return colorMap[colorClass] || '#8b5cf6';
+  };
+
+  const colorHex = getColorHex(property.color);
+
   return (
     <button
       onClick={() => onSelect(propertyId)}
-      className={`w-full h-full relative border-2 hover:scale-105 hover:z-20 hover:shadow-2xl transition-all duration-200 cursor-pointer flex flex-col overflow-hidden bg-white ${
-        hasCompleteSet 
-          ? 'border-[#fbbf24] shadow-[0_0_20px_rgba(251,191,36,0.6),0_0_40px_rgba(251,191,36,0.3)] animate-[pulse-glow_2s_ease-in-out_infinite]' 
-          : 'border-gray-800'
-      }`}
-      style={hasCompleteSet ? {
-        animation: 'pulse-glow 2s ease-in-out infinite'
-      } : undefined}
+      className="holographic-card w-full h-full relative overflow-hidden cursor-pointer group"
+      style={{
+        background: `linear-gradient(135deg, rgba(139, 92, 246, 0.08), rgba(109, 40, 217, 0.05))`,
+        backdropFilter: 'blur(10px)',
+        WebkitBackdropFilter: 'blur(10px)',
+      }}
     >
-      {/* Color bar at top */}
-      <div className={`${property.color} h-4 w-full flex-shrink-0`}></div>
+      {/* Holographic shimmer strip - animated on hover only */}
+      <div 
+        className="absolute top-0 left-0 w-full h-full pointer-events-none z-10 shimmer-strip"
+        style={{
+          background: `linear-gradient(90deg, transparent, ${colorHex}, transparent)`,
+          opacity: 0.3,
+          transform: 'translateX(-100%) rotate(45deg)',
+        }}
+      />
 
-      {/* Property Name */}
-      <div className="px-1 py-1 bg-white border-b border-gray-200 flex-shrink-0">
-        <div className="text-center">
-          <div className="text-[7px] font-bold text-gray-700 leading-tight uppercase truncate">
-            {property.name}
-          </div>
-        </div>
-      </div>
+      {/* Border with property color */}
+      <div 
+        className="absolute inset-0 pointer-events-none z-0"
+        style={{
+          border: `2px solid ${colorHex}`,
+          borderRadius: '8px',
+        }}
+      />
 
-      {/* Building display area */}
-      <div className="flex-1 flex items-center justify-center bg-gradient-to-b from-slate-100 to-slate-50 px-1 py-2 min-h-0">
-        {buildingLevel === 0 ? (
-          <div className="text-center">
-            <div className="text-base">📍</div>
-          </div>
-        ) : (
-          <div className="w-full h-full flex items-center justify-center scale-[0.25]">
-            {BUILDING_SVGS[buildingLevel]}
-          </div>
-        )}
-      </div>
-
-      {/* Combined Cooldown/Status Indicator - Only show when there's at least one cooldown */}
-      {activeCooldowns.length > 0 && (
-        <div className="px-1 py-0.5 bg-gradient-to-r from-slate-50 to-slate-100 border-t border-gray-200 flex-shrink-0">
-          <div className="flex items-center justify-center gap-1">
-            {activeCooldowns.map((cooldown, index) => (
-              <div key={index} className="flex items-center gap-0.5">
-                <span className="text-[8px]">{cooldown.icon}</span>
-                {cooldown.time && (
-                  <span className="text-[6px] font-semibold text-gray-700">
-                    {cooldown.time}
-                  </span>
-                )}
-                {cooldown.label && (
-                  <span className="text-[6px] font-semibold text-amber-700">
-                    {cooldown.label}
-                  </span>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
+      {/* Complete set golden border */}
+      {hasCompleteSet && (
+        <div 
+          className="absolute inset-0 pointer-events-none z-0"
+          style={{
+            border: '3px solid #fbbf24',
+            borderRadius: '8px',
+            animation: 'pulse-border 2s ease-in-out infinite',
+          }}
+        />
       )}
 
-      {/* Price */}
-      <div className="px-1 py-1 bg-white border-t border-gray-200 flex-shrink-0">
-        <div className="text-center">
-          <div className="text-[8px] font-black text-gray-900">
-            ${(property.price / 1000)}K
+      {/* Card content */}
+      <div className="relative z-20 flex flex-col h-full">
+        {/* Color bar at top */}
+        <div 
+          className={`${property.color} h-4 w-full flex-shrink-0`}
+        />
+
+        {/* Property Name */}
+        <div 
+          className="px-1 py-1.5 flex-shrink-0"
+          style={{
+            background: 'rgba(12, 5, 25, 0.6)',
+            borderBottom: `1px solid ${colorHex}40`,
+          }}
+        >
+          <div className="text-center">
+            <div 
+              className="text-[7px] font-bold leading-tight uppercase truncate"
+              style={{
+                color: '#e9d5ff',
+                letterSpacing: '0.5px',
+              }}
+            >
+              {property.name}
+            </div>
+          </div>
+        </div>
+
+        {/* Building display area with floating animation */}
+        <div 
+          className="flex-1 flex items-center justify-center px-1 py-2 min-h-0"
+          style={{
+            background: 'linear-gradient(135deg, rgba(88, 28, 135, 0.4), rgba(109, 40, 217, 0.2))',
+          }}
+        >
+          {buildingLevel === 0 ? (
+            <div className="text-center">
+              <div className="text-base">📍</div>
+            </div>
+          ) : (
+            <div className="w-full h-full flex items-center justify-center scale-[0.25] building-float">
+              {BUILDING_SVGS[buildingLevel]}
+            </div>
+          )}
+        </div>
+
+        {/* Combined Cooldown/Status Indicator */}
+        {activeCooldowns.length > 0 && (
+          <div 
+            className="px-1 py-0.5 flex-shrink-0"
+            style={{
+              background: 'rgba(12, 5, 25, 0.8)',
+              borderTop: `1px solid ${colorHex}30`,
+            }}
+          >
+            <div className="flex items-center justify-center gap-1">
+              {activeCooldowns.map((cooldown, index) => (
+                <div key={index} className="flex items-center gap-0.5">
+                  <span className="text-[8px]">{cooldown.icon}</span>
+                  {cooldown.time && (
+                    <span className="text-[6px] font-semibold text-purple-300">
+                      {cooldown.time}
+                    </span>
+                  )}
+                  {cooldown.label && (
+                    <span className="text-[6px] font-semibold text-amber-400">
+                      {cooldown.label}
+                    </span>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Price */}
+        <div 
+          className="px-1 py-1 flex-shrink-0"
+          style={{
+            background: 'rgba(12, 5, 25, 0.8)',
+            borderTop: `1px solid ${colorHex}30`,
+          }}
+        >
+          <div className="text-center">
+            <div 
+              className="text-[8px] font-black"
+              style={{
+                color: '#e9d5ff',
+              }}
+            >
+              ${(property.price / 1000)}K
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Add keyframe animation for the golden glow */}
       <style jsx>{`
-        @keyframes pulse-glow {
+        @keyframes shimmer {
+          0% {
+            transform: translateX(-100%) rotate(45deg);
+          }
+          100% {
+            transform: translateX(200%) rotate(45deg);
+          }
+        }
+
+        @keyframes pulse-border {
           0%, 100% { 
-            box-shadow: 0 0 20px rgba(251, 191, 36, 0.6), 0 0 40px rgba(251, 191, 36, 0.3);
+            border-color: rgba(251, 191, 36, 1);
           }
           50% { 
-            box-shadow: 0 0 30px rgba(251, 191, 36, 0.8), 0 0 60px rgba(251, 191, 36, 0.4);
+            border-color: rgba(251, 191, 36, 0.8);
           }
+        }
+
+        @keyframes float {
+          0%, 100% {
+            transform: translateY(0px) scale(0.25);
+          }
+          50% {
+            transform: translateY(-3px) scale(0.25);
+          }
+        }
+
+        .building-float {
+          /* No animation by default */
+        }
+
+        .holographic-card:hover .building-float {
+          animation: float 3s ease-in-out infinite;
+        }
+
+        .holographic-card:hover .shimmer-strip {
+          animation: shimmer 3s ease-in-out infinite;
+        }
+
+        .holographic-card {
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+          border-radius: 8px;
+        }
+
+        .holographic-card:hover {
+          transform: translateY(-8px) scale(1.05);
+          z-index: 50;
         }
       `}</style>
     </button>

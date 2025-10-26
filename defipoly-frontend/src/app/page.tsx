@@ -1,11 +1,11 @@
 'use client';
 
-import { Header } from '@/components/Header';
 import { Board } from '@/components/Board';
 import { Portfolio } from '@/components/Portfolio';
 import { Leaderboard } from '@/components/Leaderboard';
 import { LiveFeed } from '@/components/LiveFeed';
 import { PropertyModal } from '@/components/PropertyModal';
+import { SideHeader } from '@/components/SideHeader';
 import { 
   BuyPropertyExplanationModal,
   ShieldPropertyExplanationModal,
@@ -18,29 +18,42 @@ export default function Home() {
   const [activeExplanationModal, setActiveExplanationModal] = useState<'buy' | 'shield' | 'steal' | null>(null);
 
   const handleBuyProceed = () => {
-    // Add your logic here - maybe open a property selection modal
     console.log('User understood Buy mechanic, proceeding...');
-    // For now, just close the modal
   };
 
   const handleShieldProceed = () => {
-    // Add your logic here
     console.log('User understood Shield mechanic, proceeding...');
   };
 
   const handleStealProceed = () => {
-    // Add your logic here
     console.log('User understood Steal mechanic, proceeding...');
   };
 
   return (
     <div className="min-h-screen">
-      <Header />
-      
+      {/* Main grid layout - full height */}
       <div className="grid grid-cols-1 xl:grid-cols-[340px_1fr_340px] gap-6 p-6 max-w-[1900px] mx-auto pb-32">
-        <Portfolio onSelectProperty={setSelectedProperty} />
-        <Board onSelectProperty={setSelectedProperty} />
+        {/* LEFT COLUMN: Logo + Portfolio */}
         <div className="flex flex-col gap-6">
+          {/* Logo at top of left column */}
+          <div className="flex items-center gap-3 rounded-xl px-4 py-3 shadow-xl">
+            <div className="text-2xl">🎲</div>
+            <div>
+              <h1 className="text-lg font-bold text-purple-100">Defipoly</h1>
+            </div>
+          </div>
+          
+          <Portfolio onSelectProperty={setSelectedProperty} />
+        </div>
+
+        {/* CENTER: Board */}
+        <Board onSelectProperty={setSelectedProperty} />
+        
+        {/* RIGHT COLUMN: Profile/Wallet + Leaderboard + Live Feed */}
+        <div className="flex flex-col gap-6">
+          {/* Profile & Wallet at top of right column */}
+          <SideHeader />
+          
           <Leaderboard />
           <LiveFeed />
         </div>
@@ -66,7 +79,7 @@ export default function Home() {
           </button>
           <button 
             onClick={() => setActiveExplanationModal('shield')}
-            className="px-5 py-2.5 bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-500 hover:to-amber-600 rounded-lg font-semibold text-sm transition-all flex items-center gap-2 hover:shadow-lg hover:shadow-amber-500/40"
+            className="px-5 py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-500 hover:to-blue-600 rounded-lg font-semibold text-sm transition-all flex items-center gap-2 hover:shadow-lg hover:shadow-blue-500/40"
           >
             <span>🛡️</span> Shield Property
           </button>
@@ -74,26 +87,26 @@ export default function Home() {
             onClick={() => setActiveExplanationModal('steal')}
             className="px-5 py-2.5 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 rounded-lg font-semibold text-sm transition-all flex items-center gap-2 hover:shadow-lg hover:shadow-red-500/40"
           >
-            <span>🎯</span> Steal Property
+            <span>💰</span> Steal Property
           </button>
         </div>
       </div>
 
-      {/* Mechanics Explanation Modals */}
+      {/* Explanation Modals - Conditionally rendered */}
       {activeExplanationModal === 'buy' && (
-        <BuyPropertyExplanationModal
+        <BuyPropertyExplanationModal 
           onClose={() => setActiveExplanationModal(null)}
           onProceed={handleBuyProceed}
         />
       )}
       {activeExplanationModal === 'shield' && (
-        <ShieldPropertyExplanationModal
+        <ShieldPropertyExplanationModal 
           onClose={() => setActiveExplanationModal(null)}
           onProceed={handleShieldProceed}
         />
       )}
       {activeExplanationModal === 'steal' && (
-        <StealPropertyExplanationModal
+        <StealPropertyExplanationModal 
           onClose={() => setActiveExplanationModal(null)}
           onProceed={handleStealProceed}
         />
