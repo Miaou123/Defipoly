@@ -81,9 +81,6 @@ export function Board({ onSelectProperty }: BoardProps) {
           <div className="col-start-2 row-start-8"><PropertyCard propertyId={4} onSelect={onSelectProperty} /></div>
           <div className="col-start-3 row-start-8"><PropertyCard propertyId={3} onSelect={onSelectProperty} /></div>
           <div className="col-start-4 row-start-8"><PropertyCard propertyId={2} onSelect={onSelectProperty} /></div>
-          <div className="col-start-5 row-start-8">
-            <FillerSquare icon="⚡" label="Flash Loan" bgColor="bg-purple-300" />
-          </div>
           <div className="col-start-6 row-start-8"><PropertyCard propertyId={1} onSelect={onSelectProperty} /></div>
           <div className="col-start-7 row-start-8"><PropertyCard propertyId={0} onSelect={onSelectProperty} /></div>
           

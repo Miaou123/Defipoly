@@ -12,10 +12,12 @@ import {
   StealPropertyExplanationModal
 } from '@/components/MechanicsExplanationModals';
 import { useState } from 'react';
+import { ChevronUp, ChevronDown } from 'lucide-react';
 
 export default function Home() {
   const [selectedProperty, setSelectedProperty] = useState<number | null>(null);
   const [activeExplanationModal, setActiveExplanationModal] = useState<'buy' | 'shield' | 'steal' | null>(null);
+  const [showActionBar, setShowActionBar] = useState(true);
 
   const handleBuyProceed = () => {
     console.log('User understood Buy mechanic, proceeding...');
@@ -64,31 +66,49 @@ export default function Home() {
         onClose={() => setSelectedProperty(null)}
       />
 
+      {/* Toggle Button - Always Visible */}
+      <button
+        onClick={() => setShowActionBar(!showActionBar)}
+        className="fixed bottom-2 left-1/2 -translate-x-1/2 bg-black/60 backdrop-blur-xl border border-purple-500/30 rounded-lg px-4 py-2 hover:bg-purple-900/40 transition-all z-50 shadow-lg"
+      >
+        {showActionBar ? (
+          <ChevronDown className="w-5 h-5 text-purple-300" />
+        ) : (
+          <ChevronUp className="w-5 h-5 text-purple-300" />
+        )}
+      </button>
+
       {/* Bottom Action Bar */}
-      <div className="fixed bottom-0 left-0 right-0 bg-black/60 backdrop-blur-xl border-t border-purple-500/30 p-3 z-40">
-        <div className="max-w-7xl mx-auto flex gap-3 justify-center items-center flex-wrap">
-          <div className="text-xs text-purple-300 bg-purple-900/20 px-4 py-2 rounded-lg border border-purple-500/30">
-            <div className="font-medium">ℹ️ Click properties to Buy/Steal</div>
-            <div className="opacity-70 text-[10px]">Setup happens automatically on first purchase</div>
+      <div 
+        className={`fixed left-0 right-0 bg-black/60 backdrop-blur-xl border-t border-purple-500/30 z-40 transition-all duration-300 ${
+          showActionBar ? 'bottom-0' : '-bottom-full'
+        }`}
+      >
+        <div className="p-3 pb-12">
+          <div className="max-w-7xl mx-auto flex gap-3 justify-center items-center flex-wrap">
+            <div className="text-xs text-purple-300 bg-purple-900/20 px-4 py-2 rounded-lg border border-purple-500/30">
+              <div className="font-medium">ℹ️ Click properties to Buy/Steal</div>
+              <div className="opacity-70 text-[10px]">Setup happens automatically on first purchase</div>
+            </div>
+            <button 
+              onClick={() => setActiveExplanationModal('buy')}
+              className="px-5 py-2.5 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-500 hover:to-green-600 rounded-lg font-semibold text-sm transition-all flex items-center gap-2 hover:shadow-lg hover:shadow-green-500/40"
+            >
+              <span>🏠</span> Buy Property
+            </button>
+            <button 
+              onClick={() => setActiveExplanationModal('shield')}
+              className="px-5 py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-500 hover:to-blue-600 rounded-lg font-semibold text-sm transition-all flex items-center gap-2 hover:shadow-lg hover:shadow-blue-500/40"
+            >
+              <span>🛡️</span> Shield Property
+            </button>
+            <button 
+              onClick={() => setActiveExplanationModal('steal')}
+              className="px-5 py-2.5 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 rounded-lg font-semibold text-sm transition-all flex items-center gap-2 hover:shadow-lg hover:shadow-red-500/40"
+            >
+              <span>💰</span> Steal Property
+            </button>
           </div>
-          <button 
-            onClick={() => setActiveExplanationModal('buy')}
-            className="px-5 py-2.5 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-500 hover:to-green-600 rounded-lg font-semibold text-sm transition-all flex items-center gap-2 hover:shadow-lg hover:shadow-green-500/40"
-          >
-            <span>🏠</span> Buy Property
-          </button>
-          <button 
-            onClick={() => setActiveExplanationModal('shield')}
-            className="px-5 py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-500 hover:to-blue-600 rounded-lg font-semibold text-sm transition-all flex items-center gap-2 hover:shadow-lg hover:shadow-blue-500/40"
-          >
-            <span>🛡️</span> Shield Property
-          </button>
-          <button 
-            onClick={() => setActiveExplanationModal('steal')}
-            className="px-5 py-2.5 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 rounded-lg font-semibold text-sm transition-all flex items-center gap-2 hover:shadow-lg hover:shadow-red-500/40"
-          >
-            <span>💰</span> Steal Property
-          </button>
         </div>
       </div>
 
