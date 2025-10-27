@@ -230,10 +230,8 @@ export function PropertyCard({ propertyId, onSelect }: PropertyCardProps) {
   const property = PROPERTIES.find(p => p.id === propertyId);
   if (!property) return null;
 
-  // Get cooldown info (optimized - fetches once, calculates client-side)
+  // Get cooldown info
   const { cooldownRemaining, isOnCooldown, lastPurchasedPropertyId } = useCooldown(property.setId);
-
-  // Get steal cooldown info 
   const { isOnStealCooldown, stealCooldownRemaining } = useStealCooldownFromContext(propertyId);
   
   // Format cooldown time
@@ -244,7 +242,6 @@ export function PropertyCard({ propertyId, onSelect }: PropertyCardProps) {
     return `${mins}m`;
   };
 
-  // Only show buy cooldown if there's a cooldown AND this is NOT the property that was just bought
   const isThisPropertyBlocked = isOnCooldown && lastPurchasedPropertyId !== propertyId;
 
   // Determine which cooldowns are active
@@ -259,7 +256,7 @@ export function PropertyCard({ propertyId, onSelect }: PropertyCardProps) {
     activeCooldowns.push({ icon: '🔥', time: formatCooldown(stealCooldownRemaining) });
   }
 
-  // Fetch ownership data AND check for complete set
+  // Fetch ownership data
   useEffect(() => {
     if (!connected || !publicKey || !program) {
       setBuildingLevel(0);
@@ -277,17 +274,14 @@ export function PropertyCard({ propertyId, onSelect }: PropertyCardProps) {
           const slotsOwned = ownershipData.slotsOwned;
           const maxPerPlayer = propertyData.maxPerPlayer;
           
-          // Calculate building level based on percentage of maxPerPlayer (1-5 levels)
           const progressRatio = slotsOwned / maxPerPlayer;
           const level = Math.ceil(progressRatio * 5);
           setBuildingLevel(level);
           
-          // Check if shield is active
           const now = Date.now() / 1000;
           const isShielded = ownershipData.slotsShielded > 0 && ownershipData.shieldExpiry.toNumber() > now;
           setShieldActive(isShielded);
           
-          // Check for complete set
           const setId = property.setId;
           const propertiesInSet = PROPERTIES.filter(p => p.setId === setId);
           const requiredProps = setId === 0 || setId === 7 ? 2 : 3;
@@ -322,70 +316,72 @@ export function PropertyCard({ propertyId, onSelect }: PropertyCardProps) {
     fetchOwnership();
   }, [connected, publicKey, propertyId, program, getOwnershipData, getPropertyData, refreshKey, property.name, property.setId]);
 
-  // Extract color from Tailwind classes for holographic effects
+  // Extract color from Tailwind classes
   const getColorHex = (colorClass: string) => {
     const colorMap: { [key: string]: string } = {
-      'bg-amber-700': '#b45309',
-      'bg-sky-400': '#38bdf8',
-      'bg-pink-500': '#ec4899',
-      'bg-orange-500': '#f97316',
-      'bg-red-600': '#dc2626',
-      'bg-yellow-400': '#facc15',
-      'bg-green-500': '#22c55e',
-      'bg-blue-600': '#2563eb',
+      'bg-amber-900': '#78350f',    // Brown properties
+      'bg-sky-300': '#7dd3fc',      // Light blue properties
+      'bg-pink-400': '#f472b6',     // Pink properties
+      'bg-orange-500': '#f97316',   // Orange properties
+      'bg-red-600': '#dc2626',      // Red properties
+      'bg-yellow-400': '#facc15',   // Yellow properties
+      'bg-green-600': '#16a34a',    // Green properties
+      'bg-blue-900': '#1e3a8a',     // Dark blue properties
     };
     return colorMap[colorClass] || '#8b5cf6';
   };
 
+  // Get darker version of the color for the bar
+  const getDarkerColorHex = (colorClass: string) => {
+    const colorMap: { [key: string]: string } = {
+      'bg-amber-900': '#451a03',    // Much darker brown
+      'bg-sky-300': '#0369a1',      // Much darker light blue
+      'bg-pink-400': '#be185d',     // Much darker pink
+      'bg-orange-500': '#c2410c',   // Much darker orange
+      'bg-red-600': '#991b1b',      // Much darker red
+      'bg-yellow-400': '#a16207',   // Much darker yellow
+      'bg-green-600': '#15803d',    // Much darker green
+      'bg-blue-900': '#0c1844',     // Much darker dark blue
+    };
+    return colorMap[colorClass] || '#6d28d9';
+  };
+
   const colorHex = getColorHex(property.color);
+  const darkerColorHex = getDarkerColorHex(property.color);
 
   return (
-      <button
-        onClick={() => onSelect(propertyId)}
-        className="holographic-card w-full h-full relative overflow-hidden cursor-pointer group"
-        style={{
-          background: `linear-gradient(135deg, rgba(139, 92, 246, 0.08), rgba(109, 40, 217, 0.05))`,
-          backdropFilter: 'blur(10px)',
-          WebkitBackdropFilter: 'blur(10px)',
-          borderRadius: '0px', // ← ADDED: Remove rounded corners
-        }}
-      >
-      {/* Holographic shimmer strip - animated on hover only */}
+    <button
+      onClick={() => onSelect(propertyId)}
+      className="w-full h-full relative overflow-hidden cursor-pointer group"
+      style={{
+        background: `linear-gradient(135deg, rgba(88, 28, 135, 0.8), rgba(109, 40, 217, 0.6))`,
+        border: `1px solid ${colorHex}`,
+        borderRadius: '0px',
+        transition: 'all 0.3s ease',
+      }}
+    >
+      {/* Animated shine effect */}
       <div 
-        className="absolute top-0 left-0 w-full h-full pointer-events-none z-10 shimmer-strip"
+        className="absolute top-0 left-0 w-full h-full pointer-events-none z-10 opacity-0 group-hover:opacity-100"
         style={{
-          background: `linear-gradient(90deg, transparent, ${colorHex}, transparent)`,
-          opacity: 0.3,
-          transform: 'translateX(-100%) rotate(45deg)',
+          background: 'linear-gradient(45deg, transparent, rgba(255, 255, 255, 0.1), transparent)',
+          transform: 'translateX(-100%) translateY(-100%) rotate(45deg)',
+          animation: 'shine-sweep 3s infinite',
+          width: '200%',
+          height: '200%',
+          top: '-50%',
+          left: '-50%',
         }}
       />
-
-      {/* Border with property color */}
-      <div 
-        className="absolute inset-0 pointer-events-none z-0"
-        style={{
-          border: `2px solid ${colorHex}`,
-          borderRadius: '0px', // ← CHANGED: Remove rounded corners
-        }}
-      />
-
-      {/* Complete set golden border */}
-      {hasCompleteSet && (
-        <div 
-          className="absolute inset-0 pointer-events-none z-0"
-          style={{
-            border: '3px solid #fbbf24',
-            borderRadius: '0px', // ← CHANGED: Remove rounded corners
-            animation: 'pulse-border 2s ease-in-out infinite',
-          }}
-        />
-      )}
 
       {/* Card content */}
       <div className="relative z-20 flex flex-col h-full">
-        {/* Color bar at top */}
+        {/* Darker color bar at top with diagonal clip */}
         <div 
-          className={`${property.color} h-4 w-full flex-shrink-0`}
+          className="h-4 w-full flex-shrink-0"
+          style={{
+            background: darkerColorHex,
+          }}
         />
 
         {/* Property Name */}
@@ -409,7 +405,7 @@ export function PropertyCard({ propertyId, onSelect }: PropertyCardProps) {
           </div>
         </div>
 
-        {/* Building display area with floating animation */}
+        {/* Building display area */}
         <div 
           className="flex-1 flex items-center justify-center px-1 py-2 min-h-0"
           style={{
@@ -421,10 +417,25 @@ export function PropertyCard({ propertyId, onSelect }: PropertyCardProps) {
               <div className="text-base">📍</div>
             </div>
           ) : (
-            <div className="w-full h-full flex items-center justify-center scale-[0.25] building-float">
+            <div className="w-full h-full flex items-center justify-center scale-[0.25]">
               {BUILDING_SVGS[buildingLevel]}
             </div>
           )}
+        </div>
+
+        {/* Price section at bottom */}
+        <div 
+          className="px-1 py-0.5 flex-shrink-0"
+          style={{
+            background: 'rgba(12, 5, 25, 0.8)',
+            borderTop: `1px solid ${colorHex}30`,
+          }}
+        >
+          <div className="text-center">
+            <div className="text-[7px] font-semibold text-purple-300">
+              ${property.price.toLocaleString()}
+            </div>
+          </div>
         </div>
 
         {/* Combined Cooldown/Status Indicator */}
@@ -432,7 +443,7 @@ export function PropertyCard({ propertyId, onSelect }: PropertyCardProps) {
           <div 
             className="px-1 py-0.5 flex-shrink-0"
             style={{
-              background: 'rgba(12, 5, 25, 0.8)',
+              background: 'rgba(12, 5, 25, 0.9)',
               borderTop: `1px solid ${colorHex}30`,
             }}
           >
@@ -445,88 +456,46 @@ export function PropertyCard({ propertyId, onSelect }: PropertyCardProps) {
                       {cooldown.time}
                     </span>
                   )}
-                  {cooldown.label && (
-                    <span className="text-[6px] font-semibold text-amber-400">
-                      {cooldown.label}
-                    </span>
-                  )}
                 </div>
               ))}
             </div>
           </div>
         )}
-
-        {/* Price */}
-        <div 
-          className="px-1 py-1 flex-shrink-0"
-          style={{
-            background: 'rgba(12, 5, 25, 0.8)',
-            borderTop: `1px solid ${colorHex}30`,
-          }}
-        >
-          <div className="text-center">
-            <div 
-              className="text-[8px] font-black"
-              style={{
-                color: '#e9d5ff',
-              }}
-            >
-              ${(property.price / 1000)}K
-            </div>
-          </div>
-        </div>
       </div>
 
-          <style jsx>{`
-      @keyframes shimmer {
-        0% {
-          transform: translateX(-100%) rotate(45deg);
+      {/* Hover effect enhancement */}
+      <style jsx>{`
+        button:hover {
+          transform:  scale(1.10);
+          box-shadow: 
+            0 0 50px ${colorHex}cc,
+            0 0 100px ${colorHex}80,
+            inset 0 0 40px ${colorHex}33 !important;
+            z-index: 50 !important;
         }
-        100% {
-          transform: translateX(200%) rotate(45deg);
+
+        @keyframes shine-sweep {
+          0% {
+            transform: translateX(-100%) translateY(-100%) rotate(45deg);
+          }
+          100% {
+            transform: translateX(100%) translateY(100%) rotate(45deg);
+          }
         }
-      }
 
-      @keyframes pulse-border {
-        0%, 100% { 
-          border-color: rgba(251, 191, 36, 1);
+        .building-float {
+          animation: float 3s ease-in-out infinite;
         }
-        50% { 
-          border-color: rgba(251, 191, 36, 0.8);
+
+        @keyframes float {
+          0%, 100% {
+            transform: translateY(0) scale(0.25);
+          }
+          50% {
+            transform: translateY(-10px) scale(0.25);
+          }
         }
-      }
-
-      @keyframes float {
-        0%, 100% {
-          transform: translateY(0px) scale(0.25);
-        }
-        50% {
-          transform: translateY(-3px) scale(0.25);
-        }
-      }
-
-      .building-float {
-        /* No animation by default */
-      }
-
-      .holographic-card:hover .building-float {
-        animation: float 3s ease-in-out infinite;
-      }
-
-      .holographic-card:hover .shimmer-strip {
-        animation: shimmer 3s ease-in-out infinite;
-      }
-
-      .holographic-card {
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        border-radius: 0px;  // ← CHANGED: Remove rounded corners
-      }
-
-      .holographic-card:hover {
-        transform: translateY(-8px) scale(1.05);
-        z-index: 50;
-      }
-    `}</style>
+      `}</style>
     </button>
   );
 }
