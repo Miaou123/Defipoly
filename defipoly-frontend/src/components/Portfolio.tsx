@@ -294,11 +294,32 @@ export function Portfolio({ onSelectProperty }: PortfolioProps) {
           </div>
         )}
 
-        {/* Properties Grouped by Set */}
+        {/* Properties Grouped by Set - SORTED BY HIGHEST TO LOWEST DAILY REWARDS */}
         {!loading && ownedProperties.length > 0 && (
           <div className="space-y-3">
             {Object.entries(groupedProperties)
-              .sort(([a], [b]) => Number(a) - Number(b))
+              .sort(([aSetId, aProps], [bSetId, bProps]) => {
+                // Calculate total income for set A
+                const aSetId_num = Number(aSetId);
+                const aIsComplete = isSetComplete(aSetId_num);
+                const aMinSlots = getMinSlots(aSetId_num);
+                const aTotalIncome = aProps.reduce((sum, p) => {
+                  const income = calculateIncome(p, aMinSlots, aIsComplete);
+                  return sum + income.totalIncome;
+                }, 0);
+
+                // Calculate total income for set B
+                const bSetId_num = Number(bSetId);
+                const bIsComplete = isSetComplete(bSetId_num);
+                const bMinSlots = getMinSlots(bSetId_num);
+                const bTotalIncome = bProps.reduce((sum, p) => {
+                  const income = calculateIncome(p, bMinSlots, bIsComplete);
+                  return sum + income.totalIncome;
+                }, 0);
+
+                // Sort by total income descending (highest first)
+                return bTotalIncome - aTotalIncome;
+              })
               .map(([setIdStr, setProperties]) => {
               const setId = Number(setIdStr);
               const isExpanded = expandedSets.has(setId);

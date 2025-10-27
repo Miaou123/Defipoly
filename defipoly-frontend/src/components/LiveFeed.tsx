@@ -71,7 +71,7 @@ export function LiveFeed() {
 
       case 'steal_success':
         return {
-          message: `${getDisplayName(action.playerAddress)} stole from ${getDisplayName(action.targetAddress)} on ${propertyName}! 💰`,
+          message: `${getDisplayName(action.playerAddress)} stole from ${getDisplayName(action.targetAddress)} on ${propertyName}! 🎯`,
           type: 'steal',
           timestamp: action.blockTime * 1000,
           txSignature: action.txSignature,
@@ -82,7 +82,7 @@ export function LiveFeed() {
 
       case 'steal_failed':
         return {
-          message: `${getDisplayName(action.playerAddress)} failed to steal from ${getDisplayName(action.targetAddress)} on ${propertyName} 🛡️`,
+          message: `${getDisplayName(action.playerAddress)} failed to steal from ${getDisplayName(action.targetAddress)} on ${propertyName}`,
           type: 'steal',
           timestamp: action.blockTime * 1000,
           txSignature: action.txSignature,
@@ -103,7 +103,7 @@ export function LiveFeed() {
 
       case 'claim':
         return {
-          message: `${getDisplayName(action.playerAddress)} claimed ${formatAmount(action.amount || 0)} DEFI 💰`,
+          message: `${getDisplayName(action.playerAddress)} claimed ${formatAmount(action.amount || 0)} DEFI rewards 💰`,
           type: 'claim',
           timestamp: action.blockTime * 1000,
           txSignature: action.txSignature,
@@ -113,11 +113,11 @@ export function LiveFeed() {
       default:
         return null;
     }
-  }, []);
+  }, [profiles]);
 
   const addFeedItem = useCallback((item: FeedItem) => {
-    setFeed((prev) => {
-      const exists = prev.some(i => i.txSignature === item.txSignature);
+    setFeed(prev => {
+      const exists = prev.some(existing => existing.txSignature === item.txSignature);
       if (exists) return prev;
       return [item, ...prev].slice(0, 50);
     });
@@ -127,8 +127,7 @@ export function LiveFeed() {
   useEffect(() => {
     const fetchHistoricalActions = async () => {
       try {
-        console.log('📥 Fetching historical actions from backend...');
-        
+        console.log('📡 Fetching recent actions from backend...');
         const response = await fetch(`${BACKEND_URL}/api/actions/recent?limit=50`);
         
         if (!response.ok) {
@@ -190,19 +189,18 @@ export function LiveFeed() {
               const events = eventParser.parseLogs(logs.logs);
               
               for (const event of events) {
-                // Convert blockchain event to action format
                 const action: any = {
                   txSignature: logs.signature,
-                  blockTime: Math.floor(Date.now() / 1000),
+                  blockTime: Date.now() / 1000,
                 };
-
+                
                 switch (event.name) {
                   case 'PropertyBoughtEvent':
                   case 'propertyBoughtEvent':
                     action.actionType = 'buy';
                     action.playerAddress = event.data.player.toString();
                     action.propertyId = event.data.propertyId;
-                    action.amount = Number(event.data.price);
+                    action.amount = Number(event.data.totalCost || event.data.price);
                     break;
                   
                   case 'PropertySoldEvent':
@@ -210,7 +208,7 @@ export function LiveFeed() {
                     action.actionType = 'sell';
                     action.playerAddress = event.data.player.toString();
                     action.propertyId = event.data.propertyId;
-                    action.amount = Number(event.data.received);
+                    action.amount = Number(event.data.amount);
                     action.slots = event.data.slots;
                     break;
                   
@@ -277,30 +275,35 @@ export function LiveFeed() {
   }, [connection, addFeedItem, actionToFeedItem]);
 
   return (
-    <div className="bg-purple-900/8 backdrop-blur-xl rounded-2xl border border-purple-500/20 p-6 max-h-[450px] overflow-y-auto">
-      <h2 className="text-lg font-semibold text-purple-200 mb-5 pb-4 border-b border-purple-500/20">
-        Live Activity
-      </h2>
+    <div className="bg-purple-900/8 backdrop-blur-xl rounded-2xl border border-purple-500/20 max-h-[280px] overflow-hidden flex flex-col">
+      {/* Header - Sticky */}
+      <div className="p-4 pb-2">
+        <h2 className="text-base font-semibold text-purple-200 border-b border-purple-500/20 pb-2">
+          Live Activity
+        </h2>
+      </div>
 
+      {/* Scrollable Content */}
+      <div className="flex-1 overflow-y-auto px-4 pb-4">
       {loading ? (
-        <div className="text-center py-12">
-          <div className="text-2xl mb-2">⏳</div>
-          <div className="text-sm text-purple-300">Loading activity...</div>
+        <div className="text-center py-8">
+          <div className="text-xl mb-1">⏳</div>
+          <div className="text-xs text-purple-300">Loading activity...</div>
         </div>
       ) : feed.length === 0 ? (
-        <div className="text-center py-12">
-          <div className="text-5xl mb-3 opacity-50">📡</div>
-          <div className="text-sm text-gray-400">
+        <div className="text-center py-8">
+          <div className="text-3xl mb-2 opacity-50">📡</div>
+          <div className="text-xs text-gray-400">
             No activity yet<br />
             Be the first to make a move!
           </div>
         </div>
       ) : (
-        <div className="space-y-3">
+        <div className="space-y-2">
           {feed.map((item) => (
             <div
               key={item.txSignature}
-              className={`p-4 bg-purple-900/10 rounded-xl border-l-4 text-sm text-purple-200 leading-relaxed transition-all ${
+              className={`p-3 bg-purple-900/10 rounded-xl border-l-4 text-xs text-purple-200 leading-relaxed transition-all ${
                 item.type === 'buy' ? 'border-green-400' :
                 item.type === 'steal' ? 'border-red-400' :
                 item.type === 'claim' ? 'border-blue-400' :
@@ -309,9 +312,9 @@ export function LiveFeed() {
               }`}
             >
               <div className="flex items-center gap-2">
-                {/* Profile Picture */}
+                {/* Profile Picture - Smaller */}
                 {item.playerAddress && (
-                  <div className="w-6 h-6 rounded-full overflow-hidden bg-purple-500/20 border border-purple-500/30 flex-shrink-0">
+                  <div className="w-5 h-5 rounded-full overflow-hidden bg-purple-500/20 border border-purple-500/30 flex-shrink-0">
                     {profiles[item.playerAddress]?.profilePicture ? (
                       <img 
                         src={profiles[item.playerAddress].profilePicture} 
@@ -319,7 +322,7 @@ export function LiveFeed() {
                         className="w-full h-full object-cover"
                       />
                     ) : (
-                      <div className="w-full h-full flex items-center justify-center text-purple-300 text-[10px] font-bold">
+                      <div className="w-full h-full flex items-center justify-center text-purple-300 text-[9px] font-bold">
                         {getDisplayName(item.playerAddress).slice(0, 2).toUpperCase()}
                       </div>
                     )}
@@ -335,6 +338,7 @@ export function LiveFeed() {
           ))}
         </div>
       )}
+      </div>
     </div>
   );
 }

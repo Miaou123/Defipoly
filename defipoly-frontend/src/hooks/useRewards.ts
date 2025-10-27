@@ -12,17 +12,25 @@ export function useRewards() {
   const [dailyIncome, setDailyIncome] = useState(0);
   const [unclaimedRewards, setUnclaimedRewards] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
 
   // Fetch from blockchain every 30 seconds
   useEffect(() => {
     if (!wallet || !program) return;
 
     const fetchData = async () => {
-      setLoading(true);
+      // Only show loading state on initial load
+      if (isInitialLoad) {
+        setLoading(true);
+      }
+      
       try {
         const playerData = await getPlayerData();
         if (!playerData) {
-          setLoading(false);
+          if (isInitialLoad) {
+            setLoading(false);
+            setIsInitialLoad(false);
+          }
           return;
         }
 
@@ -52,48 +60,51 @@ export function useRewards() {
       } catch (error) {
         console.error('Error fetching rewards data:', error);
       } finally {
-        setLoading(false);
+        if (isInitialLoad) {
+          setLoading(false);
+          setIsInitialLoad(false);
+        }
       }
     };
 
     fetchData();
     const interval = setInterval(fetchData, 30000); // Sync every 30s
     return () => clearInterval(interval);
-  }, [wallet, program, getPlayerData, getOwnershipData]);
+  }, [wallet, program, getPlayerData, getOwnershipData, isInitialLoad]);
 
-  // Calculate rewards client-side every second
+  // Client-side calculation (runs every second)
   useEffect(() => {
     if (ownerships.length === 0) {
       setUnclaimedRewards(0);
       return;
     }
 
-    const calculate = () => {
-      const nowSeconds = Math.floor(Date.now() / 1000);
+    const calculateRewards = () => {
+      const now = Math.floor(Date.now() / 1000);
+      const secondsSinceLastClaim = Math.max(0, now - lastClaimTime);
+      
       let total = 0;
-
-      ownerships.forEach(ownership => {
-        // Use later of purchase time or last claim
-        const startTime = Math.max(ownership.purchaseTimestamp, lastClaimTime);
-        const elapsedSeconds = nowSeconds - startTime;
+      for (const ownership of ownerships) {
+        const ownershipAge = now - ownership.purchaseTimestamp;
+        const effectiveAge = Math.min(ownershipAge, secondsSinceLastClaim);
         
-        if (elapsedSeconds > 0) {
-          const incomePerSecond = (ownership.dailyIncomePerSlot * ownership.slotsOwned) / 86400;
-          total += incomePerSecond * elapsedSeconds;
-        }
-      });
-
-      setUnclaimedRewards(Math.max(0, total));
+        const incomePerSecond = ownership.dailyIncomePerSlot / 86400;
+        const earned = incomePerSecond * effectiveAge * ownership.slotsOwned;
+        total += earned;
+      }
+      
+      setUnclaimedRewards(Math.floor(total));
     };
 
-    calculate();
-    const interval = setInterval(calculate, 1000); // Update every second
+    calculateRewards();
+    const interval = setInterval(calculateRewards, 1000);
     return () => clearInterval(interval);
   }, [ownerships, lastClaimTime]);
 
   return {
-    unclaimedRewards: Math.floor(unclaimedRewards), // Round to 2 decimals
+    ownerships,
     dailyIncome,
+    unclaimedRewards,
     loading,
   };
 }
