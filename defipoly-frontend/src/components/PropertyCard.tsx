@@ -340,15 +340,16 @@ export function PropertyCard({ propertyId, onSelect }: PropertyCardProps) {
   const colorHex = getColorHex(property.color);
 
   return (
-    <button
-      onClick={() => onSelect(propertyId)}
-      className="holographic-card w-full h-full relative overflow-hidden cursor-pointer group"
-      style={{
-        background: `linear-gradient(135deg, rgba(139, 92, 246, 0.08), rgba(109, 40, 217, 0.05))`,
-        backdropFilter: 'blur(10px)',
-        WebkitBackdropFilter: 'blur(10px)',
-      }}
-    >
+      <button
+        onClick={() => onSelect(propertyId)}
+        className="holographic-card w-full h-full relative overflow-hidden cursor-pointer group"
+        style={{
+          background: `linear-gradient(135deg, rgba(139, 92, 246, 0.08), rgba(109, 40, 217, 0.05))`,
+          backdropFilter: 'blur(10px)',
+          WebkitBackdropFilter: 'blur(10px)',
+          borderRadius: '0px', // ← ADDED: Remove rounded corners
+        }}
+      >
       {/* Holographic shimmer strip - animated on hover only */}
       <div 
         className="absolute top-0 left-0 w-full h-full pointer-events-none z-10 shimmer-strip"
@@ -364,7 +365,7 @@ export function PropertyCard({ propertyId, onSelect }: PropertyCardProps) {
         className="absolute inset-0 pointer-events-none z-0"
         style={{
           border: `2px solid ${colorHex}`,
-          borderRadius: '8px',
+          borderRadius: '0px', // ← CHANGED: Remove rounded corners
         }}
       />
 
@@ -374,7 +375,7 @@ export function PropertyCard({ propertyId, onSelect }: PropertyCardProps) {
           className="absolute inset-0 pointer-events-none z-0"
           style={{
             border: '3px solid #fbbf24',
-            borderRadius: '8px',
+            borderRadius: '0px', // ← CHANGED: Remove rounded corners
             animation: 'pulse-border 2s ease-in-out infinite',
           }}
         />
@@ -476,56 +477,56 @@ export function PropertyCard({ propertyId, onSelect }: PropertyCardProps) {
         </div>
       </div>
 
-      <style jsx>{`
-        @keyframes shimmer {
-          0% {
-            transform: translateX(-100%) rotate(45deg);
-          }
-          100% {
-            transform: translateX(200%) rotate(45deg);
-          }
+          <style jsx>{`
+      @keyframes shimmer {
+        0% {
+          transform: translateX(-100%) rotate(45deg);
         }
+        100% {
+          transform: translateX(200%) rotate(45deg);
+        }
+      }
 
-        @keyframes pulse-border {
-          0%, 100% { 
-            border-color: rgba(251, 191, 36, 1);
-          }
-          50% { 
-            border-color: rgba(251, 191, 36, 0.8);
-          }
+      @keyframes pulse-border {
+        0%, 100% { 
+          border-color: rgba(251, 191, 36, 1);
         }
+        50% { 
+          border-color: rgba(251, 191, 36, 0.8);
+        }
+      }
 
-        @keyframes float {
-          0%, 100% {
-            transform: translateY(0px) scale(0.25);
-          }
-          50% {
-            transform: translateY(-3px) scale(0.25);
-          }
+      @keyframes float {
+        0%, 100% {
+          transform: translateY(0px) scale(0.25);
         }
+        50% {
+          transform: translateY(-3px) scale(0.25);
+        }
+      }
 
-        .building-float {
-          /* No animation by default */
-        }
+      .building-float {
+        /* No animation by default */
+      }
 
-        .holographic-card:hover .building-float {
-          animation: float 3s ease-in-out infinite;
-        }
+      .holographic-card:hover .building-float {
+        animation: float 3s ease-in-out infinite;
+      }
 
-        .holographic-card:hover .shimmer-strip {
-          animation: shimmer 3s ease-in-out infinite;
-        }
+      .holographic-card:hover .shimmer-strip {
+        animation: shimmer 3s ease-in-out infinite;
+      }
 
-        .holographic-card {
-          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-          border-radius: 8px;
-        }
+      .holographic-card {
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        border-radius: 0px;  // ← CHANGED: Remove rounded corners
+      }
 
-        .holographic-card:hover {
-          transform: translateY(-8px) scale(1.05);
-          z-index: 50;
-        }
-      `}</style>
+      .holographic-card:hover {
+        transform: translateY(-8px) scale(1.05);
+        z-index: 50;
+      }
+    `}</style>
     </button>
   );
 }

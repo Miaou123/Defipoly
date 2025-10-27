@@ -21,43 +21,54 @@ export default function Home() {
 
   const handleBuyProceed = () => {
     console.log('User understood Buy mechanic, proceeding...');
+    setActiveExplanationModal(null);
   };
 
   const handleShieldProceed = () => {
     console.log('User understood Shield mechanic, proceeding...');
+    setActiveExplanationModal(null);
   };
 
   const handleStealProceed = () => {
     console.log('User understood Steal mechanic, proceeding...');
+    setActiveExplanationModal(null);
   };
 
   return (
-    <div className="min-h-screen">
-      {/* Main grid layout - full height */}
-      <div className="grid grid-cols-1 xl:grid-cols-[340px_1fr_340px] gap-6 p-6 max-w-[1900px] mx-auto pb-32">
+    <div className="h-screen overflow-hidden relative">
+      {/* Main grid layout - fixed height, no scrolling */}
+      <div className="grid grid-cols-1 xl:grid-cols-[minmax(320px,400px)_minmax(800px,1fr)_minmax(320px,400px)] gap-6 p-4 h-full w-full mx-auto">
         {/* LEFT COLUMN: Logo + Portfolio */}
-        <div className="flex flex-col gap-6">
+        <div className="flex flex-col gap-4 overflow-hidden">
           {/* Logo at top of left column */}
-          <div className="flex items-center gap-3 rounded-xl px-4 py-3 shadow-xl">
+          <div className="flex items-center gap-3 rounded-xl px-4 py-3 shadow-xl flex-shrink-0">
             <div className="text-2xl">🎲</div>
             <div>
               <h1 className="text-lg font-bold text-purple-100">Defipoly</h1>
             </div>
           </div>
           
-          <Portfolio onSelectProperty={setSelectedProperty} />
+          <div className="flex-1 overflow-hidden">
+            <Portfolio onSelectProperty={setSelectedProperty} />
+          </div>
         </div>
 
         {/* CENTER: Board */}
-        <Board onSelectProperty={setSelectedProperty} />
+        <div className="flex items-center justify-center overflow-hidden">
+          <Board onSelectProperty={setSelectedProperty} />
+        </div>
         
         {/* RIGHT COLUMN: Profile/Wallet + Leaderboard + Live Feed */}
-        <div className="flex flex-col gap-6">
+        <div className="flex flex-col gap-4 overflow-hidden">
           {/* Profile & Wallet at top of right column */}
-          <SideHeader />
+          <div className="flex-shrink-0">
+            <SideHeader />
+          </div>
           
-          <Leaderboard />
-          <LiveFeed />
+          <div className="flex-1 overflow-auto space-y-4 pr-2">
+            <Leaderboard />
+            <LiveFeed />
+          </div>
         </div>
       </div>
 
@@ -66,25 +77,25 @@ export default function Home() {
         onClose={() => setSelectedProperty(null)}
       />
 
-      {/* Toggle Button - Always Visible */}
-      <button
-        onClick={() => setShowActionBar(!showActionBar)}
-        className="fixed bottom-2 left-1/2 -translate-x-1/2 bg-black/60 backdrop-blur-xl border border-purple-500/30 rounded-lg px-4 py-2 hover:bg-purple-900/40 transition-all z-50 shadow-lg"
-      >
-        {showActionBar ? (
-          <ChevronDown className="w-5 h-5 text-purple-300" />
-        ) : (
-          <ChevronUp className="w-5 h-5 text-purple-300" />
-        )}
-      </button>
-
-      {/* Bottom Action Bar */}
+      {/* Bottom Action Bar with integrated toggle button */}
       <div 
         className={`fixed left-0 right-0 bg-black/60 backdrop-blur-xl border-t border-purple-500/30 z-40 transition-all duration-300 ${
           showActionBar ? 'bottom-0' : '-bottom-full'
         }`}
       >
-        <div className="p-3 pb-12">
+        {/* Toggle Button - Perfectly aligned with top border */}
+        <button
+          onClick={() => setShowActionBar(!showActionBar)}
+          className="absolute -top-[25px] left-1/2 -translate-x-1/2 bg-black/70 backdrop-blur-xl border border-purple-500/30 border-b-0 rounded-t-lg px-3 py-1 hover:bg-purple-900/40 transition-colors shadow-lg z-10"
+        >
+          {showActionBar ? (
+            <ChevronDown className="w-4 h-4 text-purple-300" />
+          ) : (
+            <ChevronUp className="w-4 h-4 text-purple-300" />
+          )}
+        </button>
+
+        <div className="p-3 pb-3">
           <div className="max-w-7xl mx-auto flex gap-3 justify-center items-center flex-wrap">
             <div className="text-xs text-purple-300 bg-purple-900/20 px-4 py-2 rounded-lg border border-purple-500/30">
               <div className="font-medium">ℹ️ Click properties to Buy/Steal</div>
@@ -111,6 +122,16 @@ export default function Home() {
           </div>
         </div>
       </div>
+
+      {/* Floating toggle button when bar is hidden - stays visible at bottom */}
+      {!showActionBar && (
+        <button
+          onClick={() => setShowActionBar(!showActionBar)}
+          className="fixed bottom-2 left-1/2 -translate-x-1/2 bg-black/70 backdrop-blur-xl border border-purple-500/30 rounded-lg px-3 py-1 hover:bg-purple-900/40 transition-all shadow-lg z-50"
+        >
+          <ChevronUp className="w-4 h-4 text-purple-300" />
+        </button>
+      )}
 
       {/* Explanation Modals - Conditionally rendered */}
       {activeExplanationModal === 'buy' && (

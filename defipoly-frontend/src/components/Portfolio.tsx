@@ -5,7 +5,7 @@ import { useWallet, useConnection } from '@solana/wallet-adapter-react';
 import { PROPERTIES, getSetName } from '@/utils/constants';
 import { useDefipoly } from '@/hooks/useDefipoly';
 import type { PropertyOwnership } from '@/types/accounts';
-import { Shield, ChevronDown, ChevronRight, Award, Trophy, Zap } from 'lucide-react';
+import { Shield, ChevronDown, ChevronRight, Award, Trophy, Zap, Wallet } from 'lucide-react';
 import { ShieldAllModal } from './ShieldAllModal';
 import { useTokenBalance } from '@/hooks/useTokenBalance';
 
@@ -30,7 +30,7 @@ export function Portfolio({ onSelectProperty }: PortfolioProps) {
   const { publicKey, connected } = useWallet();
   const { connection } = useConnection();
   const { getOwnershipData, program } = useDefipoly();
-  const { balance } = useTokenBalance();
+  const { balance, loading: balanceLoading } = useTokenBalance();
   const [ownedProperties, setOwnedProperties] = useState<OwnedProperty[]>([]);
   const [loading, setLoading] = useState(false);
   const [dailyIncome, setDailyIncome] = useState(0);
@@ -39,15 +39,16 @@ export function Portfolio({ onSelectProperty }: PortfolioProps) {
   const [expandedSets, setExpandedSets] = useState<Set<number>>(new Set([0, 1, 2, 3, 4, 5, 6, 7]));
   const [showShieldAllModal, setShowShieldAllModal] = useState(false);
 
-  // Update current time every second for shield countdown
+  // Update current time every second for shield timers
   useEffect(() => {
     const interval = setInterval(() => {
       setCurrentTime(Date.now());
     }, 1000);
-    
+
     return () => clearInterval(interval);
   }, []);
 
+  // Fetch portfolio data
   useEffect(() => {
     if (!publicKey || !connected || !program) {
       setOwnedProperties([]);
@@ -58,7 +59,6 @@ export function Portfolio({ onSelectProperty }: PortfolioProps) {
 
     const fetchPortfolio = async () => {
       setLoading(true);
-      
       try {
         const ownerships: OwnedProperty[] = [];
         let totalIncome = 0;
@@ -66,29 +66,20 @@ export function Portfolio({ onSelectProperty }: PortfolioProps) {
 
         for (const property of PROPERTIES) {
           try {
-            const ownershipData = await getOwnershipData(property.id);
-            
-            if (ownershipData && ownershipData.slotsOwned > 0) {
+            const ownership = await getOwnershipData(property.id);
+            if (ownership && ownership.slotsOwned > 0) {
               const ownedProperty: OwnedProperty = {
-                player: ownershipData.player,
-                propertyId: ownershipData.propertyId,
-                slotsOwned: ownershipData.slotsOwned,
-                slotsShielded: ownershipData.slotsShielded,
-                purchaseTimestamp: ownershipData.purchaseTimestamp,
-                shieldExpiry: ownershipData.shieldExpiry,
-                bump: ownershipData.bump,
+                ...ownership,
                 propertyInfo: property,
               };
-              
               ownerships.push(ownedProperty);
               
-              // Calculate income and value
-              const income = property.dailyIncome * ownershipData.slotsOwned;
+              const income = property.dailyIncome * ownership.slotsOwned;
               totalIncome += income;
-              totalValue += property.price * ownershipData.slotsOwned;
+              totalValue += property.price * ownership.slotsOwned;
             }
           } catch (error) {
-            console.error(`Error fetching property ${property.id}:`, error);
+            // Property not owned or error fetching
           }
         }
 
@@ -238,13 +229,45 @@ export function Portfolio({ onSelectProperty }: PortfolioProps) {
 
   return (
     <>
-      <div className="bg-purple-900/8 backdrop-blur-xl rounded-2xl border border-purple-500/20 max-h-[650px] overflow-hidden flex flex-col">
-        {/* Header + Shield Button - Sticky */}
-        <div className="p-6 pb-4">
-          <div className="flex justify-between items-center mb-4">
+      <div className="bg-purple-900/8 backdrop-blur-xl rounded-2xl border border-purple-500/20 h-full overflow-hidden flex flex-col">
+        {/* Header + Balance + Shield Button - Sticky */}
+        <div className="p-6 pb-4 space-y-4">
+          {/* Header */}
+          <div className="flex justify-between items-center">
             <h2 className="text-xl font-bold text-white">My Portfolio</h2>
             <span className="text-sm text-purple-400">{totalSlots} slots</span>
           </div>
+
+          {/* Token Balance Card - Compact */}
+          {connected && (
+            <div className="bg-gradient-to-br from-purple-800/40 to-purple-900/40 backdrop-blur-sm rounded-lg border border-purple-500/30 p-3">
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2">
+                  <div className="w-7 h-7 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center flex-shrink-0">
+                    <Wallet className="w-3.5 h-3.5 text-white" />
+                  </div>
+                  <div>
+                    <div className="text-[10px] text-purple-300 font-semibold uppercase tracking-wide">
+                      Balance
+                    </div>
+                    <div className="text-lg font-black text-white leading-tight">
+                      {balanceLoading ? (
+                        <span className="animate-pulse">...</span>
+                      ) : (
+                        balance.toLocaleString(undefined, { maximumFractionDigits: 0 })
+                      )}
+                    </div>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="text-[10px] text-purple-400 uppercase tracking-wide">Value</div>
+                  <div className="text-sm font-bold text-purple-200">
+                    {portfolioValue > 0 ? (portfolioValue / 1000).toFixed(0) + 'K' : '0'}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
           
           {/* Shield All Button */}
           {renderShieldAllButton()}
@@ -271,15 +294,18 @@ export function Portfolio({ onSelectProperty }: PortfolioProps) {
           </div>
         )}
 
-        {/* Owned Properties Grouped by Set */}
-        {ownedProperties.length > 0 && (
-          <div className="space-y-1">
-            {Object.entries(groupedProperties).map(([setIdStr, setProperties]) => {
-              const setId = parseInt(setIdStr);
-              const setName = getSetName(setId);
+        {/* Properties Grouped by Set */}
+        {!loading && ownedProperties.length > 0 && (
+          <div className="space-y-3">
+            {Object.entries(groupedProperties)
+              .sort(([a], [b]) => Number(a) - Number(b))
+              .map(([setIdStr, setProperties]) => {
+              const setId = Number(setIdStr);
               const isExpanded = expandedSets.has(setId);
               const isComplete = isSetComplete(setId);
               const minSlots = getMinSlots(setId);
+              const setName = getSetName(setId);
+              const setColorClass = setProperties[0].propertyInfo.color;
               
               const totalSlotsInSet = setProperties.reduce((sum, p) => sum + p.slotsOwned, 0);
               const totalIncomeInSet = setProperties.reduce((sum, p) => {
@@ -287,22 +313,15 @@ export function Portfolio({ onSelectProperty }: PortfolioProps) {
                 return sum + income.totalIncome;
               }, 0);
 
-              // Get the color from the first property in the set
-              const setColorClass = setProperties[0]?.propertyInfo.color || 'bg-purple-500';
-
               return (
                 <div 
-                  key={setId} 
-                  className={`rounded-lg overflow-hidden transition-all ${
-                    isComplete 
-                      ? 'bg-white/[0.05]' 
-                      : 'bg-white/[0.02]'
-                  }`}
+                  key={`set-${setId}`}
+                  className="bg-white/[0.03] rounded-lg overflow-hidden border border-purple-500/10"
                 >
-                  {/* Set Header - Clickable */}
+                  {/* Set Header - Collapsible */}
                   <button
                     onClick={() => toggleSet(setId)}
-                    className="w-full px-3 py-2 flex items-center justify-between hover:bg-white/[0.03] transition-all"
+                    className="w-full px-3 py-2.5 flex items-center justify-between hover:bg-white/[0.03] transition-all"
                   >
                     <div className="flex items-center gap-2">
                       {isExpanded ? 

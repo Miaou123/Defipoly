@@ -18,12 +18,16 @@ export function usePlayerStats() {
       setLoading(true);
       try {
         const BACKEND_URL = process.env.NEXT_PUBLIC_PROFILE_API_URL || 'http://localhost:3001';
-        const response = await fetch(`${BACKEND_URL}/api/players/${publicKey.toString()}/stats`);
+        // ✅ FIXED: Changed from /api/players/:wallet/stats to /api/stats/:wallet
+        const response = await fetch(`${BACKEND_URL}/api/stats/${publicKey.toString()}`);
         
         if (response.ok) {
           const data = await response.json();
+          console.log('📊 Player stats received:', data); // Debug log
           // total_earned is in lamports (1e9), convert to tokens
           setTotalEarned(data.totalEarned ? data.totalEarned / 1e9 : 0);
+        } else {
+          console.error('Failed to fetch player stats:', response.status, response.statusText);
         }
       } catch (error) {
         console.error('Error fetching player stats:', error);
