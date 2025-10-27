@@ -4,8 +4,8 @@
 
 import { useState } from 'react';
 import { useDefipoly } from '@/hooks/useDefipoly';
-import { useNotification } from '../../contexts/NotificationContext';
-import { usePropertyRefresh } from '../../contexts/PropertyRefreshContext';
+import { useNotification } from '@/contexts/NotificationContext';
+import { usePropertyRefresh } from '@/contexts/PropertyRefreshContext';
 import { PROPERTIES } from '@/utils/constants';
 
 interface SellPropertySectionProps {
@@ -29,7 +29,6 @@ export function SellPropertySection({
   const { showSuccess, showError } = useNotification();
   const { triggerRefresh } = usePropertyRefresh();
   
-  const [showSellOptions, setShowSellOptions] = useState(false);
   const [slotsToSell, setSlotsToSell] = useState(1);
 
   // Base sell value is 15% (1500 bps), can go up to 30% (3000 bps) after 14 days
@@ -71,24 +70,8 @@ export function SellPropertySection({
 
   if (!propertyData || propertyData.owned === 0) return null;
 
-  if (!showSellOptions) {
-    return (
-      <button
-        onClick={() => setShowSellOptions(true)}
-        disabled={loading}
-        className="w-full py-3 rounded-xl font-bold text-base transition-all shadow-lg bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-500 hover:to-red-500 text-white border border-orange-400/30 hover:shadow-orange-500/50 hover:scale-[1.02]"
-      >
-        💰 Sell Slots
-      </button>
-    );
-  }
-
   return (
     <div className="bg-gradient-to-br from-purple-900/40 to-purple-800/40 backdrop-blur-xl rounded-xl p-4 border-2 border-purple-500/40 space-y-3">
-      <h4 className="font-black text-lg text-purple-100 flex items-center gap-2">
-        <span className="text-xl">💰</span> Sell Slots
-      </h4>
-      
       <div>
         <label className="text-xs text-purple-300 font-semibold uppercase tracking-wide block mb-1">
           Slots to Sell
@@ -138,16 +121,6 @@ export function SellPropertySection({
           }`}
         >
           {loading ? 'Selling...' : 'Confirm'}
-        </button>
-        <button
-          onClick={() => {
-            setShowSellOptions(false);
-            setSlotsToSell(1);
-          }}
-          disabled={loading}
-          className="px-4 bg-purple-800/60 hover:bg-purple-700/60 py-2.5 rounded-lg font-bold text-purple-100 transition-all"
-        >
-          Cancel
         </button>
       </div>
     </div>

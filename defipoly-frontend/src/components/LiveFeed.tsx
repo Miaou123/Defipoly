@@ -149,7 +149,7 @@ export function LiveFeed() {
           
           // Fetch profiles for all wallet addresses in the feed
           const allAddresses = new Set<string>();
-          feedItems.forEach(item => {
+          feedItems.forEach((item: any) => {
             if (item.playerAddress) allAddresses.add(item.playerAddress);
             if (item.targetAddress) allAddresses.add(item.targetAddress);
           });
@@ -317,7 +317,7 @@ export function LiveFeed() {
                   <div className="w-5 h-5 rounded-full overflow-hidden bg-purple-500/20 border border-purple-500/30 flex-shrink-0">
                     {profiles[item.playerAddress]?.profilePicture ? (
                       <img 
-                        src={profiles[item.playerAddress].profilePicture} 
+                        src={profiles[item.playerAddress].profilePicture || ''} 
                         alt="Profile"
                         className="w-full h-full object-cover"
                       />

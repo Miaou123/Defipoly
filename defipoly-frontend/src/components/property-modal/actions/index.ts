@@ -1,5 +1,6 @@
 // ============================================
-// FILE: defipoly-frontend/src/components/property-actions/index.ts
+// FILE: src/components/property-modal/actions/index.ts
+// Export all action sections
 // ============================================
 
 export { BuyPropertySection } from './BuyPropertySection';

@@ -5,8 +5,8 @@
 
 import { useState, useEffect } from 'react';
 import { useDefipoly } from '@/hooks/useDefipoly';
-import { useNotification } from '../../contexts/NotificationContext';
-import { usePropertyRefresh } from '../../contexts/PropertyRefreshContext';
+import { useNotification } from '@/contexts/NotificationContext';
+import { usePropertyRefresh } from '@/contexts/PropertyRefreshContext';
 import { useStealCooldownFromContext } from '@/contexts/StealCooldownContext';
 import { PROPERTIES } from '@/utils/constants';
 import { fetchPropertyStats } from '@/utils/propertyStats';
@@ -38,7 +38,6 @@ export function StealPropertySection({
   // FIXED: Use propertyId instead of property.setId for correct cooldown data
   const { isOnStealCooldown, stealCooldownRemaining, refetchStealCooldown } = useStealCooldownFromContext(propertyId);
   
-  const [showStealOptions, setShowStealOptions] = useState(false);
   const [availableTargets, setAvailableTargets] = useState<number | null>(null);
   const [loadingStats, setLoadingStats] = useState(false);
 
@@ -58,9 +57,9 @@ export function StealPropertySection({
     return `${secs}s`;
   };
 
-  // Fetch property stats when component shows steal options
+  // Fetch property stats when component mounts
   useEffect(() => {
-    if (showStealOptions && availableTargets === null) {
+    if (availableTargets === null) {
       setLoadingStats(true);
       fetchPropertyStats(propertyId)
         .then(stats => {
@@ -71,7 +70,7 @@ export function StealPropertySection({
         .catch(err => console.error('Failed to fetch property stats:', err))
         .finally(() => setLoadingStats(false));
     }
-  }, [showStealOptions, propertyId, availableTargets]);
+  }, [propertyId, availableTargets]);
 
   const handleSteal = async () => {
     if (loading || isOnStealCooldown) return;
@@ -138,7 +137,7 @@ export function StealPropertySection({
   if (wouldExceedMaxSlots) return null;
 
   // Show cooldown warning if on cooldown
-  if (isOnStealCooldown && !showStealOptions) {
+  if (isOnStealCooldown) {
     return (
       <div className="bg-red-900/20 border border-red-500/30 rounded-xl p-4">
         <div className="flex items-center gap-2 text-red-400 mb-2">
@@ -155,43 +154,9 @@ export function StealPropertySection({
     );
   }
 
-  if (!showStealOptions) {
-    return (
-      <button
-        onClick={() => setShowStealOptions(true)}
-        disabled={!canSteal || loading || isOnStealCooldown}
-        className={`w-full py-3 rounded-xl font-bold text-base transition-all shadow-lg ${
-          !canSteal || loading || isOnStealCooldown
-            ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
-            : 'bg-gradient-to-r from-red-600 to-orange-600 hover:from-red-700 hover:to-orange-700 text-white transform hover:scale-105'
-        }`}
-      >
-        {isOnStealCooldown 
-          ? `Cooldown: ${formatCooldown(stealCooldownRemaining)}`
-          : `💰 Steal Property (${stealCost.toLocaleString()} POL)`
-        }
-      </button>
-    );
-  }
-
   return (
     <div className="space-y-4">
       <div className="bg-gradient-to-br from-red-900/30 to-orange-900/30 rounded-lg p-4 border border-red-500/30">
-        <h3 className="text-lg font-bold mb-3 text-red-300">🎯 Steal Property</h3>
-        
-        {/* Show cooldown warning in the steal panel */}
-        {isOnStealCooldown && (
-          <div className="bg-red-900/40 border border-red-500/50 rounded-lg p-3 mb-4">
-            <div className="flex items-center gap-2 text-red-300 mb-1">
-              <Clock size={14} />
-              <span className="font-semibold text-sm">Cooldown Active</span>
-            </div>
-            <p className="text-xs text-red-200">
-              Time remaining: <span className="font-bold">{formatCooldown(stealCooldownRemaining)}</span>
-            </p>
-          </div>
-        )}
-        
         <div className="space-y-2 text-sm text-gray-300 mb-4">
           <div className="flex justify-between">
             <span>Cost:</span>
@@ -245,13 +210,6 @@ export function StealPropertySection({
              isOnStealCooldown ? `Cooldown: ${formatCooldown(stealCooldownRemaining)}` :
              availableTargets === 0 ? 'No Targets Available' : 
              `🎲 Attempt Steal (${stealCost.toLocaleString()} POL)`}
-          </button>
-          
-          <button
-            onClick={() => setShowStealOptions(false)}
-            className="px-4 py-3 bg-gray-700 hover:bg-gray-600 rounded-lg font-bold transition-all"
-          >
-            Cancel
           </button>
         </div>
       </div>

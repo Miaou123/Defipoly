@@ -1,6 +1,6 @@
 // ============================================
-// FILE: defipoly-frontend/src/components/PropertyModal.tsx
-// Updated with Property Card + Details Side-by-Side
+// FILE: src/components/property-modal/PropertyModal.tsx
+// Main modal component with new structure
 // ============================================
 
 'use client';
@@ -11,15 +11,10 @@ import { useDefipoly } from '@/hooks/useDefipoly';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { useAnchorWallet } from '@solana/wallet-adapter-react';
 import { useTokenBalance } from '@/hooks/useTokenBalance';
-import { StyledWalletButton } from './StyledWalletButton';
+import { StyledWalletButton } from '../StyledWalletButton';
 import { X } from 'lucide-react';
-import { PropertyCard } from './PropertyCard';
-import {
-  BuyPropertySection,
-  ShieldPropertySection,
-  SellPropertySection,
-  StealPropertySection
-} from './property-actions';
+import { PropertyCard } from '../PropertyCard';
+import { PropertyActionsBar } from './PropertyActionsBar';
 
 interface PropertyModalProps {
   propertyId: number | null;
@@ -152,20 +147,6 @@ export function PropertyModal({ propertyId, onClose }: PropertyModalProps) {
   const boostedIncomePerSlot = setBonusInfo?.hasCompleteSet ? 
     Math.floor(baseIncomePerSlot * 1.4) : baseIncomePerSlot;
 
-  // Calculate total daily income for owned slots
-  let totalDailyIncome = 0;
-  if (propertyData?.owned > 0 && setBonusInfo) {
-    if (setBonusInfo.hasCompleteSet) {
-      const boostedSlots = setBonusInfo.boostedSlots;
-      const unboostedSlots = setBonusInfo.totalSlots - boostedSlots;
-      totalDailyIncome = (boostedSlots * boostedIncomePerSlot) + (unboostedSlots * baseIncomePerSlot);
-    } else {
-      totalDailyIncome = propertyData.owned * baseIncomePerSlot;
-    }
-  }
-
-  const propertyColor = getColorFromClass(property.color);
-
   // Calculate availability values for the stacked bar
   const totalSlots = property.totalSlots;
   const personalOwned = propertyData?.owned || 0;
@@ -185,29 +166,29 @@ export function PropertyModal({ propertyId, onClose }: PropertyModalProps) {
         className="bg-gradient-to-br from-purple-950/95 via-purple-900/95 to-purple-950/95 backdrop-blur-xl rounded-2xl border-2 border-purple-500/30 shadow-2xl shadow-purple-500/20 max-w-2xl w-full overflow-hidden" 
         onClick={e => e.stopPropagation()}
       >
-        {/* Header */}
-        <div className="relative bg-gradient-to-r from-purple-900/50 to-purple-800/50 border-b border-purple-500/30 p-6">
+        {/* Header - COMPACT */}
+        <div className="relative bg-gradient-to-r from-purple-900/50 to-purple-800/50 border-b border-purple-500/30 p-4">
           <div className="flex justify-between items-start">
             <div>
-              <h2 className="text-3xl font-black text-purple-100 mb-2">{property.name}</h2>
-              <div className={`${property.color} h-3 w-24 rounded-full shadow-lg`}></div>
+              <h2 className="text-2xl font-black text-purple-100 mb-1.5">{property.name}</h2>
+              <div className={`${property.color} h-2.5 w-20 rounded-full shadow-lg`}></div>
             </div>
             <button 
               onClick={onClose} 
-              className="text-purple-300 hover:text-white transition-colors hover:bg-purple-800/50 rounded-lg p-2"
+              className="text-purple-300 hover:text-white transition-colors hover:bg-purple-800/50 rounded-lg p-1.5"
             >
-              <X size={24} />
+              <X size={20} />
             </button>
           </div>
         </div>
 
-        {/* Content */}
-        <div className="p-6 space-y-4 max-h-[60vh] overflow-y-auto">
-          {/* NEW LAYOUT: Property Card + Details Side by Side */}
-          <div className="grid grid-cols-[200px_1fr] gap-5">
+        {/* Content - COMPACT */}
+        <div className="p-4 space-y-3 max-h-[70vh] overflow-y-auto">
+          {/* Property Card + Details - SMALLER */}
+          <div className="grid grid-cols-[140px_1fr] gap-4">
             {/* Left: Property Card */}
             <div className="flex justify-center">
-              <div className="w-[200px] h-[300px]">
+              <div className="w-[140px] h-[210px]">
                 <PropertyCard 
                   propertyId={propertyId} 
                   onSelect={() => {}} 
@@ -215,36 +196,36 @@ export function PropertyModal({ propertyId, onClose }: PropertyModalProps) {
               </div>
             </div>
 
-            {/* Right: Combined Details */}
-            <div className="bg-purple-900/20 rounded-xl p-4 border border-purple-500/20 space-y-3">
+            {/* Right: Details */}
+            <div className="bg-purple-900/20 rounded-xl p-3 border border-purple-500/20 space-y-2.5">
               {/* Income Calculation Row */}
               <div>
-                <div className="text-[10px] text-purple-400 mb-2 uppercase tracking-wider">💰 Income</div>
-                <div className="flex items-center gap-2 bg-purple-950/50 rounded-lg p-2">
+                <div className="text-[9px] text-purple-400 mb-1.5 uppercase tracking-wider">💰 Income</div>
+                <div className="flex items-center gap-2 bg-purple-950/50 rounded-lg p-1.5">
                   {/* Base */}
                   <div className="flex flex-col flex-1">
                     <div className="text-[8px] text-purple-400 uppercase">📊 Base</div>
-                    <div className="text-base font-bold text-purple-100">{baseIncomePerSlot.toLocaleString()}</div>
+                    <div className="text-sm font-bold text-purple-100">{baseIncomePerSlot.toLocaleString()}</div>
                   </div>
                   
-                  <div className="text-purple-400 opacity-50 font-bold">+</div>
+                  <div className="text-purple-400 opacity-50 font-bold text-sm">+</div>
                   
                   {/* Boost */}
                   <div className="flex flex-col flex-1">
                     <div className="text-[8px] text-purple-400 uppercase flex items-center gap-1">
-                      ⚡ Boost <span className={`px-1.5 py-0.5 rounded text-[8px] font-bold ${hasSetBonus ? 'bg-amber-500 text-amber-950' : 'bg-gray-600 text-gray-300 opacity-60'}`}>+40%</span>
+                      ⚡ Boost <span className={`px-1 py-0.5 rounded text-[7px] font-bold ${hasSetBonus ? 'bg-amber-500 text-amber-950' : 'bg-gray-600 text-gray-300 opacity-60'}`}>+40%</span>
                     </div>
-                    <div className={`text-base font-bold ${hasSetBonus ? 'text-purple-100' : 'text-purple-100/50 line-through'}`}>
+                    <div className={`text-sm font-bold ${hasSetBonus ? 'text-purple-100' : 'text-purple-100/50 line-through'}`}>
                       {bonusAmount.toLocaleString()}
                     </div>
                   </div>
                   
-                  <div className="text-purple-400 opacity-50 font-bold text-lg">=</div>
+                  <div className="text-purple-400 opacity-50 font-bold text-sm">=</div>
                   
                   {/* Total */}
-                  <div className={`flex flex-col flex-[1.2] rounded-lg p-2 border-2 ${hasSetBonus ? 'bg-green-900/15 border-green-500/30' : 'bg-gray-900/15 border-gray-500/30'}`}>
+                  <div className={`flex flex-col flex-[1.2] rounded-lg p-1.5 border-2 ${hasSetBonus ? 'bg-green-900/15 border-green-500/30' : 'bg-gray-900/15 border-gray-500/30'}`}>
                     <div className="text-[8px] text-purple-400 uppercase">💎 Total</div>
-                    <div className={`text-xl font-bold ${hasSetBonus ? 'text-green-400' : 'text-gray-400'}`}>
+                    <div className={`text-lg font-bold ${hasSetBonus ? 'text-green-400' : 'text-gray-400'}`}>
                       {hasSetBonus ? totalIncome.toLocaleString() : baseIncomePerSlot.toLocaleString()}
                     </div>
                   </div>
@@ -256,17 +237,17 @@ export function PropertyModal({ propertyId, onClose }: PropertyModalProps) {
 
               {/* Slots Distribution Row */}
               <div>
-                <div className="text-[10px] text-purple-400 mb-2 uppercase tracking-wider">🎰 Slots</div>
+                <div className="text-[9px] text-purple-400 mb-1.5 uppercase tracking-wider">🎰 Slots</div>
                 <div className="space-y-2">
                   {/* Values */}
                   <div className="flex justify-between items-baseline">
                     <div>
-                      <span className="text-xl font-bold text-purple-100">{totalSlots - availableSlots}</span>
-                      <span className="text-[10px] text-purple-400 ml-1">/ {totalSlots} slots filled</span>
+                      <span className="text-lg font-bold text-purple-100">{totalSlots - availableSlots}</span>
+                      <span className="text-[9px] text-purple-400 ml-1">/ {totalSlots} slots filled</span>
                     </div>
                     <div>
-                      <span className="text-xl font-bold text-purple-100">{availableSlots}</span>
-                      <span className="text-[10px] text-purple-400 ml-1">available</span>
+                      <span className="text-lg font-bold text-purple-100">{availableSlots}</span>
+                      <span className="text-[9px] text-purple-400 ml-1">available</span>
                     </div>
                   </div>
                   
@@ -293,17 +274,17 @@ export function PropertyModal({ propertyId, onClose }: PropertyModalProps) {
                   </div>
                   
                   {/* Legend */}
-                  <div className="flex gap-4 text-[11px]">
-                    <div className="flex items-center gap-1.5">
-                      <div className="w-2 h-2 bg-green-500 rounded-sm"></div>
+                  <div className="flex gap-3 text-[10px]">
+                    <div className="flex items-center gap-1">
+                      <div className="w-1.5 h-1.5 bg-green-500 rounded-sm"></div>
                       <span className="text-purple-300">Others: {othersOwned}</span>
                     </div>
-                    <div className="flex items-center gap-1.5">
-                      <div className="w-2 h-2 bg-purple-500 rounded-sm"></div>
+                    <div className="flex items-center gap-1">
+                      <div className="w-1.5 h-1.5 bg-purple-500 rounded-sm"></div>
                       <span className="text-purple-300">You: {personalOwned}</span>
                     </div>
-                    <div className="flex items-center gap-1.5">
-                      <div className="w-2 h-2 bg-white/30 rounded-sm"></div>
+                    <div className="flex items-center gap-1">
+                      <div className="w-1.5 h-1.5 bg-white/30 rounded-sm"></div>
                       <span className="text-purple-300">Available: {availableSlots}</span>
                     </div>
                   </div>
@@ -312,54 +293,22 @@ export function PropertyModal({ propertyId, onClose }: PropertyModalProps) {
             </div>
           </div>
 
-          {/* Action Buttons */}
+          {/* Action Buttons - NEW COLLAPSIBLE INLINE DESIGN */}
           {!connected ? (
-            <div className="flex flex-col items-center py-8 space-y-4">
-              <p className="text-purple-200 mb-2 text-center text-base">Connect your wallet to interact with this property</p>
+            <div className="flex flex-col items-center py-6 space-y-3">
+              <p className="text-purple-200 mb-1 text-center text-sm">Connect your wallet to interact with this property</p>
               <StyledWalletButton variant="modal" />
             </div>
           ) : (
-            <div className="space-y-3">
-              {/* All action sections are now separate components! */}
-              <BuyPropertySection
-                propertyId={propertyId}
-                property={property}
-                propertyData={propertyData}
-                balance={balance}
-                loading={loading}
-                setLoading={setLoading}
-                onClose={onClose}
-              />
-              
-              <ShieldPropertySection
-                propertyId={propertyId}
-                property={property}
-                propertyData={propertyData}
-                balance={balance}
-                loading={loading}
-                setLoading={setLoading}
-                onClose={onClose}
-              />
-              
-              <SellPropertySection
-                propertyId={propertyId}
-                property={property}
-                propertyData={propertyData}
-                loading={loading}
-                setLoading={setLoading}
-                onClose={onClose}
-              />
-              
-              <StealPropertySection
-                propertyId={propertyId}
-                property={property}
-                propertyData={propertyData}
-                balance={balance}
-                loading={loading}
-                setLoading={setLoading}
-                onClose={onClose}
-              />
-            </div>
+            <PropertyActionsBar
+              propertyId={propertyId}
+              property={property}
+              propertyData={propertyData}
+              balance={balance}
+              loading={loading}
+              setLoading={setLoading}
+              onClose={onClose}
+            />
           )}
         </div>
       </div>

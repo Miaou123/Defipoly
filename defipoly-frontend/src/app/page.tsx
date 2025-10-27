@@ -4,7 +4,7 @@ import { Board } from '@/components/Board';
 import { Portfolio } from '@/components/Portfolio';
 import { Leaderboard } from '@/components/Leaderboard';
 import { LiveFeed } from '@/components/LiveFeed';
-import { PropertyModal } from '@/components/PropertyModal';
+import { PropertyModal } from '@/components/property-modal';
 import { SideHeader } from '@/components/SideHeader';
 import { 
   BuyPropertyExplanationModal,

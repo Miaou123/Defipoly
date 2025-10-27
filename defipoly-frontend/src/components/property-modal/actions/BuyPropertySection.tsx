@@ -7,10 +7,10 @@ import { useState, useEffect, useMemo } from 'react';
 import { useAnchorWallet } from '@solana/wallet-adapter-react';
 import { PROPERTIES } from '@/utils/constants';
 import { useDefipoly } from '@/hooks/useDefipoly';
-import { useNotification } from '../../contexts/NotificationContext';
-import { usePropertyRefresh } from '../../contexts/PropertyRefreshContext';
+import { useNotification } from '@/contexts/NotificationContext';
+import { usePropertyRefresh } from '@/contexts/PropertyRefreshContext';
 import { useCooldown } from '@/hooks/useCooldown';
-import { CooldownExplanationModal } from '../CooldownExplanationModal';
+import { CooldownExplanationModal } from '../../CooldownExplanationModal';
 import { Clock } from 'lucide-react';
 
 interface BuyPropertySectionProps {
@@ -38,7 +38,6 @@ export function BuyPropertySection({
   const { triggerRefresh } = usePropertyRefresh();
   const { cooldownRemaining, isOnCooldown, affectedProperties, cooldownDurationHours, lastPurchasedPropertyId } = useCooldown(property.setId);
 
-  const [showBuyOptions, setShowBuyOptions] = useState(false);
   const [slotsToBuy, setSlotsToBuy] = useState(1);
   const [buyingProgress, setBuyingProgress] = useState<string>('');
   const [showCooldownModal, setShowCooldownModal] = useState(false);
@@ -191,18 +190,6 @@ export function BuyPropertySection({
 
   if (!propertyData || propertyData.owned >= propertyData.maxSlotsPerProperty) return null;
 
-  if (!showBuyOptions) {
-    return (
-      <button
-        onClick={() => setShowBuyOptions(true)}
-        disabled={loading}
-        className="w-full py-3 rounded-xl font-bold text-base transition-all shadow-lg bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 text-white border border-green-400/30 hover:shadow-green-500/50 hover:scale-[1.02]"
-      >
-        Buy Slots
-      </button>
-    );
-  }
-
   return (
     <>
       <div className="bg-purple-900/20 rounded-xl p-4 border border-purple-500/20 space-y-3">
@@ -252,7 +239,12 @@ export function BuyPropertySection({
           </div>
           <div className="flex justify-between text-sm">
             <span className="text-purple-300">Daily Income:</span>
-            <span className="font-bold text-green-400">+{(dailyIncome * slotsToBuy).toLocaleString()} DEFI</span>
+            <span className="font-bold text-green-400">
+              +{((setBonusInfo.hasCompleteSet || setBonusInfo.willCompleteSet) 
+                ? Math.floor(dailyIncome * 1.4 * slotsToBuy) 
+                : dailyIncome * slotsToBuy
+              ).toLocaleString()} DEFI
+            </span>
           </div>
           
           {!setBonusInfo.loading && (
@@ -297,16 +289,6 @@ export function BuyPropertySection({
             ) : (
               'Confirm'
             )}
-          </button>
-          <button
-            onClick={() => {
-              setShowBuyOptions(false);
-              setSlotsToBuy(1);
-            }}
-            disabled={loading}
-            className="px-4 bg-purple-800/60 hover:bg-purple-700/60 py-2.5 rounded-lg font-bold text-purple-100 transition-all"
-          >
-            Cancel
           </button>
         </div>
       </div>
