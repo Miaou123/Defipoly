@@ -1,5 +1,6 @@
 // ============================================
-// FILE: defipoly-frontend/src/components/property-actions/SellPropertySection.tsx
+// FILE: SellPropertySection.tsx
+// Refactored to match buy section style
 // ============================================
 
 import { useState } from 'react';
@@ -33,6 +34,7 @@ export function SellPropertySection({
 
   // Base sell value is 15% (1500 bps), can go up to 30% (3000 bps) after 14 days
   const estimatedReceive = (property.price * slotsToSell * 0.15); // Minimum estimate
+  const maxSlotsToSell = propertyData?.owned || 0;
 
   const handleSell = async () => {
     if (loading) return;
@@ -71,58 +73,80 @@ export function SellPropertySection({
   if (!propertyData || propertyData.owned === 0) return null;
 
   return (
-    <div className="bg-gradient-to-br from-purple-900/40 to-purple-800/40 backdrop-blur-xl rounded-xl p-4 border-2 border-purple-500/40 space-y-3">
-      <div>
-        <label className="text-xs text-purple-300 font-semibold uppercase tracking-wide block mb-1">
-          Slots to Sell
-        </label>
-        <input
-          type="number"
-          min="1"
-          max={propertyData.owned}
-          value={slotsToSell}
-          onChange={(e) => {
-            const value = parseInt(e.target.value) || 1;
-            const clamped = Math.max(1, Math.min(value, propertyData.owned));
-            setSlotsToSell(clamped);
-          }}
-          className="w-full px-3 py-2 bg-purple-950/60 border-2 border-purple-500/40 rounded-lg text-purple-100 font-bold text-lg text-center focus:outline-none focus:border-purple-400 focus:ring-2 focus:ring-purple-400/20"
-        />
-        <div className="flex justify-between text-xs text-purple-400/80 mt-1">
-          <span>Min: 1</span>
-          <span>Max: {propertyData.owned}</span>
+    <div className="mt-2 p-3 bg-gradient-to-br from-purple-900/40 to-indigo-900/40 rounded-xl border border-purple-500/30">
+      {/* Header with Slots and Value */}
+      <div className="flex items-center justify-between mb-2.5">
+        {/* Slots Control */}
+        <div className="flex items-center gap-2">
+          <span className="text-purple-300 text-xs font-semibold uppercase tracking-wider">
+            Slots
+          </span>
+          <div className="flex items-center gap-1.5 bg-purple-950/50 rounded-lg p-0.5 border border-purple-500/30">
+            <button
+              onClick={() => setSlotsToSell(Math.max(1, slotsToSell - 1))}
+              disabled={slotsToSell <= 1 || loading}
+              className="w-8 h-8 flex items-center justify-center bg-purple-600/30 hover:bg-purple-600/50 disabled:bg-purple-900/20 disabled:text-purple-700 rounded text-white font-bold transition-all duration-200 active:scale-95 text-lg"
+            >
+              −
+            </button>
+            <div className="w-12 h-8 flex items-center justify-center bg-purple-950/70 rounded">
+              <span className="text-white text-xl font-bold">{slotsToSell}</span>
+            </div>
+            <button
+              onClick={() => setSlotsToSell(Math.min(maxSlotsToSell, slotsToSell + 1))}
+              disabled={slotsToSell >= maxSlotsToSell || loading}
+              className="w-8 h-8 flex items-center justify-center bg-purple-600/30 hover:bg-purple-600/50 disabled:bg-purple-900/20 disabled:text-purple-700 rounded text-white font-bold transition-all duration-200 active:scale-95 text-lg"
+            >
+              +
+            </button>
+          </div>
         </div>
-      </div>
 
-      <div className="bg-black/30 rounded-lg p-2.5 border border-purple-500/20 text-sm">
-        <div className="flex justify-between items-center">
-          <span className="text-purple-300">You'll receive:</span>
-          <span className="font-black text-lg text-orange-300">
-            ~{estimatedReceive.toLocaleString()} DEFI
+        {/* Value Display */}
+        <div className="flex items-center gap-2">
+          <span className="text-purple-300 text-xs font-semibold uppercase tracking-wider">
+            Value
+          </span>
+          <span className="text-orange-400 text-2xl font-bold">
+            ~{Math.round(estimatedReceive).toLocaleString()}
           </span>
         </div>
-        <div className="text-xs text-purple-400 mt-1">
-          15-30% of buy price (based on days held)
+      </div>
+
+      {/* Info Section - Compact */}
+      <div className="space-y-1 mb-2.5">
+        <div className="flex items-start gap-1.5 text-purple-200">
+          <span className="text-sm">📊</span>
+          <span className="text-xs leading-relaxed">
+            Max: {maxSlotsToSell} slots owned
+          </span>
+        </div>
+        <div className="flex items-start gap-1.5 text-purple-200">
+          <span className="text-sm">💵</span>
+          <span className="text-xs leading-relaxed">
+            Sell value: 15-30% of buy price (based on days held)
+          </span>
+        </div>
+        <div className="flex items-start gap-1.5 text-amber-300">
+          <span className="text-sm">⚠️</span>
+          <span className="text-xs leading-relaxed">
+            Held longer = better value (max 30% after 14 days)
+          </span>
         </div>
       </div>
 
-      <div className="text-xs text-amber-300 bg-amber-900/20 border border-amber-500/30 rounded-lg p-2">
-        ⚠️ Held longer = better sell value (max 30% after 14 days)
-      </div>
-
-      <div className="flex gap-2">
-        <button
-          onClick={handleSell}
-          disabled={loading}
-          className={`flex-1 py-2.5 rounded-lg font-black text-base transition-all ${
-            loading
-              ? 'bg-gray-800/50 cursor-not-allowed text-gray-500'
-              : 'bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-500 hover:to-red-500 text-white shadow-lg hover:shadow-orange-500/50'
-          }`}
-        >
-          {loading ? 'Selling...' : 'Confirm'}
-        </button>
-      </div>
+      {/* Action Button - Subtle style */}
+      <button
+        onClick={handleSell}
+        disabled={loading || slotsToSell < 1 || slotsToSell > maxSlotsToSell}
+        className={`w-full py-2 rounded-lg font-semibold text-sm transition-all ${
+          loading || slotsToSell < 1 || slotsToSell > maxSlotsToSell
+            ? 'bg-gray-800/30 cursor-not-allowed text-gray-500 border border-gray-700/30'
+            : 'bg-orange-600/40 hover:bg-orange-600/60 border border-orange-500/50 text-orange-100 hover:border-orange-400/70'
+        }`}
+      >
+        {loading ? 'Selling...' : 'Sell Slots'}
+      </button>
     </div>
   );
 }

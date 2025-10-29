@@ -200,7 +200,7 @@ export function PropertyModal({ propertyId, onClose }: PropertyModalProps) {
             <div className="bg-purple-900/20 rounded-xl p-3 border border-purple-500/20 space-y-2.5">
               {/* Income Calculation Row */}
               <div>
-                <div className="text-[9px] text-purple-400 mb-1.5 uppercase tracking-wider">💰 Income</div>
+                <div className="text-[9px] text-purple-400 mb-1.5 uppercase tracking-wider">Income</div>
                 <div className="flex items-center gap-2 bg-purple-950/50 rounded-lg p-1.5">
                   {/* Base */}
                   <div className="flex flex-col flex-1">
@@ -237,7 +237,7 @@ export function PropertyModal({ propertyId, onClose }: PropertyModalProps) {
 
               {/* Slots Distribution Row */}
               <div>
-                <div className="text-[9px] text-purple-400 mb-1.5 uppercase tracking-wider">🎰 Slots</div>
+                <div className="text-[9px] text-purple-400 mb-1.5 uppercase tracking-wider">Slots</div>
                 <div className="space-y-2">
                   {/* Values */}
                   <div className="flex justify-between items-baseline">
