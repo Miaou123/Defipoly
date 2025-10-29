@@ -1,8 +1,3 @@
-// ============================================
-// FILE: defipoly-frontend/src/components/property-actions/ShieldPropertySection.tsx
-// FIXED: Now checks for active shields and cooldown periods
-// ============================================
-
 import { useState, useEffect } from 'react';
 import { useDefipoly } from '@/hooks/useDefipoly';
 import { useNotification } from '@/contexts/NotificationContext';
@@ -33,85 +28,74 @@ export function ShieldPropertySection({
   const { showSuccess, showError } = useNotification();
   const { triggerRefresh } = usePropertyRefresh();
   
-  const [slotsToShield, setSlotsToShield] = useState(1);
-  const [timeRemaining, setTimeRemaining] = useState<string>('');
+  const [selectedHours, setSelectedHours] = useState(24);
+  const [timeRemaining, setTimeRemaining] = useState('');
 
-  // Shield cooldown constants
-  const SHIELD_COOLDOWN_HOURS = 12;
-  const SHIELD_COOLDOWN_SECONDS = SHIELD_COOLDOWN_HOURS * 3600;
-
-  // Calculate shield cost
-  const shieldCost = (property.price * (propertyData?.shieldCostPercentBps || 500) / 10000) * slotsToShield;
-  const canShield = balance >= shieldCost && propertyData?.owned > 0;
-
-  // Check shield status
+  const totalSlots = propertyData?.owned || 0;
   const now = Date.now() / 1000;
   const shieldExpiryTimestamp = propertyData?.shieldExpiry?.toNumber() || 0;
   const isShieldActive = propertyData?.shieldActive && shieldExpiryTimestamp > now;
   
-  // Calculate cooldown (12 hours after 48-hour shield expires)
-  const cooldownEndTime = shieldExpiryTimestamp + SHIELD_COOLDOWN_SECONDS;
+  const cooldownDurationSeconds = propertyData?.shieldCooldownDuration?.toNumber() || (12 * 3600);
+  const cooldownEndTime = shieldExpiryTimestamp + cooldownDurationSeconds;
   const isInCooldown = !isShieldActive && shieldExpiryTimestamp > 0 && now < cooldownEndTime;
-  const cooldownRemaining = isInCooldown ? cooldownEndTime - now : 0;
   
-  // Format time remaining
+  const baseCostPerSlot24h = (property.price * (propertyData?.shieldCostPercentBps || 500) / 10000);
+  const costPerSlotForDuration = (baseCostPerSlot24h * selectedHours) / 24;
+  const totalShieldCost = costPerSlotForDuration * totalSlots;
+  const canShield = balance >= totalShieldCost && totalSlots > 0;
+  
+  const cooldownHours = selectedHours / 4;
+
   const formatTime = (seconds: number): string => {
     const hours = Math.floor(seconds / 3600);
     const mins = Math.floor((seconds % 3600) / 60);
-    const secs = Math.floor(seconds % 60);
-    
-    if (hours > 0) return `${hours}h ${mins}m ${secs}s`;
-    if (mins > 0) return `${mins}m ${secs}s`;
-    return `${secs}s`;
+    if (hours > 0) return `${hours}h ${mins}m`;
+    return `${mins}m`;
   };
 
-  // Update countdown timer
   useEffect(() => {
     if (!isShieldActive && !isInCooldown) {
       setTimeRemaining('');
       return;
     }
 
-    const updateTimer = () => {
+    const interval = setInterval(() => {
       const currentTime = Date.now() / 1000;
       
       if (isShieldActive) {
-        // Show shield time remaining
         const remaining = Math.max(0, shieldExpiryTimestamp - currentTime);
         if (remaining <= 0) {
           setTimeRemaining('');
-          triggerRefresh(); // Refresh to switch to cooldown state
+          triggerRefresh();
         } else {
           setTimeRemaining(formatTime(remaining));
         }
       } else if (isInCooldown) {
-        // Show cooldown time remaining
-        const remaining = Math.max(0, cooldownRemaining);
+        const remaining = Math.max(0, cooldownEndTime - currentTime);
         if (remaining <= 0) {
           setTimeRemaining('');
-          triggerRefresh(); // Refresh to enable shield activation
+          triggerRefresh();
         } else {
           setTimeRemaining(formatTime(remaining));
         }
       }
-    };
-
-    updateTimer();
-    const interval = setInterval(updateTimer, 1000);
+    }, 1000);
+    
     return () => clearInterval(interval);
-  }, [isShieldActive, isInCooldown, shieldExpiryTimestamp, cooldownRemaining, triggerRefresh]);
+  }, [isShieldActive, isInCooldown, shieldExpiryTimestamp, cooldownEndTime, triggerRefresh]);
 
   const handleShield = async () => {
     if (loading || isShieldActive || isInCooldown) return;
     setLoading(true);
     
     try {
-      const signature = await activateShield(propertyId, slotsToShield);
+      const signature = await activateShield(propertyId, selectedHours);
       
       if (signature) {
         showSuccess(
           'Shield Activated!',
-          `Shield activated for ${slotsToShield} slot${slotsToShield > 1 ? 's' : ''}! Protected for 48 hours (${SHIELD_COOLDOWN_HOURS}h cooldown after).`,
+          `${totalSlots} slot${totalSlots > 1 ? 's' : ''} protected for ${selectedHours}h`,
           signature !== 'already-processed' ? signature : undefined
         );
         triggerRefresh();
@@ -119,7 +103,6 @@ export function ShieldPropertySection({
       }
     } catch (error: any) {
       console.error('Error activating shield:', error);
-      
       const errorString = error?.message || error?.toString() || '';
       let errorMessage = 'Failed to activate shield';
       
@@ -127,6 +110,10 @@ export function ShieldPropertySection({
         errorMessage = 'Transaction was cancelled';
       } else if (errorString.includes('insufficient')) {
         errorMessage = 'Insufficient balance';
+      } else if (errorString.includes('InvalidShieldDuration')) {
+        errorMessage = 'Invalid shield duration';
+      } else if (errorString.includes('ShieldAlreadyActive')) {
+        errorMessage = 'Shield is already active';
       }
       
       showError('Shield Failed', errorMessage);
@@ -135,16 +122,22 @@ export function ShieldPropertySection({
     }
   };
 
-  if (!propertyData || propertyData.owned === 0) return null;
+  const increaseHours = () => {
+    if (selectedHours < 48) {
+      setSelectedHours(selectedHours + 1);
+    }
+  };
 
-  const slotsShielded = propertyData.slotsShielded || 0;
-  const slotsUnshielded = propertyData.owned - slotsShielded;
-  const maxAdditionalShields = slotsUnshielded;
-  const isPartiallyShielded = slotsShielded > 0 && slotsShielded < propertyData.owned;
-  const isFullyShielded = slotsShielded >= propertyData.owned;
+  const decreaseHours = () => {
+    if (selectedHours > 1) {
+      setSelectedHours(selectedHours - 1);
+    }
+  };
 
-  // Show "Shield Cooldown" status - only when no active shields
-  if (isInCooldown && slotsShielded === 0) {
+  if (!propertyData || totalSlots === 0) return null;
+
+  // Cooldown state - Orange theme
+  if (isInCooldown && !isShieldActive) {
     return (
       <div className="bg-gradient-to-br from-orange-900/40 to-amber-800/40 backdrop-blur-xl rounded-xl p-4 border-2 border-orange-500/40 space-y-3">
         <h4 className="font-black text-lg text-orange-100 flex items-center gap-2">
@@ -167,33 +160,25 @@ export function ShieldPropertySection({
             </span>
             <span className="text-lg font-black text-orange-200">{timeRemaining}</span>
           </div>
-          
-          <div className="mt-2 pt-2 border-t border-orange-500/20 text-xs text-orange-400">
-            Shield expired - recharging for {SHIELD_COOLDOWN_HOURS} hours
-          </div>
-        </div>
-
-        <div className="bg-orange-900/20 border border-orange-500/20 rounded-lg p-2 text-xs text-orange-300">
-          ⏰ After a 48-hour shield, there's a {SHIELD_COOLDOWN_HOURS}-hour cooldown before you can reactivate.
         </div>
       </div>
     );
   }
 
-  // Show shield interface (including when partially shielded or during active shield with unshielded slots)
-  return (
-    <div className="bg-gradient-to-br from-purple-900/40 to-purple-800/40 backdrop-blur-xl rounded-xl p-4 border-2 border-purple-500/40 space-y-3">
-      <h4 className="font-black text-lg text-purple-100 flex items-center gap-2">
-        <span className="text-xl">🛡️</span> Shield Slots
-      </h4>
-
-      {/* Current shield status */}
-      {slotsShielded > 0 && (
+  // Active state - Green theme
+  if (isShieldActive) {
+    return (
+      <div className="bg-gradient-to-br from-green-900/40 to-emerald-800/40 backdrop-blur-xl rounded-xl p-4 border-2 border-green-500/40 space-y-3">
+        <h4 className="font-black text-lg text-green-100 flex items-center gap-2">
+          <Shield className="w-5 h-5" />
+          Shield Active
+        </h4>
+        
         <div className="bg-green-950/60 rounded-lg p-3 border border-green-500/20">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-sm text-green-300 font-semibold">Currently Protected:</span>
+            <span className="text-sm text-green-300 font-semibold">Protected Slots:</span>
             <span className="text-xs px-2 py-1 bg-green-600/30 border border-green-500/50 rounded-full text-green-200 font-bold">
-              🛡️ {slotsShielded}/{propertyData.owned} SLOTS
+              🛡️ {totalSlots} SLOT{totalSlots > 1 ? 'S' : ''}
             </span>
           </div>
           
@@ -204,78 +189,99 @@ export function ShieldPropertySection({
             </span>
             <span className="text-lg font-black text-green-200">{timeRemaining}</span>
           </div>
-          
-          <div className="mt-2 pt-2 border-t border-green-500/20 text-xs text-green-400">
-            {slotsShielded} slot{slotsShielded > 1 ? 's' : ''} protected • {slotsUnshielded} unshielded
-          </div>
         </div>
-      )}
+      </div>
+    );
+  }
 
-      {/* Shield additional slots form - only show if there are unshielded slots and not in cooldown */}
-      {slotsUnshielded > 0 && !isInCooldown && (
-        <>
-          <div>
-            <label className="text-xs text-purple-300 font-semibold uppercase tracking-wide block mb-1">
-              {isPartiallyShielded ? 'Additional Slots to Shield' : 'Slots to Shield'}
-            </label>
+  // Shield selection - BLUE THEME to match Shield button
+  return (
+    <div className="bg-gradient-to-b from-blue-600/30 to-blue-700/30 backdrop-blur-xl rounded-2xl p-5 border-2 border-blue-500/60 shadow-lg shadow-blue-500/20 space-y-4">
+      {/* Controls with blue styling */}
+      <div className="grid grid-cols-[auto_1fr_auto] gap-4 items-center">
+        {/* Duration Section */}
+        <div className="flex items-center gap-2">
+          <span className="text-[11px] uppercase text-blue-200 font-semibold tracking-wide whitespace-nowrap">
+            Duration
+          </span>
+          <div className="flex items-center gap-1.5">
+            <button
+              onClick={decreaseHours}
+              className="w-8 h-8 bg-blue-500/30 hover:bg-blue-500/40 border border-blue-400/40 rounded-lg flex items-center justify-center text-white text-lg font-black active:scale-95 transition-all"
+            >
+              −
+            </button>
             <input
               type="number"
               min="1"
-              max={maxAdditionalShields}
-              value={Math.min(slotsToShield, maxAdditionalShields)}
-              onChange={(e) => {
-                const value = parseInt(e.target.value) || 1;
-                const clamped = Math.max(1, Math.min(value, maxAdditionalShields));
-                setSlotsToShield(clamped);
-              }}
-              className="w-full px-3 py-2 bg-purple-950/60 border-2 border-purple-500/40 rounded-lg text-purple-100 font-bold text-lg text-center focus:outline-none focus:border-purple-400 focus:ring-2 focus:ring-purple-400/20"
+              max="48"
+              value={selectedHours}
+              onChange={(e) => setSelectedHours(Math.max(1, Math.min(48, parseInt(e.target.value) || 1)))}
+              className="w-[60px] h-8 bg-blue-950/40 border border-blue-400/40 rounded-lg text-white text-base font-black text-center focus:outline-none focus:border-blue-400/80 focus:bg-blue-950/60 transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
             />
-            <div className="flex justify-between text-xs text-purple-400/80 mt-1">
-              <span>Min: 1</span>
-              <span>Max: {maxAdditionalShields} (unshielded)</span>
-            </div>
-          </div>
-
-          <div className="bg-black/30 rounded-lg p-2.5 border border-purple-500/20 text-sm">
-            <div className="flex justify-between items-center">
-              <span className="text-purple-300">Shield Cost:</span>
-              <span className="font-black text-lg text-amber-300">{shieldCost.toLocaleString()} DEFI</span>
-            </div>
-            <div className="text-xs text-purple-400 mt-1">
-              Protects {Math.min(slotsToShield, maxAdditionalShields)} additional slot{Math.min(slotsToShield, maxAdditionalShields) > 1 ? 's' : ''} for 48 hours
-            </div>
-            <div className="text-xs text-orange-300 mt-1">
-              ⏰ {SHIELD_COOLDOWN_HOURS}h cooldown after expiry
-            </div>
-          </div>
-
-          <div className="flex gap-2">
             <button
-              onClick={handleShield}
-              disabled={loading || !canShield}
-              className={`flex-1 py-2.5 rounded-lg font-black text-base transition-all ${
-                loading || !canShield
-                  ? 'bg-gray-800/50 cursor-not-allowed text-gray-500'
-                  : 'bg-gradient-to-r from-amber-600 to-yellow-600 hover:from-amber-500 hover:to-yellow-500 text-white shadow-lg hover:shadow-amber-500/50'
-              }`}
+              onClick={increaseHours}
+              className="w-8 h-8 bg-blue-500/30 hover:bg-blue-500/40 border border-blue-400/40 rounded-lg flex items-center justify-center text-white text-lg font-black active:scale-95 transition-all"
             >
-              {loading ? 'Activating...' : `Shield ${Math.min(slotsToShield, maxAdditionalShields)} More`}
+              +
             </button>
+            <span className="text-xs text-blue-200 font-semibold">h</span>
           </div>
-        </>
-      )}
-
-      {/* Fully shielded message */}
-      {isFullyShielded && (
-        <div className="bg-green-900/20 border border-green-500/20 rounded-lg p-2 text-xs text-green-300">
-          ✨ All your slots are protected! After expiry, {SHIELD_COOLDOWN_HOURS}h cooldown before reactivation.
         </div>
-      )}
 
-      {/* In cooldown but have shielded slots message */}
-      {isInCooldown && slotsShielded > 0 && slotsUnshielded > 0 && (
-        <div className="bg-orange-900/20 border border-orange-500/20 rounded-lg p-2 text-xs text-orange-300">
-          ⏰ Shield cooldown active. Wait {formatTime(cooldownRemaining)} to shield remaining {slotsUnshielded} slot{slotsUnshielded > 1 ? 's' : ''}.
+        {/* Cost Section */}
+        <div className="flex items-center justify-center gap-2">
+          <span className="text-[11px] uppercase text-blue-200 font-semibold tracking-wide">
+            Cost
+          </span>
+          <div className="text-amber-400 text-lg font-black">
+            {Math.round(totalShieldCost)}
+          </div>
+        </div>
+
+        {/* Cooldown Section */}
+        <div className="flex items-center gap-2">
+          <span className="text-[11px] uppercase text-blue-200 font-semibold tracking-wide">
+            CD
+          </span>
+          <div className="text-orange-400 text-lg font-black">
+            {cooldownHours >= 1 ? `${cooldownHours}h` : `${Math.round(cooldownHours * 60)}m`}
+          </div>
+        </div>
+      </div>
+
+      {/* Separator line - blue gradient */}
+      <div className="h-px bg-gradient-to-r from-transparent via-blue-400/40 to-transparent" />
+
+      {/* Info Lines */}
+      <div className="space-y-1.5 text-xs">
+        <div className="text-blue-100">
+          🛡️ Protects <span className="font-bold text-white">{totalSlots} slot{totalSlots > 1 ? 's' : ''}</span> for {selectedHours} hour{selectedHours > 1 ? 's' : ''}
+        </div>
+        <div className="text-orange-300">
+          ⏰ {cooldownHours >= 1 ? `${cooldownHours}h` : `${Math.round(cooldownHours * 60)}min`} cooldown after expiry (25% of duration)
+        </div>
+      </div>
+
+      {/* Separator line - blue gradient */}
+      <div className="h-px bg-gradient-to-r from-transparent via-blue-400/40 to-transparent" />
+
+      {/* Activate Button - BLUE to match Shield button */}
+      <button
+        onClick={handleShield}
+        disabled={loading || !canShield}
+        className={`w-full h-12 rounded-xl font-black text-[15px] transition-all shadow-lg ${
+          loading || !canShield
+            ? 'bg-gray-800/50 cursor-not-allowed text-gray-500 shadow-none'
+            : 'bg-gradient-to-b from-blue-500 to-blue-600 hover:from-blue-400 hover:to-blue-500 text-white border-2 border-blue-400/60 shadow-blue-500/40 hover:shadow-blue-500/60 hover:-translate-y-0.5 active:translate-y-0'
+        }`}
+      >
+        {loading ? 'Activating Shield...' : 'Activate Shield'}
+      </button>
+
+      {!canShield && balance < totalShieldCost && (
+        <div className="text-center text-xs text-red-300">
+          ⚠️ Need {Math.round(totalShieldCost).toLocaleString()} DEFI
         </div>
       )}
     </div>
