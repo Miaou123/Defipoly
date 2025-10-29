@@ -220,7 +220,7 @@ export function BuyPropertySection({
               >
                 −
               </button>
-              <div className="w-12 h-8 flex items-center justify-center bg-purple-950/70 rounded">
+              <div className="w-12 h-8 flex items-center justify-center bg-950/70 rounded">
                 <span className="text-white text-xl font-bold">{slotsToBuy}</span>
               </div>
               <button
@@ -238,7 +238,7 @@ export function BuyPropertySection({
             <span className="text-purple-300 text-xs font-semibold uppercase tracking-wider">
               Cost
             </span>
-            <span className="text-yellow-400 text-2xl font-bold">
+            <span className="text-yellow-400 text-xl font-bold">
               {buyCost.toLocaleString()}
             </span>
           </div>

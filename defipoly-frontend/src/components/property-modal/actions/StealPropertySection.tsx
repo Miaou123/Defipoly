@@ -152,7 +152,7 @@ export function StealPropertySection({
           <span className="text-purple-300 text-xs font-semibold uppercase tracking-wider">
             Cost
           </span>
-          <span className="text-yellow-400 text-2xl font-bold">
+          <span className="text-yellow-400 text-xl font-bold">
             {stealCost.toLocaleString()}
           </span>
         </div>
@@ -162,7 +162,7 @@ export function StealPropertySection({
           <span className="text-purple-300 text-xs font-semibold uppercase tracking-wider">
           Success Rate
           </span>
-          <span className="text-green-400 text-2xl font-bold">
+          <span className="text-green-400 text-xl font-bold">
             33%
           </span>
         </div>

@@ -201,7 +201,7 @@ export function PropertyModal({ propertyId, onClose }: PropertyModalProps) {
               {/* Income Calculation Row */}
               <div>
                 <div className="text-[9px] text-purple-400 mb-1.5 uppercase tracking-wider">Income</div>
-                <div className="flex items-center gap-2 bg-purple-950/50 rounded-lg p-1.5">
+                <div className="flex items-center gap-2 bg-950/50 rounded-lg p-1.5">
                   {/* Base */}
                   <div className="flex flex-col flex-1">
                     <div className="text-[8px] text-purple-400 uppercase">📊 Base</div>

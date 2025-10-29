@@ -89,7 +89,7 @@ export function SellPropertySection({
             >
               −
             </button>
-            <div className="w-12 h-8 flex items-center justify-center bg-purple-950/70 rounded">
+            <div className="w-12 h-8 flex items-center justify-center bg-950/70 rounded">
               <span className="text-white text-xl font-bold">{slotsToSell}</span>
             </div>
             <button
@@ -107,7 +107,7 @@ export function SellPropertySection({
           <span className="text-purple-300 text-xs font-semibold uppercase tracking-wider">
             Value
           </span>
-          <span className="text-orange-400 text-2xl font-bold">
+          <span className="text-orange-400 text-xl font-bold">
             ~{Math.round(estimatedReceive).toLocaleString()}
           </span>
         </div>
