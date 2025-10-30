@@ -40,6 +40,9 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
+# todo file
+todo-ideas.txt
+
 
 # ========================================
 # AUTO-GENERATED FILES - DO NOT EDIT
