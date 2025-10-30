@@ -283,10 +283,9 @@ pub mod defipoly_program {
     }
 
     // ========== SHIELD SYSTEM ==========
-
     pub fn activate_shield(
         ctx: Context<ActivateShield>,
-        shield_duration_hours: u16,  // Changed from slots_to_shield - now accepts 1-48
+        shield_duration_hours: u16,  // Accepts 1-48 hours
     ) -> Result<()> {
         let game_config = &ctx.accounts.game_config;
         let property = &ctx.accounts.property;
@@ -339,8 +338,25 @@ pub mod defipoly_program {
         token::transfer(transfer_ctx_dev, to_dev)?;
     
         let shield_duration_seconds = (shield_duration_hours as i64) * 3600;
+        
+        // 🆕 NEW: Check if steal protection is active and queue shield after it
+        let shield_start_time = if clock.unix_timestamp < ownership.steal_protection_expiry {
+            // Steal protection is active - shield starts AFTER it expires
+            let wait_time = ownership.steal_protection_expiry - clock.unix_timestamp;
+            msg!(
+                "⏱️  Steal protection active for {} more seconds. Shield will start after protection expires at {}",
+                wait_time,
+                ownership.steal_protection_expiry
+            );
+            ownership.steal_protection_expiry
+        } else {
+            // No steal protection - shield starts immediately
+            clock.unix_timestamp
+        };
+    
+        // Set shield properties
         ownership.slots_shielded = slots_to_shield;
-        ownership.shield_expiry = clock.unix_timestamp + shield_duration_seconds;
+        ownership.shield_expiry = shield_start_time + shield_duration_seconds;
         ownership.shield_cooldown_duration = shield_duration_seconds / 4;  // 25% cooldown
     
         emit!(ShieldActivatedEvent {
@@ -351,46 +367,115 @@ pub mod defipoly_program {
             expiry: ownership.shield_expiry,
         });
     
-        msg!("Shield activated: {} slots for {}h", slots_to_shield, shield_duration_hours);
+        if shield_start_time > clock.unix_timestamp {
+            msg!(
+                "🛡️ Shield queued: {} slots for {}h (starts at {}, expires at {})",
+                slots_to_shield,
+                shield_duration_hours,
+                shield_start_time,
+                ownership.shield_expiry
+            );
+        } else {
+            msg!(
+                "🛡️ Shield activated: {} slots for {}h (expires at {})",
+                slots_to_shield,
+                shield_duration_hours,
+                ownership.shield_expiry
+            );
+        }
+    
         Ok(())
     }
 
     // ========== SECURE COMMIT-REVEAL STEAL MECHANICS (RANDOM ONLY) ==========
 
 /// Instant steal with cooldown protection (SINGLE TRANSACTION - 33% success rate)
+/// Randomly selects target from eligible owners passed in remaining_accounts
 pub fn steal_property_instant(
     ctx: Context<StealPropertyInstant>,
-    target_player: Pubkey,
     user_randomness: [u8; 32],
 ) -> Result<()> {
     let game_config = &ctx.accounts.game_config;
     let property = &ctx.accounts.property;
     let player = &mut ctx.accounts.player_account;
-    let target_account = &mut ctx.accounts.target_account;
-    let target_ownership = &mut ctx.accounts.target_ownership;
     let attacker_ownership = &mut ctx.accounts.attacker_ownership;
     let steal_cooldown = &mut ctx.accounts.steal_cooldown;
     let clock = Clock::get()?;
 
     require!(!game_config.game_paused, ErrorCode::GamePaused);
-    require!(target_ownership.slots_owned > 0, ErrorCode::TargetDoesNotOwnProperty);
+
+    // Get eligible targets from remaining_accounts (pairs of [ownership, player_account])
+    let remaining_accounts = ctx.remaining_accounts;
+    require!(remaining_accounts.len() >= 2, ErrorCode::NoEligibleTargets);
+    require!(remaining_accounts.len() % 2 == 0, ErrorCode::InvalidAccountCount);
+    
+    let num_targets = remaining_accounts.len() / 2;
+    require!(num_targets > 0, ErrorCode::NoEligibleTargets);
+
+    // Generate randomness using current slot hash + user randomness
+    let slot_hashes = &ctx.accounts.slot_hashes;
+    let slot_hashes_data = slot_hashes.data.borrow();
+    
+    require!(
+        slot_hashes_data.len() >= 40,
+        ErrorCode::SlotHashUnavailable
+    );
+
+    let mut slot_hash_bytes = [0u8; 32];
+    slot_hash_bytes.copy_from_slice(&slot_hashes_data[8..40]);
+
+    // Combine entropy sources
+    let mut combined_entropy = [0u8; 32];
+    for i in 0..32 {
+        combined_entropy[i] = user_randomness[i]
+            ^ slot_hash_bytes[i]
+            ^ ((clock.slot >> (i % 8)) as u8)
+            ^ ((clock.unix_timestamp >> (i % 8)) as u8);
+    }
+    
+    let random_u64 = u64::from_le_bytes(combined_entropy[0..8].try_into().unwrap());
+
+    // Randomly select target from eligible pool
+    let target_index = (random_u64 % num_targets as u64) as usize;
+    let target_ownership_info = &remaining_accounts[target_index * 2];
+    let target_account_info = &remaining_accounts[target_index * 2 + 1];
+
+    // Deserialize target accounts
+    let mut target_ownership_data = target_ownership_info.try_borrow_mut_data()?;
+    let mut target_ownership = PropertyOwnership::try_deserialize(&mut &target_ownership_data[..])?;
+    
+    let mut target_account_data = target_account_info.try_borrow_mut_data()?;
+    let mut target_account = PlayerAccount::try_deserialize(&mut &target_account_data[..])?;
+
+    let target_player = target_ownership.player;
+
+    // Validation
     require!(
         target_player != ctx.accounts.attacker.key(),
         ErrorCode::CannotStealFromSelf
     );
+    require!(
+        target_ownership.property_id == property.property_id,
+        ErrorCode::PropertyMismatch
+    );
+    require!(target_ownership.slots_owned > 0, ErrorCode::TargetDoesNotOwnProperty);
 
-    // Check shielded slots
+    // Check combined protection (shield + steal protection)
     let shielded_slots = if clock.unix_timestamp < target_ownership.shield_expiry {
         target_ownership.slots_shielded
     } else {
         0
     };
+    
+    let has_steal_protection = clock.unix_timestamp < target_ownership.steal_protection_expiry;
+    
     require!(
         target_ownership.slots_owned > shielded_slots,
         ErrorCode::AllSlotsShielded
     );
+    require!(!has_steal_protection, ErrorCode::StealProtectionActive);
 
-    // Check cooldown (half of buy cooldown)
+    // Check attacker cooldown (half of buy cooldown)
     let cooldown_duration = property.cooldown_seconds / 2;
     if steal_cooldown.player != Pubkey::default() {
         let time_since_last_steal = clock.unix_timestamp - steal_cooldown.last_steal_attempt_timestamp;
@@ -435,32 +520,10 @@ pub fn steal_property_instant(
     );
     token::transfer(transfer_ctx_dev, to_dev)?;
 
-    // Generate randomness using current slot hash + user randomness
-    let slot_hashes = &ctx.accounts.slot_hashes;
-    let slot_hashes_data = slot_hashes.data.borrow();
-    
-    require!(
-        slot_hashes_data.len() >= 40,
-        ErrorCode::SlotHashUnavailable
-    );
-
-    let mut slot_hash_bytes = [0u8; 32];
-    slot_hash_bytes.copy_from_slice(&slot_hashes_data[8..40]);
-
-    // Combine entropy sources
-    let mut combined_entropy = [0u8; 32];
-    for i in 0..32 {
-        combined_entropy[i] = user_randomness[i]
-            ^ slot_hash_bytes[i]
-            ^ ((clock.slot >> (i % 8)) as u8)
-            ^ ((clock.unix_timestamp >> (i % 8)) as u8);
-    }
-    
-    let random_u64 = u64::from_le_bytes(combined_entropy[0..8].try_into().unwrap());
-
-    // Determine success (33% chance)
+    // Determine success (33% chance) - use different part of entropy
     let success_threshold = game_config.steal_chance_random_bps as u64;
-    let success = (random_u64 % 10000) < success_threshold;
+    let success_random = u64::from_le_bytes(combined_entropy[8..16].try_into().unwrap());
+    let success = (success_random % 10000) < success_threshold;
 
     // Update player stats
     player.total_steals_attempted += 1;
@@ -481,6 +544,7 @@ pub fn steal_property_instant(
             attacker_ownership.slots_shielded = 0;
             attacker_ownership.purchase_timestamp = clock.unix_timestamp;
             attacker_ownership.shield_expiry = 0;
+            attacker_ownership.steal_protection_expiry = 0;
             attacker_ownership.bump = ctx.bumps.attacker_ownership;
         } else {
             attacker_ownership.slots_owned += 1;
@@ -513,8 +577,8 @@ pub fn steal_property_instant(
             vrf_result: random_u64,
         });
 
-        msg!("✅ INSTANT STEAL SUCCESS: {} stole 1 slot from {} (entropy: {})", 
-             ctx.accounts.attacker.key(), target_player, random_u64);
+        msg!("✅ INSTANT STEAL SUCCESS: {} stole 1 slot from {} (target_selection: {}, success_roll: {})", 
+             ctx.accounts.attacker.key(), target_player, random_u64, success_random);
     } else {
         emit!(StealFailedEvent {
             attacker: ctx.accounts.attacker.key(),
@@ -525,9 +589,19 @@ pub fn steal_property_instant(
             vrf_result: random_u64,
         });
 
-        msg!("❌ INSTANT STEAL FAILED: {} (entropy: {})", 
-             ctx.accounts.attacker.key(), random_u64);
+        msg!("❌ INSTANT STEAL FAILED: {} targeted {} (target_selection: {}, success_roll: {})", 
+             ctx.accounts.attacker.key(), target_player, random_u64, success_random);
     }
+
+    // 🆕 APPLY 6-HOUR STEAL PROTECTION (whether success or fail)
+    target_ownership.steal_protection_expiry = clock.unix_timestamp + (6 * 3600);
+
+    // Serialize changes back to accounts
+    target_ownership.try_serialize(&mut &mut target_ownership_data[..])?;
+    target_account.try_serialize(&mut &mut target_account_data[..])?;
+
+    msg!("🛡️ Steal protection applied to {} until {}", 
+         target_player, target_ownership.steal_protection_expiry);
 
     Ok(())
 }
@@ -1051,15 +1125,8 @@ pub struct ActivateShield<'info> {
 }
 
 #[derive(Accounts)]
-#[instruction(target_player: Pubkey)] 
 pub struct StealPropertyInstant<'info> {
     pub property: Account<'info, Property>,
-    
-    #[account(
-        mut,
-        constraint = target_ownership.player == target_player @ ErrorCode::InvalidTarget
-    )]
-    pub target_ownership: Account<'info, PropertyOwnership>,
     
     #[account(
         init_if_needed,
@@ -1081,12 +1148,6 @@ pub struct StealPropertyInstant<'info> {
     
     #[account(mut)]
     pub player_account: Account<'info, PlayerAccount>,
-    
-    #[account(
-        mut,
-        constraint = target_account.owner == target_player @ ErrorCode::InvalidTarget
-    )]
-    pub target_account: Account<'info, PlayerAccount>,
     
     #[account(mut)]
     pub player_token_account: Account<'info, TokenAccount>,
@@ -1291,11 +1352,12 @@ pub struct PropertyOwnership {
     pub purchase_timestamp: i64,
     pub shield_expiry: i64,
     pub shield_cooldown_duration: i64,
+    pub steal_protection_expiry: i64,
     pub bump: u8,
 }
 
 impl PropertyOwnership {
-    pub const SIZE: usize = 32 + 1 + 2 + 2 + 8 + 8 + 8 + 1; 
+    pub const SIZE: usize = 32 + 1 + 2 + 2 + 8 + 8 + 8 + 8 + 1;
 }
 
 #[account]
@@ -1457,6 +1519,10 @@ pub enum ErrorCode {
     InvalidShieldSlots,
     #[msg("Target does not own this property")]
     TargetDoesNotOwnProperty,
+    #[msg("No eligible targets found")]
+    NoEligibleTargets,
+    #[msg("All slots are protected (shielded or steal protection active)")]
+    AllSlotsProtected,
     #[msg("Cannot steal from yourself")]
     CannotStealFromSelf,
     #[msg("All slots are shielded")]

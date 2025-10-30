@@ -1,13 +1,15 @@
 // ============================================
 // FILE: defipoly-frontend/src/utils/propertyStats.ts
 // Utility to fetch property statistics from backend
+// 🆕 UPDATED: Added ownersWithStealProtection field
 // ============================================
 
-const BACKEND_URL = process.env.NEXT_PUBLIC_PROFILE_API_URL || 'http://localhost:3001';
+const BACKEND_URL = process.env.NEXT_PUBLIC_PROFILE_API_URL || 'http://localhost:3005';
 
 export interface PropertyStats {
   propertyId: number;
   ownersWithUnshieldedSlots: number;
+  ownersWithStealProtection?: number;  // 🆕 NEW: Optional for backward compatibility
 }
 
 /**
@@ -25,7 +27,8 @@ export async function fetchPropertyStats(propertyId: number): Promise<PropertySt
     const data = await response.json();
     return {
       propertyId: data.propertyId,
-      ownersWithUnshieldedSlots: data.ownersWithUnshieldedSlots
+      ownersWithUnshieldedSlots: data.ownersWithUnshieldedSlots,
+      ownersWithStealProtection: data.ownersWithStealProtection || 0,  // 🆕 NEW
     };
   } catch (error) {
     console.error('Error fetching property stats:', error);
@@ -52,7 +55,8 @@ export async function fetchAllPropertiesStats(): Promise<Map<number, PropertySta
       const id = parseInt(propertyId);
       statsMap.set(id, {
         propertyId: id,
-        ownersWithUnshieldedSlots: stats.ownersWithUnshieldedSlots
+        ownersWithUnshieldedSlots: stats.ownersWithUnshieldedSlots,
+        ownersWithStealProtection: stats.ownersWithStealProtection || 0,  // 🆕 NEW
       });
     });
     

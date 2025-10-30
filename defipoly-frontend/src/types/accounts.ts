@@ -57,6 +57,8 @@ export interface PropertyOwnership {
   slotsShielded: number;
   purchaseTimestamp: BN;
   shieldExpiry: BN;
+  shieldCooldownDuration: BN;
+  stealProtectionExpiry: BN; 
   bump: number;
 }
 

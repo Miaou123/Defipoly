@@ -1,5 +1,6 @@
 // utils/propertyOwners.ts
 // Utility to fetch all players who own slots in a property
+// UPDATED: Now includes steal protection expiry checking
 
 import { Connection, PublicKey, GetProgramAccountsFilter } from '@solana/web3.js';
 import { Program, Idl, BN } from '@coral-xyz/anchor';
@@ -7,22 +8,27 @@ import { PROGRAM_ID } from './constants';
 
 /**
  * Fetch all players who own unshielded slots in a property
- * This is needed for random steal functionality
+ * Now also returns steal protection expiry for filtering
  */
 export async function fetchPropertyOwners(
   connection: Connection,
   program: Program<Idl>,
   propertyId: number
-): Promise<{ owner: PublicKey; slotsOwned: number; unshieldedSlots: number }[]> {
+): Promise<{ 
+  owner: PublicKey; 
+  slotsOwned: number; 
+  unshieldedSlots: number;
+  stealProtectionExpiry: number; 
+}[]> {
   try {
     console.log(`🔍 Fetching all owners for property ${propertyId}...`);
     
     // Direct approach: fetch all ownership accounts using getProgramAccounts
-    // This avoids the program.account.propertyOwnership issue
     const filters: GetProgramAccountsFilter[] = [
       {
         // Account discriminator for PropertyOwnership (8 bytes)
-        dataSize: 8 + 32 + 1 + 2 + 2 + 8 + 8 + 1, // Adjust based on your struct size
+        // 🆕 UPDATED SIZE: Added 8 bytes for steal_protection_expiry
+        dataSize: 8 + 32 + 1 + 2 + 2 + 8 + 8 + 8 + 1, // Was 62, now 70
       }
     ];
 
@@ -32,7 +38,12 @@ export async function fetchPropertyOwners(
 
     console.log(`Found ${accounts.length} potential ownership accounts`);
 
-    const owners: { owner: PublicKey; slotsOwned: number; unshieldedSlots: number }[] = [];
+    const owners: { 
+      owner: PublicKey; 
+      slotsOwned: number; 
+      unshieldedSlots: number;
+      stealProtectionExpiry: number;
+    }[] = [];
     const currentTime = Math.floor(Date.now() / 1000);
 
     for (const { pubkey, account } of accounts) {
@@ -77,6 +88,15 @@ export async function fetchPropertyOwners(
         const shieldExpiry = shieldExpiryLow + (shieldExpiryHigh * 0x100000000);
         offset += 8;
 
+        // Skip shield_cooldown_duration (8 bytes)
+        offset += 8;
+
+        // 🆕 NEW: Read steal_protection_expiry (8 bytes, i64)
+        const stealProtectionExpiryLow = data.readUInt32LE(offset);
+        const stealProtectionExpiryHigh = data.readUInt32LE(offset + 4);
+        const stealProtectionExpiry = stealProtectionExpiryLow + (stealProtectionExpiryHigh * 0x100000000);
+        offset += 8;
+
         // Calculate unshielded slots
         const shieldActive = shieldExpiry > currentTime;
         const effectiveShieldedSlots = shieldActive ? slotsShielded : 0;
@@ -87,10 +107,12 @@ export async function fetchPropertyOwners(
             owner: player,
             slotsOwned: slotsOwned,
             unshieldedSlots: unshieldedSlots,
+            stealProtectionExpiry: stealProtectionExpiry,
           });
         }
       } catch (error) {
         // Skip accounts that fail to decode
+        console.warn('Failed to decode account:', error);
         continue;
       }
     }
@@ -106,13 +128,24 @@ export async function fetchPropertyOwners(
 /**
  * Alternative: Use ownership PDA derivation to check specific players
  * This is more reliable but requires knowing which players to check
+ * 🆕 UPDATED: Now reads steal_protection_expiry
  */
 export async function fetchPropertyOwnersViaPDA(
   connection: Connection,
   propertyId: number,
   playerAddresses: PublicKey[]
-): Promise<{ owner: PublicKey; slotsOwned: number; unshieldedSlots: number }[]> {
-  const owners: { owner: PublicKey; slotsOwned: number; unshieldedSlots: number }[] = [];
+): Promise<{ 
+  owner: PublicKey; 
+  slotsOwned: number; 
+  unshieldedSlots: number;
+  stealProtectionExpiry: number;
+}[]> {
+  const owners: { 
+    owner: PublicKey; 
+    slotsOwned: number; 
+    unshieldedSlots: number;
+    stealProtectionExpiry: number;
+  }[] = [];
   const currentTime = Math.floor(Date.now() / 1000);
 
   for (const player of playerAddresses) {
@@ -129,7 +162,7 @@ export async function fetchPropertyOwnersViaPDA(
 
       const data = accountInfo.data;
       
-      // Parse data (same as above)
+      // Parse data
       let offset = 8;
       const ownerPubkey = new PublicKey(data.slice(offset, offset + 32));
       offset += 32;
@@ -151,6 +184,14 @@ export async function fetchPropertyOwnersViaPDA(
       const shieldExpiryLow = data.readUInt32LE(offset);
       const shieldExpiryHigh = data.readUInt32LE(offset + 4);
       const shieldExpiry = shieldExpiryLow + (shieldExpiryHigh * 0x100000000);
+      offset += 8;
+
+      offset += 8; // skip shield_cooldown_duration
+
+      // 🆕 NEW: Read steal_protection_expiry
+      const stealProtectionExpiryLow = data.readUInt32LE(offset);
+      const stealProtectionExpiryHigh = data.readUInt32LE(offset + 4);
+      const stealProtectionExpiry = stealProtectionExpiryLow + (stealProtectionExpiryHigh * 0x100000000);
 
       const shieldActive = shieldExpiry > currentTime;
       const effectiveShieldedSlots = shieldActive ? slotsShielded : 0;
@@ -161,6 +202,7 @@ export async function fetchPropertyOwnersViaPDA(
           owner: ownerPubkey,
           slotsOwned,
           unshieldedSlots,
+          stealProtectionExpiry,
         });
       }
     } catch (error) {
@@ -172,57 +214,88 @@ export async function fetchPropertyOwnersViaPDA(
 }
 
 /**
- * Select a random owner from the list, weighted by their unshielded slots
- * More slots = higher chance of being selected
+ * 🆕 NEW: Get count of owners by protection status
  */
-export function selectRandomOwner(
-  owners: { owner: PublicKey; slotsOwned: number; unshieldedSlots: number }[],
-  excludePlayer?: PublicKey
-): PublicKey | null {
-  // Filter out the current player
-  let eligibleOwners = owners;
-  if (excludePlayer) {
-    eligibleOwners = owners.filter(o => !o.owner.equals(excludePlayer));
-  }
+export function getOwnerProtectionStats(
+  owners: { 
+    owner: PublicKey; 
+    slotsOwned: number; 
+    unshieldedSlots: number;
+    stealProtectionExpiry: number;
+  }[]
+): {
+  total: number;
+  withUnshieldedSlots: number;
+  withStealProtection: number;
+  fullyProtected: number;
+  vulnerable: number;
+} {
+  const currentTime = Math.floor(Date.now() / 1000);
 
-  if (eligibleOwners.length === 0) {
-    return null;
-  }
+  const stats = {
+    total: owners.length,
+    withUnshieldedSlots: 0,
+    withStealProtection: 0,
+    fullyProtected: 0,
+    vulnerable: 0,
+  };
 
-  // Weight by unshielded slots - more slots = higher chance
-  const totalWeight = eligibleOwners.reduce((sum, owner) => sum + owner.unshieldedSlots, 0);
-  const randomWeight = Math.random() * totalWeight;
+  for (const owner of owners) {
+    const hasUnshieldedSlots = owner.unshieldedSlots > 0;
+    const hasStealProtection = currentTime < owner.stealProtectionExpiry;
 
-  let cumulativeWeight = 0;
-  for (const owner of eligibleOwners) {
-    cumulativeWeight += owner.unshieldedSlots;
-    if (randomWeight <= cumulativeWeight) {
-      return owner.owner;
+    if (hasUnshieldedSlots) {
+      stats.withUnshieldedSlots++;
+    }
+
+    if (hasStealProtection) {
+      stats.withStealProtection++;
+    }
+
+    if (!hasUnshieldedSlots || hasStealProtection) {
+      stats.fullyProtected++;
+    } else {
+      stats.vulnerable++;
     }
   }
 
-  // Fallback: return the last owner
-  return eligibleOwners[eligibleOwners.length - 1].owner;
+  return stats;
 }
 
 /**
- * Select a completely random owner (equal probability)
+ * 🆕 NEW: Filter owners to get only eligible steal targets
+ * (unshielded slots AND no steal protection)
  */
-export function selectRandomOwnerUnweighted(
-  owners: { owner: PublicKey; slotsOwned: number; unshieldedSlots: number }[],
+export function getEligibleStealTargets(
+  owners: { 
+    owner: PublicKey; 
+    slotsOwned: number; 
+    unshieldedSlots: number;
+    stealProtectionExpiry: number;
+  }[],
   excludePlayer?: PublicKey
-): PublicKey | null {
-  // Filter out the current player
-  let eligibleOwners = owners;
-  if (excludePlayer) {
-    eligibleOwners = owners.filter(o => !o.owner.equals(excludePlayer));
+): PublicKey[] {
+  const currentTime = Math.floor(Date.now() / 1000);
+  const eligible: PublicKey[] = [];
+
+  for (const owner of owners) {
+    // Skip excluded player
+    if (excludePlayer && owner.owner.equals(excludePlayer)) {
+      continue;
+    }
+
+    // Must have unshielded slots
+    if (owner.unshieldedSlots <= 0) {
+      continue;
+    }
+
+    // Must not have active steal protection
+    if (currentTime < owner.stealProtectionExpiry) {
+      continue;
+    }
+
+    eligible.push(owner.owner);
   }
 
-  if (eligibleOwners.length === 0) {
-    return null;
-  }
-
-  // Pick a random owner with equal probability
-  const randomIndex = Math.floor(Math.random() * eligibleOwners.length);
-  return eligibleOwners[randomIndex].owner;
+  return eligible;
 }

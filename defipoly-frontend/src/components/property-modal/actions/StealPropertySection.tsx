@@ -1,6 +1,6 @@
 // ============================================
-// FILE: StealPropertySection.tsx
-// Simplified and refactored to match buy section style
+// FINAL CORRECTED StealPropertySection.tsx
+// Uses cooldownHours (the actual field in PROPERTIES constant)
 // ============================================
 
 import { useState, useEffect } from 'react';
@@ -37,6 +37,7 @@ export function StealPropertySection({
   const { isOnStealCooldown, stealCooldownRemaining, refetchStealCooldown } = useStealCooldownFromContext(propertyId);
   
   const [availableTargets, setAvailableTargets] = useState<number | null>(null);
+  const [protectedOwners, setProtectedOwners] = useState<number>(0);
 
   const stealCost = property.price * 0.5;
   const canSteal = balance >= stealCost && !isOnStealCooldown;
@@ -52,13 +53,14 @@ export function StealPropertySection({
     return `${secs}s`;
   };
 
-  // Fetch property stats
+  // Fetch property stats including steal protection info
   useEffect(() => {
     if (availableTargets === null) {
       fetchPropertyStats(propertyId)
         .then(stats => {
           if (stats) {
             setAvailableTargets(stats.ownersWithUnshieldedSlots);
+            setProtectedOwners(stats.ownersWithStealProtection || 0);
           }
         })
         .catch(err => console.error('Failed to fetch property stats:', err));
@@ -76,77 +78,68 @@ export function StealPropertySection({
         await refetchStealCooldown();
         
         if (result.success) {
+          const targetDisplay = result.targetAddress 
+            ? `${result.targetAddress.slice(0, 4)}...${result.targetAddress.slice(-4)}`
+            : 'a random owner';
+            
           showSuccess(
             'Steal Successful!',
-            `You successfully stole 1 slot of ${property.name}!`,
+            `You successfully stole 1 slot of ${property.name} from ${targetDisplay}!`,
             result.tx
           );
         } else {
+          const targetDisplay = result.targetAddress 
+            ? `${result.targetAddress.slice(0, 4)}...${result.targetAddress.slice(-4)}`
+            : 'a random owner';
+            
           showError(
             'Steal Failed', 
-            `Steal attempt failed. You paid the cost but didn't win.`
+            `Steal attempt failed. Targeted ${targetDisplay} but the 33% roll didn't succeed. They now have 6h steal protection.`
           );
         }
+        
         triggerRefresh();
-        setTimeout(() => onClose(), 2000);
+        setTimeout(() => {
+          setAvailableTargets(null); // Refresh stats
+        }, 2000);
       }
     } catch (error: any) {
-      console.error('Error stealing property:', error);
+      console.error('Steal error:', error);
       
-      await refetchStealCooldown();
+      const errorMsg = error?.message || error?.toString() || 'Unknown error';
       
-      const errorString = error?.message || error?.toString() || '';
-      let errorMessage = 'Failed to execute steal';
-      
-      if (errorString.includes('TargetDoesNotOwnProperty')) {
-        errorMessage = 'Target does not own this property';
-      } else if (errorString.includes('AllSlotsShielded') || errorString.includes('shielded')) {
-        errorMessage = 'All slots are shielded';
-      } else if (errorString.includes('No eligible targets found')) {
-        errorMessage = 'No eligible targets found';
-      } else if (errorString.includes('CannotStealFromSelf')) {
-        errorMessage = 'Cannot steal from yourself';
-      } else if (errorString.includes('StealCooldownActive')) {
-        errorMessage = 'Steal cooldown is active';
-      } else if (errorString.includes('No players own unshielded slots')) {
-        errorMessage = 'No unshielded slots available';
-      } else if (errorString.includes('User rejected')) {
-        errorMessage = 'Transaction was cancelled';
-      } else if (errorString.includes('insufficient')) {
-        errorMessage = 'Insufficient balance';
+      if (errorMsg.includes('No eligible targets')) {
+        showError(
+          'No Targets Available',
+          'All owners are either fully shielded or have active steal protection (6h after being targeted).'
+        );
+      } else if (errorMsg.includes('steal protection')) {
+        showError(
+          'Steal Protection Active',
+          'The selected target has steal protection active (6h cooldown).'
+        );
+      } else {
+        showError('Steal Failed', errorMsg);
       }
-      
-      showError('Steal Failed', errorMessage);
     } finally {
       setLoading(false);
     }
   };
 
-  // Don't show if user has reached max slots
-  if (wouldExceedMaxSlots) return null;
-
-  // Cooldown state - Compact version
-  if (isOnStealCooldown) {
-    return (
-      <div className="mt-2 p-3 bg-gradient-to-br from-purple-900/40 to-indigo-900/40 rounded-xl border border-purple-500/30">
-        <div className="mb-2 p-2 bg-red-900/30 border border-red-500/40 rounded-lg">
-          <p className="text-xs text-red-200 flex items-center gap-1.5 mb-1">
-            <Clock className="w-3.5 h-3.5" />
-            <span className="font-semibold">Steal Cooldown Active</span>
-          </p>
-          <p className="text-xs text-red-200 flex items-center justify-between">
-            <span>Available in:</span>
-            <span className="font-bold">{formatCooldown(stealCooldownRemaining)}</span>
-          </p>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="mt-2 p-3 bg-gradient-to-br from-purple-900/40 to-indigo-900/40 rounded-xl border border-purple-500/30">
-      {/* Header with Cost and Success Rate */}
-      <div className="flex items-center justify-between mb-2.5">
+    <div className="bg-gradient-to-br from-purple-900/40 to-indigo-900/40 rounded-xl p-4 border border-purple-500/30">
+      <div className="flex items-center justify-between mb-3">
+        <h3 className="text-lg font-bold text-purple-200">Random Steal</h3>
+        {isOnStealCooldown && stealCooldownRemaining > 0 && (
+          <div className="flex items-center gap-1.5 text-yellow-400 text-xs bg-yellow-400/10 px-2 py-1 rounded-md border border-yellow-400/20">
+            <Clock className="w-3.5 h-3.5" />
+            <span className="font-semibold">{formatCooldown(stealCooldownRemaining)}</span>
+          </div>
+        )}
+      </div>
+
+      {/* Cost & Success Rate Display */}
+      <div className="grid grid-cols-2 gap-3 mb-3 bg-black/20 rounded-lg p-2.5 border border-purple-500/20">
         {/* Cost Display */}
         <div className="flex items-center gap-2">
           <span className="text-purple-300 text-xs font-semibold uppercase tracking-wider">
@@ -160,7 +153,7 @@ export function StealPropertySection({
         {/* Success Rate */}
         <div className="flex items-center gap-2">
           <span className="text-purple-300 text-xs font-semibold uppercase tracking-wider">
-          Success Rate
+            Success Rate
           </span>
           <span className="text-green-400 text-xl font-bold">
             33%
@@ -168,14 +161,15 @@ export function StealPropertySection({
         </div>
       </div>
 
-      {/* Info Section - Compact */}
-      <div className="space-y-1 mb-2.5">
+      {/* Info Section */}
+      <div className="space-y-1.5 mb-3">
         <div className="flex items-start gap-1.5 text-purple-200">
-          <span className="text-sm">🎯</span>
+          <span className="text-sm">🎲</span>
           <span className="text-xs leading-relaxed">
-            Random steal: 1 slot from any unshielded owner
+            <strong>Truly Random:</strong> Target selected on-chain from all unprotected owners
           </span>
         </div>
+        
         {availableTargets !== null && (
           <div className="flex items-start gap-1.5 text-purple-200">
             <span className="text-sm">👥</span>
@@ -183,27 +177,60 @@ export function StealPropertySection({
               Available targets: <span className={`font-bold ${availableTargets > 0 ? 'text-green-400' : 'text-red-400'}`}>
                 {availableTargets > 0 ? `${availableTargets}` : 'None'}
               </span>
+              {protectedOwners > 0 && (
+                <span className="text-yellow-400 ml-1">
+                  ({protectedOwners} protected)
+                </span>
+              )}
             </span>
           </div>
         )}
+
+        <div className="flex items-start gap-1.5 text-purple-200">
+          <span className="text-sm">🛡️</span>
+          <span className="text-xs leading-relaxed">
+            <strong>Protection:</strong> Targeted players get 6h immunity (success or fail)
+          </span>
+        </div>
+
+        <div className="flex items-start gap-1.5 text-purple-200">
+          <span className="text-sm">⚡</span>
+          <span className="text-xs leading-relaxed">
+            {/* ✅ FIXED: Uses cooldownHours which exists in PROPERTIES constant */}
+            Your cooldown: {(property.cooldownHours || 24) / 2}h between steal attempts
+          </span>
+        </div>
       </div>
 
-      {/* Action Button - Subtle style */}
+      {/* Warnings */}
+      {wouldExceedMaxSlots && (
+        <div className="text-center text-xs text-yellow-300 mb-2 bg-yellow-400/10 py-1.5 px-2 rounded border border-yellow-400/20">
+          ⚠️ You're at max slots for this property
+        </div>
+      )}
+
+      {/* Action Button */}
       <button
         onClick={handleSteal}
         disabled={loading || !canSteal || (availableTargets !== null && availableTargets === 0)}
-        className={`w-full py-2 rounded-lg font-semibold text-sm transition-all ${
+        className={`w-full py-2.5 rounded-lg font-semibold text-sm transition-all ${
           loading || !canSteal || (availableTargets !== null && availableTargets === 0)
             ? 'bg-gray-800/30 cursor-not-allowed text-gray-500 border border-gray-700/30'
-            : 'bg-red-600/40 hover:bg-red-600/60 border border-red-500/50 text-red-100 hover:border-red-400/70'
+            : 'bg-red-600/40 hover:bg-red-600/60 border border-red-500/50 text-red-100 hover:border-red-400/70 shadow-lg shadow-red-500/20'
         }`}
       >
-        {loading ? 'Attempting Steal...' : 'Attempt Steal'}
+        {loading ? '🎲 Rolling the dice...' : '🎲 Attempt Random Steal'}
       </button>
 
       {!canSteal && balance < stealCost && (
-        <div className="text-center text-xs text-red-300 mt-1.5">
+        <div className="text-center text-xs text-red-300 mt-2">
           ⚠️ Need {stealCost.toLocaleString()} DEFI
+        </div>
+      )}
+
+      {availableTargets === 0 && (
+        <div className="text-center text-xs text-orange-300 mt-2 bg-orange-400/10 py-1.5 px-2 rounded border border-orange-400/20">
+          🔒 All owners are protected (shielded or 6h steal immunity)
         </div>
       )}
     </div>

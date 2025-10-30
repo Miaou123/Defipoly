@@ -45,7 +45,9 @@ export function ShieldPropertySection({
   const cooldownEndTime = shieldExpiryTimestamp + cooldownDurationSeconds;
   const isInCooldown = !isShieldActive && shieldExpiryTimestamp > 0 && now < cooldownEndTime;
   
-  const baseCostPerSlot24h = (property.price * (propertyData?.shieldCostPercentBps || 500) / 10000);
+  const baseCostPerSlot24h = propertyData?.shieldCostPercentBps 
+  ? (property.price * propertyData.shieldCostPercentBps / 10000)
+  : 0;
   const costPerSlotForDuration = (baseCostPerSlot24h * selectedHours) / 24;
   const totalShieldCost = costPerSlotForDuration * totalSlots;
   const canShield = balance >= totalShieldCost && totalSlots > 0;

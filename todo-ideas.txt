@@ -54,6 +54,9 @@ Need to rethink prices etc because stealing would be too weak (need to add a coo
 For the docs:
 Explain that no burn because there is a max supply (not like most of Defi project) and burning would just = less tokens to distribute to players
 Why pumpfun? No shady minting methods, no unwanted token interactions etc
+Steal bypass buy cooldown
+When a steal happen the stolen property is proected from steal for the next 6 hours
+
 
 padding tech for future update:
 
