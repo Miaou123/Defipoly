@@ -286,28 +286,38 @@ pub mod defipoly_program {
 
     pub fn activate_shield(
         ctx: Context<ActivateShield>,
-        slots_to_shield: u16,
+        shield_duration_hours: u16,  // Changed from slots_to_shield - now accepts 1-48
     ) -> Result<()> {
         let game_config = &ctx.accounts.game_config;
         let property = &ctx.accounts.property;
         let ownership = &mut ctx.accounts.ownership;
         let clock = Clock::get()?;
-
+    
         require!(!game_config.game_paused, ErrorCode::GamePaused);
         require!(ownership.slots_owned > 0, ErrorCode::DoesNotOwnProperty);
+        
+        // Accept any duration from 1 to 48 hours
         require!(
-            slots_to_shield <= ownership.slots_owned,
-            ErrorCode::InsufficientSlots
+            shield_duration_hours >= 1 && shield_duration_hours <= 48,
+            ErrorCode::InvalidShieldDuration
         );
-        require!(slots_to_shield > 0, ErrorCode::InvalidShieldSlots);
-
+        
+        require!(
+            ownership.slots_shielded == 0 || clock.unix_timestamp >= ownership.shield_expiry,
+            ErrorCode::ShieldAlreadyActive
+        );
+    
+        let slots_to_shield = ownership.slots_owned;  // Always all slots
+    
+        // Cost scales linearly with duration
         let daily_income_per_slot = (property.price * property.yield_percent_bps as u64) / 10000;
         let shield_cost_per_slot = (daily_income_per_slot * property.shield_cost_percent_bps as u64) / 10000;
-        let total_cost = shield_cost_per_slot * slots_to_shield as u64;
-
+        let cost_per_slot_for_duration = (shield_cost_per_slot * shield_duration_hours as u64) / 24;
+        let total_cost = cost_per_slot_for_duration * slots_to_shield as u64;
+    
         let to_reward_pool = (total_cost * 90) / 100;
         let to_dev = total_cost - to_reward_pool;
-
+    
         let transfer_ctx_pool = CpiContext::new(
             ctx.accounts.token_program.to_account_info(),
             Transfer {
@@ -317,7 +327,7 @@ pub mod defipoly_program {
             },
         );
         token::transfer(transfer_ctx_pool, to_reward_pool)?;
-
+    
         let transfer_ctx_dev = CpiContext::new(
             ctx.accounts.token_program.to_account_info(),
             Transfer {
@@ -327,11 +337,12 @@ pub mod defipoly_program {
             },
         );
         token::transfer(transfer_ctx_dev, to_dev)?;
-
-        let shield_duration = 48 * 3600;
+    
+        let shield_duration_seconds = (shield_duration_hours as i64) * 3600;
         ownership.slots_shielded = slots_to_shield;
-        ownership.shield_expiry = clock.unix_timestamp + shield_duration;
-
+        ownership.shield_expiry = clock.unix_timestamp + shield_duration_seconds;
+        ownership.shield_cooldown_duration = shield_duration_seconds / 4;  // 25% cooldown
+    
         emit!(ShieldActivatedEvent {
             player: ownership.player,
             property_id: property.property_id,
@@ -339,8 +350,8 @@ pub mod defipoly_program {
             cost: total_cost,
             expiry: ownership.shield_expiry,
         });
-
-        msg!("Shield activated: {} slots of property {}", slots_to_shield, property.property_id);
+    
+        msg!("Shield activated: {} slots for {}h", slots_to_shield, shield_duration_hours);
         Ok(())
     }
 
@@ -1279,11 +1290,12 @@ pub struct PropertyOwnership {
     pub slots_shielded: u16,
     pub purchase_timestamp: i64,
     pub shield_expiry: i64,
+    pub shield_cooldown_duration: i64,
     pub bump: u8,
 }
 
 impl PropertyOwnership {
-    pub const SIZE: usize = 32 + 1 + 2 + 2 + 8 + 8 + 1;
+    pub const SIZE: usize = 32 + 1 + 2 + 2 + 8 + 8 + 8 + 1; 
 }
 
 #[account]
@@ -1485,4 +1497,8 @@ pub enum ErrorCode {
     StealCooldownActive,
     #[msg("Slot hash unavailable - try again")]
     SlotHashUnavailable,
+    #[msg("Invalid shield duration. Must be between 1 and 48 hours.")]
+    InvalidShieldDuration,
+    #[msg("Shield is already active. Wait for expiry before reactivating.")]
+    ShieldAlreadyActive, 
 }

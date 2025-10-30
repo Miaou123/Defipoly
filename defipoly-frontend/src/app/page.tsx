@@ -8,6 +8,7 @@ import { PropertyModal } from '@/components/property-modal';
 import { SideHeader } from '@/components/SideHeader';
 import { 
   BuyPropertyExplanationModal,
+  SellPropertyExplanationModal,
   ShieldPropertyExplanationModal,
   StealPropertyExplanationModal
 } from '@/components/MechanicsExplanationModals';
@@ -16,11 +17,16 @@ import { ChevronUp, ChevronDown } from 'lucide-react';
 
 export default function Home() {
   const [selectedProperty, setSelectedProperty] = useState<number | null>(null);
-  const [activeExplanationModal, setActiveExplanationModal] = useState<'buy' | 'shield' | 'steal' | null>(null);
+  const [activeExplanationModal, setActiveExplanationModal] = useState<'buy' | 'sell' | 'shield' | 'steal' | null>(null);
   const [showActionBar, setShowActionBar] = useState(true);
 
   const handleBuyProceed = () => {
     console.log('User understood Buy mechanic, proceeding...');
+    setActiveExplanationModal(null);
+  };
+
+  const handleSellProceed = () => {
+    console.log('User understood Sell mechanic, proceeding...');
     setActiveExplanationModal(null);
   };
 
@@ -95,29 +101,37 @@ export default function Home() {
           )}
         </button>
 
-        <div className="p-3 pb-3">
-          <div className="max-w-7xl mx-auto flex gap-3 justify-center items-center flex-wrap">
-            <div className="text-xs text-purple-300 bg-purple-900/20 px-4 py-2 rounded-lg border border-purple-500/30">
-              <div className="font-medium">ℹ️ Click properties to Buy/Steal</div>
-              <div className="opacity-70 text-[10px]">Setup happens automatically on first purchase</div>
-            </div>
+        <div className="max-w-7xl mx-auto px-4 py-3">
+          <div className="text-center mb-3">
+            <p className="text-xs text-purple-300">
+              💡 Click a property to get started
+            </p>
+          </div>
+          
+          <div className="flex gap-2 justify-center flex-wrap">
             <button 
               onClick={() => setActiveExplanationModal('buy')}
-              className="px-5 py-2.5 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-500 hover:to-green-600 rounded-lg font-semibold text-sm transition-all flex items-center gap-2 hover:shadow-lg hover:shadow-green-500/40"
+              className="px-4 py-2 bg-emerald-600/40 hover:bg-emerald-600/60 border border-emerald-500/50 text-emerald-100 hover:border-emerald-400/70 rounded-lg font-semibold text-sm transition-all flex items-center gap-2"
             >
               <span>🏠</span> Buy Property
             </button>
             <button 
+              onClick={() => setActiveExplanationModal('sell')}
+              className="px-4 py-2 bg-orange-600/40 hover:bg-orange-600/60 border border-orange-500/50 text-orange-100 hover:border-orange-400/70 rounded-lg font-semibold text-sm transition-all flex items-center gap-2"
+            >
+              <span>💰</span> Sell Property
+            </button>
+            <button 
               onClick={() => setActiveExplanationModal('shield')}
-              className="px-5 py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-500 hover:to-blue-600 rounded-lg font-semibold text-sm transition-all flex items-center gap-2 hover:shadow-lg hover:shadow-blue-500/40"
+              className="px-4 py-2 bg-blue-600/40 hover:bg-blue-600/60 border border-blue-500/50 text-blue-100 hover:border-blue-400/70 rounded-lg font-semibold text-sm transition-all flex items-center gap-2"
             >
               <span>🛡️</span> Shield Property
             </button>
             <button 
               onClick={() => setActiveExplanationModal('steal')}
-              className="px-5 py-2.5 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 rounded-lg font-semibold text-sm transition-all flex items-center gap-2 hover:shadow-lg hover:shadow-red-500/40"
+              className="px-4 py-2 bg-red-600/40 hover:bg-red-600/60 border border-red-500/50 text-red-100 hover:border-red-400/70 rounded-lg font-semibold text-sm transition-all flex items-center gap-2"
             >
-              <span>💰</span> Steal Property
+              <span>🎯</span> Steal Property
             </button>
           </div>
         </div>
@@ -138,6 +152,12 @@ export default function Home() {
         <BuyPropertyExplanationModal 
           onClose={() => setActiveExplanationModal(null)}
           onProceed={handleBuyProceed}
+        />
+      )}
+      {activeExplanationModal === 'sell' && (
+        <SellPropertyExplanationModal 
+          onClose={() => setActiveExplanationModal(null)}
+          onProceed={handleSellProceed}
         />
       )}
       {activeExplanationModal === 'shield' && (

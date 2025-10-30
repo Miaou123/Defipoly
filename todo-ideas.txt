@@ -1,8 +1,5 @@
+
 Current focus:
-
-Add shielding tracking in my backend (so ppl know if they can steal or not, added providers and propertystats for this, need to add it to the backend and store it properly etc): working (just need more test)
-
-When shielding, even one property it shows the shield in modal but don't propose to shield more slots
 
 show the steal option even when owning a property
 
@@ -12,15 +9,27 @@ Need to test the new full deploy system with deploy:full
 
 
 Todo:
+For steal maybe have it have different chances if 1. All property are boughts, 2. more or less property are unshielded (strategic)
 Work on security (backend / frontend / program)
-Quests system
+
+Add glittering / glowing animation for higher level properties
+
+Tokens go to reward pool (for game) / reward pool maybe convert these ones to sol directly (for leaderboard) / dev wallet
+
 Add 3d scaling houses when clicking on the property menu
-fix the disparition bug from claiming when it's updated from blockchain every 30 sec/ same for leaderboard
 Instead of 25% sell scaling (ui not right yet)
+
+Leaderbard/quest system:
+leaderboard by tokens used / rewards per day ratio (so most effective playuer is 1) also maybe have steals taken into account to encourage stealing 
+Quests system (create a profile, connect twitter account, buy one property do one shield etc etc)
 
 show the number of unshielded slots
 
+Maybe change the steal cost / % when all slots from a property are owned
+
 Add wss in addition to websockets? wss = 100%
+
+Add the possibility to click on the leaderboard and watch other players board
 
 To much helius API calls
 
@@ -42,6 +51,9 @@ Different family bonuses
 
 Need to rethink prices etc because stealing would be too weak (need to add a cooldown to make sense but some users would already have 50+ of the property so it would be impossible to catch up)
 
+For the docs:
+Explain that no burn because there is a max supply (not like most of Defi project) and burning would just = less tokens to distribute to players
+Why pumpfun? No shady minting methods, no unwanted token interactions etc
 
 padding tech for future update:
 

@@ -57,7 +57,7 @@
       ],
       "args": [
         {
-          "name": "slots_to_shield",
+          "name": "shield_duration_hours",
           "type": "u16"
         }
       ]
@@ -1429,6 +1429,16 @@
       "code": 6029,
       "name": "SlotHashUnavailable",
       "msg": "Slot hash unavailable - try again"
+    },
+    {
+      "code": 6030,
+      "name": "InvalidShieldDuration",
+      "msg": "Invalid shield duration. Must be between 1 and 48 hours."
+    },
+    {
+      "code": 6031,
+      "name": "ShieldAlreadyActive",
+      "msg": "Shield is already active. Wait for expiry before reactivating."
     }
   ],
   "types": [
@@ -1805,6 +1815,10 @@
           },
           {
             "name": "shield_expiry",
+            "type": "i64"
+          },
+          {
+            "name": "shield_cooldown_duration",
             "type": "i64"
           },
           {
