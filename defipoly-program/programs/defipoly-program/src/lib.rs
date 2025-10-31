@@ -710,7 +710,8 @@ pub fn steal_property_instant(
                 let base_slots = ownership.slots_owned - bonus_slots;
                 
                 let base_rewards = base_slots as u64 * income_per_minute * minutes_elapsed as u64;
-                let bonus_multiplier_bps = 10000 + game_config.set_bonus_bps;
+                let set_bonus_bps = Property::get_set_bonus_bps(ownership.set_id);
+                let bonus_multiplier_bps = 10000 + set_bonus_bps;
                 let bonus_rewards = (bonus_slots as u64 * income_per_minute * minutes_elapsed as u64 * bonus_multiplier_bps as u64) / 10000;
                 
                 total_rewards += base_rewards + bonus_rewards;
@@ -1321,6 +1322,20 @@ impl Property {
         match set_id {
             0 | 7 => 2,
             _ => 3,
+        }
+    }
+    
+    pub fn get_set_bonus_bps(set_id: u8) -> u16 {
+        match set_id {
+            0 => 3000,  // Brown: 30%
+            1 => 3286,  // Light Blue: 32.86%
+            2 => 3571,  // Pink: 35.71%
+            3 => 3857,  // Orange: 38.57%
+            4 => 4143,  // Red: 41.43%
+            5 => 4429,  // Yellow: 44.29%
+            6 => 4714,  // Green: 47.14%
+            7 => 5000,  // Dark Blue: 50%
+            _ => 4000,  // Default fallback: 40%
         }
     }
 }

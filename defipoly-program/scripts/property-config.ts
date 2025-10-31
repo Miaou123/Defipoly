@@ -1,7 +1,7 @@
 // ============================================
 // FILE: defipoly-program/scripts/property-config.ts
 // SINGLE SOURCE OF TRUTH FOR ALL PROPERTY DATA
-// UPDATED: Shield costs graduated from 10-17% by set
+// UPDATED: Variable set bonuses (30-50%) + Shield costs graduated from 10-17% by set
 // ============================================
 
 export interface PropertyConfig {
@@ -18,8 +18,24 @@ export interface PropertyConfig {
   cooldown: number;        // In hours
 }
 
+// ============================================
+// SET BONUS CONFIGURATION (NEW)
+// Brown (Set 0) = 30%, Dark Blue (Set 7) = 50%
+// Linear progression across sets
+// ============================================
+export const SET_BONUSES = {
+  0: { percent: 30.00, bps: 3000 },   // Brown
+  1: { percent: 32.86, bps: 3286 },   // Light Blue
+  2: { percent: 35.71, bps: 3571 },   // Pink
+  3: { percent: 38.57, bps: 3857 },   // Orange
+  4: { percent: 41.43, bps: 4143 },   // Red
+  5: { percent: 44.29, bps: 4429 },   // Yellow
+  6: { percent: 47.14, bps: 4714 },   // Green
+  7: { percent: 50.00, bps: 5000 },   // Dark Blue
+} as const;
+
 export const PROPERTY_CONFIG: PropertyConfig[] = [
-  // ========== SET 0: BROWN (2 properties) - 10% ==========
+  // ========== SET 0: BROWN (2 properties) - 10% shield, 30% SET BONUS ==========
   {
     id: 0,
     name: "Mediterranean Avenue",
@@ -30,7 +46,7 @@ export const PROPERTY_CONFIG: PropertyConfig[] = [
     maxPerPlayer: 50,
     price: 1500,
     yieldBps: 600,         // 6.0% daily yield
-    shieldCostBps: 1000,   // 10% shield cost ← CHANGED
+    shieldCostBps: 1000,   // 10% shield cost
     cooldown: 6,           // 6 hours
   },
   {
@@ -43,11 +59,11 @@ export const PROPERTY_CONFIG: PropertyConfig[] = [
     maxPerPlayer: 50,
     price: 1500,
     yieldBps: 600,
-    shieldCostBps: 1000,   // 10% shield cost ← CHANGED
+    shieldCostBps: 1000,   // 10% shield cost
     cooldown: 6,
   },
 
-  // ========== SET 1: LIGHT BLUE (3 properties) - 11% ==========
+  // ========== SET 1: LIGHT BLUE (3 properties) - 11% shield, 32.86% SET BONUS ==========
   {
     id: 2,
     name: "Oriental Avenue",
@@ -58,7 +74,7 @@ export const PROPERTY_CONFIG: PropertyConfig[] = [
     maxPerPlayer: 40,
     price: 3500,
     yieldBps: 650,         // 6.5% daily yield
-    shieldCostBps: 1100,   // 11% shield cost ← CHANGED
+    shieldCostBps: 1100,   // 11% shield cost
     cooldown: 8,           // 8 hours
   },
   {
@@ -71,7 +87,7 @@ export const PROPERTY_CONFIG: PropertyConfig[] = [
     maxPerPlayer: 40,
     price: 3500,
     yieldBps: 650,
-    shieldCostBps: 1100,   // 11% shield cost ← CHANGED
+    shieldCostBps: 1100,   // 11% shield cost
     cooldown: 8,
   },
   {
@@ -84,11 +100,11 @@ export const PROPERTY_CONFIG: PropertyConfig[] = [
     maxPerPlayer: 40,
     price: 3500,
     yieldBps: 650,
-    shieldCostBps: 1100,   // 11% shield cost ← CHANGED
+    shieldCostBps: 1100,   // 11% shield cost
     cooldown: 8,
   },
 
-  // ========== SET 2: PINK (3 properties) - 12% ==========
+  // ========== SET 2: PINK (3 properties) - 12% shield, 35.71% SET BONUS ==========
   {
     id: 5,
     name: "St. Charles Place",
@@ -99,7 +115,7 @@ export const PROPERTY_CONFIG: PropertyConfig[] = [
     maxPerPlayer: 30,
     price: 7500,
     yieldBps: 700,         // 7.0% daily yield
-    shieldCostBps: 1200,   // 12% shield cost ← CHANGED
+    shieldCostBps: 1200,   // 12% shield cost
     cooldown: 10,          // 10 hours
   },
   {
@@ -112,7 +128,7 @@ export const PROPERTY_CONFIG: PropertyConfig[] = [
     maxPerPlayer: 30,
     price: 7500,
     yieldBps: 700,
-    shieldCostBps: 1200,   // 12% shield cost ← CHANGED
+    shieldCostBps: 1200,   // 12% shield cost
     cooldown: 10,
   },
   {
@@ -125,11 +141,11 @@ export const PROPERTY_CONFIG: PropertyConfig[] = [
     maxPerPlayer: 30,
     price: 7500,
     yieldBps: 700,
-    shieldCostBps: 1200,   // 12% shield cost ← CHANGED
+    shieldCostBps: 1200,   // 12% shield cost
     cooldown: 10,
   },
 
-  // ========== SET 3: ORANGE (3 properties) - 13% ==========
+  // ========== SET 3: ORANGE (3 properties) - 13% shield, 38.57% SET BONUS ==========
   {
     id: 8,
     name: "St. James Place",
@@ -140,7 +156,7 @@ export const PROPERTY_CONFIG: PropertyConfig[] = [
     maxPerPlayer: 25,
     price: 15000,
     yieldBps: 750,         // 7.5% daily yield
-    shieldCostBps: 1300,   // 13% shield cost ← CHANGED
+    shieldCostBps: 1300,   // 13% shield cost
     cooldown: 12,          // 12 hours
   },
   {
@@ -153,7 +169,7 @@ export const PROPERTY_CONFIG: PropertyConfig[] = [
     maxPerPlayer: 25,
     price: 15000,
     yieldBps: 750,
-    shieldCostBps: 1300,   // 13% shield cost ← CHANGED
+    shieldCostBps: 1300,   // 13% shield cost
     cooldown: 12,
   },
   {
@@ -166,11 +182,11 @@ export const PROPERTY_CONFIG: PropertyConfig[] = [
     maxPerPlayer: 25,
     price: 15000,
     yieldBps: 750,
-    shieldCostBps: 1300,   // 13% shield cost ← CHANGED
+    shieldCostBps: 1300,   // 13% shield cost
     cooldown: 12,
   },
 
-  // ========== SET 4: RED (3 properties) - 14% ==========
+  // ========== SET 4: RED (3 properties) - 14% shield, 41.43% SET BONUS ==========
   {
     id: 11,
     name: "Kentucky Avenue",
@@ -181,7 +197,7 @@ export const PROPERTY_CONFIG: PropertyConfig[] = [
     maxPerPlayer: 20,
     price: 30000,
     yieldBps: 800,         // 8.0% daily yield
-    shieldCostBps: 1400,   // 14% shield cost ← CHANGED
+    shieldCostBps: 1400,   // 14% shield cost
     cooldown: 16,          // 16 hours
   },
   {
@@ -194,7 +210,7 @@ export const PROPERTY_CONFIG: PropertyConfig[] = [
     maxPerPlayer: 20,
     price: 30000,
     yieldBps: 800,
-    shieldCostBps: 1400,   // 14% shield cost ← CHANGED
+    shieldCostBps: 1400,   // 14% shield cost
     cooldown: 16,
   },
   {
@@ -207,11 +223,11 @@ export const PROPERTY_CONFIG: PropertyConfig[] = [
     maxPerPlayer: 20,
     price: 30000,
     yieldBps: 800,
-    shieldCostBps: 1400,   // 14% shield cost ← CHANGED
+    shieldCostBps: 1400,   // 14% shield cost
     cooldown: 16,
   },
 
-  // ========== SET 5: YELLOW (3 properties) - 15% ==========
+  // ========== SET 5: YELLOW (3 properties) - 15% shield, 44.29% SET BONUS ==========
   {
     id: 14,
     name: "Atlantic Avenue",
@@ -222,7 +238,7 @@ export const PROPERTY_CONFIG: PropertyConfig[] = [
     maxPerPlayer: 15,
     price: 60000,
     yieldBps: 850,         // 8.5% daily yield
-    shieldCostBps: 1500,   // 15% shield cost ← CHANGED
+    shieldCostBps: 1500,   // 15% shield cost
     cooldown: 20,          // 20 hours
   },
   {
@@ -235,7 +251,7 @@ export const PROPERTY_CONFIG: PropertyConfig[] = [
     maxPerPlayer: 15,
     price: 60000,
     yieldBps: 850,
-    shieldCostBps: 1500,   // 15% shield cost ← CHANGED
+    shieldCostBps: 1500,   // 15% shield cost
     cooldown: 20,
   },
   {
@@ -248,11 +264,11 @@ export const PROPERTY_CONFIG: PropertyConfig[] = [
     maxPerPlayer: 15,
     price: 60000,
     yieldBps: 850,
-    shieldCostBps: 1500,   // 15% shield cost ← CHANGED
+    shieldCostBps: 1500,   // 15% shield cost
     cooldown: 20,
   },
 
-  // ========== SET 6: GREEN (3 properties) - 16% ==========
+  // ========== SET 6: GREEN (3 properties) - 16% shield, 47.14% SET BONUS ==========
   {
     id: 17,
     name: "Pacific Avenue",
@@ -263,7 +279,7 @@ export const PROPERTY_CONFIG: PropertyConfig[] = [
     maxPerPlayer: 10,
     price: 120000,
     yieldBps: 900,         // 9.0% daily yield
-    shieldCostBps: 1600,   // 16% shield cost ← CHANGED
+    shieldCostBps: 1600,   // 16% shield cost
     cooldown: 24,          // 24 hours
   },
   {
@@ -276,7 +292,7 @@ export const PROPERTY_CONFIG: PropertyConfig[] = [
     maxPerPlayer: 10,
     price: 120000,
     yieldBps: 900,
-    shieldCostBps: 1600,   // 16% shield cost ← CHANGED
+    shieldCostBps: 1600,   // 16% shield cost
     cooldown: 24,
   },
   {
@@ -289,11 +305,11 @@ export const PROPERTY_CONFIG: PropertyConfig[] = [
     maxPerPlayer: 10,
     price: 120000,
     yieldBps: 900,
-    shieldCostBps: 1600,   // 16% shield cost ← CHANGED
+    shieldCostBps: 1600,   // 16% shield cost
     cooldown: 24,
   },
 
-  // ========== SET 7: DARK BLUE (2 properties) - 17% ==========
+  // ========== SET 7: DARK BLUE (2 properties) - 17% shield, 50% SET BONUS ==========
   {
     id: 20,
     name: "Park Place",
@@ -304,7 +320,7 @@ export const PROPERTY_CONFIG: PropertyConfig[] = [
     maxPerPlayer: 5,
     price: 240000,
     yieldBps: 1000,        // 10.0% daily yield
-    shieldCostBps: 1700,   // 17% shield cost ← CHANGED
+    shieldCostBps: 1700,   // 17% shield cost
     cooldown: 28,          // 28 hours
   },
   {
@@ -317,7 +333,7 @@ export const PROPERTY_CONFIG: PropertyConfig[] = [
     maxPerPlayer: 5,
     price: 240000,
     yieldBps: 1000,
-    shieldCostBps: 1700,   // 17% shield cost ← CHANGED
+    shieldCostBps: 1700,   // 17% shield cost
     cooldown: 28,
   },
 ];
@@ -325,6 +341,15 @@ export const PROPERTY_CONFIG: PropertyConfig[] = [
 // Helper to calculate daily income
 export function calculateDailyIncome(price: number, yieldBps: number): number {
   return Math.floor((price * yieldBps) / 10000);
+}
+
+// Helper to get set bonus
+export function getSetBonusBps(setId: number): number {
+  return SET_BONUSES[setId as keyof typeof SET_BONUSES]?.bps || 4000;
+}
+
+export function getSetBonusPercent(setId: number): number {
+  return SET_BONUSES[setId as keyof typeof SET_BONUSES]?.percent || 40;
 }
 
 // Convert to deployment format (lamports)
