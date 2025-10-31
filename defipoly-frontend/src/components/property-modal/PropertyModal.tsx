@@ -1,6 +1,6 @@
 // ============================================
 // FILE: src/components/property-modal/PropertyModal.tsx
-// Main modal component with new structure
+// Main modal component with VARIABLE SET BONUSES (30-50%)
 // ============================================
 
 'use client';
@@ -142,10 +142,20 @@ export function PropertyModal({ propertyId, onClose }: PropertyModalProps) {
 
   const dailyIncome = property.dailyIncome;
   
-  // Calculate income per slot (used for yield display)
+  // ============================================
+  // VARIABLE SET BONUS CALCULATION (30-50%)
+  // ============================================
+  
+  // Calculate income per slot
   const baseIncomePerSlot = dailyIncome;
+  
+  // Get variable set bonus from property data (no imports needed!)
+  const setBonusPercent = property.setBonusPercent;  // e.g., 30.00 for Brown, 50.00 for Dark Blue
+  const setBonusBps = property.setBonusBps;          // e.g., 3000 for Brown, 5000 for Dark Blue
+  
+  // Calculate boosted income using VARIABLE bonus
   const boostedIncomePerSlot = setBonusInfo?.hasCompleteSet ? 
-    Math.floor(baseIncomePerSlot * 1.4) : baseIncomePerSlot;
+    Math.floor(baseIncomePerSlot * (10000 + setBonusBps) / 10000) : baseIncomePerSlot;
 
   // Calculate availability values for the stacked bar
   const totalSlots = property.totalSlots;
@@ -153,8 +163,8 @@ export function PropertyModal({ propertyId, onClose }: PropertyModalProps) {
   const othersOwned = totalSlots - (propertyData?.availableSlots || 0) - personalOwned;
   const availableSlots = propertyData?.availableSlots || 0;
 
-  // Calculate bonus amount
-  const bonusAmount = Math.floor(baseIncomePerSlot * 0.4);
+  // Calculate bonus amount using VARIABLE bonus
+  const bonusAmount = Math.floor(baseIncomePerSlot * setBonusBps / 10000);
   const totalIncome = baseIncomePerSlot + bonusAmount;
 
   // Check if set bonus is active
@@ -198,7 +208,7 @@ export function PropertyModal({ propertyId, onClose }: PropertyModalProps) {
 
             {/* Right: Details */}
             <div className="bg-purple-900/20 rounded-xl p-3 border border-purple-500/20 space-y-2.5">
-              {/* Income Calculation Row */}
+              {/* Income Calculation Row - UPDATED WITH VARIABLE BONUS */}
               <div>
                 <div className="text-[9px] text-purple-400 mb-1.5 uppercase tracking-wider">Income</div>
                 <div className="flex items-center gap-2 bg-950/50 rounded-lg p-1.5">
@@ -210,10 +220,12 @@ export function PropertyModal({ propertyId, onClose }: PropertyModalProps) {
                   
                   <div className="text-purple-400 opacity-50 font-bold text-sm">+</div>
                   
-                  {/* Boost */}
+                  {/* Boost - SHOWS VARIABLE PERCENTAGE */}
                   <div className="flex flex-col flex-1">
                     <div className="text-[8px] text-purple-400 uppercase flex items-center gap-1">
-                      ⚡ Boost <span className={`px-1 py-0.5 rounded text-[7px] font-bold ${hasSetBonus ? 'bg-amber-500 text-amber-950' : 'bg-gray-600 text-gray-300 opacity-60'}`}>+40%</span>
+                      ⚡ Boost <span className={`px-1 py-0.5 rounded text-[7px] font-bold ${hasSetBonus ? 'bg-amber-500 text-amber-950' : 'bg-gray-600 text-gray-300 opacity-60'}`}>
+                        +{setBonusPercent.toFixed(0)}%
+                      </span>
                     </div>
                     <div className={`text-sm font-bold ${hasSetBonus ? 'text-purple-100' : 'text-purple-100/50 line-through'}`}>
                       {bonusAmount.toLocaleString()}
@@ -230,6 +242,20 @@ export function PropertyModal({ propertyId, onClose }: PropertyModalProps) {
                     </div>
                   </div>
                 </div>
+                
+                {/* Set Bonus Info - Shows which set and actual percentage */}
+                {hasSetBonus && (
+                  <div className="mt-2 px-2 py-1.5 bg-amber-500/10 border border-amber-500/30 rounded-lg">
+                    <div className="flex items-center justify-between text-[10px]">
+                      <span className="text-amber-400 font-medium">
+                        ✨ Complete Set Bonus Active
+                      </span>
+                      <span className="text-amber-300">
+                        +{setBonusPercent.toFixed(1)}% on {setBonusInfo.boostedSlots} slot{setBonusInfo.boostedSlots !== 1 ? 's' : ''}
+                      </span>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Divider */}
