@@ -2,6 +2,7 @@
 // Anchor 0.31.1
 // Secure commit-reveal randomness using slot hashes
 // UPDATED: Random steal only (no targeted steal)
+// ADMIN FUNCTIONS ADDED: Complete game master control system
 
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, Token, TokenAccount, Transfer, Mint};
@@ -10,6 +11,7 @@ use anchor_spl::associated_token::AssociatedToken;
 declare_id!("HpacCgxUuzwoMeryvQtC94RxFmpxC6dYPX5E17JBzBmQ");
 
 const DEV_WALLET: &str = "CgWTFX7JJQHed3qyMDjJkNCxK4sFe3wbDFABmWAAmrdS";
+const MARKETING_WALLET: &str = "FoPKSQ5HDSVyZgaQobX64YEBVQ2iiKMZp8VHWtd6jLQE";
 const MAX_PROPERTIES_PER_CLAIM: u8 = 22;
 const MIN_CLAIM_INTERVAL_MINUTES: i64 = 1;
 
@@ -26,6 +28,7 @@ pub mod defipoly_program {
         let game_config = &mut ctx.accounts.game_config;
         game_config.authority = ctx.accounts.authority.key();
         game_config.dev_wallet = DEV_WALLET.parse().unwrap();
+        game_config.marketing_wallet = MARKETING_WALLET.parse().unwrap();
         game_config.token_mint = ctx.accounts.token_mint.key();
         game_config.reward_pool_vault = ctx.accounts.reward_pool_vault.key();
         game_config.total_supply = 1_000_000_000;
@@ -138,11 +141,17 @@ pub mod defipoly_program {
         // Calculate total cost for all slots
         let total_price = property.price.checked_mul(slots as u64)
             .ok_or(ErrorCode::Overflow)?;
-        let to_reward_pool = total_price.checked_mul(90)
+        let to_reward_pool = total_price.checked_mul(95)
             .ok_or(ErrorCode::Overflow)?
             .checked_div(100)
             .ok_or(ErrorCode::Overflow)?;
-        let to_dev = total_price.checked_sub(to_reward_pool)
+        let to_marketing = total_price.checked_mul(3)
+            .ok_or(ErrorCode::Overflow)?
+            .checked_div(100)
+            .ok_or(ErrorCode::Overflow)?;
+        let to_dev = total_price.checked_mul(2)
+            .ok_or(ErrorCode::Overflow)?
+            .checked_div(100)
             .ok_or(ErrorCode::Overflow)?;
     
         // Transfer to reward pool
@@ -155,6 +164,16 @@ pub mod defipoly_program {
             },
         );
         token::transfer(transfer_ctx_pool, to_reward_pool)?;
+
+        let transfer_ctx_marketing = CpiContext::new(
+            ctx.accounts.token_program.to_account_info(),
+            Transfer {
+                from: ctx.accounts.player_token_account.to_account_info(),
+                to: ctx.accounts.marketing_token_account.to_account_info(),
+                authority: ctx.accounts.player.to_account_info(),
+            },
+        );
+        token::transfer(transfer_ctx_marketing, to_marketing)?;
     
         // Transfer to dev wallet
         let transfer_ctx_dev = CpiContext::new(
@@ -314,8 +333,18 @@ pub mod defipoly_program {
         let cost_per_slot_for_duration = (shield_cost_per_slot * shield_duration_hours as u64) / 24;
         let total_cost = cost_per_slot_for_duration * slots_to_shield as u64;
     
-        let to_reward_pool = (total_cost * 90) / 100;
-        let to_dev = total_cost - to_reward_pool;
+        let to_reward_pool = total_cost.checked_mul(95)
+            .ok_or(ErrorCode::Overflow)?
+            .checked_div(100)
+            .ok_or(ErrorCode::Overflow)?;
+        let to_marketing = total_cost.checked_mul(3)
+            .ok_or(ErrorCode::Overflow)?
+            .checked_div(100)
+            .ok_or(ErrorCode::Overflow)?;
+        let to_dev = total_cost.checked_mul(2)
+            .ok_or(ErrorCode::Overflow)?
+            .checked_div(100)
+            .ok_or(ErrorCode::Overflow)?;
     
         let transfer_ctx_pool = CpiContext::new(
             ctx.accounts.token_program.to_account_info(),
@@ -326,6 +355,16 @@ pub mod defipoly_program {
             },
         );
         token::transfer(transfer_ctx_pool, to_reward_pool)?;
+
+        let transfer_ctx_marketing = CpiContext::new(
+            ctx.accounts.token_program.to_account_info(),
+            Transfer {
+                from: ctx.accounts.player_token_account.to_account_info(),
+                to: ctx.accounts.marketing_token_account.to_account_info(),
+                authority: ctx.accounts.player.to_account_info(),
+            },
+        );
+        token::transfer(transfer_ctx_marketing, to_marketing)?;
     
         let transfer_ctx_dev = CpiContext::new(
             ctx.accounts.token_program.to_account_info(),
@@ -496,10 +535,20 @@ pub fn steal_property_instant(
 
     // Calculate steal cost
     let steal_cost = (property.price * game_config.steal_cost_percent_bps as u64) / 10000;
-    let to_reward_pool = (steal_cost * 90) / 100;
-    let to_dev = steal_cost - to_reward_pool;
+    let to_reward_pool = steal_cost.checked_mul(95)
+        .ok_or(ErrorCode::Overflow)?
+        .checked_div(100)
+        .ok_or(ErrorCode::Overflow)?;
+    let to_marketing = steal_cost.checked_mul(3)
+        .ok_or(ErrorCode::Overflow)?
+        .checked_div(100)
+        .ok_or(ErrorCode::Overflow)?;
+    let to_dev = steal_cost.checked_mul(2)
+        .ok_or(ErrorCode::Overflow)?
+        .checked_div(100)
+        .ok_or(ErrorCode::Overflow)?;
 
-    // Transfer steal cost
+    // Transfer to reward pool (95%)
     let transfer_ctx_pool = CpiContext::new(
         ctx.accounts.token_program.to_account_info(),
         Transfer {
@@ -510,6 +559,18 @@ pub fn steal_property_instant(
     );
     token::transfer(transfer_ctx_pool, to_reward_pool)?;
 
+    // Transfer to marketing wallet (3%)
+    let transfer_ctx_marketing = CpiContext::new(
+        ctx.accounts.token_program.to_account_info(),
+        Transfer {
+            from: ctx.accounts.player_token_account.to_account_info(),
+            to: ctx.accounts.marketing_token_account.to_account_info(),
+            authority: ctx.accounts.attacker.to_account_info(),
+        },
+    );
+    token::transfer(transfer_ctx_marketing, to_marketing)?;
+
+    // Transfer to dev wallet (2%)
     let transfer_ctx_dev = CpiContext::new(
         ctx.accounts.token_program.to_account_info(),
         Transfer {
@@ -857,7 +918,7 @@ pub fn steal_property_instant(
         Ok(())
     }
 
-    // ========== ADMIN FUNCTIONS ==========
+    // ========== EXISTING ADMIN FUNCTIONS ==========
 
     pub fn update_property_price(
         ctx: Context<AdminUpdateProperty>,
@@ -954,6 +1015,377 @@ pub fn steal_property_instant(
         
         Ok(())
     }
+
+    // ========== NEW ADMIN/GAME MASTER FUNCTIONS ==========
+
+    pub fn admin_grant_property(
+        ctx: Context<AdminGrantProperty>,
+        target_player: Pubkey,
+        slots: u16,
+    ) -> Result<()> {
+        let game_config = &ctx.accounts.game_config;
+        let property = &mut ctx.accounts.property;
+        let ownership = &mut ctx.accounts.ownership;
+        let player = &mut ctx.accounts.player_account;
+        let clock = Clock::get()?;
+
+        require!(!game_config.game_paused, ErrorCode::GamePaused);
+        require!(slots > 0, ErrorCode::InvalidSlotAmount);
+        require!(property.available_slots >= slots, ErrorCode::NoSlotsAvailable);
+
+        let current_owned = ownership.slots_owned;
+        let max_allowed = property.max_per_player;
+        
+        require!(
+            current_owned + slots <= max_allowed,
+            ErrorCode::MaxSlotsReached
+        );
+
+        // Update property slots
+        property.available_slots = property.available_slots
+            .checked_sub(slots)
+            .ok_or(ErrorCode::Overflow)?;
+
+        // Initialize or update ownership
+        if ownership.slots_owned == 0 {
+            ownership.player = target_player;
+            ownership.property_id = property.property_id;
+            ownership.slots_owned = slots;
+            ownership.slots_shielded = 0;
+            ownership.purchase_timestamp = clock.unix_timestamp;
+            ownership.shield_expiry = 0;
+            ownership.steal_protection_expiry = 0;
+            ownership.bump = ctx.bumps.ownership;
+            player.properties_owned_count += 1;
+        } else {
+            ownership.slots_owned = ownership.slots_owned
+                .checked_add(slots)
+                .ok_or(ErrorCode::Overflow)?;
+        }
+
+        // Update player total slots
+        player.total_slots_owned = player.total_slots_owned
+            .checked_add(slots)
+            .ok_or(ErrorCode::Overflow)?;
+
+        // Calculate and add daily income
+        let daily_income_per_slot = (property.price * property.yield_percent_bps as u64) / 10000;
+        let total_daily_income_increase = daily_income_per_slot
+            .checked_mul(slots as u64)
+            .ok_or(ErrorCode::Overflow)?;
+
+        player.total_base_daily_income = player.total_base_daily_income
+            .checked_add(total_daily_income_increase)
+            .ok_or(ErrorCode::Overflow)?;
+
+        emit!(AdminGrantEvent {
+            admin: ctx.accounts.authority.key(),
+            target_player,
+            property_id: property.property_id,
+            slots,
+        });
+
+        msg!("🎁 Admin granted {} slots of property {} to {}", 
+             slots, property.property_id, target_player);
+        Ok(())
+    }
+
+    pub fn admin_revoke_property(
+        ctx: Context<AdminRevokeProperty>,
+        slots: u16,
+    ) -> Result<()> {
+        let property = &mut ctx.accounts.property;
+        let ownership = &mut ctx.accounts.ownership;
+        let player = &mut ctx.accounts.player_account;
+
+        require!(ownership.slots_owned >= slots, ErrorCode::InsufficientSlots);
+
+        // Remove slots from ownership
+        ownership.slots_owned = ownership.slots_owned
+            .checked_sub(slots)
+            .ok_or(ErrorCode::Overflow)?;
+
+        // Adjust shielded slots if necessary
+        if ownership.slots_shielded > ownership.slots_owned {
+            ownership.slots_shielded = ownership.slots_owned;
+        }
+
+        // Return slots to property pool
+        property.available_slots = property.available_slots
+            .checked_add(slots)
+            .ok_or(ErrorCode::Overflow)?;
+
+        // Update player totals
+        player.total_slots_owned = player.total_slots_owned
+            .checked_sub(slots)
+            .ok_or(ErrorCode::Overflow)?;
+
+        // Calculate and subtract daily income
+        let daily_income_per_slot = (property.price * property.yield_percent_bps as u64) / 10000;
+        let total_daily_income_decrease = daily_income_per_slot
+            .checked_mul(slots as u64)
+            .ok_or(ErrorCode::Overflow)?;
+
+        player.total_base_daily_income = player.total_base_daily_income
+            .checked_sub(total_daily_income_decrease)
+            .ok_or(ErrorCode::Overflow)?;
+
+        emit!(AdminRevokeEvent {
+            admin: ctx.accounts.authority.key(),
+            target_player: ownership.player,
+            property_id: property.property_id,
+            slots,
+        });
+
+        msg!("🚫 Admin revoked {} slots of property {} from {}", 
+             slots, property.property_id, ownership.player);
+        Ok(())
+    }
+
+    pub fn admin_update_property_yield(
+        ctx: Context<AdminUpdateProperty>,
+        property_id: u8,
+        new_yield_bps: u16,
+    ) -> Result<()> {
+        require!(new_yield_bps <= 10000, ErrorCode::InvalidYield);
+        
+        ctx.accounts.property.yield_percent_bps = new_yield_bps;
+        
+        emit!(AdminUpdateEvent {
+            property_id,
+            update_type: "yield".to_string(),
+            new_value: new_yield_bps as u64,
+        });
+        
+        msg!("Property {} yield updated to {} bps ({}%)", 
+             property_id, new_yield_bps, new_yield_bps as f64 / 100.0);
+        Ok(())
+    }
+
+    pub fn admin_update_shield_cost(
+        ctx: Context<AdminUpdateProperty>,
+        property_id: u8,
+        new_shield_cost_bps: u16,
+    ) -> Result<()> {
+        require!(new_shield_cost_bps <= 10000, ErrorCode::InvalidShieldCost);
+        
+        ctx.accounts.property.shield_cost_percent_bps = new_shield_cost_bps;
+        
+        emit!(AdminUpdateEvent {
+            property_id,
+            update_type: "shield_cost".to_string(),
+            new_value: new_shield_cost_bps as u64,
+        });
+        
+        msg!("Property {} shield cost updated to {} bps", 
+             property_id, new_shield_cost_bps);
+        Ok(())
+    }
+
+    pub fn admin_update_cooldown(
+        ctx: Context<AdminUpdateProperty>,
+        property_id: u8,
+        new_cooldown_seconds: i64,
+    ) -> Result<()> {
+        require!(new_cooldown_seconds >= 0, ErrorCode::InvalidCooldown);
+        
+        ctx.accounts.property.cooldown_seconds = new_cooldown_seconds;
+        
+        emit!(AdminUpdateEvent {
+            property_id,
+            update_type: "cooldown".to_string(),
+            new_value: new_cooldown_seconds as u64,
+        });
+        
+        msg!("Property {} cooldown updated to {} seconds", 
+             property_id, new_cooldown_seconds);
+        Ok(())
+    }
+
+    pub fn admin_clear_cooldown(
+        ctx: Context<AdminClearCooldown>,
+    ) -> Result<()> {
+        let cooldown = &mut ctx.accounts.set_cooldown;
+        cooldown.last_purchase_timestamp = 0;
+        
+        msg!("🔓 Admin cleared cooldown for player {} on set {}", 
+             cooldown.player, cooldown.set_id);
+        Ok(())
+    }
+
+    pub fn admin_clear_steal_cooldown(
+        ctx: Context<AdminClearStealCooldown>,
+    ) -> Result<()> {
+        let cooldown = &mut ctx.accounts.steal_cooldown;
+        cooldown.last_steal_attempt_timestamp = 0;
+        
+        msg!("🔓 Admin cleared steal cooldown for player {} on property {}", 
+             cooldown.player, cooldown.property_id);
+        Ok(())
+    }
+
+    pub fn admin_adjust_rewards(
+        ctx: Context<AdminAdjustPlayer>,
+        adjustment: i64,
+    ) -> Result<()> {
+        let player = &mut ctx.accounts.player_account;
+        
+        if adjustment >= 0 {
+            player.total_rewards_claimed = player.total_rewards_claimed
+                .checked_add(adjustment as u64)
+                .ok_or(ErrorCode::Overflow)?;
+        } else {
+            let decrease = (-adjustment) as u64;
+            player.total_rewards_claimed = player.total_rewards_claimed
+                .checked_sub(decrease)
+                .ok_or(ErrorCode::Overflow)?;
+        }
+        
+        emit!(AdminPlayerAdjustEvent {
+            admin: ctx.accounts.authority.key(),
+            player: player.owner,
+            adjustment_type: "rewards".to_string(),
+            value: adjustment,
+        });
+        
+        msg!("💰 Admin adjusted rewards for {} by {}", 
+             player.owner, adjustment);
+        Ok(())
+    }
+
+    pub fn admin_grant_shield(
+        ctx: Context<AdminGrantShield>,
+        duration_hours: u16,
+    ) -> Result<()> {
+        let ownership = &mut ctx.accounts.ownership;
+        let clock = Clock::get()?;
+        
+        require!(
+            duration_hours >= 1 && duration_hours <= 168, // Max 7 days
+            ErrorCode::InvalidShieldDuration
+        );
+        
+        let shield_duration_seconds = (duration_hours as i64) * 3600;
+        
+        // Check if steal protection is active and queue shield after it
+        let shield_start_time = if clock.unix_timestamp < ownership.steal_protection_expiry {
+            ownership.steal_protection_expiry
+        } else {
+            clock.unix_timestamp
+        };
+        
+        ownership.slots_shielded = ownership.slots_owned;
+        ownership.shield_expiry = shield_start_time + shield_duration_seconds;
+        ownership.shield_cooldown_duration = shield_duration_seconds / 4;
+        
+        emit!(AdminShieldGrantEvent {
+            admin: ctx.accounts.authority.key(),
+            player: ownership.player,
+            property_id: ownership.property_id,
+            duration_hours,
+            expiry: ownership.shield_expiry,
+        });
+        
+        msg!("🛡️ Admin granted shield to {} for property {} ({} hours)", 
+             ownership.player, ownership.property_id, duration_hours);
+        Ok(())
+    }
+
+    pub fn admin_emergency_withdraw(
+        ctx: Context<AdminEmergencyWithdraw>,
+        amount: u64,
+    ) -> Result<()> {
+        let game_config = &ctx.accounts.game_config;
+        
+        require!(
+            ctx.accounts.reward_pool_vault.amount >= amount,
+            ErrorCode::InsufficientRewardPool
+        );
+        
+        let game_config_key = game_config.key();
+        let seeds = &[
+            b"reward_pool_vault",
+            game_config_key.as_ref(),
+            &[game_config.reward_pool_vault_bump],
+        ];
+        let signer_seeds = &[&seeds[..]];
+
+        let transfer_ctx = CpiContext::new_with_signer(
+            ctx.accounts.token_program.to_account_info(),
+            Transfer {
+                from: ctx.accounts.reward_pool_vault.to_account_info(),
+                to: ctx.accounts.destination_account.to_account_info(),
+                authority: ctx.accounts.reward_pool_vault.to_account_info(),
+            },
+            signer_seeds,
+        );
+        token::transfer(transfer_ctx, amount)?;
+
+        emit!(AdminWithdrawEvent {
+            admin: ctx.accounts.authority.key(),
+            amount,
+            destination: ctx.accounts.destination_account.key(),
+        });
+
+        msg!("🚨 Emergency withdrawal: {} tokens to {}", 
+             amount, ctx.accounts.destination_account.key());
+        Ok(())
+    }
+
+    pub fn admin_transfer_authority(
+        ctx: Context<AdminTransferAuthority>,
+        new_authority: Pubkey,
+    ) -> Result<()> {
+        let game_config = &mut ctx.accounts.game_config;
+        let old_authority = game_config.authority;
+        
+        game_config.authority = new_authority;
+        
+        emit!(AdminAuthorityTransferEvent {
+            old_authority,
+            new_authority,
+        });
+        
+        msg!("👑 Authority transferred from {} to {}", 
+             old_authority, new_authority);
+        Ok(())
+    }
+
+    pub fn admin_update_global_rates(
+        ctx: Context<AdminUpdateGame>,
+        steal_cost_bps: Option<u16>,
+        set_bonus_bps: Option<u16>,
+        max_properties_claim: Option<u8>,
+        min_claim_interval: Option<i64>,
+    ) -> Result<()> {
+        let game_config = &mut ctx.accounts.game_config;
+        
+        if let Some(cost) = steal_cost_bps {
+            require!(cost <= 10000, ErrorCode::InvalidStealCost);
+            game_config.steal_cost_percent_bps = cost;
+            msg!("Steal cost updated to {} bps", cost);
+        }
+        
+        if let Some(bonus) = set_bonus_bps {
+            require!(bonus <= 10000, ErrorCode::InvalidSetBonus);
+            game_config.set_bonus_bps = bonus;
+            msg!("Set bonus updated to {} bps", bonus);
+        }
+        
+        if let Some(max_props) = max_properties_claim {
+            require!(max_props > 0 && max_props <= 22, ErrorCode::InvalidPropertyCount);
+            game_config.max_properties_per_claim = max_props;
+            msg!("Max properties per claim updated to {}", max_props);
+        }
+        
+        if let Some(interval) = min_claim_interval {
+            require!(interval >= 0, ErrorCode::InvalidClaimInterval);
+            game_config.min_claim_interval_minutes = interval;
+            msg!("Min claim interval updated to {} minutes", interval);
+        }
+        
+        Ok(())
+    }
 }
 
 // ========== ACCOUNT CONTEXTS ==========
@@ -991,6 +1423,17 @@ pub struct InitializeGame<'info> {
     
     /// CHECK: Dev wallet address - hardcoded as DEV_WALLET constant
     pub dev_wallet: UncheckedAccount<'info>,
+
+    #[account(
+        init_if_needed,
+        payer = authority,
+        associated_token::mint = token_mint,
+        associated_token::authority = marketing_wallet,
+    )]
+    pub marketing_token_account: Account<'info, TokenAccount>,
+    
+    /// CHECK: Marketing wallet address
+    pub marketing_wallet: UncheckedAccount<'info>,
     
     #[account(mut)]
     pub authority: Signer<'info>,
@@ -1089,6 +1532,9 @@ pub struct BuyProperty<'info> {
     
     #[account(mut)]
     pub dev_token_account: Account<'info, TokenAccount>,
+
+    #[account(mut)]
+    pub marketing_token_account: Account<'info, TokenAccount>,
     
     pub game_config: Account<'info, GameConfig>,
     
@@ -1116,6 +1562,9 @@ pub struct ActivateShield<'info> {
     
     #[account(mut)]
     pub dev_token_account: Account<'info, TokenAccount>,
+
+    #[account(mut)]
+    pub marketing_token_account: Account<'info, TokenAccount>,
     
     pub game_config: Account<'info, GameConfig>,
     
@@ -1158,6 +1607,9 @@ pub struct StealPropertyInstant<'info> {
     
     #[account(mut)]
     pub dev_token_account: Account<'info, TokenAccount>,
+
+    #[account(mut)]
+    pub marketing_token_account: Account<'info, TokenAccount>,
     
     pub game_config: Account<'info, GameConfig>,
     
@@ -1273,6 +1725,136 @@ pub struct AdminClosePlayerAccount<'info> {
     pub rent_receiver: AccountInfo<'info>,
 }
 
+// ========== NEW ADMIN CONTEXTS ==========
+
+#[derive(Accounts)]
+#[instruction(target_player: Pubkey)]
+pub struct AdminGrantProperty<'info> {
+    #[account(mut)]
+    pub property: Account<'info, Property>,
+    
+    #[account(
+        init_if_needed,
+        payer = authority,
+        space = 8 + PropertyOwnership::SIZE,
+        seeds = [b"ownership", target_player.as_ref(), property.property_id.to_le_bytes().as_ref()],
+        bump
+    )]
+    pub ownership: Account<'info, PropertyOwnership>,
+    
+    #[account(mut)]
+    pub player_account: Account<'info, PlayerAccount>,
+    
+    #[account(
+        constraint = game_config.authority == authority.key() @ ErrorCode::Unauthorized
+    )]
+    pub game_config: Account<'info, GameConfig>,
+    
+    #[account(mut)]
+    pub authority: Signer<'info>,
+    
+    pub system_program: Program<'info, System>,
+}
+
+#[derive(Accounts)]
+pub struct AdminRevokeProperty<'info> {
+    #[account(mut)]
+    pub property: Account<'info, Property>,
+    
+    #[account(mut)]
+    pub ownership: Account<'info, PropertyOwnership>,
+    
+    #[account(mut)]
+    pub player_account: Account<'info, PlayerAccount>,
+    
+    #[account(
+        constraint = game_config.authority == authority.key() @ ErrorCode::Unauthorized
+    )]
+    pub game_config: Account<'info, GameConfig>,
+    
+    pub authority: Signer<'info>,
+}
+
+#[derive(Accounts)]
+pub struct AdminClearCooldown<'info> {
+    #[account(mut)]
+    pub set_cooldown: Account<'info, PlayerSetCooldown>,
+    
+    #[account(
+        constraint = game_config.authority == authority.key() @ ErrorCode::Unauthorized
+    )]
+    pub game_config: Account<'info, GameConfig>,
+    
+    pub authority: Signer<'info>,
+}
+
+#[derive(Accounts)]
+pub struct AdminClearStealCooldown<'info> {
+    #[account(mut)]
+    pub steal_cooldown: Account<'info, PlayerStealCooldown>,
+    
+    #[account(
+        constraint = game_config.authority == authority.key() @ ErrorCode::Unauthorized
+    )]
+    pub game_config: Account<'info, GameConfig>,
+    
+    pub authority: Signer<'info>,
+}
+
+#[derive(Accounts)]
+pub struct AdminAdjustPlayer<'info> {
+    #[account(mut)]
+    pub player_account: Account<'info, PlayerAccount>,
+    
+    #[account(
+        constraint = game_config.authority == authority.key() @ ErrorCode::Unauthorized
+    )]
+    pub game_config: Account<'info, GameConfig>,
+    
+    pub authority: Signer<'info>,
+}
+
+#[derive(Accounts)]
+pub struct AdminGrantShield<'info> {
+    #[account(mut)]
+    pub ownership: Account<'info, PropertyOwnership>,
+    
+    #[account(
+        constraint = game_config.authority == authority.key() @ ErrorCode::Unauthorized
+    )]
+    pub game_config: Account<'info, GameConfig>,
+    
+    pub authority: Signer<'info>,
+}
+
+#[derive(Accounts)]
+pub struct AdminEmergencyWithdraw<'info> {
+    #[account(mut)]
+    pub reward_pool_vault: Account<'info, TokenAccount>,
+    
+    #[account(mut)]
+    pub destination_account: Account<'info, TokenAccount>,
+    
+    #[account(
+        constraint = game_config.authority == authority.key() @ ErrorCode::Unauthorized
+    )]
+    pub game_config: Account<'info, GameConfig>,
+    
+    pub authority: Signer<'info>,
+    
+    pub token_program: Program<'info, Token>,
+}
+
+#[derive(Accounts)]
+pub struct AdminTransferAuthority<'info> {
+    #[account(
+        mut,
+        constraint = game_config.authority == authority.key() @ ErrorCode::Unauthorized
+    )]
+    pub game_config: Account<'info, GameConfig>,
+    
+    pub authority: Signer<'info>,
+}
 
 // ========== STATE ACCOUNTS ==========
 
@@ -1280,6 +1862,7 @@ pub struct AdminClosePlayerAccount<'info> {
 pub struct GameConfig {
     pub authority: Pubkey,
     pub dev_wallet: Pubkey,
+    pub marketing_wallet: Pubkey,
     pub token_mint: Pubkey,
     pub reward_pool_vault: Pubkey,
     pub total_supply: u64,
@@ -1295,10 +1878,12 @@ pub struct GameConfig {
     pub min_claim_interval_minutes: i64,
     pub bump: u8,
     pub reward_pool_vault_bump: u8,
+    
+    pub padding: [u8; 256],  // Reserved for future features
 }
 
 impl GameConfig {
-    pub const SIZE: usize = 32 + 32 + 32 + 32 + 8 + 8 + 8 + 1 + 1 + 2 + 2 + 2 + 2 + 1 + 8 + 1 + 1;
+    pub const SIZE: usize = 205 + 256;  // With padding for future upgrades
 }
 
 #[account]
@@ -1313,10 +1898,12 @@ pub struct Property {
     pub shield_cost_percent_bps: u16,
     pub cooldown_seconds: i64,
     pub bump: u8,
+    
+    pub padding: [u8; 128],  // Reserved for future features
 }
 
 impl Property {
-    pub const SIZE: usize = 1 + 1 + 2 + 2 + 2 + 8 + 2 + 2 + 8 + 1;
+    pub const SIZE: usize = 29 + 128;  // With padding
     
     pub fn get_properties_in_set(set_id: u8) -> u8 {
         match set_id {
@@ -1352,10 +1939,12 @@ pub struct PlayerAccount {
     pub total_steals_attempted: u32,
     pub total_steals_successful: u32,
     pub bump: u8,
+    
+    pub padding: [u8; 128],  // Reserved for future features
 }
 
 impl PlayerAccount {
-    pub const SIZE: usize = 32 + 2 + 8 + 8 + 8 + 1 + 1 + 4 + 4 + 1;
+    pub const SIZE: usize = 69 + 128;  // With padding
 }
 
 #[account]
@@ -1369,10 +1958,12 @@ pub struct PropertyOwnership {
     pub shield_cooldown_duration: i64,
     pub steal_protection_expiry: i64,
     pub bump: u8,
+    
+    pub padding: [u8; 64],  // Reserved for future features
 }
 
 impl PropertyOwnership {
-    pub const SIZE: usize = 32 + 1 + 2 + 2 + 8 + 8 + 8 + 8 + 1;
+    pub const SIZE: usize = 70 + 64;  // With padding
 }
 
 #[account]
@@ -1385,10 +1976,12 @@ pub struct PlayerSetCooldown {
     pub properties_owned_in_set: [u8; 3],
     pub properties_count: u8,
     pub bump: u8,
+    
+    pub padding: [u8; 64],  // Reserved for future features
 }
 
 impl PlayerSetCooldown {
-    pub const SIZE: usize = 32 + 1 + 8 + 8 + 1 + 3 + 1 + 1;
+    pub const SIZE: usize = 55 + 64;  // With padding
 }
 
 #[account]
@@ -1401,10 +1994,12 @@ pub struct PlayerSetOwnership {
     pub has_complete_set: bool,
     pub first_property_timestamp: i64,
     pub bump: u8,
+    
+    pub padding: [u8; 64],  // Reserved for future features
 }
 
 impl PlayerSetOwnership {
-    pub const SIZE: usize = 32 + 1 + 2 + 3 + 1 + 1 + 8 + 1;
+    pub const SIZE: usize = 49 + 64;  // With padding
 }
 
 #[account]
@@ -1414,10 +2009,12 @@ pub struct PlayerStealCooldown {
     pub last_steal_attempt_timestamp: i64,
     pub cooldown_duration: i64,
     pub bump: u8,
+    
+    pub padding: [u8; 64],  // Reserved for future features
 }
 
 impl PlayerStealCooldown {
-    pub const SIZE: usize = 32 + 1 + 8 + 8 + 1;
+    pub const SIZE: usize = 50 + 64;  // With padding
 }
 
 #[account]
@@ -1428,10 +2025,12 @@ pub struct SetStats {
     pub unique_owners: u32,
     pub total_players: u32,
     pub bump: u8,
+    
+    pub padding: [u8; 64],  // Reserved for future features
 }
 
 impl SetStats {
-    pub const SIZE: usize = 1 + 8 + 8 + 4 + 4 + 1;
+    pub const SIZE: usize = 26 + 64;  // With padding
 }
 
 // ========== EVENTS ==========
@@ -1510,6 +2109,54 @@ pub struct AdminUpdateEvent {
     pub new_value: u64,
 }
 
+// ========== NEW ADMIN EVENTS ==========
+
+#[event]
+pub struct AdminGrantEvent {
+    pub admin: Pubkey,
+    pub target_player: Pubkey,
+    pub property_id: u8,
+    pub slots: u16,
+}
+
+#[event]
+pub struct AdminRevokeEvent {
+    pub admin: Pubkey,
+    pub target_player: Pubkey,
+    pub property_id: u8,
+    pub slots: u16,
+}
+
+#[event]
+pub struct AdminPlayerAdjustEvent {
+    pub admin: Pubkey,
+    pub player: Pubkey,
+    pub adjustment_type: String,
+    pub value: i64,
+}
+
+#[event]
+pub struct AdminShieldGrantEvent {
+    pub admin: Pubkey,
+    pub player: Pubkey,
+    pub property_id: u8,
+    pub duration_hours: u16,
+    pub expiry: i64,
+}
+
+#[event]
+pub struct AdminWithdrawEvent {
+    pub admin: Pubkey,
+    pub amount: u64,
+    pub destination: Pubkey,
+}
+
+#[event]
+pub struct AdminAuthorityTransferEvent {
+    pub old_authority: Pubkey,
+    pub new_authority: Pubkey,
+}
+
 // ========== ERRORS ==========
 
 #[error_code]
@@ -1581,5 +2228,22 @@ pub enum ErrorCode {
     #[msg("Invalid shield duration. Must be between 1 and 48 hours.")]
     InvalidShieldDuration,
     #[msg("Shield is already active. Wait for expiry before reactivating.")]
-    ShieldAlreadyActive, 
+    ShieldAlreadyActive,
+    #[msg("Steal protection is active on this property")]
+    StealProtectionActive,
+    // ========== NEW ADMIN ERROR CODES ==========
+    #[msg("Invalid yield percentage (must be <= 100%)")]
+    InvalidYield,
+    #[msg("Invalid shield cost percentage")]
+    InvalidShieldCost,
+    #[msg("Invalid cooldown duration")]
+    InvalidCooldown,
+    #[msg("Invalid steal cost")]
+    InvalidStealCost,
+    #[msg("Invalid set bonus")]
+    InvalidSetBonus,
+    #[msg("Invalid property count")]
+    InvalidPropertyCount,
+    #[msg("Invalid claim interval")]
+    InvalidClaimInterval,
 }
