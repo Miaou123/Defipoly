@@ -1,0 +1,100 @@
+{
+  "name": "defipoly-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Defipoly - Full-stack Solana-based Monopoly game",
+  "workspaces": [
+    "defipoly-frontend",
+    "defipoly-backend",
+    "defipoly-program"
+  ],
+  "scripts": {
+    "========== DEVELOPMENT ==========": "",
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "dev:frontend": "cd defipoly-frontend && npm run dev",
+    "dev:backend": "cd defipoly-backend && npm run dev",
+    "dev:validator": "cd defipoly-program && solana-test-validator",
+    
+    "========== BUILD ==========": "",
+    "build": "npm run build:frontend && npm run build:program",
+    "build:frontend": "cd defipoly-frontend && npm run build",
+    "build:program": "cd defipoly-program && anchor build",
+    
+    "========== START ==========": "",
+    "start": "concurrently \"npm run start:backend\" \"npm run start:frontend\"",
+    "start:frontend": "cd defipoly-frontend && npm start",
+    "start:backend": "cd defipoly-backend && npm start",
+    
+    "========== TESTING ==========": "",
+    "test": "npm run test:program",
+    "test:program": "cd defipoly-program && anchor test",
+    "test:frontend": "cd defipoly-frontend && npm test",
+    "test:backend": "cd defipoly-backend && npm test",
+    
+    "========== INSTALLATION ==========": "",
+    "install:all": "npm install && npm run install:frontend && npm run install:backend && npm run install:program",
+    "install:frontend": "cd defipoly-frontend && npm install",
+    "install:backend": "cd defipoly-backend && npm install",
+    "install:program": "cd defipoly-program && npm install",
+    
+    "========== LINTING ==========": "",
+    "lint": "npm run lint:frontend",
+    "lint:frontend": "cd defipoly-frontend && npm run lint",
+    "lint:fix": "npm run lint:frontend -- --fix",
+    
+    "========== CLEANUP ==========": "",
+    "clean": "npm run clean:frontend && npm run clean:backend && npm run clean:program",
+    "clean:frontend": "cd defipoly-frontend && rm -rf .next out node_modules",
+    "clean:backend": "cd defipoly-backend && rm -rf node_modules dist logs/*.log",
+    "clean:program": "cd defipoly-program && rm -rf target .anchor node_modules && anchor clean",
+    
+    "========== DEPLOYMENT ==========": "",
+    "deploy:program:devnet": "cd defipoly-program && anchor deploy --provider.cluster devnet",
+    "deploy:program:mainnet": "cd defipoly-program && anchor deploy --provider.cluster mainnet-beta",
+    "deploy:frontend": "cd defipoly-frontend && vercel deploy --prod",
+    
+    "========== DATABASE ==========": "",
+    "db:backup": "cd defipoly-backend && npm run db:backup",
+    "db:optimize": "cd defipoly-backend && npm run db:optimize",
+    "db:health": "cd defipoly-backend && npm run db:health",
+    
+    "========== PM2 (Backend) ==========": "",
+    "pm2:start": "cd defipoly-backend && npm run pm2:start",
+    "pm2:stop": "cd defipoly-backend && npm run pm2:stop",
+    "pm2:restart": "cd defipoly-backend && npm run pm2:restart",
+    "pm2:logs": "cd defipoly-backend && npm run pm2:logs",
+    
+    "========== UTILITIES ==========": "",
+    "format": "prettier --write \"**/*.{js,jsx,ts,tsx,json,css,md}\"",
+    "check-ports": "lsof -i :3000 && lsof -i :3005",
+    "kill-ports": "kill -9 $(lsof -t -i:3000) && kill -9 $(lsof -t -i:3005)",
+    "health-check": "curl http://localhost:3005/health && curl http://localhost:3000/api/health"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2",
+    "prettier": "^3.1.0"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": ""
+  },
+  "keywords": [
+    "solana",
+    "blockchain",
+    "game",
+    "monopoly",
+    "defi",
+    "nextjs",
+    "anchor"
+  ],
+  "author": "",
+  "license": "MIT",
+  "bugs": {
+    "url": ""
+  },
+  "homepage": ""
+}

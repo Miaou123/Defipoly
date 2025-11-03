@@ -1,0 +1,8 @@
+{
+    "network": "devnet",
+    "programId": "YOUR_PROGRAM_ID_HERE",
+    "tokenMint": "YOUR_TOKEN_MINT_HERE",
+    "gameConfig": "YOUR_GAME_CONFIG_HERE",
+    "rewardPool": "YOUR_REWARD_POOL_HERE",
+    "rpcEndpoint": "https://api.devnet.solana.com"
+  }

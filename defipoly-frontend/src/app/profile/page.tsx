@@ -27,7 +27,7 @@ interface PlayerStats {
   failedSteals: number;
 }
 
-const BACKEND_URL = process.env.NEXT_PUBLIC_PROFILE_API_URL || 'http://localhost:3001';
+const BACKEND_URL = process.env.NEXT_PUBLIC_PROFILE_API_URL || 'http://localhost:3005';
 
 export default function ProfilePage() {
   const { publicKey, connected } = useWallet();

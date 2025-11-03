@@ -3,7 +3,7 @@
 // ============================================
 
 // API Configuration
-const API_URL = process.env.NEXT_PUBLIC_PROFILE_API_URL || 'http://localhost:3001';
+const API_URL = process.env.NEXT_PUBLIC_PROFILE_API_URL || 'http://localhost:3005';
 
 export interface ProfileData {
   username: string | null;

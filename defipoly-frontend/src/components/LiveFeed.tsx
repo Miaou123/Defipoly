@@ -17,7 +17,7 @@ interface FeedItem {
   targetAddress?: string;
 }
 
-const BACKEND_URL = process.env.NEXT_PUBLIC_PROFILE_API_URL || 'http://localhost:3001';
+const BACKEND_URL = process.env.NEXT_PUBLIC_PROFILE_API_URL || 'http://localhost:3005';
 
 export function LiveFeed() {
   const { connection } = useConnection();

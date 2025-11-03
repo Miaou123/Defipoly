@@ -1,0 +1,17 @@
+{
+    "network": "devnet",
+    "programId": "H1zzYzWPReWJ4W2JNiBrYbsrHDxFDGJ9n9jAyYG2VhLQ",
+    "tokenMint": "743D9e7PCGgh2V3TY2tUeg31e63tmFjJ9rTZJkwhRVLX",
+    "gameConfig": "aedS8uSUBgLFgd1RqitymXTfDTzkpuoS4hLCPGGRxVi",
+    "rewardPool": "E1y1axQ9oBT98f3D293QKsAanXNLwg8unkY5JJgcFLLj",
+    "properties": {
+      "0": "FMU7grFRpP1N61dEkQhQkLYPMT87GUkXtw8EyR9qbMXu",
+      "1": "CMCFGZuFwxjxvFJCEykXo4hBzoEEKJztBJXXxTDU9MTt",
+      "2": "6BaiKUUkr9udW1c94g4yqECkAcp2JQ3WeQnUyWns4zne",
+      "3": "GYfS2KQHKHUhqJpnHWYDjQ2d7uT3c3PDsfwfQME2Av2H",
+      "4": "B7ECYPGkugj8Y1EJbg2NAARzUNWBH3gSZENPmPHKfnY",
+      "5": "DQUi2GXZvLgfcgt19sopcK8VxpUrqkkQZ1G4AGRA7gEs",
+      "6": "GSjmn4zGjMh3MJ3akCzDjXwutx19DDmwUqsuzPS4a4oQ",
+      "7": "D3uCTTi8kb3LwfsyWkicUstduBBBB6iw7ne9W1W5FESz"
+    }
+  }

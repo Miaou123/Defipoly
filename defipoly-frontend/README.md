@@ -1,36 +1,129 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Defipoly Frontend
 
-## Getting Started
+Next.js web application for the Defipoly game.
 
-First, run the development server:
+## 🚀 Getting Started
+
+### Prerequisites
+- Node.js v18+
+- npm or yarn
+
+### Installation
+
+```bash
+npm install
+```
+
+### Configuration
+
+Copy `.env.example` to `.env.local` and configure:
+```bash
+cp .env.example .env.local
+```
+
+Required environment variables:
+```env
+# Backend API URL
+NEXT_PUBLIC_PROFILE_API_URL=http://localhost:3005
+
+# Solana Configuration
+NEXT_PUBLIC_RPC_URL=https://api.mainnet-beta.solana.com
+NEXT_PUBLIC_PROGRAM_ID=your_program_id_here
+```
+
+### Development
+
+Run the development server:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 📁 Project Structure
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```
+src/
+├── app/              # Next.js App Router pages
+├── components/       # React components
+├── contexts/         # React contexts (wallet, notifications, etc.)
+├── hooks/           # Custom React hooks
+├── types/           # TypeScript type definitions
+└── utils/           # Utility functions and helpers
+```
 
-## Learn More
+## 🔧 Available Scripts
 
-To learn more about Next.js, take a look at the following resources:
+- `npm run dev` - Start development server
+- `npm run build` - Build for production
+- `npm run start` - Start production server
+- `npm run lint` - Run ESLint
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## 🎨 Tech Stack
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- **Framework**: Next.js 15 with App Router
+- **Styling**: Tailwind CSS
+- **Wallet**: Solana Wallet Adapter
+- **State Management**: React Context API
+- **Language**: TypeScript
 
-## Deploy on Vercel
+## 🔗 Backend Integration
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+The frontend connects to the backend API on port 3005. Make sure the backend is running before starting the frontend:
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```bash
+cd ../defipoly-backend
+npm start
+```
+
+## 📝 Key Features
+
+- Wallet connection and management
+- Real-time game board display
+- Property buying/selling interface
+- Player profiles and statistics
+- Live feed of game events
+- Rewards claiming system
+- Cooldown tracking
+
+## 🚀 Deployment
+
+### Vercel Deployment
+
+The easiest way to deploy is using [Vercel](https://vercel.com):
+
+1. Push your code to GitHub
+2. Import the project in Vercel
+3. Set environment variables
+4. Deploy
+
+### Environment Variables for Production
+
+```env
+NEXT_PUBLIC_PROFILE_API_URL=https://your-backend-api.com
+NEXT_PUBLIC_RPC_URL=https://api.mainnet-beta.solana.com
+NEXT_PUBLIC_PROGRAM_ID=your_mainnet_program_id
+```
+
+## 🐛 Troubleshooting
+
+### Common Issues
+
+1. **Wallet not connecting**
+   - Check that you have a Solana wallet extension installed
+   - Ensure you're on the correct network (mainnet/devnet)
+
+2. **API calls failing**
+   - Verify the backend is running on port 3005
+   - Check NEXT_PUBLIC_PROFILE_API_URL in .env.local
+
+3. **Build errors**
+   - Clear .next folder: `rm -rf .next`
+   - Reinstall dependencies: `rm -rf node_modules && npm install`
+
+## 📚 Learn More
+
+- [Next.js Documentation](https://nextjs.org/docs)
+- [Solana Web3.js](https://solana-labs.github.io/solana-web3.js/)
+- [Tailwind CSS](https://tailwindcss.com/docs)

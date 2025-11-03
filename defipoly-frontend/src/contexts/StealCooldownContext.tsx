@@ -4,7 +4,7 @@ import { createContext, useContext, useState, useEffect, ReactNode } from 'react
 import { useWallet } from '@solana/wallet-adapter-react';
 import { usePropertyRefresh } from './PropertyRefreshContext';
 
-const API_URL = process.env.NEXT_PUBLIC_PROFILE_API_URL || 'http://localhost:3001';
+const API_URL = process.env.NEXT_PUBLIC_PROFILE_API_URL || 'http://localhost:3005';
 
 interface StealCooldownData {
   isOnCooldown: boolean;
