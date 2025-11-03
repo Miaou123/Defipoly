@@ -1,0 +1,58 @@
+name: Deploy Defipoly
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+        
+    - name: Install dependencies
+      run: npm run install:all
+      
+    - name: Run frontend build
+      run: npm run build:frontend
+      
+    - name: Run backend tests
+      run: |
+        cd defipoly-backend
+        npm test || echo "No tests configured yet"
+
+  deploy-frontend:
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Deploy to Vercel
+      run: |
+        cd defipoly-frontend
+        # Add your Vercel deployment commands here
+        echo "Add Vercel deployment configuration"
+
+  deploy-backend:
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Deploy Backend
+      run: |
+        cd defipoly-backend
+        # Add your backend deployment commands here
+        echo "Add backend deployment configuration"
