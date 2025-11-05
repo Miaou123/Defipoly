@@ -3,7 +3,8 @@
   "scripts": {
     "build": "anchor build",
     "deploy": "anchor deploy",
-    "deploy:full": "npm run build && npm run copy-idl && npm run deploy && npm run initialize && npm run generate:constants",
+    "deploy:full": "tsx scripts/new-deploy.ts",
+    "deploy:existing": "npm run build && npm run deploy && npm run initialize && npm run generate:constants",
     "initialize":  "tsx scripts/initialize-game.ts",
     "generate:constants": "tsx scripts/generate-constants.ts",
     "test": "anchor test"

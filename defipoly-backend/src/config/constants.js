@@ -1,75 +1,367 @@
 // ============================================
-// AUTO-GENERATED FROM property-config.ts
-// SINGLE SOURCE OF TRUTH
-// Last updated: 2025-10-24
+// AUTO-GENERATED - DO NOT EDIT
+// Source: defipoly-program/scripts/property-config.ts
+// Generated: 2025-11-05T15:25:23.244Z
 // ============================================
 
+// ========================================
+// PROPERTIES
+// ========================================
+// Exact copy from property-config.ts
+
 const PROPERTIES = [
-  // Set 0 - Brown (10%)
-  { id: 0, setId: 0, price: 1500000000000, yieldBps: 600, shieldCostBps: 1000, cooldownHours: 6 },
-  { id: 1, setId: 0, price: 1500000000000, yieldBps: 600, shieldCostBps: 1000, cooldownHours: 6 },
-  
-  // Set 1 - Light Blue (11%)
-  { id: 2, setId: 1, price: 3500000000000, yieldBps: 650, shieldCostBps: 1100, cooldownHours: 8 },
-  { id: 3, setId: 1, price: 3500000000000, yieldBps: 650, shieldCostBps: 1100, cooldownHours: 8 },
-  { id: 4, setId: 1, price: 3500000000000, yieldBps: 650, shieldCostBps: 1100, cooldownHours: 8 },
-  
-  // Set 2 - Pink (12%)
-  { id: 5, setId: 2, price: 7500000000000, yieldBps: 700, shieldCostBps: 1200, cooldownHours: 10 },
-  { id: 6, setId: 2, price: 7500000000000, yieldBps: 700, shieldCostBps: 1200, cooldownHours: 10 },
-  { id: 7, setId: 2, price: 7500000000000, yieldBps: 700, shieldCostBps: 1200, cooldownHours: 10 },
-  
-  // Set 3 - Orange (13%)
-  { id: 8, setId: 3, price: 15000000000000, yieldBps: 750, shieldCostBps: 1300, cooldownHours: 12 },
-  { id: 9, setId: 3, price: 15000000000000, yieldBps: 750, shieldCostBps: 1300, cooldownHours: 12 },
-  { id: 10, setId: 3, price: 15000000000000, yieldBps: 750, shieldCostBps: 1300, cooldownHours: 12 },
-  
-  // Set 4 - Red (14%)
-  { id: 11, setId: 4, price: 30000000000000, yieldBps: 800, shieldCostBps: 1400, cooldownHours: 16 },
-  { id: 12, setId: 4, price: 30000000000000, yieldBps: 800, shieldCostBps: 1400, cooldownHours: 16 },
-  { id: 13, setId: 4, price: 30000000000000, yieldBps: 800, shieldCostBps: 1400, cooldownHours: 16 },
-  
-  // Set 5 - Yellow (15%)
-  { id: 14, setId: 5, price: 60000000000000, yieldBps: 850, shieldCostBps: 1500, cooldownHours: 20 },
-  { id: 15, setId: 5, price: 60000000000000, yieldBps: 850, shieldCostBps: 1500, cooldownHours: 20 },
-  { id: 16, setId: 5, price: 60000000000000, yieldBps: 850, shieldCostBps: 1500, cooldownHours: 20 },
-  
-  // Set 6 - Green (16%)
-  { id: 17, setId: 6, price: 120000000000000, yieldBps: 900, shieldCostBps: 1600, cooldownHours: 24 },
-  { id: 18, setId: 6, price: 120000000000000, yieldBps: 900, shieldCostBps: 1600, cooldownHours: 24 },
-  { id: 19, setId: 6, price: 120000000000000, yieldBps: 900, shieldCostBps: 1600, cooldownHours: 24 },
-  
-  // Set 7 - Dark Blue (17%)
-  { id: 20, setId: 7, price: 240000000000000, yieldBps: 1000, shieldCostBps: 1700, cooldownHours: 28 },
-  { id: 21, setId: 7, price: 240000000000000, yieldBps: 1000, shieldCostBps: 1700, cooldownHours: 28 },
+  {
+    "id": 0,
+    "name": "Mediterranean Avenue",
+    "setId": 0,
+    "tier": "brown",
+    "color": "bg-amber-900",
+    "maxSlots": 600,
+    "maxPerPlayer": 50,
+    "price": 1500,
+    "yieldBps": 600,
+    "shieldCostBps": 1000,
+    "cooldown": 6
+  },
+  {
+    "id": 1,
+    "name": "Baltic Avenue",
+    "setId": 0,
+    "tier": "brown",
+    "color": "bg-amber-900",
+    "maxSlots": 600,
+    "maxPerPlayer": 50,
+    "price": 1500,
+    "yieldBps": 600,
+    "shieldCostBps": 1000,
+    "cooldown": 6
+  },
+  {
+    "id": 2,
+    "name": "Oriental Avenue",
+    "setId": 1,
+    "tier": "lightblue",
+    "color": "bg-sky-300",
+    "maxSlots": 450,
+    "maxPerPlayer": 40,
+    "price": 3500,
+    "yieldBps": 650,
+    "shieldCostBps": 1100,
+    "cooldown": 8
+  },
+  {
+    "id": 3,
+    "name": "Vermont Avenue",
+    "setId": 1,
+    "tier": "lightblue",
+    "color": "bg-sky-300",
+    "maxSlots": 450,
+    "maxPerPlayer": 40,
+    "price": 3500,
+    "yieldBps": 650,
+    "shieldCostBps": 1100,
+    "cooldown": 8
+  },
+  {
+    "id": 4,
+    "name": "Connecticut Avenue",
+    "setId": 1,
+    "tier": "lightblue",
+    "color": "bg-sky-300",
+    "maxSlots": 450,
+    "maxPerPlayer": 40,
+    "price": 3500,
+    "yieldBps": 650,
+    "shieldCostBps": 1100,
+    "cooldown": 8
+  },
+  {
+    "id": 5,
+    "name": "St. Charles Place",
+    "setId": 2,
+    "tier": "pink",
+    "color": "bg-pink-400",
+    "maxSlots": 350,
+    "maxPerPlayer": 30,
+    "price": 7500,
+    "yieldBps": 700,
+    "shieldCostBps": 1200,
+    "cooldown": 10
+  },
+  {
+    "id": 6,
+    "name": "States Avenue",
+    "setId": 2,
+    "tier": "pink",
+    "color": "bg-pink-400",
+    "maxSlots": 350,
+    "maxPerPlayer": 30,
+    "price": 7500,
+    "yieldBps": 700,
+    "shieldCostBps": 1200,
+    "cooldown": 10
+  },
+  {
+    "id": 7,
+    "name": "Virginia Avenue",
+    "setId": 2,
+    "tier": "pink",
+    "color": "bg-pink-400",
+    "maxSlots": 350,
+    "maxPerPlayer": 30,
+    "price": 7500,
+    "yieldBps": 700,
+    "shieldCostBps": 1200,
+    "cooldown": 10
+  },
+  {
+    "id": 8,
+    "name": "St. James Place",
+    "setId": 3,
+    "tier": "orange",
+    "color": "bg-orange-500",
+    "maxSlots": 250,
+    "maxPerPlayer": 25,
+    "price": 15000,
+    "yieldBps": 750,
+    "shieldCostBps": 1300,
+    "cooldown": 12
+  },
+  {
+    "id": 9,
+    "name": "Tennessee Avenue",
+    "setId": 3,
+    "tier": "orange",
+    "color": "bg-orange-500",
+    "maxSlots": 250,
+    "maxPerPlayer": 25,
+    "price": 15000,
+    "yieldBps": 750,
+    "shieldCostBps": 1300,
+    "cooldown": 12
+  },
+  {
+    "id": 10,
+    "name": "New York Avenue",
+    "setId": 3,
+    "tier": "orange",
+    "color": "bg-orange-500",
+    "maxSlots": 250,
+    "maxPerPlayer": 25,
+    "price": 15000,
+    "yieldBps": 750,
+    "shieldCostBps": 1300,
+    "cooldown": 12
+  },
+  {
+    "id": 11,
+    "name": "Kentucky Avenue",
+    "setId": 4,
+    "tier": "red",
+    "color": "bg-red-600",
+    "maxSlots": 180,
+    "maxPerPlayer": 20,
+    "price": 30000,
+    "yieldBps": 800,
+    "shieldCostBps": 1400,
+    "cooldown": 16
+  },
+  {
+    "id": 12,
+    "name": "Indiana Avenue",
+    "setId": 4,
+    "tier": "red",
+    "color": "bg-red-600",
+    "maxSlots": 180,
+    "maxPerPlayer": 20,
+    "price": 30000,
+    "yieldBps": 800,
+    "shieldCostBps": 1400,
+    "cooldown": 16
+  },
+  {
+    "id": 13,
+    "name": "Illinois Avenue",
+    "setId": 4,
+    "tier": "red",
+    "color": "bg-red-600",
+    "maxSlots": 180,
+    "maxPerPlayer": 20,
+    "price": 30000,
+    "yieldBps": 800,
+    "shieldCostBps": 1400,
+    "cooldown": 16
+  },
+  {
+    "id": 14,
+    "name": "Atlantic Avenue",
+    "setId": 5,
+    "tier": "yellow",
+    "color": "bg-yellow-500",
+    "maxSlots": 120,
+    "maxPerPlayer": 15,
+    "price": 60000,
+    "yieldBps": 850,
+    "shieldCostBps": 1500,
+    "cooldown": 20
+  },
+  {
+    "id": 15,
+    "name": "Ventnor Avenue",
+    "setId": 5,
+    "tier": "yellow",
+    "color": "bg-yellow-500",
+    "maxSlots": 120,
+    "maxPerPlayer": 15,
+    "price": 60000,
+    "yieldBps": 850,
+    "shieldCostBps": 1500,
+    "cooldown": 20
+  },
+  {
+    "id": 16,
+    "name": "Marvin Gardens",
+    "setId": 5,
+    "tier": "yellow",
+    "color": "bg-yellow-500",
+    "maxSlots": 120,
+    "maxPerPlayer": 15,
+    "price": 60000,
+    "yieldBps": 850,
+    "shieldCostBps": 1500,
+    "cooldown": 20
+  },
+  {
+    "id": 17,
+    "name": "Pacific Avenue",
+    "setId": 6,
+    "tier": "green",
+    "color": "bg-green-600",
+    "maxSlots": 80,
+    "maxPerPlayer": 10,
+    "price": 120000,
+    "yieldBps": 900,
+    "shieldCostBps": 1600,
+    "cooldown": 24
+  },
+  {
+    "id": 18,
+    "name": "North Carolina Avenue",
+    "setId": 6,
+    "tier": "green",
+    "color": "bg-green-600",
+    "maxSlots": 80,
+    "maxPerPlayer": 10,
+    "price": 120000,
+    "yieldBps": 900,
+    "shieldCostBps": 1600,
+    "cooldown": 24
+  },
+  {
+    "id": 19,
+    "name": "Pennsylvania Avenue",
+    "setId": 6,
+    "tier": "green",
+    "color": "bg-green-600",
+    "maxSlots": 80,
+    "maxPerPlayer": 10,
+    "price": 120000,
+    "yieldBps": 900,
+    "shieldCostBps": 1600,
+    "cooldown": 24
+  },
+  {
+    "id": 20,
+    "name": "Park Place",
+    "setId": 7,
+    "tier": "darkblue",
+    "color": "bg-blue-900",
+    "maxSlots": 40,
+    "maxPerPlayer": 5,
+    "price": 240000,
+    "yieldBps": 1000,
+    "shieldCostBps": 1700,
+    "cooldown": 28
+  },
+  {
+    "id": 21,
+    "name": "Boardwalk",
+    "setId": 7,
+    "tier": "darkblue",
+    "color": "bg-blue-900",
+    "maxSlots": 40,
+    "maxPerPlayer": 5,
+    "price": 240000,
+    "yieldBps": 1000,
+    "shieldCostBps": 1700,
+    "cooldown": 28
+  }
 ];
 
-const SET_BONUS_BPS = 4000; // 40% bonus
+// ========================================
+// SET BONUSES
+// ========================================
+// Exact copy from property-config.ts
 
-const PROPERTY_SETS = {
-  0: [0, 1],           // Brown
-  1: [2, 3, 4],        // Light Blue
-  2: [5, 6, 7],        // Pink
-  3: [8, 9, 10],       // Orange
-  4: [11, 12, 13],     // Red
-  5: [14, 15, 16],     // Yellow
-  6: [17, 18, 19],     // Green
-  7: [20, 21]          // Dark Blue
+const SET_BONUSES = {
+  "0": {
+    "percent": 30,
+    "bps": 3000
+  },
+  "1": {
+    "percent": 32.86,
+    "bps": 3286
+  },
+  "2": {
+    "percent": 35.71,
+    "bps": 3571
+  },
+  "3": {
+    "percent": 38.57,
+    "bps": 3857
+  },
+  "4": {
+    "percent": 41.43,
+    "bps": 4143
+  },
+  "5": {
+    "percent": 44.29,
+    "bps": 4429
+  },
+  "6": {
+    "percent": 47.14,
+    "bps": 4714
+  },
+  "7": {
+    "percent": 50,
+    "bps": 5000
+  }
 };
 
-function getCooldownDurationForSet(setId) {
-  const firstProp = PROPERTIES.find(p => p.setId === setId);
-  return firstProp ? firstProp.cooldownHours * 3600 : 86400;
+// ========================================
+// HELPER FUNCTIONS
+// ========================================
+
+function getPropertyById(id) {
+  return PROPERTIES.find(p => p.id === id);
 }
 
-function getPropertiesInSet(setId) {
-  return PROPERTY_SETS[setId] ? PROPERTY_SETS[setId].length : 0;
+function getPropertiesBySetId(setId) {
+  return PROPERTIES.filter(p => p.setId === setId);
 }
+
+function getSetBonus(setId) {
+  return SET_BONUSES[setId];
+}
+
+// ========================================
+// EXPORTS
+// ========================================
 
 module.exports = {
   PROPERTIES,
-  SET_BONUS_BPS,
-  PROPERTY_SETS,
-  getCooldownDurationForSet,
-  getPropertiesInSet
+  SET_BONUSES,
+  getPropertyById,
+  getPropertiesBySetId,
+  getSetBonus
 };
