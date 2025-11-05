@@ -141,6 +141,12 @@ function createIndexes() {
     db.run(`ALTER TABLE player_stats ADD COLUMN daily_income INTEGER DEFAULT 0`, () => {});
     db.run(`ALTER TABLE property_ownership ADD COLUMN slots_shielded INTEGER DEFAULT 0`, () => {});
     db.run(`ALTER TABLE property_ownership ADD COLUMN shield_expiry INTEGER DEFAULT 0`, () => {});
+    db.run(`ALTER TABLE player_stats ADD COLUMN leaderboard_score INTEGER DEFAULT 0`, () => {});
+    db.run(`ALTER TABLE player_stats ADD COLUMN roi_ratio REAL DEFAULT 0`, () => {});
+    db.run(`ALTER TABLE player_stats ADD COLUMN steal_win_rate REAL DEFAULT 0`, () => {});
+    db.run(`ALTER TABLE player_stats ADD COLUMN defense_rating REAL DEFAULT 0`, () => {});
+    db.run(`ALTER TABLE player_stats ADD COLUMN complete_sets INTEGER DEFAULT 0`, () => {});
+    db.run(`ALTER TABLE player_stats ADD COLUMN times_stolen INTEGER DEFAULT 0`, () => {});
 
 
     console.log('✅ Database indexes created');
