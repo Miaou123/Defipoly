@@ -1,0 +1,13 @@
+{
+  "name": "@defipoly/shared-types",
+  "version": "1.0.0",
+  "description": "Shared TypeScript types for Defipoly monorepo",
+  "main": "index.js",
+  "types": "index.d.ts",
+  "scripts": {
+    "build": "tsc"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0"
+  }
+}

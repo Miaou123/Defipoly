@@ -6,7 +6,8 @@
   "workspaces": [
     "defipoly-frontend",
     "defipoly-backend",
-    "defipoly-program"
+    "defipoly-program",
+    "shared-types"
   ],
   "scripts": {
     "========== DEVELOPMENT ==========": "",

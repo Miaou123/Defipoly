@@ -4,9 +4,6 @@
     "build": "anchor build",
     "deploy": "anchor deploy",
     "deploy:full": "npm run build && npm run copy-idl && npm run deploy && npm run initialize && npm run generate:constants",
-    "bot:setup": "tsx scripts/bot/setup-test-wallets.ts",
-    "bot:init": "tsx scripts/bot/bot-interactions.ts init all",
-    "bot": "tsx scripts/bot/bot-interactions.ts",
     "initialize":  "tsx scripts/initialize-game.ts",
     "generate:constants": "tsx scripts/generate-constants.ts",
     "test": "anchor test"

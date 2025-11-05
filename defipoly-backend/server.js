@@ -13,7 +13,8 @@ const WSSListener = require('./src/services/wssListener');
 const GapDetector = require('./src/services/gapDetector');
 const { router: wssMonitoringRouter, initMonitoring } = require('./src/routes/wssMonitoring');
 
-require('dotenv').config();
+// Load environment variables from the monorepo root
+require('dotenv').config({ path: '../.env' });
 const app = express();
 const PORT = process.env.PORT || 3005;
 

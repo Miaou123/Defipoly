@@ -3,6 +3,15 @@ import { mintTo, getAssociatedTokenAddress, createAssociatedTokenAccountInstruct
 import * as fs from "fs";
 import * as path from "path";
 import { homedir } from "os";
+import dotenv from 'dotenv';
+import { fileURLToPath } from "url";
+
+// Fix __dirname for ES modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Load environment variables from monorepo root
+dotenv.config({ path: path.join(__dirname, '../../../.env') });
 
 async function main() {
   // Configuration
