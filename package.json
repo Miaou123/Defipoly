@@ -67,9 +67,9 @@
     
     "========== UTILITIES ==========": "",
     "format": "prettier --write \"**/*.{js,jsx,ts,tsx,json,css,md}\"",
-    "check-ports": "lsof -i :3000 && lsof -i :3005",
-    "kill-ports": "kill -9 $(lsof -t -i:3000) && kill -9 $(lsof -t -i:3005)",
-    "health-check": "curl http://localhost:3005/health && curl http://localhost:3000/api/health"
+    "check-ports": "lsof -i :3100 && lsof -i :3101",
+    "kill-ports": "kill -9 $(lsof -t -i:3100) && kill -9 $(lsof -t -i:3101)",
+    "health-check": "curl http://localhost:3101/health && curl http://localhost:3100/api/health"
   },
   "devDependencies": {
     "concurrently": "^8.2.2",

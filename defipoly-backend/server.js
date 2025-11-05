@@ -16,7 +16,7 @@ const { router: wssMonitoringRouter, initMonitoring } = require('./src/routes/ws
 // Load environment variables from the monorepo root
 require('dotenv').config({ path: '../.env' });
 const app = express();
-const PORT = process.env.PORT || 3005;
+const PORT = process.env.PORT || 3101;
 
 // Middleware
 app.use(cors());

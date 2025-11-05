@@ -1,27 +1,20 @@
-# Test wallets - contains private keys, DO NOT COMMIT
-test-wallets/
-test-wallets-backup/
-*.tar.gz
-
-# Wallet backups
-wallets-summary-backup.json
-
-# Node modules
+# Dependencies
 node_modules/
 
-# Build outputs
-target/
-dist/
-.anchor/
+# Build artifacts
+/target
+**/*.rs.bk
 
-# Environment files
-.env
-.env.local
-
-# IDE
-.vscode/
+# IDEs
 .idea/
+.vscode/
 
-# OS files
+# OS
 .DS_Store
-Thumbs.db
+
+# Anchor
+.anchor/
+test-ledger/
+
+# Logs
+*.log
