@@ -1,11 +1,13 @@
 // ============================================
-// FILE: src/services/transactionProcessor.js
-// COMPLETE VERSION with all event types and proper data extraction
+// UPDATED transactionProcessor.js
+// Now reads PROGRAM_ID directly from IDL file
+// No need for PROGRAM_ID in .env anymore
 // ============================================
 
 const { BorshCoder, EventParser } = require('@coral-xyz/anchor');
 const { PublicKey } = require('@solana/web3.js');
 
+// Load IDL - this is the source of truth for PROGRAM_ID
 const idl = require('../idl/defipoly_program.json');
 
 // Log IDL loading
@@ -16,14 +18,15 @@ if (idl.events && idl.events.length > 0) {
   console.log('   - Event names:', idl.events.map(e => e.name).join(', '));
 }
 
-const PROGRAM_ID = new PublicKey(process.env.PROGRAM_ID || idl.address);
+// PROGRAM_ID comes from IDL file, not from .env
+const PROGRAM_ID = new PublicKey(idl.address);
 const coder = new BorshCoder(idl);
 const eventParser = new EventParser(PROGRAM_ID, coder);
 
 console.log('✅ [TRANSACTION PROCESSOR] EventParser initialized');
 
 /**
- * Parse transaction from Helius webhook payload
+ * Parse transaction from Helius webhook payload or WebSocket
  * Returns action data if successful, null otherwise
  */
 async function parseTransaction(tx) {
@@ -72,167 +75,137 @@ async function parseTransaction(tx) {
       return null;
     }
 
-    // Log all events found
-    eventsArray.forEach((event, i) => {
-      console.log(`   Event ${i + 1}: ${event.name}`);
-    });
-    
-    // Map the first valid event to action
+    // Process each event
+    const actions = [];
     for (const event of eventsArray) {
-      console.log(`🔄 [PARSE TX] Mapping event: ${event.name}`);
-      console.log(`📦 [PARSE TX] Event data:`, JSON.stringify(event.data, null, 2));
+      console.log(`\n🎯 [PARSE TX] Processing event: ${event.name}`);
       
-      const actionData = mapEventToAction(event, signature, blockTime);
-      
-      if (actionData) {
-        console.log('✅ [PARSE TX] Successfully mapped to action:', actionData.actionType);
-        console.log('📦 [PARSE TX] Full action data:', JSON.stringify(actionData, null, 2));
-        return actionData;
+      const action = eventToAction(event, signature, blockTime);
+      if (action) {
+        actions.push(action);
+        console.log(`   ✅ Converted to action: ${action.actionType}`);
       } else {
-        console.warn(`⚠️  [PARSE TX] mapEventToAction returned null for event: ${event.name}`);
+        console.warn(`   ⚠️  Could not convert event ${event.name} to action`);
       }
     }
-    
-    console.warn('⚠️  [PARSE TX] No events could be mapped to actions');
-    return null;
-    
+
+    console.log(`\n✅ [PARSE TX] Successfully parsed ${actions.length} action(s)`);
+    return actions;
+
   } catch (error) {
     console.error('❌ [PARSE TX] Error parsing transaction:', error);
-    console.error('Stack trace:', error.stack);
     return null;
   }
 }
 
 /**
- * Map Anchor event to game action format
- * Handles both camelCase and snake_case field names
+ * Convert event to action data
  */
-function mapEventToAction(event, signature, blockTime) {
-  console.log(`🗺️  [MAP EVENT] Mapping event: ${event.name}`);
-  
-  const base = { signature, blockTime };
-  
+function eventToAction(event, signature, blockTime) {
   try {
-    switch (event.name) {
-      // ========== BUY PROPERTY ==========
+    const eventName = event.name;
+    const eventData = event.data;
+
+    console.log(`   📦 Event data:`, JSON.stringify(eventData, null, 2));
+
+    // Base action structure
+    const action = {
+      txSignature: signature,
+      blockTime: blockTime,
+      timestamp: new Date(blockTime * 1000).toISOString(),
+    };
+
+    // Map event types to action types
+    switch (eventName) {
       case 'PropertyBoughtEvent':
-      case 'propertyBoughtEvent':
-        console.log('   → Mapping to: buy');
-        return { 
-          ...base, 
-          actionType: 'buy', 
-          playerAddress: event.data.player?.toString(), 
-          propertyId: event.data.propertyId ?? event.data.property_id,
-          amount: event.data.totalCost?.toNumber?.() ?? event.data.total_cost?.toNumber?.(), 
-          slots: event.data.slots ?? event.data.slots_bought, 
-          success: true,
-          metadata: {
-            slotsOwned: event.data.slotsOwned ?? event.data.slots_owned,
-            totalSlotsOwned: event.data.totalSlotsOwned ?? event.data.total_slots_owned,
-            price: event.data.price?.toString()
-          }
+        return {
+          ...action,
+          actionType: 'buy',
+          playerAddress: eventData.player.toString(),
+          propertyId: eventData.propertyId,
+          slots: eventData.slots,
+          totalCost: eventData.totalCost.toString(),
+          dailyIncome: eventData.dailyIncome.toString(),
         };
-      
-      // ========== SELL PROPERTY ==========
+
       case 'PropertySoldEvent':
-      case 'propertySoldEvent':
-        console.log('   → Mapping to: sell');
-        return { 
-          ...base, 
-          actionType: 'sell', 
-          playerAddress: event.data.player?.toString(), 
-          propertyId: event.data.propertyId ?? event.data.property_id,
-          amount: event.data.received?.toNumber?.(), 
-          slots: event.data.slots ?? event.data.slots_sold, 
-          success: true,
-          metadata: {
-            sellValuePercent: event.data.sellValuePercent ?? event.data.sell_value_percent,
-            daysHeld: event.data.daysHeld ?? event.data.days_held,
-            received: event.data.received?.toString()
-          }
+        return {
+          ...action,
+          actionType: 'sell',
+          playerAddress: eventData.player.toString(),
+          propertyId: eventData.propertyId,
+          slots: eventData.slots,
+          saleValue: eventData.saleValue.toString(),
         };
-      
-      // ========== STEAL SUCCESS ==========
-      case 'StealSuccessEvent':
-      case 'stealSuccessEvent':
-        console.log('   → Mapping to: steal_success');
-        return { 
-          ...base, 
-          actionType: 'steal_success', 
-          playerAddress: event.data.attacker?.toString(),
-          propertyId: event.data.propertyId ?? event.data.property_id,
-          targetAddress: event.data.target?.toString(),
-          slots: event.data.slotsStolen ?? event.data.slots_stolen ?? 1, // Default to 1 if not present
-          amount: event.data.stealCost?.toNumber?.() ?? event.data.steal_cost?.toNumber?.(), 
-          success: true,
-          metadata: {
-            targeted: event.data.targeted,
-            vrfResult: event.data.vrfResult ?? event.data.vrf_result
-          }
-        };
-      
-      // ========== STEAL FAILURE ==========
-      case 'StealFailureEvent':
-      case 'StealFailedEvent':
-      case 'stealFailureEvent':
-      case 'stealFailedEvent':
-        console.log('   → Mapping to: steal_failed');
-        return { 
-          ...base, 
-          actionType: 'steal_failed', 
-          playerAddress: event.data.attacker?.toString(),
-          propertyId: event.data.propertyId ?? event.data.property_id,
-          targetAddress: event.data.target?.toString(),
-          slots: 0, // Failed steals get 0 slots
-          amount: event.data.stealCost?.toNumber?.() ?? event.data.steal_cost?.toNumber?.(), 
-          success: false,
-          metadata: {
-            targeted: event.data.targeted,
-            vrfResult: event.data.vrfResult ?? event.data.vrf_result
-          }
-        };
-      
-      // ========== SHIELD ACTIVATED ==========
-      case 'ShieldActivatedEvent':
-      case 'shieldActivatedEvent':
-        console.log('   → Mapping to: shield');
-        return { 
-          ...base, 
-          actionType: 'shield', 
-          playerAddress: event.data.player?.toString(),
-          propertyId: event.data.propertyId ?? event.data.property_id,
-          slots: event.data.slotsShielded ?? event.data.slots_shielded,
-          amount: event.data.cost?.toNumber?.() ?? event.data.shield_cost?.toNumber?.(), 
-          success: true,
-          metadata: {
-            expiry: event.data.expiry?.toString()
-          }
-        };
-      
-      // ========== REWARDS CLAIMED ==========
+
       case 'RewardsClaimedEvent':
-      case 'rewardsClaimedEvent':
-        console.log('   → Mapping to: claim');
-        return { 
-          ...base, 
-          actionType: 'claim', 
-          playerAddress: event.data.player?.toString(),
-          amount: event.data.amount?.toNumber?.(), 
-          success: true,
-          metadata: {
-            hoursElapsed: event.data.hoursElapsed ?? event.data.hours_elapsed
-          }
+        return {
+          ...action,
+          actionType: 'claim',
+          playerAddress: eventData.player.toString(),
+          amount: eventData.amount.toString(),
         };
-      
+
+      case 'ShieldActivatedEvent':
+        return {
+          ...action,
+          actionType: 'shield',
+          playerAddress: eventData.player.toString(),
+          propertyId: eventData.propertyId,
+          duration: eventData.duration,
+          cost: eventData.cost.toString(),
+        };
+
+      case 'StealSuccessEvent':
+        return {
+          ...action,
+          actionType: 'steal_success',
+          attackerAddress: eventData.attacker.toString(),
+          victimAddress: eventData.victim.toString(),
+          propertyId: eventData.propertyId,
+          slotsStolen: eventData.slotsStolen,
+          stolenValue: eventData.stolenValue.toString(),
+        };
+
+      case 'StealFailedEvent':
+        return {
+          ...action,
+          actionType: 'steal_failed',
+          attackerAddress: eventData.attacker.toString(),
+          victimAddress: eventData.victim.toString(),
+          propertyId: eventData.propertyId,
+          reason: eventData.reason || 'shield_active',
+        };
+
+      case 'StealAttemptEvent':
+        return {
+          ...action,
+          actionType: 'steal_attempt',
+          attackerAddress: eventData.attacker.toString(),
+          victimAddress: eventData.victim.toString(),
+          propertyId: eventData.propertyId,
+        };
+
+      case 'AdminUpdateEvent':
+        return {
+          ...action,
+          actionType: 'admin',
+          adminAddress: eventData.admin.toString(),
+          updateType: eventData.updateType || 'unknown',
+        };
+
       default:
-        console.warn(`   ⚠️  Unknown event type: ${event.name}`);
+        console.warn(`   ⚠️  Unknown event type: ${eventName}`);
         return null;
     }
   } catch (error) {
-    console.error(`   ❌ Error mapping event ${event.name}:`, error);
-    console.error('   Event data:', JSON.stringify(event.data, null, 2));
+    console.error(`   ❌ Error converting event to action:`, error);
     return null;
   }
 }
 
-module.exports = { parseTransaction };
+module.exports = {
+  parseTransaction,
+  eventToAction,
+  PROGRAM_ID, // Export in case other modules need it
+};

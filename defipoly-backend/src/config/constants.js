@@ -1,25 +1,17 @@
 // ============================================
 // AUTO-GENERATED - DO NOT EDIT
 // Source: defipoly-program/scripts/property-config.ts
-// Generated: 2025-11-05T16:08:33.397Z
+// Generated: 2025-11-05T16:38:59.059Z
 // ============================================
-
-// ========================================
-// BLOCKCHAIN ADDRESSES
-// ========================================
-// These come from deployment-info.json which is created by initialize-game.ts
-
-const PROGRAM_ID = 'EUN9cPWG8pJeuuNfBvvtPaKmTzZqiA8xeHYxGiuPjNTE';
-const TOKEN_MINT = '97toD5DaBXcKyVtHenWrrPynuDyBYZtQ5xiWHTh5T4pk';
-const GAME_CONFIG = '275QRvjpz5stZb93T3KY1LLGndCdGs5DvW3bn1F21eRq';
-const REWARD_POOL_VAULT = 'Cq3273buxQhVcZkqEZw83aGnfitNRQM8LKFZX9B2ggEc';
-const REWARD_POOL = '200000000000000000';
-const NETWORK = 'devnet';
+// 
+// This file contains game configuration data only.
+// Blockchain addresses (PROGRAM_ID, etc.) are read from the IDL file.
+//
+// ============================================
 
 // ========================================
 // PROPERTIES
 // ========================================
-// Exact copy from property-config.ts
 
 const PROPERTIES = [
   {
@@ -313,7 +305,6 @@ const PROPERTIES = [
 // ========================================
 // SET BONUSES
 // ========================================
-// Exact copy from property-config.ts
 
 const SET_BONUSES = {
   "0": {
@@ -351,6 +342,52 @@ const SET_BONUSES = {
 };
 
 // ========================================
+// DERIVED DATA
+// ========================================
+// Property IDs grouped by setId for cooldown checks
+
+const PROPERTY_SETS = {
+  "0": [
+    0,
+    1
+  ],
+  "1": [
+    2,
+    3,
+    4
+  ],
+  "2": [
+    5,
+    6,
+    7
+  ],
+  "3": [
+    8,
+    9,
+    10
+  ],
+  "4": [
+    11,
+    12,
+    13
+  ],
+  "5": [
+    14,
+    15,
+    16
+  ],
+  "6": [
+    17,
+    18,
+    19
+  ],
+  "7": [
+    20,
+    21
+  ]
+};
+
+// ========================================
 // HELPER FUNCTIONS
 // ========================================
 
@@ -366,23 +403,30 @@ function getSetBonus(setId) {
   return SET_BONUSES[setId];
 }
 
+function getSetBonusBps(setId) {
+  return SET_BONUSES[setId]?.bps || 4000;
+}
+
+function getCooldownDurationForSet(setId) {
+  // Return cooldown in seconds - gets it from first property in set
+  const property = PROPERTIES.find(p => p.setId === setId);
+  return property ? property.cooldown * 3600 : 86400; // hours to seconds, default 24h
+}
+
 // ========================================
 // EXPORTS
 // ========================================
 
 module.exports = {
-  // Blockchain addresses
-  PROGRAM_ID,
-  TOKEN_MINT,
-  GAME_CONFIG,
-  REWARD_POOL_VAULT,
-  REWARD_POOL,
-  NETWORK,
-  
-  // Properties
+  // Game data
   PROPERTIES,
   SET_BONUSES,
+  PROPERTY_SETS,
+  
+  // Helper functions
   getPropertyById,
   getPropertiesBySetId,
-  getSetBonus
+  getSetBonus,
+  getSetBonusBps,
+  getCooldownDurationForSet
 };

@@ -1,7 +1,6 @@
 // ============================================
-// FILE: server.js
-// Defipoly Backend - WSS Version
-// Upgraded from webhooks to WebSocket for 100% reliability
+// UPDATED server.js
+// Now reads PROGRAM_ID from IDL file instead of .env
 // ============================================
 
 const express = require('express');
@@ -15,6 +14,10 @@ const { router: wssMonitoringRouter, initMonitoring } = require('./src/routes/ws
 
 // Load environment variables from the monorepo root
 require('dotenv').config({ path: '../.env' });
+
+// Load IDL to get PROGRAM_ID
+const idl = require('./src/idl/defipoly_program.json');
+
 const app = express();
 const PORT = process.env.PORT || 3101;
 
@@ -29,6 +32,7 @@ app.get('/health', (req, res) => {
     timestamp: Date.now(),
     version: '2.0.0',
     mode: 'wss',
+    programId: idl.address,
     features: ['profiles', 'actions', 'cooldowns', 'stats', 'leaderboard', 'wss', 'gap-detection']
   });
 });
@@ -56,65 +60,73 @@ let gapDetector = null;
  */
 async function initializeWSS() {
   try {
-    // Get configuration from environment
+    // Get configuration
     const RPC_URL = process.env.RPC_URL;
-    const PROGRAM_ID = process.env.PROGRAM_ID;
+    const WS_URL = process.env.SOLANA_WS_URL || RPC_URL.replace('https://', 'wss://');
+    const PROGRAM_ID = idl.address; // Read from IDL instead of .env
     
     if (!RPC_URL) {
-      throw new Error('RPC_URL not set in .env file');
-    }
-    
-    if (!PROGRAM_ID) {
-      throw new Error('PROGRAM_ID not set in .env file');
+      console.error('❌ RPC_URL not set in environment');
+      console.log('   Please set RPC_URL in your .env file');
+      return;
     }
 
-    // Derive WebSocket URL from RPC URL if not explicitly set
-    let SOLANA_WS_URL = process.env.SOLANA_WS_URL;
-    if (!SOLANA_WS_URL) {
-      SOLANA_WS_URL = RPC_URL.replace('https://', 'wss://').replace('http://', 'ws://');
-      console.log('ℹ️  SOLANA_WS_URL not set, auto-derived from RPC URL');
-    }
+    console.log('\n🌐 Starting WebSocket listener...');
+    console.log(`📡 RPC URL: ${RPC_URL}`);
+    console.log(`🔌 WS URL: ${WS_URL}`);
+    console.log(`🎯 Program ID: ${PROGRAM_ID}`);
 
-    // Initialize WSS Listener
-    wssListener = new WSSListener(RPC_URL, SOLANA_WS_URL, PROGRAM_ID);
+    // Initialize WSS listener with all 3 required parameters
+    wssListener = new WSSListener(RPC_URL, WS_URL, PROGRAM_ID);
     await wssListener.start();
 
-    // Initialize Gap Detector
-    gapDetector = new GapDetector(RPC_URL, SOLANA_WS_URL, PROGRAM_ID);
+    console.log('✅ WebSocket listener started successfully!\n');
+
+    // Initialize gap detector
+    console.log('🔍 Starting gap detector...');
+    const checkInterval = parseInt(process.env.GAP_CHECK_INTERVAL) || 600; // 10 minutes default
+    console.log(`   Check interval: ${checkInterval} seconds`);
+    
+    gapDetector = new GapDetector(RPC_URL, WS_URL, PROGRAM_ID);
+    gapDetector.checkInterval = checkInterval * 1000; // Convert to ms
     await gapDetector.start();
-
-    // Initialize monitoring routes with WSS instances
+    
+    console.log('✅ Gap detector started');
+    
+    // Initialize monitoring
     initMonitoring(wssListener, gapDetector);
-
     console.log('✅ WSS and Gap Detection initialized successfully\n');
+
   } catch (error) {
-    console.error('❌ Failed to initialize WSS:', error.message);
-    console.error('Stack:', error.stack);
-    throw error;
+    console.error('❌ Error initializing WebSocket listener:', error);
   }
 }
 
 /**
- * Initialize database and start server
+ * Start server
  */
 async function startServer() {
   try {
     // Initialize database
     await initDatabase();
-    
-    // Initialize WebSocket listener
-    await initializeWSS();
+
+    // Initialize WSS if enabled
+    if (process.env.ENABLE_WSS !== 'false') {
+      await initializeWSS();
+    } else {
+      console.log('⚠️  WebSocket listener disabled (ENABLE_WSS=false)');
+    }
 
     // Start Express server
     app.listen(PORT, () => {
-      console.log(`🚀 Defipoly API v2.0 running on port ${PORT}`);
+      console.log(`\n🚀 Defipoly API v2.0 running on port ${PORT}`);
       console.log(`📊 Database: SQLite (defipoly.db)`);
       console.log(`✅ Profile storage enabled`);
       console.log(`✅ Game actions tracking enabled`);
       console.log(`✅ Cooldown system enabled`);
       console.log(`✅ Player stats & leaderboard enabled`);
-      console.log(`🔌 WebSocket listener enabled`);
-      console.log(`🔍 Gap detection enabled`);
+      console.log(`🔌 WebSocket listener ${process.env.ENABLE_WSS !== 'false' ? 'enabled' : 'disabled'}`);
+      console.log(`🔍 Gap detection ${process.env.ENABLE_WSS !== 'false' ? 'enabled' : 'disabled'}`);
       console.log(`\n📡 Available endpoints:`);
       console.log(`   GET  /health`);
       console.log(`   GET  /api/game/constants`);
@@ -123,8 +135,8 @@ async function startServer() {
       console.log(`   POST /api/profiles/batch`);
       console.log(`   GET  /api/cooldown/:wallet/:setId`);
       console.log(`   GET  /api/cooldown/:wallet`);
-      console.log(`   GET  /api/steal-cooldown/:wallet/:propertyId`); 
-      console.log(`   GET  /api/steal-cooldown/:wallet`); 
+      console.log(`   GET  /api/steal-cooldown/:wallet/:propertyId`);
+      console.log(`   GET  /api/steal-cooldown/:wallet`);
       console.log(`   GET  /api/stats/:wallet`);
       console.log(`   GET  /api/ownership/:wallet`);
       console.log(`   GET  /api/leaderboard`);
@@ -137,10 +149,11 @@ async function startServer() {
       console.log(`   GET  /api/wss/status`);
       console.log(`   GET  /api/wss/stats`);
       console.log(`   GET  /api/wss/health`);
-      console.log(`   POST /api/wss/check-gaps`);
+      console.log(`   POST /api/wss/check-gaps\n`);
     });
+
   } catch (error) {
-    console.error('Failed to start server:', error);
+    console.error('❌ Error starting server:', error);
     process.exit(1);
   }
 }
@@ -149,24 +162,29 @@ async function startServer() {
  * Graceful shutdown
  */
 async function shutdown() {
-  console.log('\n🛑 Graceful shutdown initiated...');
-  
+  console.log('\n🛑 Shutting down gracefully...');
+
   // Stop WSS listener
   if (wssListener) {
+    console.log('   Stopping WebSocket listener...');
     await wssListener.stop();
   }
-  
+
   // Stop gap detector
   if (gapDetector) {
-    gapDetector.stop();
+    console.log('   Stopping gap detector...');
+    await gapDetector.stop();
   }
-  
+
   // Close database
+  console.log('   Closing database...');
   await closeDatabase();
-  
+
+  console.log('✅ Shutdown complete');
   process.exit(0);
 }
 
+// Handle shutdown signals
 process.on('SIGINT', shutdown);
 process.on('SIGTERM', shutdown);
 

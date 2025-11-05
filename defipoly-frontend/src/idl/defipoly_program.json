@@ -1,5 +1,5 @@
 {
-  "address": "HpacCgxUuzwoMeryvQtC94RxFmpxC6dYPX5E17JBzBmQ",
+  "address": "EUN9cPWG8pJeuuNfBvvtPaKmTzZqiA8xeHYxGiuPjNTE",
   "metadata": {
     "name": "defipoly_program",
     "version": "0.1.0",
@@ -43,6 +43,10 @@
           "writable": true
         },
         {
+          "name": "marketing_token_account",
+          "writable": true
+        },
+        {
           "name": "game_config"
         },
         {
@@ -61,6 +65,92 @@
           "type": "u16"
         }
       ]
+    },
+    {
+      "name": "admin_adjust_rewards",
+      "discriminator": [
+        20,
+        225,
+        59,
+        92,
+        163,
+        126,
+        43,
+        33
+      ],
+      "accounts": [
+        {
+          "name": "player_account",
+          "writable": true
+        },
+        {
+          "name": "game_config"
+        },
+        {
+          "name": "authority",
+          "signer": true
+        }
+      ],
+      "args": [
+        {
+          "name": "adjustment",
+          "type": "i64"
+        }
+      ]
+    },
+    {
+      "name": "admin_clear_cooldown",
+      "discriminator": [
+        250,
+        255,
+        172,
+        116,
+        53,
+        40,
+        105,
+        42
+      ],
+      "accounts": [
+        {
+          "name": "set_cooldown",
+          "writable": true
+        },
+        {
+          "name": "game_config"
+        },
+        {
+          "name": "authority",
+          "signer": true
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "admin_clear_steal_cooldown",
+      "discriminator": [
+        5,
+        43,
+        23,
+        48,
+        107,
+        46,
+        240,
+        5
+      ],
+      "accounts": [
+        {
+          "name": "steal_cooldown",
+          "writable": true
+        },
+        {
+          "name": "game_config"
+        },
+        {
+          "name": "authority",
+          "signer": true
+        }
+      ],
+      "args": []
     },
     {
       "name": "admin_close_player_account",
@@ -96,6 +186,380 @@
         }
       ],
       "args": []
+    },
+    {
+      "name": "admin_emergency_withdraw",
+      "discriminator": [
+        234,
+        95,
+        216,
+        247,
+        172,
+        94,
+        175,
+        95
+      ],
+      "accounts": [
+        {
+          "name": "reward_pool_vault",
+          "writable": true
+        },
+        {
+          "name": "destination_account",
+          "writable": true
+        },
+        {
+          "name": "game_config"
+        },
+        {
+          "name": "authority",
+          "signer": true
+        },
+        {
+          "name": "token_program",
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+        }
+      ],
+      "args": [
+        {
+          "name": "amount",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "admin_grant_property",
+      "discriminator": [
+        67,
+        95,
+        98,
+        239,
+        225,
+        7,
+        70,
+        92
+      ],
+      "accounts": [
+        {
+          "name": "property",
+          "writable": true
+        },
+        {
+          "name": "ownership",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  111,
+                  119,
+                  110,
+                  101,
+                  114,
+                  115,
+                  104,
+                  105,
+                  112
+                ]
+              },
+              {
+                "kind": "arg",
+                "path": "target_player"
+              },
+              {
+                "kind": "account",
+                "path": "property.property_id",
+                "account": "Property"
+              }
+            ]
+          }
+        },
+        {
+          "name": "player_account",
+          "writable": true
+        },
+        {
+          "name": "game_config"
+        },
+        {
+          "name": "authority",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "target_player",
+          "type": "pubkey"
+        },
+        {
+          "name": "slots",
+          "type": "u16"
+        }
+      ]
+    },
+    {
+      "name": "admin_grant_shield",
+      "discriminator": [
+        106,
+        23,
+        91,
+        239,
+        96,
+        37,
+        232,
+        102
+      ],
+      "accounts": [
+        {
+          "name": "ownership",
+          "writable": true
+        },
+        {
+          "name": "game_config"
+        },
+        {
+          "name": "authority",
+          "signer": true
+        }
+      ],
+      "args": [
+        {
+          "name": "duration_hours",
+          "type": "u16"
+        }
+      ]
+    },
+    {
+      "name": "admin_revoke_property",
+      "discriminator": [
+        114,
+        105,
+        169,
+        177,
+        6,
+        195,
+        165,
+        12
+      ],
+      "accounts": [
+        {
+          "name": "property",
+          "writable": true
+        },
+        {
+          "name": "ownership",
+          "writable": true
+        },
+        {
+          "name": "player_account",
+          "writable": true
+        },
+        {
+          "name": "game_config"
+        },
+        {
+          "name": "authority",
+          "signer": true
+        }
+      ],
+      "args": [
+        {
+          "name": "slots",
+          "type": "u16"
+        }
+      ]
+    },
+    {
+      "name": "admin_transfer_authority",
+      "discriminator": [
+        43,
+        5,
+        102,
+        219,
+        33,
+        242,
+        26,
+        101
+      ],
+      "accounts": [
+        {
+          "name": "game_config",
+          "writable": true
+        },
+        {
+          "name": "authority",
+          "signer": true
+        }
+      ],
+      "args": [
+        {
+          "name": "new_authority",
+          "type": "pubkey"
+        }
+      ]
+    },
+    {
+      "name": "admin_update_cooldown",
+      "discriminator": [
+        239,
+        9,
+        67,
+        136,
+        231,
+        79,
+        245,
+        57
+      ],
+      "accounts": [
+        {
+          "name": "property",
+          "writable": true
+        },
+        {
+          "name": "game_config"
+        },
+        {
+          "name": "authority",
+          "signer": true
+        }
+      ],
+      "args": [
+        {
+          "name": "property_id",
+          "type": "u8"
+        },
+        {
+          "name": "new_cooldown_seconds",
+          "type": "i64"
+        }
+      ]
+    },
+    {
+      "name": "admin_update_global_rates",
+      "discriminator": [
+        92,
+        211,
+        176,
+        109,
+        22,
+        192,
+        116,
+        250
+      ],
+      "accounts": [
+        {
+          "name": "game_config",
+          "writable": true
+        },
+        {
+          "name": "authority",
+          "signer": true
+        }
+      ],
+      "args": [
+        {
+          "name": "steal_cost_bps",
+          "type": {
+            "option": "u16"
+          }
+        },
+        {
+          "name": "set_bonus_bps",
+          "type": {
+            "option": "u16"
+          }
+        },
+        {
+          "name": "max_properties_claim",
+          "type": {
+            "option": "u8"
+          }
+        },
+        {
+          "name": "min_claim_interval",
+          "type": {
+            "option": "i64"
+          }
+        }
+      ]
+    },
+    {
+      "name": "admin_update_property_yield",
+      "discriminator": [
+        161,
+        192,
+        5,
+        202,
+        138,
+        57,
+        23,
+        101
+      ],
+      "accounts": [
+        {
+          "name": "property",
+          "writable": true
+        },
+        {
+          "name": "game_config"
+        },
+        {
+          "name": "authority",
+          "signer": true
+        }
+      ],
+      "args": [
+        {
+          "name": "property_id",
+          "type": "u8"
+        },
+        {
+          "name": "new_yield_bps",
+          "type": "u16"
+        }
+      ]
+    },
+    {
+      "name": "admin_update_shield_cost",
+      "discriminator": [
+        139,
+        234,
+        180,
+        103,
+        223,
+        197,
+        50,
+        123
+      ],
+      "accounts": [
+        {
+          "name": "property",
+          "writable": true
+        },
+        {
+          "name": "game_config"
+        },
+        {
+          "name": "authority",
+          "signer": true
+        }
+      ],
+      "args": [
+        {
+          "name": "property_id",
+          "type": "u8"
+        },
+        {
+          "name": "new_shield_cost_bps",
+          "type": "u16"
+        }
+      ]
     },
     {
       "name": "buy_property",
@@ -254,6 +718,10 @@
         },
         {
           "name": "dev_token_account",
+          "writable": true
+        },
+        {
+          "name": "marketing_token_account",
           "writable": true
         },
         {
@@ -522,6 +990,99 @@
           "name": "dev_wallet"
         },
         {
+          "name": "marketing_token_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "marketing_wallet"
+              },
+              {
+                "kind": "const",
+                "value": [
+                  6,
+                  221,
+                  246,
+                  225,
+                  215,
+                  101,
+                  161,
+                  147,
+                  217,
+                  203,
+                  225,
+                  70,
+                  206,
+                  235,
+                  121,
+                  172,
+                  28,
+                  180,
+                  133,
+                  237,
+                  95,
+                  91,
+                  55,
+                  145,
+                  58,
+                  140,
+                  245,
+                  133,
+                  126,
+                  255,
+                  0,
+                  169
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "token_mint"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                140,
+                151,
+                37,
+                143,
+                78,
+                36,
+                137,
+                241,
+                187,
+                61,
+                16,
+                41,
+                20,
+                142,
+                13,
+                131,
+                11,
+                90,
+                19,
+                153,
+                218,
+                255,
+                16,
+                132,
+                4,
+                142,
+                123,
+                216,
+                219,
+                233,
+                248,
+                89
+              ]
+            }
+          }
+        },
+        {
+          "name": "marketing_wallet"
+        },
+        {
           "name": "authority",
           "writable": true,
           "signer": true
@@ -764,7 +1325,8 @@
     {
       "name": "steal_property_instant",
       "docs": [
-        "Instant steal with cooldown protection (SINGLE TRANSACTION - 33% success rate)"
+        "Instant steal with cooldown protection (SINGLE TRANSACTION - 33% success rate)",
+        "Randomly selects target from eligible owners passed in remaining_accounts"
       ],
       "discriminator": [
         213,
@@ -779,10 +1341,6 @@
       "accounts": [
         {
           "name": "property"
-        },
-        {
-          "name": "target_ownership",
-          "writable": true
         },
         {
           "name": "attacker_ownership",
@@ -856,10 +1414,6 @@
           "writable": true
         },
         {
-          "name": "target_account",
-          "writable": true
-        },
-        {
           "name": "player_token_account",
           "writable": true
         },
@@ -869,6 +1423,10 @@
         },
         {
           "name": "dev_token_account",
+          "writable": true
+        },
+        {
+          "name": "marketing_token_account",
           "writable": true
         },
         {
@@ -893,10 +1451,6 @@
         }
       ],
       "args": [
-        {
-          "name": "target_player",
-          "type": "pubkey"
-        },
         {
           "name": "user_randomness",
           "type": {
@@ -1175,6 +1729,71 @@
   ],
   "events": [
     {
+      "name": "AdminAuthorityTransferEvent",
+      "discriminator": [
+        48,
+        150,
+        162,
+        219,
+        223,
+        17,
+        99,
+        0
+      ]
+    },
+    {
+      "name": "AdminGrantEvent",
+      "discriminator": [
+        159,
+        240,
+        244,
+        202,
+        212,
+        35,
+        13,
+        146
+      ]
+    },
+    {
+      "name": "AdminPlayerAdjustEvent",
+      "discriminator": [
+        157,
+        191,
+        86,
+        172,
+        99,
+        47,
+        201,
+        67
+      ]
+    },
+    {
+      "name": "AdminRevokeEvent",
+      "discriminator": [
+        54,
+        207,
+        40,
+        4,
+        16,
+        128,
+        92,
+        128
+      ]
+    },
+    {
+      "name": "AdminShieldGrantEvent",
+      "discriminator": [
+        2,
+        135,
+        125,
+        181,
+        139,
+        62,
+        185,
+        7
+      ]
+    },
+    {
       "name": "AdminUpdateEvent",
       "discriminator": [
         254,
@@ -1185,6 +1804,19 @@
         154,
         22,
         143
+      ]
+    },
+    {
+      "name": "AdminWithdrawEvent",
+      "discriminator": [
+        209,
+        205,
+        149,
+        148,
+        126,
+        161,
+        184,
+        237
       ]
     },
     {
@@ -1332,116 +1964,282 @@
     },
     {
       "code": 6010,
+      "name": "NoEligibleTargets",
+      "msg": "No eligible targets found"
+    },
+    {
+      "code": 6011,
+      "name": "AllSlotsProtected",
+      "msg": "All slots are protected (shielded or steal protection active)"
+    },
+    {
+      "code": 6012,
       "name": "CannotStealFromSelf",
       "msg": "Cannot steal from yourself"
     },
     {
-      "code": 6011,
+      "code": 6013,
       "name": "AllSlotsShielded",
       "msg": "All slots are shielded"
     },
     {
-      "code": 6012,
+      "code": 6014,
       "name": "InsufficientSlots",
       "msg": "Insufficient slots"
     },
     {
-      "code": 6013,
+      "code": 6015,
       "name": "NoRewardsToClaim",
       "msg": "No rewards to claim"
     },
     {
-      "code": 6014,
+      "code": 6016,
       "name": "GamePaused",
       "msg": "Game is paused"
     },
     {
-      "code": 6015,
+      "code": 6017,
       "name": "Unauthorized",
       "msg": "Unauthorized - ownership does not match player"
     },
     {
-      "code": 6016,
+      "code": 6018,
       "name": "InvalidAccountCount",
       "msg": "Invalid account count in remaining_accounts"
     },
     {
-      "code": 6017,
+      "code": 6019,
       "name": "PropertyMismatch",
       "msg": "Property mismatch between ownership and property account"
     },
     {
-      "code": 6018,
+      "code": 6020,
       "name": "NoProperties",
       "msg": "No properties provided"
     },
     {
-      "code": 6019,
+      "code": 6021,
       "name": "InvalidTarget",
       "msg": "Invalid target player"
     },
     {
-      "code": 6020,
+      "code": 6022,
       "name": "InsufficientRewardPool",
       "msg": "Insufficient reward pool balance"
     },
     {
-      "code": 6021,
+      "code": 6023,
       "name": "TooManyProperties",
       "msg": "Too many properties in single claim (max 22)"
     },
     {
-      "code": 6022,
+      "code": 6024,
       "name": "ClaimTooSoon",
       "msg": "Claim too soon - wait at least 1 minutes"
     },
     {
-      "code": 6023,
+      "code": 6025,
       "name": "AlreadyFulfilled",
       "msg": "VRF result already fulfilled"
     },
     {
-      "code": 6024,
+      "code": 6026,
       "name": "VrfNotReady",
       "msg": "VRF result not ready yet - wait at least 1 slot"
     },
     {
-      "code": 6025,
+      "code": 6027,
       "name": "PendingStealExists",
       "msg": "Pending steal request exists - wait 5 minutes or until fulfilled"
     },
     {
-      "code": 6026,
+      "code": 6028,
       "name": "NotFulfilled",
       "msg": "Steal request not fulfilled yet - cannot close"
     },
     {
-      "code": 6027,
+      "code": 6029,
       "name": "StealRequestExpired",
       "msg": "Steal request expired - must fulfill within 150 slots (~60 sec)"
     },
     {
-      "code": 6028,
+      "code": 6030,
       "name": "StealCooldownActive",
       "msg": "Steal cooldown active - wait before attempting again"
     },
     {
-      "code": 6029,
+      "code": 6031,
       "name": "SlotHashUnavailable",
       "msg": "Slot hash unavailable - try again"
     },
     {
-      "code": 6030,
+      "code": 6032,
       "name": "InvalidShieldDuration",
       "msg": "Invalid shield duration. Must be between 1 and 48 hours."
     },
     {
-      "code": 6031,
+      "code": 6033,
       "name": "ShieldAlreadyActive",
       "msg": "Shield is already active. Wait for expiry before reactivating."
+    },
+    {
+      "code": 6034,
+      "name": "StealProtectionActive",
+      "msg": "Steal protection is active on this property"
+    },
+    {
+      "code": 6035,
+      "name": "InvalidYield",
+      "msg": "Invalid yield percentage (must be <= 100%)"
+    },
+    {
+      "code": 6036,
+      "name": "InvalidShieldCost",
+      "msg": "Invalid shield cost percentage"
+    },
+    {
+      "code": 6037,
+      "name": "InvalidCooldown",
+      "msg": "Invalid cooldown duration"
+    },
+    {
+      "code": 6038,
+      "name": "InvalidStealCost",
+      "msg": "Invalid steal cost"
+    },
+    {
+      "code": 6039,
+      "name": "InvalidSetBonus",
+      "msg": "Invalid set bonus"
+    },
+    {
+      "code": 6040,
+      "name": "InvalidPropertyCount",
+      "msg": "Invalid property count"
+    },
+    {
+      "code": 6041,
+      "name": "InvalidClaimInterval",
+      "msg": "Invalid claim interval"
     }
   ],
   "types": [
+    {
+      "name": "AdminAuthorityTransferEvent",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "old_authority",
+            "type": "pubkey"
+          },
+          {
+            "name": "new_authority",
+            "type": "pubkey"
+          }
+        ]
+      }
+    },
+    {
+      "name": "AdminGrantEvent",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "admin",
+            "type": "pubkey"
+          },
+          {
+            "name": "target_player",
+            "type": "pubkey"
+          },
+          {
+            "name": "property_id",
+            "type": "u8"
+          },
+          {
+            "name": "slots",
+            "type": "u16"
+          }
+        ]
+      }
+    },
+    {
+      "name": "AdminPlayerAdjustEvent",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "admin",
+            "type": "pubkey"
+          },
+          {
+            "name": "player",
+            "type": "pubkey"
+          },
+          {
+            "name": "adjustment_type",
+            "type": "string"
+          },
+          {
+            "name": "value",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "AdminRevokeEvent",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "admin",
+            "type": "pubkey"
+          },
+          {
+            "name": "target_player",
+            "type": "pubkey"
+          },
+          {
+            "name": "property_id",
+            "type": "u8"
+          },
+          {
+            "name": "slots",
+            "type": "u16"
+          }
+        ]
+      }
+    },
+    {
+      "name": "AdminShieldGrantEvent",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "admin",
+            "type": "pubkey"
+          },
+          {
+            "name": "player",
+            "type": "pubkey"
+          },
+          {
+            "name": "property_id",
+            "type": "u8"
+          },
+          {
+            "name": "duration_hours",
+            "type": "u16"
+          },
+          {
+            "name": "expiry",
+            "type": "i64"
+          }
+        ]
+      }
+    },
     {
       "name": "AdminUpdateEvent",
       "type": {
@@ -1463,6 +2261,26 @@
       }
     },
     {
+      "name": "AdminWithdrawEvent",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "admin",
+            "type": "pubkey"
+          },
+          {
+            "name": "amount",
+            "type": "u64"
+          },
+          {
+            "name": "destination",
+            "type": "pubkey"
+          }
+        ]
+      }
+    },
+    {
       "name": "GameConfig",
       "type": {
         "kind": "struct",
@@ -1473,6 +2291,10 @@
           },
           {
             "name": "dev_wallet",
+            "type": "pubkey"
+          },
+          {
+            "name": "marketing_wallet",
             "type": "pubkey"
           },
           {
@@ -1534,6 +2356,15 @@
           {
             "name": "reward_pool_vault_bump",
             "type": "u8"
+          },
+          {
+            "name": "padding",
+            "type": {
+              "array": [
+                "u8",
+                256
+              ]
+            }
           }
         ]
       }
@@ -1582,6 +2413,15 @@
           {
             "name": "bump",
             "type": "u8"
+          },
+          {
+            "name": "padding",
+            "type": {
+              "array": [
+                "u8",
+                128
+              ]
+            }
           }
         ]
       }
@@ -1627,6 +2467,15 @@
           {
             "name": "bump",
             "type": "u8"
+          },
+          {
+            "name": "padding",
+            "type": {
+              "array": [
+                "u8",
+                64
+              ]
+            }
           }
         ]
       }
@@ -1672,6 +2521,15 @@
           {
             "name": "bump",
             "type": "u8"
+          },
+          {
+            "name": "padding",
+            "type": {
+              "array": [
+                "u8",
+                64
+              ]
+            }
           }
         ]
       }
@@ -1700,6 +2558,15 @@
           {
             "name": "bump",
             "type": "u8"
+          },
+          {
+            "name": "padding",
+            "type": {
+              "array": [
+                "u8",
+                64
+              ]
+            }
           }
         ]
       }
@@ -1748,6 +2615,15 @@
           {
             "name": "bump",
             "type": "u8"
+          },
+          {
+            "name": "padding",
+            "type": {
+              "array": [
+                "u8",
+                128
+              ]
+            }
           }
         ]
       }
@@ -1822,8 +2698,21 @@
             "type": "i64"
           },
           {
+            "name": "steal_protection_expiry",
+            "type": "i64"
+          },
+          {
             "name": "bump",
             "type": "u8"
+          },
+          {
+            "name": "padding",
+            "type": {
+              "array": [
+                "u8",
+                64
+              ]
+            }
           }
         ]
       }
@@ -1908,6 +2797,15 @@
           {
             "name": "bump",
             "type": "u8"
+          },
+          {
+            "name": "padding",
+            "type": {
+              "array": [
+                "u8",
+                64
+              ]
+            }
           }
         ]
       }

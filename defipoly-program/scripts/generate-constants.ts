@@ -1,6 +1,7 @@
 // ============================================
-// SIMPLE generate-constants.ts
-// Just exports property-config.ts to frontend and backend
+// UPDATED generate-constants.ts
+// Simplifies backend constants - only game data, no blockchain addresses
+// Blockchain addresses come from IDL file
 // ============================================
 
 import * as fs from "fs";
@@ -16,13 +17,13 @@ const __dirname = path.dirname(__filename);
 dotenv.config({ path: path.join(__dirname, '../../../.env') });
 
 interface DeploymentInfo {
-  programId: string;      // From: target/idl/defipoly_program.json (which gets it from Anchor.toml)
-  tokenMint: string;      // From: initialize-game.ts (created when game is initialized)
-  gameConfig: string;     // From: initialize-game.ts (PDA: seeds ["game_config"])
-  rewardPoolVault: string; // From: initialize-game.ts (PDA for reward pool vault)
-  rewardPool: string;     // From: initialize-game.ts (token account created during init)
-  deployedAt: string;     // Timestamp when game was initialized
-  network: string;        // "devnet" or "mainnet"
+  programId: string;
+  tokenMint: string;
+  gameConfig: string;
+  rewardPoolVault: string;
+  rewardPool: string;
+  deployedAt: string;
+  network: string;
 }
 
 /**
@@ -83,40 +84,47 @@ export function getSetBonus(setId: number) {
 
 /**
  * Generate Backend Constants (JavaScript)
- * FIXED: Now includes blockchain addresses!
+ * Includes only what the backend actually needs - no blockchain addresses
  */
-function generateBackendConstants(deployment: DeploymentInfo): string {
+function generateBackendConstants(): string {
+  // Derive PROPERTY_SETS from PROPERTIES
+  const propertySets: { [key: number]: number[] } = {};
+  PROPERTY_CONFIG.forEach(prop => {
+    if (!propertySets[prop.setId]) {
+      propertySets[prop.setId] = [];
+    }
+    propertySets[prop.setId].push(prop.id);
+  });
+
   return `// ============================================
 // AUTO-GENERATED - DO NOT EDIT
 // Source: defipoly-program/scripts/property-config.ts
 // Generated: ${new Date().toISOString()}
 // ============================================
-
-// ========================================
-// BLOCKCHAIN ADDRESSES
-// ========================================
-// These come from deployment-info.json which is created by initialize-game.ts
-
-const PROGRAM_ID = '${deployment.programId}';
-const TOKEN_MINT = '${deployment.tokenMint}';
-const GAME_CONFIG = '${deployment.gameConfig}';
-const REWARD_POOL_VAULT = '${deployment.rewardPoolVault || deployment.gameConfig}';
-const REWARD_POOL = '${deployment.rewardPool}';
-const NETWORK = '${deployment.network}';
+// 
+// This file contains game configuration data only.
+// Blockchain addresses (PROGRAM_ID, etc.) are read from the IDL file.
+//
+// ============================================
 
 // ========================================
 // PROPERTIES
 // ========================================
-// Exact copy from property-config.ts
 
 const PROPERTIES = ${JSON.stringify(PROPERTY_CONFIG, null, 2)};
 
 // ========================================
 // SET BONUSES
 // ========================================
-// Exact copy from property-config.ts
 
 const SET_BONUSES = ${JSON.stringify(SET_BONUSES, null, 2)};
+
+// ========================================
+// DERIVED DATA
+// ========================================
+// Property IDs grouped by setId for cooldown checks
+
+const PROPERTY_SETS = ${JSON.stringify(propertySets, null, 2)};
 
 // ========================================
 // HELPER FUNCTIONS
@@ -134,25 +142,32 @@ function getSetBonus(setId) {
   return SET_BONUSES[setId];
 }
 
+function getSetBonusBps(setId) {
+  return SET_BONUSES[setId]?.bps || 4000;
+}
+
+function getCooldownDurationForSet(setId) {
+  // Return cooldown in seconds - gets it from first property in set
+  const property = PROPERTIES.find(p => p.setId === setId);
+  return property ? property.cooldown * 3600 : 86400; // hours to seconds, default 24h
+}
+
 // ========================================
 // EXPORTS
 // ========================================
 
 module.exports = {
-  // Blockchain addresses
-  PROGRAM_ID,
-  TOKEN_MINT,
-  GAME_CONFIG,
-  REWARD_POOL_VAULT,
-  REWARD_POOL,
-  NETWORK,
-  
-  // Properties
+  // Game data
   PROPERTIES,
   SET_BONUSES,
+  PROPERTY_SETS,
+  
+  // Helper functions
   getPropertyById,
   getPropertiesBySetId,
-  getSetBonus
+  getSetBonus,
+  getSetBonusBps,
+  getCooldownDurationForSet
 };
 `;
 }
@@ -166,11 +181,6 @@ async function generate() {
   // ========================================
   // STEP 1: Read deployment-info.json
   // ========================================
-  // This file is created by initialize-game.ts and contains:
-  // - programId: From Anchor.toml (your deployed program address)
-  // - tokenMint: Created when game is initialized (your game token)
-  // - gameConfig: PDA created during initialization
-  // - rewardPool: Token account for rewards
   
   const deploymentPath = path.join(__dirname, "deployment-info.json");
   
@@ -214,7 +224,7 @@ async function generate() {
   // ========================================
   
   console.log("\n2️⃣  Exporting to backend...");
-  const backendContent = generateBackendConstants(deployment); // ← FIXED: Now passes deployment!
+  const backendContent = generateBackendConstants();
   const backendPath = path.join(__dirname, "../../defipoly-backend/src/config/constants.js");
   
   fs.mkdirSync(path.dirname(backendPath), { recursive: true });
@@ -222,23 +232,33 @@ async function generate() {
   console.log("   ✅ defipoly-backend/src/config/constants.js");
 
   // ========================================
-  // STEP 4: Copy IDL to Frontend
+  // STEP 4: Copy IDL to Backend
   // ========================================
-  // The IDL (Interface Definition Language) is generated by 'anchor build'
-  // It contains all the program's instructions and account structures
-  // Frontend needs this to interact with your Solana program
   
-  console.log("\n3️⃣  Copying IDL to frontend...");
+  console.log("\n3️⃣  Copying IDL to backend...");
   const idlSource = path.join(__dirname, "../target/idl/defipoly_program.json");
-  const idlDest = path.join(__dirname, "../../defipoly-frontend/src/types/defipoly_program.json");
+  const idlDestBackend = path.join(__dirname, "../../defipoly-backend/src/idl/defipoly_program.json");
   
   if (!fs.existsSync(idlSource)) {
     console.warn("   ⚠️  IDL not found at target/idl/defipoly_program.json");
     console.warn("   Run 'anchor build' to generate it");
   } else {
-    fs.mkdirSync(path.dirname(idlDest), { recursive: true });
-    fs.copyFileSync(idlSource, idlDest);
-    console.log("   ✅ defipoly-frontend/src/types/defipoly_program.json");
+    fs.mkdirSync(path.dirname(idlDestBackend), { recursive: true });
+    fs.copyFileSync(idlSource, idlDestBackend);
+    console.log("   ✅ defipoly-backend/src/idl/defipoly_program.json");
+  }
+
+  // ========================================
+  // STEP 5: Copy IDL to Frontend
+  // ========================================
+  
+  console.log("\n4️⃣  Copying IDL to frontend...");
+  const idlDestFrontend = path.join(__dirname, "../../defipoly-frontend/src/idl/defipoly_program.json");
+  
+  if (fs.existsSync(idlSource)) {
+    fs.mkdirSync(path.dirname(idlDestFrontend), { recursive: true });
+    fs.copyFileSync(idlSource, idlDestFrontend);
+    console.log("   ✅ defipoly-frontend/src/idl/defipoly_program.json");
   }
 
   // ========================================
@@ -253,11 +273,14 @@ async function generate() {
   console.log(`   Set Bonuses: ${Object.keys(SET_BONUSES).length}`);
   console.log(`   Network:     ${deployment.network}`);
   console.log(`\n💡 What was exported:`);
-  console.log(`   ✓ PROPERTIES array (from property-config.ts)`);
-  console.log(`   ✓ SET_BONUSES object (from property-config.ts)`);
-  console.log(`   ✓ Blockchain addresses (from deployment-info.json)`);
-  console.log(`   ✓ Program IDL (from target/idl/)`);
+  console.log(`   ✓ Frontend: Full constants + blockchain addresses`);
+  console.log(`   ✓ Backend: Game constants only (PROPERTIES, SET_BONUSES, PROPERTY_SETS)`);
+  console.log(`   ✓ Backend: Helper functions (getSetBonusBps, getCooldownDurationForSet, etc.)`);
+  console.log(`   ✓ Backend: IDL file (PROGRAM_ID read from here)`);
+  console.log(`   ✓ Frontend: IDL file`);
   console.log(`\n🎯 Next steps:`);
+  console.log(`   - Remove PROGRAM_ID from your .env file (not needed anymore)`);
+  console.log(`   - Restart backend: the PROGRAM_ID now comes from IDL`);
   console.log(`   - Frontend: npm run dev`);
   console.log(`   - Backend:  npm start`);
   console.log(`   - Test:     npm run bot\n`);
