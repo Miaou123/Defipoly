@@ -21,6 +21,7 @@ const __dirname = path.dirname(__filename);
 dotenv.config({ path: path.join(__dirname, '../../../.env') });
 
 const DEV_WALLET = new anchor.web3.PublicKey("CgWTFX7JJQHed3qyMDjJkNCxK4sFe3wbDFABmWAAmrdS");
+const MARKETING_WALLET = new anchor.web3.PublicKey("FoPKSQ5HDSVyZgaQobX64YEBVQ2iiKMZp8VHWtd6jLQE");
 
 async function main() {
   // Set defaults for environment
@@ -67,27 +68,70 @@ async function main() {
   );
   console.log("✓ Token Mint:", tokenMint.toString());
 
-  // Step 2: Initialize game
+  // Step 2: Initialize game config
   console.log("\n2. Initializing game config...");
+  
+  // Derive all required PDAs
   const [gameConfig] = anchor.web3.PublicKey.findProgramAddressSync(
     [Buffer.from("game_config")],
     programId
   );
 
+  const [rewardPoolVault] = anchor.web3.PublicKey.findProgramAddressSync(
+    [Buffer.from("reward_pool_vault"), gameConfig.toBuffer()],
+    programId
+  );
+
+  // Derive associated token accounts
+  const devTokenAccount = anchor.utils.token.associatedAddress({
+    mint: tokenMint,
+    owner: DEV_WALLET,
+  });
+
+  const marketingTokenAccount = anchor.utils.token.associatedAddress({
+    mint: tokenMint,
+    owner: MARKETING_WALLET,
+  });
+
   const initialRewardPool = new BN("200000000000000000"); // 200M tokens
 
   try {
-    await program.methods
+    const tx = await program.methods
       .initializeGame(initialRewardPool)
-      .accountsPartial({
+      .accounts({
+        gameConfig,
         tokenMint,
+        rewardPoolVault,
+        devTokenAccount,
+        devWallet: DEV_WALLET,
+        marketingTokenAccount,
+        marketingWallet: MARKETING_WALLET,
         authority,
-        devWallet: DEV_WALLET, 
+        associatedTokenProgram: anchor.utils.token.ASSOCIATED_PROGRAM_ID,
+        tokenProgram: anchor.utils.token.TOKEN_PROGRAM_ID,
+        systemProgram: anchor.web3.SystemProgram.programId,
+        rent: anchor.web3.SYSVAR_RENT_PUBKEY,
       })
       .rpc();
-    console.log("✓ Game Config:", gameConfig.toString());
-  } catch (error) {
-    console.log("⚠️ Game config may already exist");
+    
+    console.log("✅ Game Config initialized!");
+    console.log("   Address:", gameConfig.toString());
+    console.log("   Transaction:", tx);
+  } catch (error: any) {
+    // Check if already initialized
+    if (error.message?.includes("already in use") || 
+        error.logs?.some((log: string) => log.includes("already in use"))) {
+      console.log("⚠️ Game config already exists (skipping)");
+      console.log("   Address:", gameConfig.toString());
+    } else {
+      console.error("❌ Failed to initialize game config:");
+      console.error("   Error:", error.message);
+      if (error.logs) {
+        console.error("   Program logs:");
+        error.logs.forEach((log: string) => console.error("     ", log));
+      }
+      throw error;
+    }
   }
 
   // Step 3: Initialize all properties from PROPERTY_CONFIG
@@ -110,11 +154,6 @@ async function main() {
         programId
       );
 
-      const [setCooldownPDA] = anchor.web3.PublicKey.findProgramAddressSync(
-        [Buffer.from("set_cooldown"), Buffer.from([prop.setId]), authority.toBuffer()],
-        programId
-      );
-
       await program.methods
         .initializeProperty(
           prop.id,
@@ -126,11 +165,11 @@ async function main() {
           prop.shieldCostBps,
           new BN(prop.cooldown)
         )
-        .accountsPartial({
+        .accounts({
           property: propertyPDA,
-          setCooldown: setCooldownPDA,
           gameConfig,
           authority,
+          systemProgram: anchor.web3.SystemProgram.programId,
         })
         .rpc();
 
@@ -149,6 +188,7 @@ async function main() {
     programId: programId.toString(),
     tokenMint: tokenMint.toString(),
     gameConfig: gameConfig.toString(),
+    rewardPoolVault: rewardPoolVault.toString(),
     rewardPool: initialRewardPool.toString(),
     deployedAt: new Date().toISOString(),
     network: rpcUrl.includes("devnet") ? "devnet" : "mainnet",
@@ -162,6 +202,7 @@ async function main() {
   console.log("\n📋 Summary:");
   console.log(`Token Mint: ${tokenMint.toString()}`);
   console.log(`Game Config: ${gameConfig.toString()}`);
+  console.log(`Reward Pool Vault: ${rewardPoolVault.toString()}`);
   console.log(`Initial Reward Pool: ${(Number(initialRewardPool) / 1e9).toLocaleString()} MEME`);
   console.log(`\n🎮 Next step: Run 'npm run generate:constants' to update frontend constants`);
 }

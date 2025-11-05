@@ -4,8 +4,11 @@
   "description": "Profile storage API for Defipoly",
   "main": "server.js",
   "scripts": {
+    "prestart": "node src/scripts/kill-port.js",
     "start": "node server.js",
+    "predev": "node src/scripts/kill-port.js",
     "dev": "nodemon server.js",
+    "kill-port": "node src/scripts/kill-port.js",
     "pm2:start": "pm2 start server.js --name defipoly-api",
     "pm2:stop": "pm2 stop defipoly-api",
     "pm2:restart": "pm2 restart defipoly-api",

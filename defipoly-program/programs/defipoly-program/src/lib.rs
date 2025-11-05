@@ -3,12 +3,13 @@
 // Secure commit-reveal randomness using slot hashes
 // UPDATED: Random steal only (no targeted steal)
 // ADMIN FUNCTIONS ADDED: Complete game master control system
+// REFACTORED: Payment distribution extracted to helper function for stack optimization
 
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, Token, TokenAccount, Transfer, Mint};
 use anchor_spl::associated_token::AssociatedToken;
 
-declare_id!("HpacCgxUuzwoMeryvQtC94RxFmpxC6dYPX5E17JBzBmQ");
+declare_id!("EUN9cPWG8pJeuuNfBvvtPaKmTzZqiA8xeHYxGiuPjNTE");
 
 const DEV_WALLET: &str = "CgWTFX7JJQHed3qyMDjJkNCxK4sFe3wbDFABmWAAmrdS";
 const MARKETING_WALLET: &str = "FoPKSQ5HDSVyZgaQobX64YEBVQ2iiKMZp8VHWtd6jLQE";
@@ -116,12 +117,9 @@ pub mod defipoly_program {
         require!(slots > 0, ErrorCode::InvalidSlotAmount);
         require!(property.available_slots >= slots, ErrorCode::NoSlotsAvailable);
         
-        let current_owned = ownership.slots_owned;
-        let max_allowed = property.max_per_player;
-        
         // Check if user can buy this many slots
         require!(
-            current_owned + slots <= max_allowed,
+            ownership.slots_owned + slots <= property.max_per_player,
             ErrorCode::MaxSlotsReached
         );
     
@@ -141,50 +139,17 @@ pub mod defipoly_program {
         // Calculate total cost for all slots
         let total_price = property.price.checked_mul(slots as u64)
             .ok_or(ErrorCode::Overflow)?;
-        let to_reward_pool = total_price.checked_mul(95)
-            .ok_or(ErrorCode::Overflow)?
-            .checked_div(100)
-            .ok_or(ErrorCode::Overflow)?;
-        let to_marketing = total_price.checked_mul(3)
-            .ok_or(ErrorCode::Overflow)?
-            .checked_div(100)
-            .ok_or(ErrorCode::Overflow)?;
-        let to_dev = total_price.checked_mul(2)
-            .ok_or(ErrorCode::Overflow)?
-            .checked_div(100)
-            .ok_or(ErrorCode::Overflow)?;
-    
-        // Transfer to reward pool
-        let transfer_ctx_pool = CpiContext::new(
-            ctx.accounts.token_program.to_account_info(),
-            Transfer {
-                from: ctx.accounts.player_token_account.to_account_info(),
-                to: ctx.accounts.reward_pool_vault.to_account_info(),
-                authority: ctx.accounts.player.to_account_info(),
-            },
-        );
-        token::transfer(transfer_ctx_pool, to_reward_pool)?;
 
-        let transfer_ctx_marketing = CpiContext::new(
-            ctx.accounts.token_program.to_account_info(),
-            Transfer {
-                from: ctx.accounts.player_token_account.to_account_info(),
-                to: ctx.accounts.marketing_token_account.to_account_info(),
-                authority: ctx.accounts.player.to_account_info(),
-            },
-        );
-        token::transfer(transfer_ctx_marketing, to_marketing)?;
-    
-        // Transfer to dev wallet
-        let transfer_ctx_dev = CpiContext::new(
-            ctx.accounts.token_program.to_account_info(),
-            Transfer {
-                from: ctx.accounts.player_token_account.to_account_info(),
-                to: ctx.accounts.dev_token_account.to_account_info(),
-                authority: ctx.accounts.player.to_account_info(),
-            },
-        );
-        token::transfer(transfer_ctx_dev, to_dev)?;
+        // Distribute payment using helper function (95% reward, 3% marketing, 2% dev)
+        distribute_payment(
+            total_price,
+            &ctx.accounts.player_token_account,
+            &ctx.accounts.reward_pool_vault,
+            &ctx.accounts.marketing_token_account,
+            &ctx.accounts.dev_token_account,
+            &ctx.accounts.player,
+            &ctx.accounts.token_program,
+        )?;
     
         // Update property: reduce available slots
         property.available_slots = property.available_slots
@@ -333,48 +298,16 @@ pub mod defipoly_program {
         let cost_per_slot_for_duration = (shield_cost_per_slot * shield_duration_hours as u64) / 24;
         let total_cost = cost_per_slot_for_duration * slots_to_shield as u64;
     
-        let to_reward_pool = total_cost.checked_mul(95)
-            .ok_or(ErrorCode::Overflow)?
-            .checked_div(100)
-            .ok_or(ErrorCode::Overflow)?;
-        let to_marketing = total_cost.checked_mul(3)
-            .ok_or(ErrorCode::Overflow)?
-            .checked_div(100)
-            .ok_or(ErrorCode::Overflow)?;
-        let to_dev = total_cost.checked_mul(2)
-            .ok_or(ErrorCode::Overflow)?
-            .checked_div(100)
-            .ok_or(ErrorCode::Overflow)?;
-    
-        let transfer_ctx_pool = CpiContext::new(
-            ctx.accounts.token_program.to_account_info(),
-            Transfer {
-                from: ctx.accounts.player_token_account.to_account_info(),
-                to: ctx.accounts.reward_pool_vault.to_account_info(),
-                authority: ctx.accounts.player.to_account_info(),
-            },
-        );
-        token::transfer(transfer_ctx_pool, to_reward_pool)?;
-
-        let transfer_ctx_marketing = CpiContext::new(
-            ctx.accounts.token_program.to_account_info(),
-            Transfer {
-                from: ctx.accounts.player_token_account.to_account_info(),
-                to: ctx.accounts.marketing_token_account.to_account_info(),
-                authority: ctx.accounts.player.to_account_info(),
-            },
-        );
-        token::transfer(transfer_ctx_marketing, to_marketing)?;
-    
-        let transfer_ctx_dev = CpiContext::new(
-            ctx.accounts.token_program.to_account_info(),
-            Transfer {
-                from: ctx.accounts.player_token_account.to_account_info(),
-                to: ctx.accounts.dev_token_account.to_account_info(),
-                authority: ctx.accounts.player.to_account_info(),
-            },
-        );
-        token::transfer(transfer_ctx_dev, to_dev)?;
+        // Distribute payment using helper function (95% reward, 3% marketing, 2% dev)
+        distribute_payment(
+            total_cost,
+            &ctx.accounts.player_token_account,
+            &ctx.accounts.reward_pool_vault,
+            &ctx.accounts.marketing_token_account,
+            &ctx.accounts.dev_token_account,
+            &ctx.accounts.player,
+            &ctx.accounts.token_program,
+        )?;
     
         let shield_duration_seconds = (shield_duration_hours as i64) * 3600;
         
@@ -535,51 +468,17 @@ pub fn steal_property_instant(
 
     // Calculate steal cost
     let steal_cost = (property.price * game_config.steal_cost_percent_bps as u64) / 10000;
-    let to_reward_pool = steal_cost.checked_mul(95)
-        .ok_or(ErrorCode::Overflow)?
-        .checked_div(100)
-        .ok_or(ErrorCode::Overflow)?;
-    let to_marketing = steal_cost.checked_mul(3)
-        .ok_or(ErrorCode::Overflow)?
-        .checked_div(100)
-        .ok_or(ErrorCode::Overflow)?;
-    let to_dev = steal_cost.checked_mul(2)
-        .ok_or(ErrorCode::Overflow)?
-        .checked_div(100)
-        .ok_or(ErrorCode::Overflow)?;
 
-    // Transfer to reward pool (95%)
-    let transfer_ctx_pool = CpiContext::new(
-        ctx.accounts.token_program.to_account_info(),
-        Transfer {
-            from: ctx.accounts.player_token_account.to_account_info(),
-            to: ctx.accounts.reward_pool_vault.to_account_info(),
-            authority: ctx.accounts.attacker.to_account_info(),
-        },
-    );
-    token::transfer(transfer_ctx_pool, to_reward_pool)?;
-
-    // Transfer to marketing wallet (3%)
-    let transfer_ctx_marketing = CpiContext::new(
-        ctx.accounts.token_program.to_account_info(),
-        Transfer {
-            from: ctx.accounts.player_token_account.to_account_info(),
-            to: ctx.accounts.marketing_token_account.to_account_info(),
-            authority: ctx.accounts.attacker.to_account_info(),
-        },
-    );
-    token::transfer(transfer_ctx_marketing, to_marketing)?;
-
-    // Transfer to dev wallet (2%)
-    let transfer_ctx_dev = CpiContext::new(
-        ctx.accounts.token_program.to_account_info(),
-        Transfer {
-            from: ctx.accounts.player_token_account.to_account_info(),
-            to: ctx.accounts.dev_token_account.to_account_info(),
-            authority: ctx.accounts.attacker.to_account_info(),
-        },
-    );
-    token::transfer(transfer_ctx_dev, to_dev)?;
+    // Distribute payment using helper function (95% reward, 3% marketing, 2% dev)
+    distribute_payment(
+        steal_cost,
+        &ctx.accounts.player_token_account,
+        &ctx.accounts.reward_pool_vault,
+        &ctx.accounts.marketing_token_account,
+        &ctx.accounts.dev_token_account,
+        &ctx.accounts.attacker,
+        &ctx.accounts.token_program,
+    )?;
 
     // Determine success (33% chance) - use different part of entropy
     let success_threshold = game_config.steal_chance_random_bps as u64;
@@ -1386,6 +1285,74 @@ pub fn steal_property_instant(
         
         Ok(())
     }
+}
+
+// ========== HELPER FUNCTIONS (OUTSIDE #[program] MODULE) ==========
+
+/// Helper function to distribute payments (95% reward pool, 3% marketing, 2% dev)
+/// Reduces stack usage by moving payment logic to separate function
+fn distribute_payment<'info>(
+    amount: u64,
+    from: &Account<'info, TokenAccount>,
+    reward_pool: &Account<'info, TokenAccount>,
+    marketing: &Account<'info, TokenAccount>,
+    dev: &Account<'info, TokenAccount>,
+    authority: &Signer<'info>,
+    token_program: &Program<'info, Token>,
+) -> Result<()> {
+    let to_reward_pool = amount.checked_mul(95)
+        .ok_or(ErrorCode::Overflow)?
+        .checked_div(100)
+        .ok_or(ErrorCode::Overflow)?;
+    let to_marketing = amount.checked_mul(3)
+        .ok_or(ErrorCode::Overflow)?
+        .checked_div(100)
+        .ok_or(ErrorCode::Overflow)?;
+    let to_dev = amount.checked_mul(2)
+        .ok_or(ErrorCode::Overflow)?
+        .checked_div(100)
+        .ok_or(ErrorCode::Overflow)?;
+
+    // Transfer to reward pool (95%)
+    token::transfer(
+        CpiContext::new(
+            token_program.to_account_info(),
+            Transfer {
+                from: from.to_account_info(),
+                to: reward_pool.to_account_info(),
+                authority: authority.to_account_info(),
+            },
+        ),
+        to_reward_pool,
+    )?;
+
+    // Transfer to marketing (3%)
+    token::transfer(
+        CpiContext::new(
+            token_program.to_account_info(),
+            Transfer {
+                from: from.to_account_info(),
+                to: marketing.to_account_info(),
+                authority: authority.to_account_info(),
+            },
+        ),
+        to_marketing,
+    )?;
+
+    // Transfer to dev (2%)
+    token::transfer(
+        CpiContext::new(
+            token_program.to_account_info(),
+            Transfer {
+                from: from.to_account_info(),
+                to: dev.to_account_info(),
+                authority: authority.to_account_info(),
+            },
+        ),
+        to_dev,
+    )?;
+
+    Ok(())
 }
 
 // ========== ACCOUNT CONTEXTS ==========

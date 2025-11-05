@@ -19,6 +19,7 @@ interface DeploymentInfo {
   programId: string;      // From: target/idl/defipoly_program.json (which gets it from Anchor.toml)
   tokenMint: string;      // From: initialize-game.ts (created when game is initialized)
   gameConfig: string;     // From: initialize-game.ts (PDA: seeds ["game_config"])
+  rewardPoolVault: string; // From: initialize-game.ts (PDA for reward pool vault)
   rewardPool: string;     // From: initialize-game.ts (token account created during init)
   deployedAt: string;     // Timestamp when game was initialized
   network: string;        // "devnet" or "mainnet"
@@ -44,6 +45,7 @@ import { PublicKey } from "@solana/web3.js";
 export const PROGRAM_ID = new PublicKey("${deployment.programId}");
 export const TOKEN_MINT = new PublicKey("${deployment.tokenMint}");
 export const GAME_CONFIG = new PublicKey("${deployment.gameConfig}");
+export const REWARD_POOL_VAULT = new PublicKey("${deployment.rewardPoolVault || deployment.gameConfig}");
 export const REWARD_POOL = new PublicKey("${deployment.rewardPool}");
 export const NETWORK = "${deployment.network}";
 
@@ -81,13 +83,26 @@ export function getSetBonus(setId: number) {
 
 /**
  * Generate Backend Constants (JavaScript)
+ * FIXED: Now includes blockchain addresses!
  */
-function generateBackendConstants(): string {
+function generateBackendConstants(deployment: DeploymentInfo): string {
   return `// ============================================
 // AUTO-GENERATED - DO NOT EDIT
 // Source: defipoly-program/scripts/property-config.ts
 // Generated: ${new Date().toISOString()}
 // ============================================
+
+// ========================================
+// BLOCKCHAIN ADDRESSES
+// ========================================
+// These come from deployment-info.json which is created by initialize-game.ts
+
+const PROGRAM_ID = '${deployment.programId}';
+const TOKEN_MINT = '${deployment.tokenMint}';
+const GAME_CONFIG = '${deployment.gameConfig}';
+const REWARD_POOL_VAULT = '${deployment.rewardPoolVault || deployment.gameConfig}';
+const REWARD_POOL = '${deployment.rewardPool}';
+const NETWORK = '${deployment.network}';
 
 // ========================================
 // PROPERTIES
@@ -124,6 +139,15 @@ function getSetBonus(setId) {
 // ========================================
 
 module.exports = {
+  // Blockchain addresses
+  PROGRAM_ID,
+  TOKEN_MINT,
+  GAME_CONFIG,
+  REWARD_POOL_VAULT,
+  REWARD_POOL,
+  NETWORK,
+  
+  // Properties
   PROPERTIES,
   SET_BONUSES,
   getPropertyById,
@@ -190,7 +214,7 @@ async function generate() {
   // ========================================
   
   console.log("\n2️⃣  Exporting to backend...");
-  const backendContent = generateBackendConstants();
+  const backendContent = generateBackendConstants(deployment); // ← FIXED: Now passes deployment!
   const backendPath = path.join(__dirname, "../../defipoly-backend/src/config/constants.js");
   
   fs.mkdirSync(path.dirname(backendPath), { recursive: true });

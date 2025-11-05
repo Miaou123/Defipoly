@@ -1,8 +1,20 @@
 // ============================================
 // AUTO-GENERATED - DO NOT EDIT
 // Source: defipoly-program/scripts/property-config.ts
-// Generated: 2025-11-05T15:25:23.244Z
+// Generated: 2025-11-05T16:08:33.397Z
 // ============================================
+
+// ========================================
+// BLOCKCHAIN ADDRESSES
+// ========================================
+// These come from deployment-info.json which is created by initialize-game.ts
+
+const PROGRAM_ID = 'EUN9cPWG8pJeuuNfBvvtPaKmTzZqiA8xeHYxGiuPjNTE';
+const TOKEN_MINT = '97toD5DaBXcKyVtHenWrrPynuDyBYZtQ5xiWHTh5T4pk';
+const GAME_CONFIG = '275QRvjpz5stZb93T3KY1LLGndCdGs5DvW3bn1F21eRq';
+const REWARD_POOL_VAULT = 'Cq3273buxQhVcZkqEZw83aGnfitNRQM8LKFZX9B2ggEc';
+const REWARD_POOL = '200000000000000000';
+const NETWORK = 'devnet';
 
 // ========================================
 // PROPERTIES
@@ -359,6 +371,15 @@ function getSetBonus(setId) {
 // ========================================
 
 module.exports = {
+  // Blockchain addresses
+  PROGRAM_ID,
+  TOKEN_MINT,
+  GAME_CONFIG,
+  REWARD_POOL_VAULT,
+  REWARD_POOL,
+  NETWORK,
+  
+  // Properties
   PROPERTIES,
   SET_BONUSES,
   getPropertyById,
