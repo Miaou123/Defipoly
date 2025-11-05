@@ -4,7 +4,7 @@ import { createContext, useContext, useState, useEffect, ReactNode } from 'react
 import { useWallet } from '@solana/wallet-adapter-react';
 import { usePropertyRefresh } from './PropertyRefreshContext';
 
-const API_URL = process.env.NEXT_PUBLIC_PROFILE_API_URL || 'http://localhost:3005';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3101';
 
 interface StealCooldownData {
   isOnCooldown: boolean;
@@ -45,7 +45,7 @@ export function StealCooldownProvider({ children }: { children: ReactNode }) {
     setIsLoading(true);
     try {
       const response = await fetch(
-        `${API_URL}/api/steal-cooldown/${publicKey.toString()}`
+        `${API_BASE_URL}/api/steal-cooldown/${publicKey.toString()}`
       );
 
       if (!response.ok) {

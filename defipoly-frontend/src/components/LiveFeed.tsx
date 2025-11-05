@@ -17,7 +17,7 @@ interface FeedItem {
   targetAddress?: string;
 }
 
-const BACKEND_URL = process.env.NEXT_PUBLIC_PROFILE_API_URL || 'http://localhost:3005';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3101';
 
 export function LiveFeed() {
   const { connection } = useConnection();
@@ -128,7 +128,7 @@ export function LiveFeed() {
     const fetchHistoricalActions = async () => {
       try {
         console.log('📡 Fetching recent actions from backend...');
-        const response = await fetch(`${BACKEND_URL}/api/actions/recent?limit=50`);
+        const response = await fetch(`${API_BASE_URL}/api/actions/recent?limit=50`);
         
         if (!response.ok) {
           throw new Error(`Backend responded with ${response.status}`);

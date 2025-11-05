@@ -17,9 +17,9 @@ export function usePlayerStats() {
     const fetchPlayerStats = async () => {
       setLoading(true);
       try {
-        const BACKEND_URL = process.env.NEXT_PUBLIC_PROFILE_API_URL || 'http://localhost:3005';
+        const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3101';
         // ✅ FIXED: Changed from /api/players/:wallet/stats to /api/stats/:wallet
-        const response = await fetch(`${BACKEND_URL}/api/stats/${publicKey.toString()}`);
+        const response = await fetch(`${API_BASE_URL}/api/stats/${publicKey.toString()}`);
         
         if (response.ok) {
           const data = await response.json();

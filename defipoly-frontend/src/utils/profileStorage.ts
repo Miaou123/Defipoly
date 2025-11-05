@@ -3,7 +3,7 @@
 // ============================================
 
 // API Configuration
-const API_URL = process.env.NEXT_PUBLIC_PROFILE_API_URL || 'http://localhost:3005';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3101';
 
 export interface ProfileData {
   username: string | null;
@@ -28,7 +28,7 @@ export async function getProfile(address: string): Promise<ProfileData> {
 
   try {
     // Try API first
-    const response = await fetch(`${API_URL}/api/profile/${address}`, {
+    const response = await fetch(`${API_BASE_URL}/api/profile/${address}`, {
       method: 'GET',
       headers: { 'Content-Type': 'application/json' },
     });
@@ -65,7 +65,7 @@ export async function getProfilesBatch(addresses: string[]): Promise<Record<stri
   if (addresses.length === 0) return {};
 
   try {
-    const response = await fetch(`${API_URL}/api/profiles/batch`, {
+    const response = await fetch(`${API_BASE_URL}/api/profiles/batch`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ wallets: addresses }),
@@ -109,7 +109,7 @@ export async function getProfilesBatch(addresses: string[]): Promise<Record<stri
  */
 export async function setUsername(address: string, username: string): Promise<boolean> {
   try {
-    const response = await fetch(`${API_URL}/api/profile`, {
+    const response = await fetch(`${API_BASE_URL}/api/profile`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -156,7 +156,7 @@ export async function setProfilePicture(address: string, base64Image: string): P
   }
 
   try {
-    const response = await fetch(`${API_URL}/api/profile`, {
+    const response = await fetch(`${API_BASE_URL}/api/profile`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -195,7 +195,7 @@ export async function setProfilePicture(address: string, base64Image: string): P
  */
 export async function removeProfilePicture(address: string): Promise<boolean> {
   try {
-    const response = await fetch(`${API_URL}/api/profile/${address}/picture`, {
+    const response = await fetch(`${API_BASE_URL}/api/profile/${address}/picture`, {
       method: 'DELETE',
       headers: { 'Content-Type': 'application/json' },
     });

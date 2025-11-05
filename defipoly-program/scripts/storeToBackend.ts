@@ -14,8 +14,8 @@ import dotenv from 'dotenv';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Load environment variables from monorepo root
-dotenv.config({ path: path.join(__dirname, '../../../.env') });
+// Load environment variables
+dotenv.config({ path: path.join(__dirname, '../.env') });
 
 const PROGRAM_ID = new anchor.web3.PublicKey("H1zzYzWPReWJ4W2JNiBrYbsrHDxFDGJ9n9jAyYG2VhLQ");
 const BACKEND_URL = process.env.BACKEND_URL || "http://YOUR_DROPLET_IP:3005";

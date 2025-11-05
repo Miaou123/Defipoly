@@ -27,7 +27,7 @@ interface PlayerStats {
   failedSteals: number;
 }
 
-const BACKEND_URL = process.env.NEXT_PUBLIC_PROFILE_API_URL || 'http://localhost:3005';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3101';
 
 export default function ProfilePage() {
   const { publicKey, connected } = useWallet();
@@ -66,7 +66,7 @@ export default function ProfilePage() {
 
     const loadProfile = async () => {
       try {
-        const response = await fetch(`${BACKEND_URL}/api/profile/${publicKey.toString()}`);
+        const response = await fetch(`${API_BASE_URL}/api/profile/${publicKey.toString()}`);
         if (response.ok) {
           const data = await response.json();
           if (data.username) {
@@ -97,7 +97,7 @@ export default function ProfilePage() {
         console.log('📊 Fetching user data from backend...');
         
         // Fetch stats from /api/stats/:wallet
-        const statsResponse = await fetch(`${BACKEND_URL}/api/stats/${walletAddress}`);
+        const statsResponse = await fetch(`${API_BASE_URL}/api/stats/${walletAddress}`);
         if (!statsResponse.ok) {
           throw new Error(`Failed to fetch stats: ${statsResponse.status}`);
         }
@@ -105,7 +105,7 @@ export default function ProfilePage() {
         console.log('📈 Received stats:', statsData);
         
         // Fetch actions from /api/actions/player/:wallet
-        const actionsResponse = await fetch(`${BACKEND_URL}/api/actions/player/${walletAddress}?limit=50`);
+        const actionsResponse = await fetch(`${API_BASE_URL}/api/actions/player/${walletAddress}?limit=50`);
         if (!actionsResponse.ok) {
           throw new Error(`Failed to fetch actions: ${actionsResponse.status}`);
         }
@@ -208,7 +208,7 @@ export default function ProfilePage() {
     if (!publicKey || !tempUsername.trim()) return;
 
     try {
-      const response = await fetch(`${BACKEND_URL}/api/profile`, {
+      const response = await fetch(`${API_BASE_URL}/api/profile`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -256,7 +256,7 @@ export default function ProfilePage() {
       const compressedImage = await compressImage(file);
       
       // Upload to backend
-      const response = await fetch(`${BACKEND_URL}/api/profile`, {
+      const response = await fetch(`${API_BASE_URL}/api/profile`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -284,7 +284,7 @@ export default function ProfilePage() {
     if (!publicKey) return;
 
     try {
-      const response = await fetch(`${BACKEND_URL}/api/profile`, {
+      const response = await fetch(`${API_BASE_URL}/api/profile`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

@@ -4,7 +4,7 @@
 // 🆕 UPDATED: Added ownersWithStealProtection field
 // ============================================
 
-const BACKEND_URL = process.env.NEXT_PUBLIC_PROFILE_API_URL || 'http://localhost:3005';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3101';
 
 export interface PropertyStats {
   propertyId: number;
@@ -17,7 +17,7 @@ export interface PropertyStats {
  */
 export async function fetchPropertyStats(propertyId: number): Promise<PropertyStats | null> {
   try {
-    const response = await fetch(`${BACKEND_URL}/api/properties/${propertyId}/stats`);
+    const response = await fetch(`${API_BASE_URL}/api/properties/${propertyId}/stats`);
     
     if (!response.ok) {
       console.error(`Failed to fetch property stats: ${response.status}`);

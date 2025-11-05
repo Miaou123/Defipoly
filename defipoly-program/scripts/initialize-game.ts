@@ -17,8 +17,8 @@ import { PROPERTY_CONFIG, toDeploymentFormat, getPropertyStats } from "./propert
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Load environment variables from monorepo root
-dotenv.config({ path: path.join(__dirname, '../../../.env') });
+// Load environment variables
+dotenv.config({ path: path.join(__dirname, '../.env') });
 
 const DEV_WALLET = new anchor.web3.PublicKey("CgWTFX7JJQHed3qyMDjJkNCxK4sFe3wbDFABmWAAmrdS");
 const MARKETING_WALLET = new anchor.web3.PublicKey("FoPKSQ5HDSVyZgaQobX64YEBVQ2iiKMZp8VHWtd6jLQE");

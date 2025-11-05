@@ -8,7 +8,7 @@ interface LeaderboardEntry {
   dailyIncome: number;
 }
 
-const API_URL = process.env.NEXT_PUBLIC_PROFILE_API_URL || 'http://localhost:3005';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3101';
 
 export function Leaderboard() {
   const [leaders, setLeaders] = useState<LeaderboardEntry[]>([]);
@@ -22,7 +22,7 @@ export function Leaderboard() {
         console.log('🏆 Fetching leaderboard from backend...');
         
         // ✅ Reduced from 10 to 5
-        const response = await fetch(`${API_URL}/api/leaderboard?limit=5`);
+        const response = await fetch(`${API_BASE_URL}/api/leaderboard?limit=5`);
         
         if (!response.ok) {
           throw new Error('Failed to fetch leaderboard');

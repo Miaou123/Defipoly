@@ -1,7 +1,7 @@
 // ============================================
 // AUTO-GENERATED - DO NOT EDIT
 // Source: defipoly-program/scripts/property-config.ts
-// Generated: 2025-11-05T16:38:59.059Z
+// Generated: 2025-11-05T17:10:08.759Z
 // ============================================
 // 
 // This file contains game configuration data only.

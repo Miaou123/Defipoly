@@ -55,8 +55,8 @@ export function RewardsPanel() {
                 }
               }
 
-              const BACKEND_URL = process.env.NEXT_PUBLIC_PROFILE_API_URL || 'http://localhost:3005';
-              await fetch(`${BACKEND_URL}/api/actions`, {
+              const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3101';
+              await fetch(`${API_BASE_URL}/api/actions`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({

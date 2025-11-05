@@ -12,8 +12,8 @@ const WSSListener = require('./src/services/wssListener');
 const GapDetector = require('./src/services/gapDetector');
 const { router: wssMonitoringRouter, initMonitoring } = require('./src/routes/wssMonitoring');
 
-// Load environment variables from the monorepo root
-require('dotenv').config({ path: '../.env' });
+// Load environment variables
+require('dotenv').config();
 
 // Load IDL to get PROGRAM_ID
 const idl = require('./src/idl/defipoly_program.json');
@@ -32,7 +32,7 @@ app.get('/health', (req, res) => {
     timestamp: Date.now(),
     version: '2.0.0',
     mode: 'wss',
-    programId: idl.address,
+    programId: process.env.PROGRAM_ID || idl.address,
     features: ['profiles', 'actions', 'cooldowns', 'stats', 'leaderboard', 'wss', 'gap-detection']
   });
 });
@@ -63,7 +63,7 @@ async function initializeWSS() {
     // Get configuration
     const RPC_URL = process.env.RPC_URL;
     const WS_URL = process.env.SOLANA_WS_URL || RPC_URL.replace('https://', 'wss://');
-    const PROGRAM_ID = idl.address; // Read from IDL instead of .env
+    const PROGRAM_ID = process.env.PROGRAM_ID || idl.address; // Read from env with IDL fallback
     
     if (!RPC_URL) {
       console.error('❌ RPC_URL not set in environment');

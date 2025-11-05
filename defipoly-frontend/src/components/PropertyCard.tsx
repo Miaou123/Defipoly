@@ -9,6 +9,11 @@ import { useStealCooldownFromContext } from '@/contexts/StealCooldownContext';
 
 import { PROPERTIES } from '@/utils/constants';
 
+// Helper function for formatting numbers without hydration issues
+const formatNumber = (num: number): string => {
+  return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+};
+
 // Building SVGs for levels 0-5 (Classic Monopoly Style)
 const BUILDING_SVGS: { [key: number]: React.ReactNode } = {
   0: <></>,
@@ -433,7 +438,7 @@ export function PropertyCard({ propertyId, onSelect }: PropertyCardProps) {
         >
           <div className="text-center">
             <div className="text-[7px] font-semibold text-purple-300">
-              ${property.price.toLocaleString()}
+              ${formatNumber(property.price)}
             </div>
           </div>
         </div>

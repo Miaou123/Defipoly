@@ -1,7 +1,7 @@
 // defipoly-frontend/src/utils/actionsStorage.ts
 // Updated to properly track slots while keeping all original functionality
 
-const API_URL = process.env.NEXT_PUBLIC_PROFILE_API_URL || 'http://localhost:3005';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3101';
 
 export interface GameAction {
   id?: number;
@@ -40,7 +40,7 @@ export interface PlayerStats {
  */
 export async function storeAction(action: GameAction): Promise<boolean> {
   try {
-    const response = await fetch(`${API_URL}/api/actions`, {
+    const response = await fetch(`${API_BASE_URL}/api/actions`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(action),
@@ -63,7 +63,7 @@ export async function storeAction(action: GameAction): Promise<boolean> {
  */
 export async function storeActionsBatch(actions: GameAction[]): Promise<number> {
   try {
-    const response = await fetch(`${API_URL}/api/actions/batch`, {
+    const response = await fetch(`${API_BASE_URL}/api/actions/batch`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ actions }),
@@ -91,7 +91,7 @@ export async function getPlayerActions(
 ): Promise<GameAction[]> {
   try {
     const response = await fetch(
-      `${API_URL}/api/actions/player/${walletAddress}?limit=${limit}&offset=${offset}`
+      `${API_BASE_URL}/api/actions/player/${walletAddress}?limit=${limit}&offset=${offset}`
     );
 
     if (response.ok) {
@@ -110,7 +110,7 @@ export async function getPlayerActions(
  */
 export async function getRecentActions(limit: number = 20): Promise<GameAction[]> {
   try {
-    const response = await fetch(`${API_URL}/api/actions/recent?limit=${limit}`);
+    const response = await fetch(`${API_BASE_URL}/api/actions/recent?limit=${limit}`);
 
     if (response.ok) {
       const data = await response.json();
@@ -128,7 +128,7 @@ export async function getRecentActions(limit: number = 20): Promise<GameAction[]
  */
 export async function getPlayerStats(walletAddress: string): Promise<PlayerStats | null> {
   try {
-    const response = await fetch(`${API_URL}/api/stats/${walletAddress}`);
+    const response = await fetch(`${API_BASE_URL}/api/stats/${walletAddress}`);
 
     if (response.ok) {
       return await response.json();
@@ -145,7 +145,7 @@ export async function getPlayerStats(walletAddress: string): Promise<PlayerStats
  */
 export async function getLeaderboard(limit: number = 10): Promise<PlayerStats[]> {
   try {
-    const response = await fetch(`${API_URL}/api/leaderboard?limit=${limit}`);
+    const response = await fetch(`${API_BASE_URL}/api/leaderboard?limit=${limit}`);
 
     if (response.ok) {
       const data = await response.json();

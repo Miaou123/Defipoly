@@ -1,7 +1,6 @@
 // ============================================
 // UPDATED generate-constants.ts
-// Simplifies backend constants - only game data, no blockchain addresses
-// Blockchain addresses come from IDL file
+// FIXED: REWARD_POOL now uses rewardPoolVault address
 // ============================================
 
 import * as fs from "fs";
@@ -13,8 +12,8 @@ import { PROPERTY_CONFIG, SET_BONUSES } from "./property-config.js";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Load environment variables from monorepo root
-dotenv.config({ path: path.join(__dirname, '../../../.env') });
+// Load environment variables
+dotenv.config({ path: path.join(__dirname, '../.env') });
 
 interface DeploymentInfo {
   programId: string;
@@ -47,7 +46,7 @@ export const PROGRAM_ID = new PublicKey("${deployment.programId}");
 export const TOKEN_MINT = new PublicKey("${deployment.tokenMint}");
 export const GAME_CONFIG = new PublicKey("${deployment.gameConfig}");
 export const REWARD_POOL_VAULT = new PublicKey("${deployment.rewardPoolVault || deployment.gameConfig}");
-export const REWARD_POOL = new PublicKey("${deployment.rewardPool}");
+export const REWARD_POOL = REWARD_POOL_VAULT; // ✅ FIXED: Use vault address, not numeric amount
 export const NETWORK = "${deployment.network}";
 
 // ========================================
@@ -204,7 +203,8 @@ async function generate() {
   console.log(`   Program ID:  ${deployment.programId}`);
   console.log(`   Token Mint:  ${deployment.tokenMint}`);
   console.log(`   Game Config: ${deployment.gameConfig}`);
-  console.log(`   Reward Pool: ${deployment.rewardPool}`);
+  console.log(`   Reward Pool Vault: ${deployment.rewardPoolVault}`);
+  console.log(`   Initial Reward Amount: ${deployment.rewardPool} lamports`);
   console.log(`   Network:     ${deployment.network}\n`);
 
   // ========================================
