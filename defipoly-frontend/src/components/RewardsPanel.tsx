@@ -10,7 +10,7 @@ import { StyledWalletButton } from './StyledWalletButton';
 import { PROGRAM_ID } from '@/utils/constants';
 import { BorshCoder, EventParser } from '@coral-xyz/anchor';
 import idl from '@/idl/defipoly_program.json';
-import { BuildingIcon, CoinsIcon, TargetIcon } from './GameIcons';
+import { BuildingIcon, CoinsIcon, TargetIcon } from './icons/UIIcons';
 
 export function RewardsPanel() {
   const { connected, publicKey } = useWallet();

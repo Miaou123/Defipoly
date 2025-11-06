@@ -1,6 +1,6 @@
 'use client';
 
-import { DiceIcon } from './GameIcons';
+import { DiceIcon } from './icons/UIIcons';
 
 interface CornerSquareProps {
   icon: string;

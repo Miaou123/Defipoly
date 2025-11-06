@@ -9,7 +9,7 @@ import { useNotification } from '@/contexts/NotificationContext';
 import { usePropertyRefresh } from '@/contexts/PropertyRefreshContext';
 import { PROPERTIES } from '@/utils/constants';
 import { Clock, Shield } from 'lucide-react';
-import { ShieldIcon, TimerIcon, WarningIcon } from '@/components/GameIcons';
+import { ShieldIcon, TimerIcon, WarningIcon } from '@/components/icons/UIIcons';
 
 interface ShieldPropertySectionProps {
   propertyId: number;

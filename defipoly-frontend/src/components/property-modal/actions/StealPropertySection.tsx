@@ -11,7 +11,7 @@ import { useStealCooldownFromContext } from '@/contexts/StealCooldownContext';
 import { PROPERTIES } from '@/utils/constants';
 import { fetchPropertyStats } from '@/utils/propertyStats';
 import { Clock } from 'lucide-react';
-import { DiceIcon, ShieldIcon, LightningIcon, WarningIcon, LockIcon } from '@/components/GameIcons';
+import { DiceIcon, ShieldIcon, LightningIcon, WarningIcon, LockIcon } from '@/components/icons/UIIcons';
 
 interface StealPropertySectionProps {
   propertyId: number;

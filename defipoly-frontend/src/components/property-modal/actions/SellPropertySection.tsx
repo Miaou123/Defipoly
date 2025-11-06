@@ -8,7 +8,7 @@ import { useDefipoly } from '@/hooks/useDefipoly';
 import { useNotification } from '@/contexts/NotificationContext';
 import { usePropertyRefresh } from '@/contexts/PropertyRefreshContext';
 import { PROPERTIES } from '@/utils/constants';
-import { ChartIcon } from '@/components/GameIcons';
+import { ChartIcon } from '@/components/icons/UIIcons';
 
 interface SellPropertySectionProps {
   propertyId: number;

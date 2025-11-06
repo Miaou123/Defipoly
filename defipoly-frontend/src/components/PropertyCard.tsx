@@ -6,7 +6,8 @@ import { useDefipoly } from '@/hooks/useDefipoly';
 import { usePropertyRefresh } from '@/contexts/PropertyRefreshContext';
 import { useCooldown } from '@/hooks/useCooldown';
 import { useStealCooldownFromContext } from '@/contexts/StealCooldownContext';
-import { ShieldIcon, CoinsIcon, FlameIcon, PropertyMarkerIcon } from './GameIcons';
+import { ShieldIcon, CoinsIcon, FlameIcon, PropertyMarkerIcon } from './icons/UIIcons';
+import { LocationPin } from './icons/GameAssets';
 
 import { PROPERTIES } from '@/utils/constants';
 
@@ -17,7 +18,7 @@ const formatNumber = (num: number): string => {
 
 // Building SVGs for levels 0-5 (Classic Monopoly Style)
 const BUILDING_SVGS: { [key: number]: React.ReactNode } = {
-  0: <></>,
+  0: null, // Will be replaced with LocationPin
   1: (
     // Small Single House
     <svg width="35" height="35" viewBox="0 0 35 35" className="w-full h-auto">
@@ -419,8 +420,11 @@ export function PropertyCard({ propertyId, onSelect }: PropertyCardProps) {
           }}
         >
           {buildingLevel === 0 ? (
-            <div className="text-center">
-              <PropertyMarkerIcon size={20} className="text-purple-400 mx-auto" />
+            <div className="w-full h-full flex items-center justify-center">
+              {/* Scale down to 30% on mobile, 35% on larger screens */}
+              <div className="scale-[0.3] sm:scale-[0.35]">
+                <LocationPin color={property.color} size="small" />
+              </div>
             </div>
           ) : (
             <div className="w-full h-full flex items-center justify-center scale-[0.25]">

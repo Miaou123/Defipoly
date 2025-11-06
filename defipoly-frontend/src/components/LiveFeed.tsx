@@ -6,7 +6,7 @@ import { PROGRAM_ID, getPropertyById } from '@/utils/constants';
 import { BorshCoder, EventParser } from '@coral-xyz/anchor';
 import { getProfilesBatch, ProfileData } from '@/utils/profileStorage';
 import idl from '@/idl/defipoly_program.json';
-import { getActionIcon } from '@/components/GameIcons';
+import { getActionIcon } from './icons/UIIcons';
 
 interface FeedItem {
   message: string;

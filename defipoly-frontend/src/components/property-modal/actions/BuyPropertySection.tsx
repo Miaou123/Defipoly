@@ -15,6 +15,7 @@ import { useCooldown } from '@/hooks/useCooldown';
 import { useNotification } from '@/contexts/NotificationContext';
 import { PROPERTIES } from '@/utils/constants';
 import { CooldownExplanationModal } from '@/components/CooldownExplanationModal';
+import { ChartIcon, CoinsIcon, CheckIcon, TargetIcon } from '@/components/icons/UIIcons';
 
 interface BuyPropertySectionProps {
   propertyId: number;
@@ -269,13 +270,13 @@ export function BuyPropertySection({
         {/* Info Section */}
         <div className="space-y-1 mb-2.5">
           <div className="flex items-start gap-1.5 text-purple-200">
-            <span className="text-sm">📊</span>
+            <ChartIcon size={16} className="text-purple-400 mt-0.5" />
             <span className="text-xs leading-relaxed">
               Max: {maxSlotsToBuy} • Available: {propertyData?.availableSlots || 0}
             </span>
           </div>
           <div className="flex items-start gap-1.5 text-purple-200">
-            <span className="text-sm">💰</span>
+            <CoinsIcon size={16} className="text-purple-400 mt-0.5" />
             <span className="text-xs leading-relaxed">
               Daily income: <span className="font-bold text-green-400">+{boostedDailyIncome.toLocaleString()} DEFI</span>
             </span>
@@ -286,7 +287,7 @@ export function BuyPropertySection({
             <>
               {setBonusInfo.hasCompleteSet ? (
                 <div className="flex items-start gap-1.5 text-green-300">
-                  <span className="text-sm">✅</span>
+                  <CheckIcon size={16} className="text-green-400 mt-0.5" />
                   <span className="text-xs leading-relaxed bg-green-900/20 rounded py-0.5 px-1.5">
                     Set bonus activated (+40%)
                   </span>
@@ -300,7 +301,7 @@ export function BuyPropertySection({
                 </div>
               ) : (
                 <div className="flex items-start gap-1.5 text-purple-400">
-                  <span className="text-sm">🎯</span>
+                  <TargetIcon size={16} className="text-purple-400 mt-0.5" />
                   <span className="text-xs leading-relaxed">
                     Own {setBonusInfo.ownedInSet}/{setBonusInfo.requiredProps} • Need {setBonusInfo.requiredProps - setBonusInfo.ownedInSet} more for +40%
                   </span>

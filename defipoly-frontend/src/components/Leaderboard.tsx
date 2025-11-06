@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { getProfilesBatch, ProfileData } from '@/utils/profileStorage';
-import { TrophyIcon } from './GameIcons';
+import { TrophyIcon } from './icons/UIIcons';
 
 interface LeaderboardEntry {
   walletAddress: string;
