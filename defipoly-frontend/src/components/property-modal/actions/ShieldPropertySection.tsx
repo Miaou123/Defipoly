@@ -9,6 +9,7 @@ import { useNotification } from '@/contexts/NotificationContext';
 import { usePropertyRefresh } from '@/contexts/PropertyRefreshContext';
 import { PROPERTIES } from '@/utils/constants';
 import { Clock, Shield } from 'lucide-react';
+import { ShieldIcon, TimerIcon, WarningIcon } from '@/components/GameIcons';
 
 interface ShieldPropertySectionProps {
   propertyId: number;
@@ -241,13 +242,13 @@ export function ShieldPropertySection({
       {/* Info Section - Compact */}
       <div className="space-y-1 mb-2.5">
         <div className="flex items-start gap-1.5 text-purple-200">
-          <span className="text-sm">🛡️</span>
+          <ShieldIcon size={16} className="text-cyan-400 mt-0.5" />
           <span className="text-xs leading-relaxed">
             Protects <span className="font-bold text-white">{totalSlots} slot{totalSlots > 1 ? 's' : ''}</span> for {selectedHours} hour{selectedHours > 1 ? 's' : ''}
           </span>
         </div>
         <div className="flex items-start gap-1.5 text-purple-200">
-          <span className="text-sm">⏱️</span>
+          <TimerIcon size={16} className="text-purple-400 mt-0.5" />
           <span className="text-xs leading-relaxed">
             {cooldownHours >= 1 ? `${cooldownHours}h` : `${Math.round(cooldownHours * 60)}min`} cooldown after expiry (25% of duration)
           </span>
@@ -269,7 +270,7 @@ export function ShieldPropertySection({
 
       {!canShield && balance < totalShieldCost && (
         <div className="text-center text-xs text-red-300 mt-1.5">
-          ⚠️ Need {Math.round(totalShieldCost).toLocaleString()} DEFI
+          <WarningIcon size={16} className="inline-block mr-1" />Need {Math.round(totalShieldCost).toLocaleString()} DEFI
         </div>
       )}
     </div>

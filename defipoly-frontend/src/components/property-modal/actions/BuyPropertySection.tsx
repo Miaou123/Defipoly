@@ -1,21 +1,24 @@
 // ============================================
-// FILE: BuyPropertySection.tsx
-// Refactored to match shield section design
+// FIXED BuyPropertySection.tsx
+// FIX 1: Calculate dailyIncome from price and yieldBps
+// FIX 2: Use correct property names from useCooldown hook
 // ============================================
 
+'use client';
+
 import { useState, useEffect, useMemo } from 'react';
-import { useAnchorWallet } from '@solana/wallet-adapter-react';
-import { PROPERTIES } from '@/utils/constants';
+import { Clock } from 'lucide-react';
+import { useWallet } from '@solana/wallet-adapter-react';
 import { useDefipoly } from '@/hooks/useDefipoly';
-import { useNotification } from '@/contexts/NotificationContext';
 import { usePropertyRefresh } from '@/contexts/PropertyRefreshContext';
 import { useCooldown } from '@/hooks/useCooldown';
-import { CooldownExplanationModal } from '../../CooldownExplanationModal';
-import { Clock } from 'lucide-react';
+import { useNotification } from '@/contexts/NotificationContext';
+import { PROPERTIES } from '@/utils/constants';
+import { CooldownExplanationModal } from '@/components/CooldownExplanationModal';
 
 interface BuyPropertySectionProps {
   propertyId: number;
-  property: typeof PROPERTIES[0];
+  property: any;
   propertyData: any;
   balance: number;
   loading: boolean;
@@ -30,31 +33,43 @@ export function BuyPropertySection({
   balance,
   loading,
   setLoading,
-  onClose
+  onClose,
 }: BuyPropertySectionProps) {
-  const wallet = useAnchorWallet();
+  const wallet = useWallet();
   const { buyProperty, getOwnershipData } = useDefipoly();
-  const { showSuccess, showError } = useNotification();
   const { triggerRefresh } = usePropertyRefresh();
-  const { cooldownRemaining, isOnCooldown, affectedProperties, cooldownDurationHours, lastPurchasedPropertyId } = useCooldown(property.setId);
-
+  const { showSuccess } = useNotification();
+  
   const [slotsToBuy, setSlotsToBuy] = useState(1);
-  const [buyingProgress, setBuyingProgress] = useState<string>('');
-  const [showCooldownModal, setShowCooldownModal] = useState(false);
+  const [buyingProgress, setBuyingProgress] = useState('');
   const [setInfo, setSetInfo] = useState<{
     ownedPropertiesInSet: number[];
     hasCompleteSet: boolean;
   } | null>(null);
+  const [showCooldownModal, setShowCooldownModal] = useState(false);
 
-  // Format cooldown time
+  // ✅ FIX: Use correct property names from useCooldown
+  // The hook returns: affectedProperties (not affectedPropertyIds), cooldownDurationHours (not cooldownDuration)
+  const { 
+    isOnCooldown, 
+    cooldownRemaining, 
+    lastPurchasedPropertyId,
+    cooldownDurationHours,  // ✅ This is the correct property name
+    affectedProperties,     // ✅ This returns the full property objects
+  } = useCooldown(property.setId);
+
   const formatCooldown = (seconds: number) => {
     const hours = Math.floor(seconds / 3600);
-    const mins = Math.floor((seconds % 3600) / 60);
+    const minutes = Math.floor((seconds % 3600) / 60);
     const secs = seconds % 60;
     
-    if (hours > 0) return `${hours}h ${mins}m`;
-    if (mins > 0) return `${mins}m ${secs}s`;
-    return `${secs}s`;
+    if (hours > 0) {
+      return `${hours}h ${minutes}m`;
+    } else if (minutes > 0) {
+      return `${minutes}m ${secs}s`;
+    } else {
+      return `${secs}s`;
+    }
   };
 
   // Calculate max slots user can buy
@@ -130,7 +145,8 @@ export function BuyPropertySection({
     };
   }, [property, propertyData, setInfo, propertyId]);
 
-  const dailyIncome = property.dailyIncome;
+  // ✅ FIX: Calculate dailyIncome from price and yieldBps
+  const dailyIncome = Math.floor((property.price * property.yieldBps) / 10000);
   const buyCost = property.price * slotsToBuy;
   const isThisPropertyBlocked = isOnCooldown && lastPurchasedPropertyId !== propertyId;
   const canBuy = balance >= buyCost && !isThisPropertyBlocked;
@@ -152,34 +168,36 @@ export function BuyPropertySection({
     
     try {
       setBuyingProgress(`Buying ${slotsToBuy} slot${slotsToBuy > 1 ? 's' : ''}...`);
+      
       const signature = await buyProperty(propertyId, slotsToBuy);
       
-      if (signature) {
-        showSuccess(
-          'Property Purchased!',
-          `Successfully bought ${slotsToBuy} slot${slotsToBuy > 1 ? 's' : ''} of ${property.name}!`,
-          signature !== 'already-processed' ? signature : undefined
-        );
-        triggerRefresh();
-        setTimeout(() => onClose(), 2000);
-      }
+      showSuccess(
+        'Purchase Successful!',
+        `Bought ${slotsToBuy} slot${slotsToBuy > 1 ? 's' : ''} of ${property.name}`,
+        signature !== 'already-processed' ? signature : undefined
+      );
+      
+      triggerRefresh();
+      setTimeout(() => onClose(), 2000);
+
     } catch (error: any) {
       console.error('Error buying property:', error);
       
+      let errorMessage = 'Failed to buy slots';
       const errorString = error?.message || error?.toString() || '';
-      let errorMessage = 'Failed to purchase property';
       
       if (errorString.includes('CooldownActive')) {
-        errorMessage = 'Cooldown is still active. Please wait before purchasing.';
-      } else if (errorString.includes('NoSlotsAvailable')) {
-        errorMessage = 'No slots available for purchase';
-      } else if (errorString.includes('insufficient funds')) {
-        errorMessage = 'Insufficient DEFI balance';
+        errorMessage = `Set cooldown active. Wait ${formatCooldown(cooldownRemaining)} before buying from this set.`;
+        setShowCooldownModal(true);
       } else if (errorString.includes('MaxSlotsReached')) {
-        errorMessage = 'Maximum slots per player reached';
+        errorMessage = `Cannot buy ${slotsToBuy} slots - would exceed maximum allowed`;
+      } else if (errorString.includes('NoSlotsAvailable')) {
+        errorMessage = `Only ${propertyData?.availableSlots} slot${propertyData?.availableSlots === 1 ? '' : 's'} available`;
+      } else if (errorString.includes('insufficient funds')) {
+        errorMessage = 'Insufficient balance';
       }
       
-      showError('Purchase Failed', errorMessage);
+      alert(errorMessage);
     } finally {
       setLoading(false);
       setBuyingProgress('');
@@ -188,19 +206,23 @@ export function BuyPropertySection({
 
   return (
     <>
-      <div className="mt-2 p-3 bg-gradient-to-br from-purple-900/40 to-indigo-900/40 rounded-xl border border-purple-500/30">
+      <div className="bg-purple-900/20 rounded-xl p-3 border border-purple-500/20 space-y-2.5">
         {/* Cooldown Warning */}
         {isThisPropertyBlocked && (
-          <div className="mb-2.5 p-2 bg-orange-900/30 border border-orange-500/40 rounded-lg">
-            <p className="text-xs text-orange-200 flex items-center gap-1.5">
-              <Clock className="w-3.5 h-3.5" />
-              Cooldown active: {formatCooldown(cooldownRemaining)}
-            </p>
+          <div className="bg-orange-900/30 border border-orange-500/40 rounded-lg p-2">
             <button
               onClick={() => setShowCooldownModal(true)}
-              className="text-xs text-orange-200 underline hover:text-orange-100 mt-0.5"
+              className="w-full text-left flex items-start gap-2 hover:bg-orange-800/20 rounded p-1 transition-colors"
             >
-              Why is there a cooldown?
+              <Clock className="w-4 h-4 text-orange-400 mt-0.5 flex-shrink-0" />
+              <div className="flex-1 min-w-0">
+                <div className="text-xs text-orange-300 font-semibold">
+                  ⏰ Set Cooldown: {formatCooldown(cooldownRemaining)}
+                </div>
+                <div className="text-[10px] text-orange-400/80 mt-0.5">
+                  Buy this property or wait {formatCooldown(cooldownRemaining)} to buy from the same set
+                </div>
+              </div>
             </button>
           </div>
         )}
@@ -220,7 +242,7 @@ export function BuyPropertySection({
               >
                 −
               </button>
-              <div className="w-12 h-8 flex items-center justify-center bg-950/70 rounded">
+              <div className="w-12 h-8 flex items-center justify-center bg-purple-950/70 rounded">
                 <span className="text-white text-xl font-bold">{slotsToBuy}</span>
               </div>
               <button
@@ -244,7 +266,7 @@ export function BuyPropertySection({
           </div>
         </div>
 
-        {/* Info Section - Compact */}
+        {/* Info Section */}
         <div className="space-y-1 mb-2.5">
           <div className="flex items-start gap-1.5 text-purple-200">
             <span className="text-sm">📊</span>
@@ -288,7 +310,7 @@ export function BuyPropertySection({
           )}
         </div>
 
-        {/* Action Button - More subtle */}
+        {/* Action Button */}
         <button
           onClick={handleBuy}
           disabled={loading || slotsToBuy < 1 || slotsToBuy > maxSlotsToBuy || !canBuy}

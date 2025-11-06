@@ -1,7 +1,7 @@
 // ============================================
 // AUTO-GENERATED - DO NOT EDIT
 // Source: defipoly-program/scripts/property-config.ts
-// Generated: 2025-11-05T17:10:08.758Z
+// Generated: 2025-11-06T18:39:55.700Z
 // ============================================
 
 import { PublicKey } from "@solana/web3.js";
@@ -17,6 +17,14 @@ export const GAME_CONFIG = new PublicKey("275QRvjpz5stZb93T3KY1LLGndCdGs5DvW3bn1
 export const REWARD_POOL_VAULT = new PublicKey("Cq3273buxQhVcZkqEZw83aGnfitNRQM8LKFZX9B2ggEc");
 export const REWARD_POOL = REWARD_POOL_VAULT; // ✅ FIXED: Use vault address, not numeric amount
 export const NETWORK = "devnet";
+
+// ========================================
+// WALLET ADDRESSES
+// ========================================
+// These match the hardcoded addresses in the Solana program
+
+export const DEV_WALLET = new PublicKey("CgWTFX7JJQHed3qyMDjJkNCxK4sFe3wbDFABmWAAmrdS");
+export const MARKETING_WALLET = new PublicKey("FoPKSQ5HDSVyZgaQobX64YEBVQ2iiKMZp8VHWtd6jLQE");
 
 // ========================================
 // PROPERTIES

@@ -8,6 +8,7 @@ import { useDefipoly } from '@/hooks/useDefipoly';
 import { useNotification } from '@/contexts/NotificationContext';
 import { usePropertyRefresh } from '@/contexts/PropertyRefreshContext';
 import { PROPERTIES } from '@/utils/constants';
+import { ChartIcon } from '@/components/GameIcons';
 
 interface SellPropertySectionProps {
   propertyId: number;
@@ -116,7 +117,7 @@ export function SellPropertySection({
       {/* Info Section - Compact */}
       <div className="space-y-1 mb-2.5">
         <div className="flex items-start gap-1.5 text-purple-200">
-          <span className="text-sm">📊</span>
+          <ChartIcon size={16} className="text-purple-400 mt-0.5" />
           <span className="text-xs leading-relaxed">
             Max: {maxSlotsToSell} slots owned
           </span>

@@ -1,5 +1,10 @@
 'use client';
 
+// ============================================
+// FIXED PropertyModalDetails.tsx
+// FIX: Calculate dailyIncome from price and yieldBps instead of using non-existent property.dailyIncome
+// ============================================
+
 interface PropertyModalDetailsProps {
   property: any;
   propertyData: any;
@@ -7,7 +12,9 @@ interface PropertyModalDetailsProps {
 }
 
 export function PropertyModalDetails({ property, propertyData, setBonusInfo }: PropertyModalDetailsProps) {
-  const dailyIncome = property.dailyIncome;
+  // ✅ FIX: Calculate dailyIncome from price and yieldBps
+  // The formula is: (price * yieldBps) / 10000
+  const dailyIncome = Math.floor((property.price * property.yieldBps) / 10000);
   const baseIncomePerSlot = dailyIncome;
   const bonusAmount = Math.floor(baseIncomePerSlot * 0.4);
   const totalIncome = baseIncomePerSlot + bonusAmount;
@@ -52,64 +59,99 @@ export function PropertyModalDetails({ property, propertyData, setBonusInfo }: P
             </div>
           </div>
         </div>
+        
+        {/* Set Bonus Info */}
+        {hasSetBonus && (
+          <div className="mt-2 px-2 py-1.5 bg-amber-500/10 border border-amber-500/30 rounded-lg">
+            <div className="flex items-center justify-between text-[10px]">
+              <span className="text-amber-400 font-medium">
+                ✨ Complete Set Bonus Active
+              </span>
+              <span className="text-amber-300">
+                +40% on {setBonusInfo.boostedSlots} slot{setBonusInfo.boostedSlots !== 1 ? 's' : ''}
+              </span>
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* Divider */}
-      <div className="h-px bg-purple-500/10"></div>
-
-      {/* Slots Distribution Row */}
+      {/* Slot Distribution */}
       <div>
-        <div className="text-[9px] text-purple-400 mb-1.5 uppercase tracking-wider">🎰 Slots</div>
-        <div className="space-y-2">
-          {/* Values */}
-          <div className="flex justify-between items-baseline">
-            <div>
-              <span className="text-lg font-bold text-purple-100">{totalSlots - availableSlots}</span>
-              <span className="text-[9px] text-purple-400 ml-1">/ {totalSlots} slots filled</span>
+        <div className="text-[9px] text-purple-400 mb-1.5 uppercase tracking-wider">🎰 Slots ({totalSlots} total)</div>
+        
+        {/* Visual Bar */}
+        <div className="h-4 bg-gray-800/50 rounded-full overflow-hidden flex border border-gray-700/50">
+          {personalOwned > 0 && (
+            <div 
+              className="bg-gradient-to-r from-green-500 to-green-400 flex items-center justify-center"
+              style={{ width: `${(personalOwned / totalSlots) * 100}%` }}
+            >
+              <span className="text-[8px] font-bold text-white drop-shadow">
+                {personalOwned > 0 && `${personalOwned}`}
+              </span>
             </div>
-            <div>
-              <span className="text-lg font-bold text-purple-100">{availableSlots}</span>
-              <span className="text-[9px] text-purple-400 ml-1">available</span>
-            </div>
-          </div>
+          )}
           
-          {/* Stacked Bar */}
-          <div className="h-2 bg-purple-950/50 rounded-full overflow-hidden flex">
-            {othersOwned > 0 && (
-              <div 
-                className="h-full bg-green-500"
-                style={{ width: `${(othersOwned / totalSlots) * 100}%` }}
-              />
-            )}
-            {personalOwned > 0 && (
-              <div 
-                className="h-full bg-purple-500"
-                style={{ width: `${(personalOwned / totalSlots) * 100}%` }}
-              />
-            )}
-            {availableSlots > 0 && (
-              <div 
-                className="h-full bg-white/15"
-                style={{ width: `${(availableSlots / totalSlots) * 100}%` }}
-              />
-            )}
-          </div>
+          {othersOwned > 0 && (
+            <div 
+              className="bg-gradient-to-r from-red-500 to-red-400 flex items-center justify-center"
+              style={{ width: `${(othersOwned / totalSlots) * 100}%` }}
+            >
+              <span className="text-[8px] font-bold text-white drop-shadow">
+                {othersOwned > 0 && `${othersOwned}`}
+              </span>
+            </div>
+          )}
           
-          {/* Legend */}
-          <div className="flex gap-3 text-[10px]">
-            <div className="flex items-center gap-1">
-              <div className="w-1.5 h-1.5 bg-green-500 rounded-sm"></div>
-              <span className="text-purple-300">Others: {othersOwned}</span>
+          {availableSlots > 0 && (
+            <div 
+              className="bg-gradient-to-r from-gray-600 to-gray-500 flex items-center justify-center"
+              style={{ width: `${(availableSlots / totalSlots) * 100}%` }}
+            >
+              <span className="text-[8px] font-bold text-white drop-shadow">
+                {availableSlots > 0 && `${availableSlots}`}
+              </span>
             </div>
-            <div className="flex items-center gap-1">
-              <div className="w-1.5 h-1.5 bg-purple-500 rounded-sm"></div>
-              <span className="text-purple-300">You: {personalOwned}</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <div className="w-1.5 h-1.5 bg-white/30 rounded-sm"></div>
-              <span className="text-purple-300">Available: {availableSlots}</span>
-            </div>
+          )}
+        </div>
+
+        {/* Legend */}
+        <div className="flex gap-3 mt-2 text-[9px]">
+          <div className="flex items-center gap-1">
+            <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+            <span className="text-gray-400">You: <span className="text-green-400 font-semibold">{personalOwned}</span></span>
           </div>
+          <div className="flex items-center gap-1">
+            <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+            <span className="text-gray-400">Others: <span className="text-red-400 font-semibold">{othersOwned}</span></span>
+          </div>
+          <div className="flex items-center gap-1">
+            <div className="w-2 h-2 bg-gray-500 rounded-full"></div>
+            <span className="text-gray-400">Free: <span className="text-gray-300 font-semibold">{availableSlots}</span></span>
+          </div>
+        </div>
+      </div>
+
+      {/* Property Stats */}
+      <div className="grid grid-cols-2 gap-2">
+        <div className="bg-purple-950/30 rounded-lg p-2 border border-purple-500/10">
+          <div className="text-[8px] text-purple-400 uppercase mb-0.5">💰 Price</div>
+          <div className="text-sm font-bold text-purple-100">{property.price.toLocaleString()} DEFI</div>
+        </div>
+        
+        <div className="bg-purple-950/30 rounded-lg p-2 border border-purple-500/10">
+          <div className="text-[8px] text-purple-400 uppercase mb-0.5">📈 Daily Yield</div>
+          <div className="text-sm font-bold text-purple-100">{(property.yieldBps / 100).toFixed(1)}%</div>
+        </div>
+        
+        <div className="bg-purple-950/30 rounded-lg p-2 border border-purple-500/10">
+          <div className="text-[8px] text-purple-400 uppercase mb-0.5">🛡️ Shield Cost</div>
+          <div className="text-sm font-bold text-purple-100">{(property.shieldCostBps / 100).toFixed(0)}%</div>
+        </div>
+        
+        <div className="bg-purple-950/30 rounded-lg p-2 border border-purple-500/10">
+          <div className="text-[8px] text-purple-400 uppercase mb-0.5">⏰ Cooldown</div>
+          <div className="text-sm font-bold text-purple-100">{property.cooldown}h</div>
         </div>
       </div>
     </div>

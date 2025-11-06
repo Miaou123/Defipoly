@@ -1,13 +1,21 @@
 // ============================================
 // AUTO-GENERATED - DO NOT EDIT
 // Source: defipoly-program/scripts/property-config.ts
-// Generated: 2025-11-05T17:10:08.759Z
+// Generated: 2025-11-06T18:39:55.701Z
 // ============================================
 // 
 // This file contains game configuration data only.
 // Blockchain addresses (PROGRAM_ID, etc.) are read from the IDL file.
 //
 // ============================================
+
+// ========================================
+// WALLET ADDRESSES
+// ========================================
+// These match the hardcoded addresses in the Solana program
+
+const DEV_WALLET = "CgWTFX7JJQHed3qyMDjJkNCxK4sFe3wbDFABmWAAmrdS";
+const MARKETING_WALLET = "FoPKSQ5HDSVyZgaQobX64YEBVQ2iiKMZp8VHWtd6jLQE";
 
 // ========================================
 // PROPERTIES
@@ -418,6 +426,10 @@ function getCooldownDurationForSet(setId) {
 // ========================================
 
 module.exports = {
+  // Wallet addresses
+  DEV_WALLET,
+  MARKETING_WALLET,
+  
   // Game data
   PROPERTIES,
   SET_BONUSES,

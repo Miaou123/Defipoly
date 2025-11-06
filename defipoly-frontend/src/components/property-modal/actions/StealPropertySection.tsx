@@ -11,6 +11,7 @@ import { useStealCooldownFromContext } from '@/contexts/StealCooldownContext';
 import { PROPERTIES } from '@/utils/constants';
 import { fetchPropertyStats } from '@/utils/propertyStats';
 import { Clock } from 'lucide-react';
+import { DiceIcon, ShieldIcon, LightningIcon, WarningIcon, LockIcon } from '@/components/GameIcons';
 
 interface StealPropertySectionProps {
   propertyId: number;
@@ -164,7 +165,7 @@ export function StealPropertySection({
       {/* Info Section */}
       <div className="space-y-1.5 mb-3">
         <div className="flex items-start gap-1.5 text-purple-200">
-          <span className="text-sm">🎲</span>
+          <DiceIcon size={16} className="text-purple-400 mt-0.5" />
           <span className="text-xs leading-relaxed">
             <strong>Truly Random:</strong> Target selected on-chain from all unprotected owners
           </span>
@@ -187,14 +188,14 @@ export function StealPropertySection({
         )}
 
         <div className="flex items-start gap-1.5 text-purple-200">
-          <span className="text-sm">🛡️</span>
+          <ShieldIcon size={16} className="text-cyan-400 mt-0.5" />
           <span className="text-xs leading-relaxed">
             <strong>Protection:</strong> Targeted players get 6h immunity (success or fail)
           </span>
         </div>
 
         <div className="flex items-start gap-1.5 text-purple-200">
-          <span className="text-sm">⚡</span>
+          <LightningIcon size={16} className="text-yellow-400 mt-0.5" />
           <span className="text-xs leading-relaxed">
             {/* ✅ FIXED: Uses cooldownHours which exists in PROPERTIES constant */}
             Your cooldown: {(property.cooldownHours || 24) / 2}h between steal attempts
@@ -205,7 +206,7 @@ export function StealPropertySection({
       {/* Warnings */}
       {wouldExceedMaxSlots && (
         <div className="text-center text-xs text-yellow-300 mb-2 bg-yellow-400/10 py-1.5 px-2 rounded border border-yellow-400/20">
-          ⚠️ You're at max slots for this property
+          <WarningIcon size={16} className="inline-block mr-1" />You're at max slots for this property
         </div>
       )}
 
@@ -219,18 +220,22 @@ export function StealPropertySection({
             : 'bg-red-600/40 hover:bg-red-600/60 border border-red-500/50 text-red-100 hover:border-red-400/70 shadow-lg shadow-red-500/20'
         }`}
       >
-        {loading ? '🎲 Rolling the dice...' : '🎲 Attempt Random Steal'}
+        {loading ? (
+          <><DiceIcon size={16} className="inline-block mr-1 animate-pulse" />Rolling the dice...</>
+        ) : (
+          <><DiceIcon size={16} className="inline-block mr-1" />Attempt Random Steal</>
+        )}
       </button>
 
       {!canSteal && balance < stealCost && (
         <div className="text-center text-xs text-red-300 mt-2">
-          ⚠️ Need {stealCost.toLocaleString()} DEFI
+          <WarningIcon size={16} className="inline-block mr-1" />Need {stealCost.toLocaleString()} DEFI
         </div>
       )}
 
       {availableTargets === 0 && (
         <div className="text-center text-xs text-orange-300 mt-2 bg-orange-400/10 py-1.5 px-2 rounded border border-orange-400/20">
-          🔒 All owners are protected (shielded or 6h steal immunity)
+          <LockIcon size={16} className="inline-block mr-1" />All owners are protected (shielded or 6h steal immunity)
         </div>
       )}
     </div>

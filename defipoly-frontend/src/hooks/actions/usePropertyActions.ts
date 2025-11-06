@@ -1,11 +1,10 @@
 // ============================================
-// FIXED usePropertyActions.ts (v2 - Corrected)
-// Webhook now handles all storage automatically
-// Fixed: getSetStatsPDA only takes setId parameter
+// UPDATED usePropertyActions.ts
+// FIXED: Uses DEV_WALLET and MARKETING_WALLET from constants
 // ============================================
 
 import { useCallback } from 'react';
-import { PublicKey, SystemProgram, Transaction } from '@solana/web3.js';
+import { SystemProgram, Transaction } from '@solana/web3.js';
 import { TOKEN_PROGRAM_ID, getAssociatedTokenAddress } from '@solana/spl-token';
 import { Program, AnchorProvider } from '@coral-xyz/anchor';
 import { Connection } from '@solana/web3.js';
@@ -19,7 +18,13 @@ import {
   getSetStatsPDA,
   fetchPlayerData
 } from '@/utils/program';
-import { GAME_CONFIG, REWARD_POOL, TOKEN_MINT } from '@/utils/constants';
+import { 
+  GAME_CONFIG, 
+  REWARD_POOL, 
+  TOKEN_MINT,
+  DEV_WALLET,
+  MARKETING_WALLET 
+} from '@/utils/constants';
 
 export const usePropertyActions = (
   program: Program | null,
@@ -41,8 +46,9 @@ export const usePropertyActions = (
     try {
       const playerTokenAccount = await getAssociatedTokenAddress(TOKEN_MINT, wallet.publicKey);
       
-      const devWallet = new PublicKey("CgWTFX7JJQHed3qyMDjJkNCxK4sFe3wbDFABmWAAmrdS");
-      const devTokenAccount = await getAssociatedTokenAddress(TOKEN_MINT, devWallet);
+      // ✅ FIX: Get wallet addresses from constants instead of hardcoding
+      const devTokenAccount = await getAssociatedTokenAddress(TOKEN_MINT, DEV_WALLET);
+      const marketingTokenAccount = await getAssociatedTokenAddress(TOKEN_MINT, MARKETING_WALLET);
 
       const [propertyPDA] = getPropertyPDA(propertyId);
       const [playerPDA] = getPlayerPDA(wallet.publicKey);
@@ -66,16 +72,16 @@ export const usePropertyActions = (
         transaction.add(initPlayerIx);
       }
 
-      // ✅ FIXED: Fetch property to get setId first
+      // Fetch property to get setId first
       const propertyData = await (program.account as any).property.fetch(propertyPDA);
       const setId = propertyData.setId;
 
       // Get all set-related PDAs using the correct parameters
       const [setCooldownPDA] = getSetCooldownPDA(wallet.publicKey, setId);
       const [setOwnershipPDA] = getSetOwnershipPDA(wallet.publicKey, setId);
-      const [setStatsPDA] = getSetStatsPDA(setId); // ✅ Only takes setId, not wallet.publicKey
+      const [setStatsPDA] = getSetStatsPDA(setId);
 
-      // Add buy property instruction with slots parameter
+      // ✅ FIX: Add buy property instruction with ALL required accounts
       const buyPropertyIx = await program.methods
         .buyProperty(slots)
         .accountsPartial({
@@ -89,6 +95,7 @@ export const usePropertyActions = (
           playerTokenAccount,
           rewardPoolVault: REWARD_POOL,
           devTokenAccount: devTokenAccount,
+          marketingTokenAccount: marketingTokenAccount, // ✅ CRITICAL FIX!
           gameConfig: GAME_CONFIG,
           tokenProgram: TOKEN_PROGRAM_ID,
           systemProgram: SystemProgram.programId,
@@ -103,8 +110,6 @@ export const usePropertyActions = (
       });
       
       console.log(`✅ Bought ${slots} slot(s) successfully:`, signature);
-      
-      // ✅ WEBHOOK HANDLES ALL STORAGE AUTOMATICALLY - No manual storage needed!
       
       // Update states
       if (!hasTokenAccount) setTokenAccountExists(true);
@@ -158,8 +163,6 @@ export const usePropertyActions = (
         .rpc();
 
       console.log('✅ Property sold successfully:', tx);
-
-      // ✅ WEBHOOK HANDLES ALL STORAGE AUTOMATICALLY - No manual storage needed!
 
       return tx;
     } catch (error: any) {

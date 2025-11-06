@@ -1,6 +1,6 @@
 // ============================================
 // UPDATED generate-constants.ts
-// FIXED: REWARD_POOL now uses rewardPoolVault address
+// ADDED: DEV_WALLET and MARKETING_WALLET exports
 // ============================================
 
 import * as fs from "fs";
@@ -14,6 +14,12 @@ const __dirname = path.dirname(__filename);
 
 // Load environment variables
 dotenv.config({ path: path.join(__dirname, '../.env') });
+
+// ========================================
+// WALLET ADDRESSES (Match program constants)
+// ========================================
+const DEV_WALLET = "CgWTFX7JJQHed3qyMDjJkNCxK4sFe3wbDFABmWAAmrdS";
+const MARKETING_WALLET = "FoPKSQ5HDSVyZgaQobX64YEBVQ2iiKMZp8VHWtd6jLQE";
 
 interface DeploymentInfo {
   programId: string;
@@ -48,6 +54,14 @@ export const GAME_CONFIG = new PublicKey("${deployment.gameConfig}");
 export const REWARD_POOL_VAULT = new PublicKey("${deployment.rewardPoolVault || deployment.gameConfig}");
 export const REWARD_POOL = REWARD_POOL_VAULT; // ✅ FIXED: Use vault address, not numeric amount
 export const NETWORK = "${deployment.network}";
+
+// ========================================
+// WALLET ADDRESSES
+// ========================================
+// These match the hardcoded addresses in the Solana program
+
+export const DEV_WALLET = new PublicKey("${DEV_WALLET}");
+export const MARKETING_WALLET = new PublicKey("${MARKETING_WALLET}");
 
 // ========================================
 // PROPERTIES
@@ -107,6 +121,14 @@ function generateBackendConstants(): string {
 // ============================================
 
 // ========================================
+// WALLET ADDRESSES
+// ========================================
+// These match the hardcoded addresses in the Solana program
+
+const DEV_WALLET = "${DEV_WALLET}";
+const MARKETING_WALLET = "${MARKETING_WALLET}";
+
+// ========================================
 // PROPERTIES
 // ========================================
 
@@ -156,6 +178,10 @@ function getCooldownDurationForSet(setId) {
 // ========================================
 
 module.exports = {
+  // Wallet addresses
+  DEV_WALLET,
+  MARKETING_WALLET,
+  
   // Game data
   PROPERTIES,
   SET_BONUSES,
@@ -205,7 +231,11 @@ async function generate() {
   console.log(`   Game Config: ${deployment.gameConfig}`);
   console.log(`   Reward Pool Vault: ${deployment.rewardPoolVault}`);
   console.log(`   Initial Reward Amount: ${deployment.rewardPool} lamports`);
-  console.log(`   Network:     ${deployment.network}\n`);
+  console.log(`   Network:     ${deployment.network}`);
+  
+  console.log("\n💼 Wallet Addresses:");
+  console.log(`   Dev Wallet:       ${DEV_WALLET}`);
+  console.log(`   Marketing Wallet: ${MARKETING_WALLET}\n`);
 
   // ========================================
   // STEP 2: Export to Frontend (TypeScript)
@@ -273,17 +303,17 @@ async function generate() {
   console.log(`   Set Bonuses: ${Object.keys(SET_BONUSES).length}`);
   console.log(`   Network:     ${deployment.network}`);
   console.log(`\n💡 What was exported:`);
-  console.log(`   ✓ Frontend: Full constants + blockchain addresses`);
-  console.log(`   ✓ Backend: Game constants only (PROPERTIES, SET_BONUSES, PROPERTY_SETS)`);
+  console.log(`   ✓ Frontend: Full constants + blockchain addresses + wallet addresses`);
+  console.log(`   ✓ Backend: Game constants + wallet addresses (PROGRAM_ID from IDL)`);
   console.log(`   ✓ Backend: Helper functions (getSetBonusBps, getCooldownDurationForSet, etc.)`);
   console.log(`   ✓ Backend: IDL file (PROGRAM_ID read from here)`);
   console.log(`   ✓ Frontend: IDL file`);
   console.log(`\n🎯 Next steps:`);
-  console.log(`   - Remove PROGRAM_ID from your .env file (not needed anymore)`);
-  console.log(`   - Restart backend: the PROGRAM_ID now comes from IDL`);
-  console.log(`   - Frontend: npm run dev`);
-  console.log(`   - Backend:  npm start`);
-  console.log(`   - Test:     npm run bot\n`);
+  console.log(`   - Remove DEV_WALLET/MARKETING_WALLET from your .env file (not needed anymore)`);
+  console.log(`   - Update your action files to import from constants:`);
+  console.log(`     import { DEV_WALLET, MARKETING_WALLET } from '@/utils/constants';`);
+  console.log(`   - Restart frontend: npm run dev`);
+  console.log(`   - Restart backend:  npm start\n`);
 }
 
 generate()
