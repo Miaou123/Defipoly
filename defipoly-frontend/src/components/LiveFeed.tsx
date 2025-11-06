@@ -6,6 +6,7 @@ import { PROGRAM_ID, getPropertyById } from '@/utils/constants';
 import { BorshCoder, EventParser } from '@coral-xyz/anchor';
 import { getProfilesBatch, ProfileData } from '@/utils/profileStorage';
 import idl from '@/idl/defipoly_program.json';
+import { getActionIcon } from '@/components/GameIcons';
 
 interface FeedItem {
   message: string;
@@ -71,7 +72,7 @@ export function LiveFeed() {
 
       case 'steal_success':
         return {
-          message: `${getDisplayName(action.playerAddress)} stole from ${getDisplayName(action.targetAddress)} on ${propertyName}! 🎯`,
+          message: `${getDisplayName(action.playerAddress)} stole from ${getDisplayName(action.targetAddress)} on ${propertyName}!`,
           type: 'steal',
           timestamp: action.blockTime * 1000,
           txSignature: action.txSignature,
@@ -93,7 +94,7 @@ export function LiveFeed() {
 
       case 'shield':
         return {
-          message: `${getDisplayName(action.playerAddress)} activated shield on ${propertyName} 🛡️`,
+          message: `${getDisplayName(action.playerAddress)} activated shield on ${propertyName}`,
           type: 'shield',
           timestamp: action.blockTime * 1000,
           txSignature: action.txSignature,
@@ -103,7 +104,7 @@ export function LiveFeed() {
 
       case 'claim':
         return {
-          message: `${getDisplayName(action.playerAddress)} claimed ${formatAmount(action.amount || 0)} DEFI rewards 💰`,
+          message: `${getDisplayName(action.playerAddress)} claimed ${formatAmount(action.amount || 0)} DEFI rewards`,
           type: 'claim',
           timestamp: action.blockTime * 1000,
           txSignature: action.txSignature,
@@ -328,6 +329,11 @@ export function LiveFeed() {
                     )}
                   </div>
                 )}
+                
+                {/* Action Icon */}
+                <div className="flex-shrink-0">
+                  {getActionIcon(item.type === 'steal' ? 'steal_success' : item.type)}
+                </div>
                 
                 {/* Message */}
                 <div className="flex-1 min-w-0">

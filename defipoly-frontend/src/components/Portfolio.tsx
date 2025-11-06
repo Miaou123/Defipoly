@@ -8,6 +8,7 @@ import type { PropertyOwnership } from '@/types/accounts';
 import { Shield, ChevronDown, ChevronRight, Award, Trophy, Zap, Wallet } from 'lucide-react';
 import { ShieldAllModal } from './ShieldAllModal';
 import { useTokenBalance } from '@/hooks/useTokenBalance';
+import { BuildingIcon } from './GameIcons';
 
 interface OwnedProperty extends PropertyOwnership {
   propertyInfo: typeof PROPERTIES[0];
@@ -168,12 +169,13 @@ export function Portfolio({ onSelectProperty }: PortfolioProps) {
     };
   };
 
-  // Calculate shield cost for a property
-  const calculateShieldCost = (property: typeof PROPERTIES[0], slots: number): number => {
-    const shieldCostBps = 500; // 5% of daily income per slot
-    const dailyIncomePerSlot = property.dailyIncome;
-    return Math.floor((dailyIncomePerSlot * shieldCostBps * slots) / 10000);
-  };
+// Calculate shield cost for a property
+const calculateShieldCost = (property: typeof PROPERTIES[0], slots: number): number => {
+  // Use actual shield cost BPS from property config (graduated 10-17% by set)
+  const shieldCostBps = property.shieldCostBps;
+  const dailyIncomePerSlot = property.dailyIncome;
+  return Math.floor((dailyIncomePerSlot * shieldCostBps * slots) / 10000);
+};
 
   // Calculate shieldable properties with costs for ShieldAllModal
   const shieldAllData = ownedProperties
@@ -286,7 +288,7 @@ export function Portfolio({ onSelectProperty }: PortfolioProps) {
         {/* Empty State */}
         {!loading && ownedProperties.length === 0 && (
           <div className="text-center py-12">
-            <div className="text-5xl mb-3 opacity-50">🏘️</div>
+            <BuildingIcon size={60} className="mx-auto mb-3 text-purple-400 opacity-50" />
             <div className="text-sm text-gray-400">
               No properties yet<br />
               Click on the board to start building!

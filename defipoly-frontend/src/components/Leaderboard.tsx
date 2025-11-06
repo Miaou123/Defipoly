@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { getProfilesBatch, ProfileData } from '@/utils/profileStorage';
+import { TrophyIcon } from './GameIcons';
 
 interface LeaderboardEntry {
   walletAddress: string;
@@ -91,7 +92,7 @@ export function Leaderboard() {
           </div>
         ) : leaders.length === 0 ? (
           <div className="text-center py-8">
-            <div className="text-xl mb-1">🏆</div>
+            <TrophyIcon size={24} className="mx-auto mb-1 text-yellow-400" />
             <div className="text-xs text-purple-400">No players yet</div>
             <div className="text-[10px] text-purple-500 mt-0.5">Be the first!</div>
           </div>

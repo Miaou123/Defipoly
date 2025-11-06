@@ -6,7 +6,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { PROPERTIES } from '@/utils/constants';
+import { PROPERTIES, SET_BONUSES } from '@/utils/constants';
 import { useDefipoly } from '@/hooks/useDefipoly';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { useAnchorWallet } from '@solana/wallet-adapter-react';
@@ -140,7 +140,7 @@ export function PropertyModal({ propertyId, onClose }: PropertyModalProps) {
 
   if (!property || propertyId === null) return null;
 
-  const dailyIncome = property.dailyIncome;
+  const dailyIncome = Math.floor((property.price * property.yieldBps) / 10000);
   
   // ============================================
   // VARIABLE SET BONUS CALCULATION (30-50%)
@@ -149,16 +149,17 @@ export function PropertyModal({ propertyId, onClose }: PropertyModalProps) {
   // Calculate income per slot
   const baseIncomePerSlot = dailyIncome;
   
-  // Get variable set bonus from property data (no imports needed!)
-  const setBonusPercent = property.setBonusPercent;  // e.g., 30.00 for Brown, 50.00 for Dark Blue
-  const setBonusBps = property.setBonusBps;          // e.g., 3000 for Brown, 5000 for Dark Blue
+  // Get variable set bonus from SET_BONUSES based on setId
+  const setBonus = SET_BONUSES[property.setId as keyof typeof SET_BONUSES];
+  const setBonusPercent = setBonus?.percent || 40;  // e.g., 30.00 for Brown, 50.00 for Dark Blue
+  const setBonusBps = setBonus?.bps || 4000;        // e.g., 3000 for Brown, 5000 for Dark Blue
   
   // Calculate boosted income using VARIABLE bonus
   const boostedIncomePerSlot = setBonusInfo?.hasCompleteSet ? 
     Math.floor(baseIncomePerSlot * (10000 + setBonusBps) / 10000) : baseIncomePerSlot;
 
   // Calculate availability values for the stacked bar
-  const totalSlots = property.totalSlots;
+  const totalSlots = property.maxSlots;  // ✅ FIXED: Use maxSlots instead of totalSlots
   const personalOwned = propertyData?.owned || 0;
   const othersOwned = totalSlots - (propertyData?.availableSlots || 0) - personalOwned;
   const availableSlots = propertyData?.availableSlots || 0;

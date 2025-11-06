@@ -10,6 +10,7 @@ import { StyledWalletButton } from './StyledWalletButton';
 import { PROGRAM_ID } from '@/utils/constants';
 import { BorshCoder, EventParser } from '@coral-xyz/anchor';
 import idl from '@/idl/defipoly_program.json';
+import { BuildingIcon, CoinsIcon, TargetIcon } from './GameIcons';
 
 export function RewardsPanel() {
   const { connected, publicKey } = useWallet();
@@ -124,15 +125,15 @@ export function RewardsPanel() {
         {/* Feature Icons */}
         <div className="grid grid-cols-3 gap-4 pt-4">
           <div className="bg-black/20 backdrop-blur rounded-xl p-4 text-center border border-purple-500/20 hover:border-purple-500/40 transition-all">
-            <div className="text-3xl mb-2">🏠</div>
+            <BuildingIcon size={32} className="mx-auto mb-2 text-purple-400" />
             <div className="text-xs text-white/80 font-semibold">Buy Properties</div>
           </div>
           <div className="bg-black/20 backdrop-blur rounded-xl p-4 text-center border border-purple-500/20 hover:border-purple-500/40 transition-all">
-            <div className="text-3xl mb-2">💰</div>
+            <CoinsIcon size={32} className="mx-auto mb-2 text-purple-400" />
             <div className="text-xs text-white/80 font-semibold">Earn Rewards</div>
           </div>
           <div className="bg-black/20 backdrop-blur rounded-xl p-4 text-center border border-purple-500/20 hover:border-purple-500/40 transition-all">
-            <div className="text-3xl mb-2">🎯</div>
+            <TargetIcon size={32} className="mx-auto mb-2 text-purple-400" />
             <div className="text-xs text-white/80 font-semibold">Steal Slots</div>
           </div>
         </div>

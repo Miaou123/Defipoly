@@ -6,6 +6,7 @@ import { useDefipoly } from '@/hooks/useDefipoly';
 import { usePropertyRefresh } from '@/contexts/PropertyRefreshContext';
 import { useCooldown } from '@/hooks/useCooldown';
 import { useStealCooldownFromContext } from '@/contexts/StealCooldownContext';
+import { ShieldIcon, CoinsIcon, FlameIcon, PropertyMarkerIcon } from './GameIcons';
 
 import { PROPERTIES } from '@/utils/constants';
 
@@ -252,13 +253,13 @@ export function PropertyCard({ propertyId, onSelect }: PropertyCardProps) {
   // Determine which cooldowns are active
   const activeCooldowns = [];
   if (shieldActive) {
-    activeCooldowns.push({ icon: '🛡️', label: 'Shield' });
+    activeCooldowns.push({ icon: <ShieldIcon size={16} className="text-cyan-400" />, label: 'Shield' });
   }
   if (isThisPropertyBlocked) {
-    activeCooldowns.push({ icon: '💰', time: formatCooldown(cooldownRemaining) });
+    activeCooldowns.push({ icon: <CoinsIcon size={16} className="text-yellow-400" />, time: formatCooldown(cooldownRemaining) });
   }
   if (isOnStealCooldown) {
-    activeCooldowns.push({ icon: '🔥', time: formatCooldown(stealCooldownRemaining) });
+    activeCooldowns.push({ icon: <FlameIcon size={16} className="text-orange-400" />, time: formatCooldown(stealCooldownRemaining) });
   }
 
   // Fetch ownership data
@@ -419,7 +420,7 @@ export function PropertyCard({ propertyId, onSelect }: PropertyCardProps) {
         >
           {buildingLevel === 0 ? (
             <div className="text-center">
-              <div className="text-base">📍</div>
+              <PropertyMarkerIcon size={20} className="text-purple-400 mx-auto" />
             </div>
           ) : (
             <div className="w-full h-full flex items-center justify-center scale-[0.25]">

@@ -1,5 +1,7 @@
 'use client';
 
+import { DiceIcon } from './GameIcons';
+
 interface CornerSquareProps {
   icon: string;
   label: string;
@@ -43,7 +45,7 @@ export function CornerSquare({ icon, label, bgColor }: CornerSquareProps) {
             background: 'linear-gradient(135deg, rgba(88, 28, 135, 0.4), rgba(109, 40, 217, 0.2))',
           }}
         >
-          <div className="text-4xl">🎲</div>
+          <DiceIcon size={48} className="text-purple-400" />
           <div 
             className="text-[10px] font-black uppercase text-purple-200 tracking-wider"
           >
@@ -109,7 +111,7 @@ export function FillerSquare({ icon, label, bgColor }: FillerSquareProps) {
             background: 'linear-gradient(135deg, rgba(88, 28, 135, 0.4), rgba(109, 40, 217, 0.2))',
           }}
         >
-          <div className="text-4xl">🎲</div>
+          <DiceIcon size={48} className="text-purple-400" />
           <div 
             className="text-[10px] font-black uppercase text-purple-200 tracking-wider"
           >
