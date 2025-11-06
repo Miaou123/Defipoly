@@ -1,12 +1,12 @@
 // ============================================
 // FILE: webhookController.js
 // Transaction processor for both webhooks and WSS
-// FIXED: Now uses gameService.js for proper stats tracking
+// FIXED: Handles array of actions from parseTransaction
 // ============================================
 
 const { parseTransaction } = require('../services/transactionProcessor');
 const { getDatabase } = require('../config/database');
-const { updatePlayerStats, updateTargetOnSteal } = require('../services/gameService'); // ✅ FIXED!
+const { updatePlayerStats, updateTargetOnSteal } = require('../services/gameService');
 
 async function processWebhook(payload) {
   const transactions = Array.isArray(payload) ? payload : [payload];
@@ -15,27 +15,31 @@ async function processWebhook(payload) {
     try {
       if (tx.meta?.err !== null) continue;
       
-      const parsedData = await parseTransaction(tx);
-      if (!parsedData) continue;
+      // ✅ FIXED: parseTransaction returns an ARRAY of actions
+      const actions = await parseTransaction(tx);
+      if (!actions || actions.length === 0) continue;
       
-      await storeTransactionData(parsedData);
-      
-      // Update player stats using gameService (the correct one!)
-      await updatePlayerStats(
-        parsedData.playerAddress,
-        parsedData.actionType,
-        parsedData.amount,
-        parsedData.slots,
-        parsedData.propertyId
-      );
-
-      // If steal success, update target player too
-      if (parsedData.actionType === 'steal_success' && parsedData.targetAddress) {
-        await updateTargetOnSteal(
-          parsedData.targetAddress,
-          parsedData.propertyId,
-          parsedData.slots
+      // ✅ FIXED: Process each action in the array
+      for (const action of actions) {
+        await storeTransactionData(action);
+        
+        // Update player stats using gameService
+        await updatePlayerStats(
+          action.playerAddress,
+          action.actionType,
+          action.amount,
+          action.slots,
+          action.propertyId
         );
+
+        // If steal success, update target player too
+        if (action.actionType === 'steal_success' && action.targetAddress) {
+          await updateTargetOnSteal(
+            action.targetAddress,
+            action.propertyId,
+            action.slots
+          );
+        }
       }
     } catch (error) {
       console.error('❌ [WEBHOOK] Error:', error);
@@ -54,7 +58,7 @@ async function storeTransactionData(data) {
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
        ON CONFLICT(tx_signature) DO NOTHING`,
       [
-        data.signature,
+        data.txSignature,  // ✅ Correct field name
         data.actionType,
         data.playerAddress,
         data.propertyId || null,
@@ -66,12 +70,14 @@ async function storeTransactionData(data) {
         data.blockTime
       ],
       function(err) {
-        if (err) reject(err);
-        else {
+        if (err) {
+          console.error('      ❌ [WEBHOOK] Database error:', err);
+          reject(err);
+        } else {
           if (this.changes > 0) {
-            console.log(`      ✅ [WSS] Stored in database (Row ID: ${this.lastID})`);
+            console.log(`      ✅ [ACTION] Stored successfully (ID: ${this.lastID})`);
           } else {
-            console.log(`      ℹ️  [WSS] Transaction already in database (duplicate)`);
+            console.log(`      ℹ️  [ACTION] Already in database (duplicate)`);
           }
           resolve(this.changes);
         }

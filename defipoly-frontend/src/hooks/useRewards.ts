@@ -2,6 +2,12 @@ import { useEffect, useState } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { useDefipoly } from './useDefipoly';
 import { PROPERTIES } from '@/utils/constants';
+import { isSetComplete, getMinSlots } from '@/utils/gameHelpers';
+
+// Helper function to calculate daily income from price and yieldBps
+const calculateDailyIncome = (price: number, yieldBps: number): number => {
+  return Math.floor((price * yieldBps) / 10000);
+};
 
 export function useRewards() {
   const { wallet } = useWallet();
@@ -41,7 +47,7 @@ export function useRewards() {
               propertyId: prop.id,
               slotsOwned: ownership.slotsOwned,
               purchaseTimestamp: ownership.purchaseTimestamp.toNumber(),
-              dailyIncomePerSlot: prop.dailyIncome,
+              dailyIncomePerSlot: calculateDailyIncome(prop.price, prop.yieldBps),
             };
           }
           return null;
@@ -53,9 +59,44 @@ export function useRewards() {
         setOwnerships(validOwnerships);
         setLastClaimTime(playerData.lastClaimTimestamp.toNumber());
         
-        const totalDaily = validOwnerships.reduce((sum, o) => 
-          sum + (o.dailyIncomePerSlot * o.slotsOwned), 0
-        );
+        // Calculate daily income with set bonuses
+        const ownedPropertyIds = validOwnerships.map(o => o.propertyId);
+        let totalDaily = 0;
+        
+        // Group by setId to calculate bonuses
+        const ownershipsBySet = validOwnerships.reduce((acc, ownership) => {
+          const property = PROPERTIES.find(p => p.id === ownership.propertyId);
+          if (!property) return acc;
+          
+          if (!acc[property.setId]) {
+            acc[property.setId] = [];
+          }
+          acc[property.setId].push({ ownership, property });
+          return acc;
+        }, {} as Record<number, Array<{ ownership: any; property: typeof PROPERTIES[0] }>>);
+        
+        // Calculate income with set bonuses
+        for (const [setIdStr, setOwnerships] of Object.entries(ownershipsBySet)) {
+          const setId = Number(setIdStr);
+          const hasCompleteSet = isSetComplete(setId, ownedPropertyIds);
+          const minSlots = getMinSlots(setId);
+          
+          for (const { ownership } of setOwnerships) {
+            const baseIncome = ownership.dailyIncomePerSlot * ownership.slotsOwned;
+            
+            if (hasCompleteSet && minSlots > 0) {
+              // Calculate bonus (40% on minimum slots)
+              const bonusedSlots = Math.min(ownership.slotsOwned, minSlots);
+              const regularSlots = ownership.slotsOwned - bonusedSlots;
+              const bonusIncome = Math.floor(ownership.dailyIncomePerSlot * 1.4 * bonusedSlots);
+              const regularIncome = ownership.dailyIncomePerSlot * regularSlots;
+              totalDaily += (bonusIncome + regularIncome);
+            } else {
+              totalDaily += baseIncome;
+            }
+          }
+        }
+        
         setDailyIncome(totalDaily);
       } catch (error) {
         console.error('Error fetching rewards data:', error);

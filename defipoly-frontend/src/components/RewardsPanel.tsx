@@ -233,7 +233,7 @@ export function RewardsPanel() {
               <div className="text-[22px] font-black tabular-nums text-white" style={{
                 fontFamily: 'Courier New, monospace'
               }}>
-                {dailyIncome >= 1000 ? `${Math.floor(dailyIncome / 1000)}K` : dailyIncome.toLocaleString()}
+                {dailyIncome.toLocaleString()}
               </div>
               <div className="text-[9px] text-purple-400 mt-[2px]">DEFI/day</div>
             </div>
@@ -252,7 +252,7 @@ export function RewardsPanel() {
               <div className="text-[22px] font-black tabular-nums text-white" style={{
                 fontFamily: 'Courier New, monospace'
               }}>
-                {totalEarned >= 1000 ? `${Math.floor(totalEarned / 1000)}K` : Math.floor(totalEarned).toLocaleString()}
+                {Math.floor(totalEarned).toLocaleString()}
               </div>
               <div className="text-[9px] text-purple-400 mt-[2px]">DEFI</div>
             </div>

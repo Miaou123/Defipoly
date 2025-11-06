@@ -1,7 +1,6 @@
 // ============================================
-// UPDATED transactionProcessor.js
-// Now reads PROGRAM_ID directly from IDL file
-// No need for PROGRAM_ID in .env anymore
+// FIXED transactionProcessor.js
+// Handles both snake_case and camelCase event field names
 // ============================================
 
 const { BorshCoder, EventParser } = require('@coral-xyz/anchor');
@@ -18,7 +17,7 @@ if (idl.events && idl.events.length > 0) {
   console.log('   - Event names:', idl.events.map(e => e.name).join(', '));
 }
 
-// PROGRAM_ID comes from IDL file, not from .env
+// PROGRAM_ID comes from IDL file only
 const PROGRAM_ID = new PublicKey(idl.address);
 const coder = new BorshCoder(idl);
 const eventParser = new EventParser(PROGRAM_ID, coder);
@@ -100,6 +99,7 @@ async function parseTransaction(tx) {
 
 /**
  * Convert event to action data
+ * Handles both snake_case and camelCase field names
  */
 function eventToAction(event, signature, blockTime) {
   try {
@@ -115,84 +115,106 @@ function eventToAction(event, signature, blockTime) {
       timestamp: new Date(blockTime * 1000).toISOString(),
     };
 
+    // Helper to convert value to string safely
+    const toString = (value) => {
+      if (value === undefined || value === null) return undefined;
+      if (typeof value === 'string') return value;
+      if (typeof value === 'object' && value.toString) return value.toString();
+      return String(value);
+    };
+
     // Map event types to action types
     switch (eventName) {
-      case 'PropertyBoughtEvent':
+      case 'PropertyBoughtEvent': {
         return {
           ...action,
           actionType: 'buy',
-          playerAddress: eventData.player.toString(),
-          propertyId: eventData.propertyId,
-          slots: eventData.slots,
-          totalCost: eventData.totalCost.toString(),
-          dailyIncome: eventData.dailyIncome.toString(),
+          playerAddress: toString(eventData.player),
+          propertyId: eventData.property_id ?? eventData.propertyId,
+          amount: Number(eventData.total_cost ?? eventData.totalCost ?? eventData.price),
+          slots: eventData.slots ?? eventData.slotsOwned ?? eventData.slots_owned ?? 1,
         };
+      }
 
-      case 'PropertySoldEvent':
+      case 'PropertySoldEvent': {
         return {
           ...action,
           actionType: 'sell',
-          playerAddress: eventData.player.toString(),
-          propertyId: eventData.propertyId,
+          playerAddress: toString(eventData.player),
+          propertyId: eventData.property_id ?? eventData.propertyId,
           slots: eventData.slots,
-          saleValue: eventData.saleValue.toString(),
+          amount: Number(eventData.received),
         };
+      }
 
-      case 'RewardsClaimedEvent':
+      case 'RewardsClaimedEvent': {
         return {
           ...action,
           actionType: 'claim',
-          playerAddress: eventData.player.toString(),
-          amount: eventData.amount.toString(),
+          playerAddress: toString(eventData.player),
+          amount: Number(eventData.amount),
         };
+      }
 
-      case 'ShieldActivatedEvent':
+      case 'ShieldActivatedEvent': {
         return {
           ...action,
           actionType: 'shield',
-          playerAddress: eventData.player.toString(),
-          propertyId: eventData.propertyId,
-          duration: eventData.duration,
-          cost: eventData.cost.toString(),
+          playerAddress: toString(eventData.player),
+          propertyId: eventData.property_id ?? eventData.propertyId,
+          amount: Number(eventData.cost),
+          slots: eventData.slots_shielded ?? eventData.slotsShielded,
         };
+      }
 
-      case 'StealSuccessEvent':
+      case 'StealSuccessEvent': {
         return {
           ...action,
           actionType: 'steal_success',
-          attackerAddress: eventData.attacker.toString(),
-          victimAddress: eventData.victim.toString(),
-          propertyId: eventData.propertyId,
-          slotsStolen: eventData.slotsStolen,
-          stolenValue: eventData.stolenValue.toString(),
+          playerAddress: toString(eventData.attacker),
+          targetAddress: toString(eventData.target ?? eventData.victim),
+          propertyId: eventData.property_id ?? eventData.propertyId,
+          amount: Number(eventData.steal_cost ?? eventData.stealCost),
+          slots: 1,
+          success: true,
         };
+      }
 
-      case 'StealFailedEvent':
+      case 'StealFailedEvent': {
         return {
           ...action,
           actionType: 'steal_failed',
-          attackerAddress: eventData.attacker.toString(),
-          victimAddress: eventData.victim.toString(),
-          propertyId: eventData.propertyId,
-          reason: eventData.reason || 'shield_active',
+          playerAddress: toString(eventData.attacker),
+          targetAddress: toString(eventData.target ?? eventData.victim),
+          propertyId: eventData.property_id ?? eventData.propertyId,
+          amount: Number(eventData.steal_cost ?? eventData.stealCost),
+          slots: 0,
+          success: false,
         };
+      }
 
-      case 'StealAttemptEvent':
+      case 'StealAttemptEvent': {
         return {
           ...action,
           actionType: 'steal_attempt',
-          attackerAddress: eventData.attacker.toString(),
-          victimAddress: eventData.victim.toString(),
-          propertyId: eventData.propertyId,
+          playerAddress: toString(eventData.attacker),
+          targetAddress: toString(eventData.target ?? eventData.victim),
+          propertyId: eventData.property_id ?? eventData.propertyId,
+          amount: Number(eventData.steal_cost ?? eventData.stealCost),
         };
+      }
 
       case 'AdminUpdateEvent':
-        return {
-          ...action,
-          actionType: 'admin',
-          adminAddress: eventData.admin.toString(),
-          updateType: eventData.updateType || 'unknown',
-        };
+      case 'AdminGrantEvent':
+      case 'AdminRevokeEvent':
+      case 'AdminPlayerAdjustEvent':
+      case 'AdminShieldGrantEvent':
+      case 'AdminWithdrawEvent':
+      case 'AdminAuthorityTransferEvent': {
+        // Admin events - just log them, don't store as player actions
+        console.log(`   ℹ️  Admin event: ${eventName} - skipping storage`);
+        return null;
+      }
 
       default:
         console.warn(`   ⚠️  Unknown event type: ${eventName}`);

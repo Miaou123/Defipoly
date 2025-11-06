@@ -63,7 +63,7 @@ async function initializeWSS() {
     // Get configuration
     const RPC_URL = process.env.RPC_URL;
     const WS_URL = process.env.SOLANA_WS_URL || RPC_URL.replace('https://', 'wss://');
-    const PROGRAM_ID = process.env.PROGRAM_ID || idl.address; // Read from env with IDL fallback
+    const PROGRAM_ID = idl.address;
     
     if (!RPC_URL) {
       console.error('❌ RPC_URL not set in environment');
