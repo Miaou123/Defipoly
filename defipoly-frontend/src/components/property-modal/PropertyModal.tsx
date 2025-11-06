@@ -1,8 +1,6 @@
 // ============================================
-// FIXED PropertyModal.tsx
-// FIX 1: Proper type casting for SET_BONUSES access
-// FIX 2: Null checking for setBonusInfo
-// FIX 3: Calculate dailyIncome from price and yieldBps
+// FILE: src/components/property-modal/PropertyModal.tsx
+// Main modal component with VARIABLE SET BONUSES (30-50%)
 // ============================================
 
 'use client';
@@ -142,7 +140,6 @@ export function PropertyModal({ propertyId, onClose }: PropertyModalProps) {
 
   if (!property || propertyId === null) return null;
 
-  // ✅ FIX: Calculate dailyIncome from price and yieldBps
   const dailyIncome = Math.floor((property.price * property.yieldBps) / 10000);
   
   // ============================================
@@ -152,241 +149,194 @@ export function PropertyModal({ propertyId, onClose }: PropertyModalProps) {
   // Calculate income per slot
   const baseIncomePerSlot = dailyIncome;
   
-  // ✅ FIX: Proper type casting for SET_BONUSES key access
-  const setBonus = SET_BONUSES[property.setId.toString() as keyof typeof SET_BONUSES];
-  const setBonusPercent = setBonus?.percent || 40;
-  const setBonusBps = setBonus?.bps || 4000;
+  // Get variable set bonus from SET_BONUSES based on setId
+  const setBonus = SET_BONUSES[property.setId as keyof typeof SET_BONUSES];
+  const setBonusPercent = setBonus?.percent || 40;  // e.g., 30.00 for Brown, 50.00 for Dark Blue
+  const setBonusBps = setBonus?.bps || 4000;        // e.g., 3000 for Brown, 5000 for Dark Blue
   
-  // ✅ FIX: Null check before accessing setBonusInfo properties
-  const hasSetBonus = setBonusInfo?.hasCompleteSet || false;
-  const boostedIncomePerSlot = hasSetBonus
-    ? Math.floor(baseIncomePerSlot * (10000 + setBonusBps) / 10000)
-    : baseIncomePerSlot;
-  
+  // Calculate boosted income using VARIABLE bonus
+  const boostedIncomePerSlot = setBonusInfo?.hasCompleteSet ? 
+    Math.floor(baseIncomePerSlot * (10000 + setBonusBps) / 10000) : baseIncomePerSlot;
+
+  // Calculate availability values for the stacked bar
+  const totalSlots = property.maxSlots;  // ✅ FIXED: Use maxSlots instead of totalSlots
+  const personalOwned = propertyData?.owned || 0;
+  const othersOwned = totalSlots - (propertyData?.availableSlots || 0) - personalOwned;
+  const availableSlots = propertyData?.availableSlots || 0;
+
+  // Calculate bonus amount using VARIABLE bonus
   const bonusAmount = Math.floor(baseIncomePerSlot * setBonusBps / 10000);
   const totalIncome = baseIncomePerSlot + bonusAmount;
 
-  const themeColor = getColorFromClass(property.color);
+  // Check if set bonus is active
+  const hasSetBonus = setBonusInfo?.hasCompleteSet || false;
 
   return (
-    <div 
-      className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4"
-      onClick={onClose}
-    >
+    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={onClose}>
       <div 
-        className="bg-gradient-to-br from-purple-950/95 via-purple-900/95 to-purple-950/95 backdrop-blur-xl rounded-2xl border-2 border-purple-500/30 shadow-2xl shadow-purple-500/20 max-w-4xl w-full max-h-[90vh] overflow-hidden"
+        className="bg-gradient-to-br from-purple-950/95 via-purple-900/95 to-purple-950/95 backdrop-blur-xl rounded-2xl border-2 border-purple-500/30 shadow-2xl shadow-purple-500/20 max-w-2xl w-full overflow-hidden" 
         onClick={e => e.stopPropagation()}
       >
-        {/* Header with property name and tier badge */}
-        <div 
-          className="relative border-b-2 p-6"
-          style={{
-            background: `linear-gradient(135deg, ${themeColor}40, ${themeColor}20)`,
-            borderColor: `${themeColor}50`
-          }}
-        >
+        {/* Header - COMPACT */}
+        <div className="relative bg-gradient-to-r from-purple-900/50 to-purple-800/50 border-b border-purple-500/30 p-4">
           <div className="flex justify-between items-start">
-            <div className="flex-1">
-              <div className="flex items-center gap-3 mb-2">
-                <h2 className="text-3xl font-black text-white">{property.name}</h2>
-                <span 
-                  className="px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider"
-                  style={{
-                    backgroundColor: `${themeColor}60`,
-                    color: 'white',
-                    border: `2px solid ${themeColor}`
-                  }}
-                >
-                  {property.tier}
-                </span>
-              </div>
-              <div className="flex items-center gap-4 text-sm text-purple-200">
-                <span>Set {property.setId + 1}</span>
-                <span>•</span>
-                <span>Property #{property.id}</span>
-              </div>
+            <div>
+              <h2 className="text-2xl font-black text-purple-100 mb-1.5">{property.name}</h2>
+              <div className={`${property.color} h-2.5 w-20 rounded-full shadow-lg`}></div>
             </div>
             <button 
-              onClick={onClose}
-              className="text-purple-300 hover:text-white transition-colors hover:bg-purple-800/50 rounded-lg p-2"
+              onClick={onClose} 
+              className="text-purple-300 hover:text-white transition-colors hover:bg-purple-800/50 rounded-lg p-1.5"
             >
-              <X size={28} />
+              <X size={20} />
             </button>
           </div>
         </div>
 
-        {/* Content Area */}
-        <div className="overflow-y-auto max-h-[calc(90vh-140px)] custom-scrollbar">
-          <div className="p-6 space-y-6">
-            {/* Connection prompt */}
-            {!connected && (
-              <div className="bg-purple-900/30 border border-purple-500/30 rounded-xl p-6 text-center">
-                <p className="text-purple-300 mb-4">Connect your wallet to interact with this property</p>
-                <StyledWalletButton variant="modal" />
+        {/* Content - COMPACT */}
+        <div className="p-4 space-y-3 max-h-[70vh] overflow-y-auto">
+          {/* Property Card + Details - SMALLER */}
+          <div className="grid grid-cols-[140px_1fr] gap-4">
+            {/* Left: Property Card */}
+            <div className="flex justify-center">
+              <div className="w-[140px] h-[210px]">
+                <PropertyCard 
+                  propertyId={propertyId} 
+                  onSelect={() => {}} 
+                />
               </div>
-            )}
+            </div>
 
-            {/* Main content grid */}
-            {connected && (
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* Left: Property visual */}
-                <div className="flex flex-col items-center justify-center bg-purple-900/20 rounded-xl p-6 border border-purple-500/20">
-                  <PropertyCard
-                    property={property}
-                    isClickable={false}
-                  />
-                </div>
-
-                {/* Right: Details */}
-                <div className="bg-purple-900/20 rounded-xl p-3 border border-purple-500/20 space-y-2.5">
-                  {/* Income Calculation Row */}
-                  <div>
-                    <div className="text-[9px] text-purple-400 mb-1.5 uppercase tracking-wider">Income</div>
-                    <div className="flex items-center gap-2 bg-purple-950/50 rounded-lg p-1.5">
-                      {/* Base */}
-                      <div className="flex flex-col flex-1">
-                        <div className="text-[8px] text-purple-400 uppercase">📊 Base</div>
-                        <div className="text-sm font-bold text-purple-100">{baseIncomePerSlot.toLocaleString()}</div>
-                      </div>
-                      
-                      <div className="text-purple-400 opacity-50 font-bold text-sm">+</div>
-                      
-                      {/* Boost */}
-                      <div className="flex flex-col flex-1">
-                        <div className="text-[8px] text-purple-400 uppercase flex items-center gap-1">
-                          ⚡ Boost <span className={`px-1 py-0.5 rounded text-[7px] font-bold ${hasSetBonus ? 'bg-amber-500 text-amber-950' : 'bg-gray-600 text-gray-300 opacity-60'}`}>
-                            +{setBonusPercent.toFixed(0)}%
-                          </span>
-                        </div>
-                        <div className={`text-sm font-bold ${hasSetBonus ? 'text-purple-100' : 'text-purple-100/50 line-through'}`}>
-                          {bonusAmount.toLocaleString()}
-                        </div>
-                      </div>
-                      
-                      <div className="text-purple-400 opacity-50 font-bold text-sm">=</div>
-                      
-                      {/* Total */}
-                      <div className={`flex flex-col flex-[1.2] rounded-lg p-1.5 border-2 ${hasSetBonus ? 'bg-green-900/15 border-green-500/30' : 'bg-gray-900/15 border-gray-500/30'}`}>
-                        <div className="text-[8px] text-purple-400 uppercase">💎 Total</div>
-                        <div className={`text-lg font-bold ${hasSetBonus ? 'text-green-400' : 'text-gray-400'}`}>
-                          {hasSetBonus ? totalIncome.toLocaleString() : baseIncomePerSlot.toLocaleString()}
-                        </div>
-                      </div>
+            {/* Right: Details */}
+            <div className="bg-purple-900/20 rounded-xl p-3 border border-purple-500/20 space-y-2.5">
+              {/* Income Calculation Row - UPDATED WITH VARIABLE BONUS */}
+              <div>
+                <div className="text-[9px] text-purple-400 mb-1.5 uppercase tracking-wider">Income</div>
+                <div className="flex items-center gap-2 bg-950/50 rounded-lg p-1.5">
+                  {/* Base */}
+                  <div className="flex flex-col flex-1">
+                    <div className="text-[8px] text-purple-400 uppercase">📊 Base</div>
+                    <div className="text-sm font-bold text-purple-100">{baseIncomePerSlot.toLocaleString()}</div>
+                  </div>
+                  
+                  <div className="text-purple-400 opacity-50 font-bold text-sm">+</div>
+                  
+                  {/* Boost - SHOWS VARIABLE PERCENTAGE */}
+                  <div className="flex flex-col flex-1">
+                    <div className="text-[8px] text-purple-400 uppercase flex items-center gap-1">
+                      ⚡ Boost <span className={`px-1 py-0.5 rounded text-[7px] font-bold ${hasSetBonus ? 'bg-amber-500 text-amber-950' : 'bg-gray-600 text-gray-300 opacity-60'}`}>
+                        +{setBonusPercent.toFixed(0)}%
+                      </span>
                     </div>
-                    
-                    {/* Set Bonus Info - ✅ FIX: Added null check */}
-                    {hasSetBonus && setBonusInfo && (
-                      <div className="mt-2 px-2 py-1.5 bg-amber-500/10 border border-amber-500/30 rounded-lg">
-                        <div className="flex items-center justify-between text-[10px]">
-                          <span className="text-amber-400 font-medium">
-                            ✨ Complete Set Bonus Active
-                          </span>
-                          <span className="text-amber-300">
-                            +{setBonusPercent.toFixed(1)}% on {setBonusInfo.boostedSlots} slot{setBonusInfo.boostedSlots !== 1 ? 's' : ''}
-                          </span>
-                        </div>
-                      </div>
+                    <div className={`text-sm font-bold ${hasSetBonus ? 'text-purple-100' : 'text-purple-100/50 line-through'}`}>
+                      {bonusAmount.toLocaleString()}
+                    </div>
+                  </div>
+                  
+                  <div className="text-purple-400 opacity-50 font-bold text-sm">=</div>
+                  
+                  {/* Total */}
+                  <div className={`flex flex-col flex-[1.2] rounded-lg p-1.5 border-2 ${hasSetBonus ? 'bg-green-900/15 border-green-500/30' : 'bg-gray-900/15 border-gray-500/30'}`}>
+                    <div className="text-[8px] text-purple-400 uppercase">💎 Total</div>
+                    <div className={`text-lg font-bold ${hasSetBonus ? 'text-green-400' : 'text-gray-400'}`}>
+                      {hasSetBonus ? totalIncome.toLocaleString() : baseIncomePerSlot.toLocaleString()}
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Set Bonus Info - Shows which set and actual percentage */}
+                {hasSetBonus && (
+                  <div className="mt-2 px-2 py-1.5 bg-amber-500/10 border border-amber-500/30 rounded-lg">
+                    <div className="flex items-center justify-between text-[10px]">
+                      <span className="text-amber-400 font-medium">
+                        ✨ Complete Set Bonus Active
+                      </span>
+                      <span className="text-amber-300">
+                        +{setBonusPercent.toFixed(1)}% on {setBonusInfo.boostedSlots} slot{setBonusInfo.boostedSlots !== 1 ? 's' : ''}
+                      </span>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Divider */}
+              <div className="h-px bg-purple-500/10"></div>
+
+              {/* Slots Distribution Row */}
+              <div>
+                <div className="text-[9px] text-purple-400 mb-1.5 uppercase tracking-wider">Slots</div>
+                <div className="space-y-2">
+                  {/* Values */}
+                  <div className="flex justify-between items-baseline">
+                    <div>
+                      <span className="text-lg font-bold text-purple-100">{totalSlots - availableSlots}</span>
+                      <span className="text-[9px] text-purple-400 ml-1">/ {totalSlots} slots filled</span>
+                    </div>
+                    <div>
+                      <span className="text-lg font-bold text-purple-100">{availableSlots}</span>
+                      <span className="text-[9px] text-purple-400 ml-1">available</span>
+                    </div>
+                  </div>
+                  
+                  {/* Stacked Bar */}
+                  <div className="h-2 bg-purple-950/50 rounded-full overflow-hidden flex">
+                    {othersOwned > 0 && (
+                      <div 
+                        className="h-full bg-green-500"
+                        style={{ width: `${(othersOwned / totalSlots) * 100}%` }}
+                      />
+                    )}
+                    {personalOwned > 0 && (
+                      <div 
+                        className="h-full bg-purple-500"
+                        style={{ width: `${(personalOwned / totalSlots) * 100}%` }}
+                      />
+                    )}
+                    {availableSlots > 0 && (
+                      <div 
+                        className="h-full bg-white/15"
+                        style={{ width: `${(availableSlots / totalSlots) * 100}%` }}
+                      />
                     )}
                   </div>
-
-                  {/* Property Stats Grid */}
-                  <div className="grid grid-cols-2 gap-2">
-                    <div className="bg-purple-950/30 rounded-lg p-2 border border-purple-500/10">
-                      <div className="text-[8px] text-purple-400 uppercase mb-0.5">💰 Price</div>
-                      <div className="text-sm font-bold text-purple-100">{property.price.toLocaleString()} DEFI</div>
+                  
+                  {/* Legend */}
+                  <div className="flex gap-3 text-[10px]">
+                    <div className="flex items-center gap-1">
+                      <div className="w-1.5 h-1.5 bg-green-500 rounded-sm"></div>
+                      <span className="text-purple-300">Others: {othersOwned}</span>
                     </div>
-                    
-                    <div className="bg-purple-950/30 rounded-lg p-2 border border-purple-500/10">
-                      <div className="text-[8px] text-purple-400 uppercase mb-0.5">📈 Daily Yield</div>
-                      <div className="text-sm font-bold text-purple-100">{(property.yieldBps / 100).toFixed(1)}%</div>
+                    <div className="flex items-center gap-1">
+                      <div className="w-1.5 h-1.5 bg-purple-500 rounded-sm"></div>
+                      <span className="text-purple-300">You: {personalOwned}</span>
                     </div>
-                    
-                    <div className="bg-purple-950/30 rounded-lg p-2 border border-purple-500/10">
-                      <div className="text-[8px] text-purple-400 uppercase mb-0.5">🛡️ Shield Cost</div>
-                      <div className="text-sm font-bold text-purple-100">{(property.shieldCostBps / 100).toFixed(0)}%</div>
-                    </div>
-                    
-                    <div className="bg-purple-950/30 rounded-lg p-2 border border-purple-500/10">
-                      <div className="text-[8px] text-purple-400 uppercase mb-0.5">⏰ Cooldown</div>
-                      <div className="text-sm font-bold text-purple-100">{property.cooldown}h</div>
+                    <div className="flex items-center gap-1">
+                      <div className="w-1.5 h-1.5 bg-white/30 rounded-sm"></div>
+                      <span className="text-purple-300">Available: {availableSlots}</span>
                     </div>
                   </div>
-
-                  {/* Slot Distribution */}
-                  {propertyData && (
-                    <div>
-                      <div className="text-[9px] text-purple-400 mb-1.5 uppercase tracking-wider">🎰 Slots ({property.maxSlots} total)</div>
-                      
-                      {/* Visual Bar */}
-                      <div className="h-4 bg-gray-800/50 rounded-full overflow-hidden flex border border-gray-700/50">
-                        {propertyData.owned > 0 && (
-                          <div 
-                            className="bg-gradient-to-r from-green-500 to-green-400 flex items-center justify-center"
-                            style={{ width: `${(propertyData.owned / property.maxSlots) * 100}%` }}
-                          >
-                            <span className="text-[8px] font-bold text-white drop-shadow">
-                              {propertyData.owned}
-                            </span>
-                          </div>
-                        )}
-                        
-                        {(property.maxSlots - propertyData.availableSlots - propertyData.owned) > 0 && (
-                          <div 
-                            className="bg-gradient-to-r from-red-500 to-red-400 flex items-center justify-center"
-                            style={{ width: `${((property.maxSlots - propertyData.availableSlots - propertyData.owned) / property.maxSlots) * 100}%` }}
-                          >
-                            <span className="text-[8px] font-bold text-white drop-shadow">
-                              {property.maxSlots - propertyData.availableSlots - propertyData.owned}
-                            </span>
-                          </div>
-                        )}
-                        
-                        {propertyData.availableSlots > 0 && (
-                          <div 
-                            className="bg-gradient-to-r from-gray-600 to-gray-500 flex items-center justify-center"
-                            style={{ width: `${(propertyData.availableSlots / property.maxSlots) * 100}%` }}
-                          >
-                            <span className="text-[8px] font-bold text-white drop-shadow">
-                              {propertyData.availableSlots}
-                            </span>
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Legend */}
-                      <div className="flex gap-3 mt-2 text-[9px]">
-                        <div className="flex items-center gap-1">
-                          <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                          <span className="text-gray-400">You: <span className="text-green-400 font-semibold">{propertyData.owned}</span></span>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <div className="w-2 h-2 bg-red-500 rounded-full"></div>
-                          <span className="text-gray-400">Others: <span className="text-red-400 font-semibold">{property.maxSlots - propertyData.availableSlots - propertyData.owned}</span></span>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <div className="w-2 h-2 bg-gray-500 rounded-full"></div>
-                          <span className="text-gray-400">Free: <span className="text-gray-300 font-semibold">{propertyData.availableSlots}</span></span>
-                        </div>
-                      </div>
-                    </div>
-                  )}
                 </div>
               </div>
-            )}
-
-            {/* Action Bar */}
-            {connected && propertyData && (
-              <PropertyActionsBar
-                propertyId={propertyId}
-                property={property}
-                propertyData={propertyData}
-                balance={balance}
-                loading={loading}
-                setLoading={setLoading}
-                onClose={onClose}
-              />
-            )}
+            </div>
           </div>
+
+          {/* Action Buttons - NEW COLLAPSIBLE INLINE DESIGN */}
+          {!connected ? (
+            <div className="flex flex-col items-center py-6 space-y-3">
+              <p className="text-purple-200 mb-1 text-center text-sm">Connect your wallet to interact with this property</p>
+              <StyledWalletButton variant="modal" />
+            </div>
+          ) : (
+            <PropertyActionsBar
+              propertyId={propertyId}
+              property={property}
+              propertyData={propertyData}
+              balance={balance}
+              loading={loading}
+              setLoading={setLoading}
+              onClose={onClose}
+            />
+          )}
         </div>
       </div>
     </div>

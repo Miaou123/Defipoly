@@ -9,7 +9,7 @@ use anchor_lang::prelude::*;
 use anchor_spl::token::{self, Token, TokenAccount, Transfer, Mint};
 use anchor_spl::associated_token::AssociatedToken;
 
-declare_id!("EUN9cPWG8pJeuuNfBvvtPaKmTzZqiA8xeHYxGiuPjNTE");
+declare_id!("5pmt4n2ge5ywu1Bc9tU1qjjtGbeNoFvVJpomSjvU1PwV");
 
 const DEV_WALLET: &str = "CgWTFX7JJQHed3qyMDjJkNCxK4sFe3wbDFABmWAAmrdS";
 const MARKETING_WALLET: &str = "FoPKSQ5HDSVyZgaQobX64YEBVQ2iiKMZp8VHWtd6jLQE";
@@ -1846,11 +1846,11 @@ pub struct GameConfig {
     pub bump: u8,
     pub reward_pool_vault_bump: u8,
     
-    pub padding: [u8; 256],  // Reserved for future features
+    pub padding: [u8; 128],  // Reserved for future features
 }
 
 impl GameConfig {
-    pub const SIZE: usize = 205 + 256;  // With padding for future upgrades
+    pub const SIZE: usize = 205 + 128;  // With padding for future upgrades
 }
 
 #[account]
@@ -1866,11 +1866,11 @@ pub struct Property {
     pub cooldown_seconds: i64,
     pub bump: u8,
     
-    pub padding: [u8; 128],  // Reserved for future features
+    pub padding: [u8; 64],  // Reserved for future features
 }
 
 impl Property {
-    pub const SIZE: usize = 29 + 128;  // With padding
+    pub const SIZE: usize = 29 + 64;  // With padding
     
     pub fn get_properties_in_set(set_id: u8) -> u8 {
         match set_id {
@@ -1907,11 +1907,11 @@ pub struct PlayerAccount {
     pub total_steals_successful: u32,
     pub bump: u8,
     
-    pub padding: [u8; 128],  // Reserved for future features
+    pub padding: [u8; 64],  // Reserved for future features
 }
 
 impl PlayerAccount {
-    pub const SIZE: usize = 69 + 128;  // With padding
+    pub const SIZE: usize = 69 + 64;  // With padding
 }
 
 #[account]
@@ -1926,11 +1926,11 @@ pub struct PropertyOwnership {
     pub steal_protection_expiry: i64,
     pub bump: u8,
     
-    pub padding: [u8; 64],  // Reserved for future features
+    pub padding: [u8; 32],  // Reserved for future features
 }
 
 impl PropertyOwnership {
-    pub const SIZE: usize = 70 + 64;  // With padding
+    pub const SIZE: usize = 70 + 32;  // With padding
 }
 
 #[account]
@@ -1944,11 +1944,11 @@ pub struct PlayerSetCooldown {
     pub properties_count: u8,
     pub bump: u8,
     
-    pub padding: [u8; 64],  // Reserved for future features
+    pub padding: [u8; 32],  // Reserved for future features
 }
 
 impl PlayerSetCooldown {
-    pub const SIZE: usize = 55 + 64;  // With padding
+    pub const SIZE: usize = 55 + 32;  // With padding
 }
 
 #[account]
@@ -1962,11 +1962,11 @@ pub struct PlayerSetOwnership {
     pub first_property_timestamp: i64,
     pub bump: u8,
     
-    pub padding: [u8; 64],  // Reserved for future features
+    pub padding: [u8; 32],  // Reserved for future features
 }
 
 impl PlayerSetOwnership {
-    pub const SIZE: usize = 49 + 64;  // With padding
+    pub const SIZE: usize = 49 + 32;  // With padding
 }
 
 #[account]
@@ -1977,11 +1977,11 @@ pub struct PlayerStealCooldown {
     pub cooldown_duration: i64,
     pub bump: u8,
     
-    pub padding: [u8; 64],  // Reserved for future features
+    pub padding: [u8; 32],  // Reserved for future features
 }
 
 impl PlayerStealCooldown {
-    pub const SIZE: usize = 50 + 64;  // With padding
+    pub const SIZE: usize = 50 + 32;  // With padding
 }
 
 #[account]
@@ -1993,11 +1993,11 @@ pub struct SetStats {
     pub total_players: u32,
     pub bump: u8,
     
-    pub padding: [u8; 64],  // Reserved for future features
+    pub padding: [u8; 32],  // Reserved for future features
 }
 
 impl SetStats {
-    pub const SIZE: usize = 26 + 64;  // With padding
+    pub const SIZE: usize = 26 + 32;  // With padding
 }
 
 // ========== EVENTS ==========

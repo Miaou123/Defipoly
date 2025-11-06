@@ -1,6 +1,6 @@
 // ============================================
-// UPDATED usePropertyActions.ts
-// FIXED: Uses DEV_WALLET and MARKETING_WALLET from constants
+// UPDATED usePropertyActions.ts for v7 Program
+// Buy and Sell only - Steal is in useStealActions
 // ============================================
 
 import { useCallback } from 'react';
@@ -38,25 +38,28 @@ export const usePropertyActions = (
   setTokenAccountExists: (exists: boolean) => void,
   setPlayerInitialized: (initialized: boolean) => void
 ) => {
+
+  // ============================================
+  // BUY PROPERTY (with auto player init)
+  // ============================================
   const buyProperty = useCallback(async (propertyId: number, slots: number = 1) => {
     if (!program || !wallet || !provider) throw new Error('Wallet not connected');
     if (!tokenAccountExists) throw new Error('Create token account first');
 
     setLoading(true);
     try {
-      const playerTokenAccount = await getAssociatedTokenAddress(TOKEN_MINT, wallet.publicKey);
+      console.log('\n🚀 Starting buyProperty');
+      console.log('Property ID:', propertyId, 'Slots:', slots);
       
-      // ✅ FIX: Get wallet addresses from constants instead of hardcoding
+      const playerTokenAccount = await getAssociatedTokenAddress(TOKEN_MINT, wallet.publicKey);
       const devTokenAccount = await getAssociatedTokenAddress(TOKEN_MINT, DEV_WALLET);
       const marketingTokenAccount = await getAssociatedTokenAddress(TOKEN_MINT, MARKETING_WALLET);
 
       const [propertyPDA] = getPropertyPDA(propertyId);
       const [playerPDA] = getPlayerPDA(wallet.publicKey);
-      const [ownershipPDA] = getOwnershipPDA(wallet.publicKey, propertyId);
 
       const transaction = new Transaction();
       const playerData = await fetchPlayerData(program, wallet.publicKey);
-      const hasTokenAccount = tokenAccountExists;
 
       // Initialize player if needed
       if (!playerData) {
@@ -72,16 +75,19 @@ export const usePropertyActions = (
         transaction.add(initPlayerIx);
       }
 
-      // Fetch property to get setId first
+      // Fetch property to get setId
       const propertyData = await (program.account as any).property.fetch(propertyPDA);
       const setId = propertyData.setId;
 
-      // Get all set-related PDAs using the correct parameters
+      // Get all set-related PDAs
+      const [ownershipPDA] = getOwnershipPDA(wallet.publicKey, propertyId);
       const [setCooldownPDA] = getSetCooldownPDA(wallet.publicKey, setId);
       const [setOwnershipPDA] = getSetOwnershipPDA(wallet.publicKey, setId);
       const [setStatsPDA] = getSetStatsPDA(setId);
 
-      // ✅ FIX: Add buy property instruction with ALL required accounts
+      console.log('📍 Adding buy property instruction...');
+      
+      // Add buy property instruction
       const buyPropertyIx = await program.methods
         .buyProperty(slots)
         .accountsPartial({
@@ -94,8 +100,8 @@ export const usePropertyActions = (
           player: wallet.publicKey,
           playerTokenAccount,
           rewardPoolVault: REWARD_POOL,
-          devTokenAccount: devTokenAccount,
-          marketingTokenAccount: marketingTokenAccount, // ✅ CRITICAL FIX!
+          devTokenAccount,
+          marketingTokenAccount,
           gameConfig: GAME_CONFIG,
           tokenProgram: TOKEN_PROGRAM_ID,
           systemProgram: SystemProgram.programId,
@@ -112,18 +118,17 @@ export const usePropertyActions = (
       console.log(`✅ Bought ${slots} slot(s) successfully:`, signature);
       
       // Update states
-      if (!hasTokenAccount) setTokenAccountExists(true);
       if (!playerData) setPlayerInitialized(true);
       
       return signature;
+      
     } catch (error: any) {
       console.error('❌ Error in buyProperty:', error);
       
-      // Check if already processed (which means success!)
+      // Check if already processed
       const errorMessage = error?.message || error?.toString() || '';
-      if (errorMessage.includes('already been processed') || 
-          errorMessage.includes('AlreadyProcessed')) {
-        console.log('✅ Transaction already processed (success)');
+      if (errorMessage.includes('already been processed')) {
+        console.log('✅ Transaction already processed');
         return 'already-processed';
       }
       
@@ -131,19 +136,20 @@ export const usePropertyActions = (
     } finally {
       setTimeout(() => setLoading(false), 1000);
     }
-  }, [program, wallet, provider, connection, eventParser, playerInitialized, tokenAccountExists, setLoading, setTokenAccountExists, setPlayerInitialized]);
+  }, [program, wallet, provider, connection, tokenAccountExists, setLoading, setPlayerInitialized]);
 
+  // ============================================
+  // SELL PROPERTY
+  // ============================================
   const sellProperty = useCallback(async (propertyId: number, slots: number) => {
-    if (!program || !wallet) throw new Error('Wallet not connected');
+    if (!program || !wallet || !provider) throw new Error('Wallet not connected');
     if (!playerInitialized) throw new Error('Initialize player first');
 
     setLoading(true);
     try {
-      const playerTokenAccount = await getAssociatedTokenAddress(
-        TOKEN_MINT,
-        wallet.publicKey
-      );
-
+      console.log('\n🏪 Selling property', propertyId, 'slots:', slots);
+      
+      const playerTokenAccount = await getAssociatedTokenAddress(TOKEN_MINT, wallet.publicKey);
       const [propertyPDA] = getPropertyPDA(propertyId);
       const [playerPDA] = getPlayerPDA(wallet.publicKey);
       const [ownershipPDA] = getOwnershipPDA(wallet.publicKey, propertyId);
@@ -154,35 +160,32 @@ export const usePropertyActions = (
           property: propertyPDA,
           ownership: ownershipPDA,
           playerAccount: playerPDA,
-          player: wallet.publicKey,
           playerTokenAccount,
           rewardPoolVault: REWARD_POOL,
           gameConfig: GAME_CONFIG,
+          player: wallet.publicKey,
           tokenProgram: TOKEN_PROGRAM_ID,
         })
         .rpc();
 
-      console.log('✅ Property sold successfully:', tx);
-
+      console.log('✅ Property sold:', tx);
+      await connection.confirmTransaction(tx, 'confirmed');
       return tx;
-    } catch (error: any) {
-      console.error('❌ Error selling property:', error);
       
+    } catch (error: any) {
+      console.error('❌ Error selling:', error);
       const errorMessage = error?.message || error?.toString() || '';
-      if (errorMessage.includes('already been processed') || 
-          errorMessage.includes('AlreadyProcessed')) {
-        console.log('✅ Transaction already processed (success)');
+      if (errorMessage.includes('already been processed')) {
         return 'already-processed';
       }
-      
       throw error;
     } finally {
       setTimeout(() => setLoading(false), 1000);
     }
-  }, [program, wallet, connection, eventParser, playerInitialized, setLoading]);
+  }, [program, wallet, provider, connection, playerInitialized, setLoading]);
 
   return {
     buyProperty,
-    sellProperty
+    sellProperty,
   };
 };

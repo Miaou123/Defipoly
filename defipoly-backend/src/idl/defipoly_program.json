@@ -1,5 +1,5 @@
 {
-  "address": "EUN9cPWG8pJeuuNfBvvtPaKmTzZqiA8xeHYxGiuPjNTE",
+  "address": "5pmt4n2ge5ywu1Bc9tU1qjjtGbeNoFvVJpomSjvU1PwV",
   "metadata": {
     "name": "defipoly_program",
     "version": "0.1.0",
@@ -2362,7 +2362,7 @@
             "type": {
               "array": [
                 "u8",
-                256
+                128
               ]
             }
           }
@@ -2419,7 +2419,7 @@
             "type": {
               "array": [
                 "u8",
-                128
+                64
               ]
             }
           }
@@ -2473,7 +2473,7 @@
             "type": {
               "array": [
                 "u8",
-                64
+                32
               ]
             }
           }
@@ -2527,7 +2527,7 @@
             "type": {
               "array": [
                 "u8",
-                64
+                32
               ]
             }
           }
@@ -2564,7 +2564,7 @@
             "type": {
               "array": [
                 "u8",
-                64
+                32
               ]
             }
           }
@@ -2621,7 +2621,7 @@
             "type": {
               "array": [
                 "u8",
-                128
+                64
               ]
             }
           }
@@ -2710,7 +2710,7 @@
             "type": {
               "array": [
                 "u8",
-                64
+                32
               ]
             }
           }
@@ -2803,7 +2803,7 @@
             "type": {
               "array": [
                 "u8",
-                64
+                32
               ]
             }
           }
