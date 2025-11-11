@@ -6,7 +6,7 @@
 import { Connection, ConnectionConfig } from '@solana/web3.js';
 
 // Cache the connection instance
-let connection: Connection | null = null;
+let cachedConnection: Connection | null = null;
 
 // Default connection config
 const DEFAULT_CONFIG: ConnectionConfig = {
@@ -20,8 +20,8 @@ const DEFAULT_CONFIG: ConnectionConfig = {
  */
 export function getConnection(config?: ConnectionConfig): Connection {
   // Return existing connection if available
-  if (connection) {
-    return connection;
+  if (cachedConnection) {
+    return cachedConnection;
   }
 
   // Get RPC URL from environment
@@ -34,27 +34,27 @@ export function getConnection(config?: ConnectionConfig): Connection {
   }
 
   // Create new connection with merged config
-  connection = new Connection(rpcUrl, {
+  cachedConnection = new Connection(rpcUrl, {
     ...DEFAULT_CONFIG,
     ...config,
   });
 
   // Add connection event handlers
-  connection.onLogs('all', (logs) => {
+  cachedConnection.onLogs('all', (logs) => {
     if (process.env.NODE_ENV === 'development') {
       console.log('[Solana Logs]', logs);
     }
   });
 
-  return connection;
+  return cachedConnection;
 }
 
 /**
  * Reset the connection (useful for testing or switching networks)
  */
 export function resetConnection(): void {
-  if (connection) {
-    connection = null;
+  if (cachedConnection) {
+    cachedConnection = null;
   }
 }
 

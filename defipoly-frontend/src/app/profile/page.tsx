@@ -6,6 +6,8 @@ import { useRouter } from 'next/navigation';
 import { getPropertyById } from '@/utils/constants';
 import { compressImage } from '@/utils/profileStorage';
 import { useNotification } from '@/contexts/NotificationContext';
+import { ProfileCustomization } from '@/components/ProfileCustomization';
+import { useTheme } from '@/contexts/ThemeContext';
 
 interface Activity {
   signature: string;
@@ -33,15 +35,15 @@ export default function ProfilePage() {
   const { publicKey, connected } = useWallet();
   const router = useRouter();
   const { showSuccess, showError } = useNotification();
+  const themeContext = useTheme();
   
   const [username, setUsername] = useState('');
   const [editingUsername, setEditingUsername] = useState(false);
   const [tempUsername, setTempUsername] = useState('');
   const [profilePicture, setProfilePicture] = useState<string | null>(null);
-  const [uploadingPicture, setUploadingPicture] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const [activities, setActivities] = useState<Activity[]>([]);
   const [loading, setLoading] = useState(true);
+  const [uploadingPicture, setUploadingPicture] = useState(false);
   const [stats, setStats] = useState<PlayerStats>({
     walletAddress: '',
     totalActions: 0,
@@ -338,7 +340,7 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-950 via-purple-900 to-slate-950">
+    <div className="min-h-screen relative z-10">
       {/* Compact Top Bar */}
       <div className="border-b border-purple-500/20 bg-black/30 backdrop-blur-xl">
         <div className="container mx-auto px-6 py-4 flex items-center justify-between max-w-6xl">
@@ -369,130 +371,58 @@ export default function ProfilePage() {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Left Column - Profile Info */}
-          <div className="lg:col-span-1 space-y-6">
-            {/* Profile Card */}
-            <div className="bg-purple-900/20 backdrop-blur-xl rounded-2xl border border-purple-500/20 p-6">
-              <h2 className="text-lg font-bold text-purple-100 mb-4">Profile</h2>
-              
-              {/* Avatar */}
-              <div className="flex flex-col items-center mb-4">
-                <div className="w-24 h-24 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center overflow-hidden border-4 border-purple-500/30 mb-3">
-                  {profilePicture ? (
-                    <img 
-                      src={profilePicture} 
-                      alt="Profile" 
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <span className="text-4xl">👤</span>
-                  )}
-                </div>
+        <div className="space-y-6">
+          {/* Profile & Theme Customization */}
+          <ProfileCustomization
+            profilePicture={profilePicture}
+            setProfilePicture={setProfilePicture}
+            username={username}
+            setUsername={setUsername}
+            editingUsername={editingUsername}
+            setEditingUsername={setEditingUsername}
+            tempUsername={tempUsername}
+            setTempUsername={setTempUsername}
+            onSaveUsername={handleSaveUsername}
+            boardTheme={themeContext.boardTheme}
+            setBoardTheme={themeContext.setBoardTheme}
+            propertyCardTheme={themeContext.propertyCardTheme}
+            setPropertyCardTheme={themeContext.setPropertyCardTheme}
+            customBoardBackground={themeContext.customBoardBackground}
+            setCustomBoardBackground={themeContext.setCustomBoardBackground}
+            customPropertyCardBackground={themeContext.customPropertyCardBackground}
+            setCustomPropertyCardBackground={themeContext.setCustomPropertyCardBackground}
+          />
 
-                {/* Upload Buttons */}
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*"
-                  onChange={handleProfilePictureUpload}
-                  className="hidden"
-                />
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => fileInputRef.current?.click()}
-                    disabled={uploadingPicture}
-                    className="px-3 py-1.5 bg-purple-600 hover:bg-purple-500 rounded-lg transition-colors text-sm disabled:opacity-50"
-                  >
-                    {uploadingPicture ? 'Uploading...' : profilePicture ? 'Change' : 'Upload'}
-                  </button>
-                  {profilePicture && (
-                    <button
-                      onClick={handleRemoveProfilePicture}
-                      className="px-3 py-1.5 bg-red-600/80 hover:bg-red-600 rounded-lg transition-colors text-sm"
-                    >
-                      Remove
-                    </button>
-                  )}
-                </div>
-              </div>
-
-              {/* Username */}
-              <div className="border-t border-purple-500/20 pt-4">
-                {editingUsername ? (
-                  <div className="space-y-3">
-                    <input
-                      type="text"
-                      value={tempUsername}
-                      onChange={(e) => setTempUsername(e.target.value)}
-                      placeholder="Enter username"
-                      className="w-full px-3 py-2 bg-purple-900/50 border border-purple-500/30 rounded-lg text-purple-100 placeholder-purple-500 focus:outline-none focus:border-purple-400 text-sm"
-                      maxLength={20}
-                    />
-                    <div className="flex gap-2">
-                      <button
-                        onClick={handleSaveUsername}
-                        className="flex-1 px-3 py-2 bg-green-600 hover:bg-green-500 rounded-lg transition-colors text-sm"
-                      >
-                        Save
-                      </button>
-                      <button
-                        onClick={() => {
-                          setEditingUsername(false);
-                          setTempUsername(username);
-                        }}
-                        className="flex-1 px-3 py-2 bg-gray-600 hover:bg-gray-500 rounded-lg transition-colors text-sm"
-                      >
-                        Cancel
-                      </button>
+          {/* Stats & Activity Row */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Quick Stats Card */}
+            <div className="lg:col-span-1">
+              <div className="bg-purple-900/20 backdrop-blur-xl rounded-2xl border border-purple-500/20 p-6">
+                <h2 className="text-lg font-bold text-purple-100 mb-4">📊 Quick Stats</h2>
+                
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center">
+                    <span className="text-purple-300 text-sm">Total Slots</span>
+                    <span className="text-purple-100 font-bold text-lg">{stats.totalSlotsOwned}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-purple-300 text-sm">Total Steals</span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-purple-100 font-bold text-lg">{stats.successfulSteals + stats.failedSteals}</span>
+                      <span className="text-purple-400 text-sm">
+                        (<span className="text-red-400 font-semibold">{stats.failedSteals}</span>
+                        {' / '}
+                        <span className="text-green-400 font-semibold">{stats.successfulSteals}</span>)
+                      </span>
                     </div>
                   </div>
-                ) : (
-                  <div>
-                    <div className="text-xs text-purple-400 mb-1">Username</div>
-                    {username ? (
-                      <div className="text-lg font-bold text-purple-100 mb-2">{username}</div>
-                    ) : (
-                      <div className="text-purple-500 italic text-sm mb-2">No username set</div>
-                    )}
-                    <button
-                      onClick={() => setEditingUsername(true)}
-                      className="w-full px-3 py-2 bg-purple-600 hover:bg-purple-500 rounded-lg transition-colors text-sm"
-                    >
-                      {username ? 'Edit Username' : 'Set Username'}
-                    </button>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Quick Stats Card */}
-            <div className="bg-purple-900/20 backdrop-blur-xl rounded-2xl border border-purple-500/20 p-6">
-              <h2 className="text-lg font-bold text-purple-100 mb-4">Quick Stats</h2>
-              
-              <div className="space-y-4">
-                <div className="flex justify-between items-center">
-                  <span className="text-purple-300 text-sm">Total Slots</span>
-                  <span className="text-purple-100 font-bold text-lg">{stats.totalSlotsOwned}</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-purple-300 text-sm">Total Steals</span>
-                  <div className="flex items-center gap-2">
-                    <span className="text-purple-100 font-bold text-lg">{stats.successfulSteals + stats.failedSteals}</span>
-                    <span className="text-purple-400 text-sm">
-                      (<span className="text-red-400 font-semibold">{stats.failedSteals}</span>
-                      {' / '}
-                      <span className="text-green-400 font-semibold">{stats.successfulSteals}</span>)
-                    </span>
-                  </div>
                 </div>
               </div>
             </div>
-          </div>
 
-          {/* Right Column - Activity History */}
-          <div className="lg:col-span-2">
-            <div className="bg-purple-900/20 backdrop-blur-xl rounded-2xl border border-purple-500/20 p-6">
+            {/* Activity History */}
+            <div className="lg:col-span-2">
+              <div className="bg-purple-900/20 backdrop-blur-xl rounded-2xl border border-purple-500/20 p-6">
               <h2 className="text-xl font-bold text-purple-100 mb-4">Activity History</h2>
               
               {loading ? (
@@ -539,6 +469,7 @@ export default function ProfilePage() {
                   ))}
                 </div>
               )}
+              </div>
             </div>
           </div>
         </div>

@@ -440,7 +440,7 @@ export function Portfolio({ onSelectProperty }: PortfolioProps) {
                                     {/* Non-complete set - SAME FORMAT, just no bonus */}
                                     <div className="flex items-center gap-1">
                                       <span className="text-purple-400 font-bold">{owned.slotsOwned}×</span>
-                                      <span className="text-purple-300">{owned.propertyInfo.dailyIncome}</span>
+                                      <span className="text-purple-300">{calculateDailyIncome(owned.propertyInfo.price, owned.propertyInfo.yieldBps)}</span>
                                     </div>
                                     <span className="text-purple-500">=</span>
                                     <span className="text-green-400 font-bold">{income.totalIncome.toLocaleString()}/day</span>

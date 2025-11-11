@@ -1,234 +1,47 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { PublicKey } from '@solana/web3.js';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { useDefipoly } from '@/hooks/useDefipoly';
 import { usePropertyRefresh } from '@/contexts/PropertyRefreshContext';
 import { useCooldown } from '@/hooks/useCooldown';
 import { useStealCooldownFromContext } from '@/contexts/StealCooldownContext';
 import { ShieldIcon, CoinsIcon, FlameIcon, PropertyMarkerIcon } from './icons/UIIcons';
-import { LocationPin } from './icons/GameAssets';
+import { LocationPin, BUILDING_SVGS } from './icons/GameAssets';
+import { fetchOwnershipData, fetchPropertyData } from '@/utils/program';
 
 import { PROPERTIES } from '@/utils/constants';
+import { PropertyCardTheme } from '@/utils/themes';
 
 // Helper function for formatting numbers without hydration issues
 const formatNumber = (num: number): string => {
   return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
 };
 
-// Building SVGs for levels 0-5 (Classic Monopoly Style)
-const BUILDING_SVGS: { [key: number]: React.ReactNode } = {
-  0: null, // Will be replaced with LocationPin
-  1: (
-    // Small Single House
-    <svg width="35" height="35" viewBox="0 0 35 35" className="w-full h-auto">
-      <ellipse cx="17.5" cy="32" rx="10" ry="2.5" fill="black" opacity="0.2"/>
-      {/* Main structure */}
-      <path d="M 17.5 15 L 26 18 L 26 30 L 17.5 32 L 9 30 L 9 18 Z" fill="#D2691E"/>
-      <path d="M 17.5 15 L 26 18 L 26 30 L 17.5 25 Z" fill="#A0522D"/>
-      {/* Roof */}
-      <path d="M 17.5 8 L 28 13 L 26 18 L 17.5 15 L 9 18 L 7 13 Z" fill="#8B4513"/>
-      <path d="M 17.5 8 L 28 13 L 26 18 L 17.5 15 Z" fill="#654321"/>
-      {/* Door */}
-      <rect x="15" y="26" width="5" height="6" fill="#654321"/>
-      {/* Windows */}
-      <rect x="11" y="22" width="3" height="3" fill="#FFFFCC"/>
-      <rect x="21" y="22" width="3" height="3" fill="#FFFFCC"/>
-    </svg>
-  ),
-  2: (
-    // Larger House with Chimney
-    <svg width="45" height="45" viewBox="0 0 45 45" className="w-full h-auto">
-      <ellipse cx="22.5" cy="42" rx="13" ry="3" fill="black" opacity="0.25"/>
-      {/* Main structure */}
-      <path d="M 22.5 18 L 34 22 L 34 39 L 22.5 41 L 11 39 L 11 22 Z" fill="#D2691E"/>
-      <path d="M 22.5 18 L 34 22 L 34 39 L 22.5 32 Z" fill="#A0522D"/>
-      {/* Chimney */}
-      <rect x="14" y="10" width="4" height="10" fill="#8B4513"/>
-      <rect x="13" y="9" width="6" height="2" fill="#654321"/>
-      {/* Roof */}
-      <path d="M 22.5 11 L 36 17 L 34 22 L 22.5 18 L 11 22 L 9 17 Z" fill="#8B4513"/>
-      <path d="M 22.5 11 L 36 17 L 34 22 L 22.5 18 Z" fill="#654321"/>
-      {/* Door */}
-      <rect x="19" y="34" width="7" height="7" fill="#654321"/>
-      <circle cx="24" cy="37.5" r="0.5" fill="#FFD700"/>
-      {/* Windows */}
-      <rect x="13" y="27" width="4" height="4" fill="#FFFFCC"/>
-      <rect x="28" y="27" width="4" height="4" fill="#FFFFCC"/>
-      <rect x="13" y="33" width="4" height="4" fill="#FFFFCC"/>
-    </svg>
-  ),
-  3: (
-    // Apartment Building (3-story)
-    <svg width="55" height="55" viewBox="0 0 55 55" className="w-full h-auto">
-      <ellipse cx="27.5" cy="52" rx="16" ry="3" fill="black" opacity="0.3"/>
-      {/* Main structure */}
-      <path d="M 27.5 16 L 42 20 L 42 50 L 27.5 52 L 13 50 L 13 20 Z" fill="#D2691E"/>
-      <path d="M 27.5 16 L 42 20 L 42 50 L 27.5 40 Z" fill="#A0522D"/>
-      {/* Roof */}
-      <path d="M 27.5 10 L 45 16 L 42 20 L 27.5 16 L 13 20 L 10 16 Z" fill="#8B4513"/>
-      <path d="M 27.5 10 L 45 16 L 42 20 L 27.5 16 Z" fill="#654321"/>
-      {/* Door */}
-      <rect x="23" y="45" width="9" height="7" fill="#654321"/>
-      <circle cx="29" cy="48.5" r="0.6" fill="#FFD700"/>
-      {/* Windows - 3 floors */}
-      <rect x="15" y="24" width="4" height="4" fill="#FFFFCC"/>
-      <rect x="24" y="24" width="4" height="4" fill="#FFFFCC"/>
-      <rect x="33" y="24" width="4" height="4" fill="#FFFFCC"/>
-      
-      <rect x="15" y="31" width="4" height="4" fill="#FFFFCC"/>
-      <rect x="24" y="31" width="4" height="4" fill="#FFFFCC"/>
-      <rect x="33" y="31" width="4" height="4" fill="#FFFFCC"/>
-      
-      <rect x="15" y="38" width="4" height="4" fill="#FFFFCC"/>
-      <rect x="33" y="38" width="4" height="4" fill="#FFFFCC"/>
-    </svg>
-  ),
-  4: (
-    // Tall Tower Building (5 floors) - Enhanced with balconies and details
-    <svg width="55" height="65" viewBox="0 0 55 65" className="w-full h-auto">
-      <ellipse cx="27.5" cy="62" rx="17" ry="4" fill="black" opacity="0.35"/>
-      {/* Main tower */}
-      <path d="M 27.5 12 L 45 19 L 45 60 L 27.5 62 L 10 60 L 10 19 Z" fill="#D2B48C"/>
-      <path d="M 27.5 12 L 45 19 L 45 60 L 27.5 50 Z" fill="#BC9B6D"/>
-      
-      {/* Decorative vertical stripes */}
-      <rect x="19" y="19" width="1" height="41" fill="#A0826D" opacity="0.5"/>
-      <rect x="36" y="19" width="1" height="41" fill="#8B6F47" opacity="0.5"/>
-      
-      {/* Top crown */}
-      <path d="M 27.5 8 L 47 16 L 45 19 L 27.5 12 L 10 19 L 8 16 Z" fill="#8B7355"/>
-      <path d="M 27.5 8 L 47 16 L 45 19 L 27.5 12 Z" fill="#6B5843"/>
-      
-      {/* Decorative crown details */}
-      <rect x="14" y="16" width="2" height="3" fill="#6B5843"/>
-      <rect x="26.5" y="14" width="2" height="3" fill="#6B5843"/>
-      <rect x="39" y="16" width="2" height="3" fill="#6B5843"/>
-      
-      {/* Balcony accents */}
-      <rect x="9" y="35" width="2" height="0.5" fill="#8B7355"/>
-      <rect x="44" y="35" width="2" height="0.5" fill="#8B7355"/>
-      
-      {/* Entrance with columns */}
-      <rect x="21" y="56" width="2" height="6" fill="#8B7355"/>
-      <rect x="32.5" y="56" width="2" height="6" fill="#8B7355"/>
-      <rect x="23" y="55" width="9" height="7" fill="#654321"/>
-      <path d="M 23 55 L 27.5 53 L 32 55 Z" fill="#8B7355"/>
-      
-      {/* Windows - 5 floors, 3 columns, perfectly aligned */}
-      <rect x="13" y="23" width="4" height="3.5" fill="#FFFFCC"/>
-      <rect x="25.5" y="23" width="4" height="3.5" fill="#FFFFCC"/>
-      <rect x="38" y="23" width="4" height="3.5" fill="#FFFFCC"/>
-      
-      <rect x="13" y="29.5" width="4" height="3.5" fill="#FFFFCC"/>
-      <rect x="25.5" y="29.5" width="4" height="3.5" fill="#FFFFCC"/>
-      <rect x="38" y="29.5" width="4" height="3.5" fill="#FFFFCC"/>
-      
-      <rect x="13" y="36" width="4" height="3.5" fill="#FFFFCC"/>
-      <rect x="25.5" y="36" width="4" height="3.5" fill="#FFFFCC"/>
-      <rect x="38" y="36" width="4" height="3.5" fill="#FFFFCC"/>
-      
-      <rect x="13" y="42.5" width="4" height="3.5" fill="#FFFFCC"/>
-      <rect x="25.5" y="42.5" width="4" height="3.5" fill="#FFFFCC"/>
-      <rect x="38" y="42.5" width="4" height="3.5" fill="#FFFFCC"/>
-      
-      <rect x="13" y="49" width="4" height="3.5" fill="#FFFFCC"/>
-      <rect x="38" y="49" width="4" height="3.5" fill="#FFFFCC"/>
-    </svg>
-  ),
-  5: (
-    // Luxury Hotel with Helipad - Enhanced with more luxury details
-    <svg width="65" height="75" viewBox="0 0 65 75" className="w-full h-auto">
-      <ellipse cx="32.5" cy="72" rx="20" ry="4.5" fill="black" opacity="0.4"/>
-      {/* Main hotel structure */}
-      <path d="M 32.5 10 L 52 18 L 52 70 L 32.5 72 L 13 70 L 13 18 Z" fill="#DAA520"/>
-      <path d="M 32.5 10 L 52 18 L 52 70 L 32.5 58 Z" fill="#B8860B"/>
-      
-      {/* Decorative gold trim lines */}
-      <rect x="20" y="18" width="1.5" height="52" fill="#FFD700" opacity="0.6"/>
-      <rect x="43.5" y="18" width="1.5" height="52" fill="#CD9A00" opacity="0.6"/>
-      
-      {/* Helipad on top with details */}
-      <ellipse cx="32.5" cy="10" rx="8" ry="2" fill="#FF6B6B"/>
-      <ellipse cx="32.5" cy="10" rx="6" ry="1.5" fill="#FF4444"/>
-      <text x="32.5" y="11.5" fontSize="4" fill="white" textAnchor="middle" fontWeight="bold">H</text>
-      
-      {/* Crown/Top decoration */}
-      <path d="M 32.5 5 L 54 14 L 52 18 L 32.5 10 L 13 18 L 11 14 Z" fill="#8B7355"/>
-      <path d="M 32.5 5 L 54 14 L 52 18 L 32.5 10 Z" fill="#6B5843"/>
-      
-      {/* Crown ornaments */}
-      <circle cx="18" cy="16" r="1.5" fill="#FFD700"/>
-      <circle cx="32.5" cy="12" r="1.5" fill="#FFD700"/>
-      <circle cx="47" cy="16" r="1.5" fill="#FFD700"/>
-      
-      {/* Luxury entrance with awning and columns */}
-      <rect x="24" y="66" width="2.5" height="6" fill="#8B7355"/>
-      <rect x="38.5" y="66" width="2.5" height="6" fill="#8B7355"/>
-      <path d="M 25 65 L 28 63 L 37 63 L 40 65 Z" fill="#DC143C"/>
-      <rect x="26" y="65" width="13" height="7" fill="#654321"/>
-      <rect x="28" y="67" width="9" height="5" fill="#2C1810"/>
-      
-      {/* Gold door trim */}
-      <rect x="27.5" y="66.5" width="10" height="0.5" fill="#FFD700"/>
-      
-      {/* Balconies on sides */}
-      <rect x="11" y="38" width="2" height="0.5" fill="#8B7355"/>
-      <rect x="51" y="38" width="2" height="0.5" fill="#8B7355"/>
-      
-      {/* Windows - 6 floors, 4 columns, perfectly aligned */}
-      <rect x="16" y="22" width="3.5" height="3.5" fill="#FFFFCC"/>
-      <rect x="26" y="22" width="3.5" height="3.5" fill="#FFFFCC"/>
-      <rect x="35" y="22" width="3.5" height="3.5" fill="#FFFFCC"/>
-      <rect x="45" y="22" width="3.5" height="3.5" fill="#FFFFCC"/>
-      
-      <rect x="16" y="28.5" width="3.5" height="3.5" fill="#FFFFCC"/>
-      <rect x="26" y="28.5" width="3.5" height="3.5" fill="#FFFFCC"/>
-      <rect x="35" y="28.5" width="3.5" height="3.5" fill="#FFFFCC"/>
-      <rect x="45" y="28.5" width="3.5" height="3.5" fill="#FFFFCC"/>
-      
-      <rect x="16" y="35" width="3.5" height="3.5" fill="#FFFFCC"/>
-      <rect x="26" y="35" width="3.5" height="3.5" fill="#FFFFCC"/>
-      <rect x="35" y="35" width="3.5" height="3.5" fill="#FFFFCC"/>
-      <rect x="45" y="35" width="3.5" height="3.5" fill="#FFFFCC"/>
-      
-      <rect x="16" y="41.5" width="3.5" height="3.5" fill="#FFFFCC"/>
-      <rect x="26" y="41.5" width="3.5" height="3.5" fill="#FFFFCC"/>
-      <rect x="35" y="41.5" width="3.5" height="3.5" fill="#FFFFCC"/>
-      <rect x="45" y="41.5" width="3.5" height="3.5" fill="#FFFFCC"/>
-      
-      <rect x="16" y="48" width="3.5" height="3.5" fill="#FFFFCC"/>
-      <rect x="26" y="48" width="3.5" height="3.5" fill="#FFFFCC"/>
-      <rect x="35" y="48" width="3.5" height="3.5" fill="#FFFFCC"/>
-      <rect x="45" y="48" width="3.5" height="3.5" fill="#FFFFCC"/>
-      
-      <rect x="16" y="54.5" width="3.5" height="3.5" fill="#FFFFCC"/>
-      <rect x="26" y="54.5" width="3.5" height="3.5" fill="#FFFFCC"/>
-      <rect x="35" y="54.5" width="3.5" height="3.5" fill="#FFFFCC"/>
-      <rect x="45" y="54.5" width="3.5" height="3.5" fill="#FFFFCC"/>
-      
-      {/* Decorative flags on corners */}
-      <rect x="14" y="16" width="1" height="6" fill="#8B4513"/>
-      <path d="M 15 16 L 19 17.5 L 15 19 Z" fill="#DC143C"/>
-      <rect x="50" y="16" width="1" height="6" fill="#8B4513"/>
-      <path d="M 50 16 L 46 17.5 L 50 19 Z" fill="#DC143C"/>
-      
-      {/* Stars on flags */}
-      <circle cx="17" cy="17.5" r="0.5" fill="#FFD700"/>
-      <circle cx="48" cy="17.5" r="0.5" fill="#FFD700"/>
-    </svg>
-  ),
-};
 
 interface PropertyCardProps {
   propertyId: number;
   onSelect: (propertyId: number) => void;
+  spectatorMode?: boolean;
+  spectatorWallet?: string;
+  theme?: PropertyCardTheme;
 }
 
-export function PropertyCard({ propertyId, onSelect }: PropertyCardProps) {
+export function PropertyCard({ propertyId, onSelect, spectatorMode = false, spectatorWallet, theme }: PropertyCardProps) {
   const { connected, publicKey } = useWallet();
   const { getOwnershipData, getPropertyData, program } = useDefipoly();
   const { refreshKey } = usePropertyRefresh();
+  
+  // Default theme if none provided
+  const cardTheme = theme || {
+    id: 'default',
+    name: 'Default',
+    background: 'bg-white/10 backdrop-blur-sm',
+    border: 'border border-white/20',
+    textColor: 'text-white',
+    accent: 'text-purple-300'
+  };
   
   const [buildingLevel, setBuildingLevel] = useState(0);
   const [shieldActive, setShieldActive] = useState(false);
@@ -251,21 +64,32 @@ export function PropertyCard({ propertyId, onSelect }: PropertyCardProps) {
 
   const isThisPropertyBlocked = isOnCooldown && lastPurchasedPropertyId !== propertyId;
 
-  // Determine which cooldowns are active
+  // Determine which cooldowns are active (only show in normal mode, not spectator mode)
   const activeCooldowns = [];
-  if (shieldActive) {
-    activeCooldowns.push({ icon: <ShieldIcon size={16} className="text-cyan-400" />, label: 'Shield' });
-  }
-  if (isThisPropertyBlocked) {
-    activeCooldowns.push({ icon: <CoinsIcon size={16} className="text-yellow-400" />, time: formatCooldown(cooldownRemaining) });
-  }
-  if (isOnStealCooldown) {
-    activeCooldowns.push({ icon: <FlameIcon size={16} className="text-orange-400" />, time: formatCooldown(stealCooldownRemaining) });
+  if (!spectatorMode) {
+    if (shieldActive) {
+      activeCooldowns.push({ icon: <ShieldIcon size={12} className="text-cyan-400" />, label: 'Shield' });
+    }
+    if (isThisPropertyBlocked) {
+      activeCooldowns.push({ icon: <CoinsIcon size={12} className="text-yellow-400" /> });
+    }
+    if (isOnStealCooldown) {
+      activeCooldowns.push({ icon: <FlameIcon size={12} className="text-orange-400" /> });
+    }
   }
 
   // Fetch ownership data
   useEffect(() => {
-    if (!connected || !publicKey || !program) {
+    // In spectator mode, we need program but not necessarily connected wallet
+    if (spectatorMode && (!program || !spectatorWallet)) {
+      setBuildingLevel(0);
+      setShieldActive(false);
+      setHasCompleteSet(false);
+      return;
+    }
+    
+    // In normal mode, we need connected wallet
+    if (!spectatorMode && (!connected || !publicKey || !program)) {
       setBuildingLevel(0);
       setShieldActive(false);
       setHasCompleteSet(false);
@@ -274,7 +98,17 @@ export function PropertyCard({ propertyId, onSelect }: PropertyCardProps) {
 
     const fetchOwnership = async () => {
       try {
-        const ownershipData = await getOwnershipData(propertyId);
+        // Determine which wallet to use for ownership data
+        let ownershipData;
+        if (spectatorMode && spectatorWallet && program) {
+          // In spectator mode, fetch ownership for the spectator wallet
+          const spectatorPublicKey = new PublicKey(spectatorWallet);
+          ownershipData = await fetchOwnershipData(program, spectatorPublicKey, propertyId);
+        } else {
+          // In normal mode, use the connected wallet
+          ownershipData = await getOwnershipData(propertyId);
+        }
+        
         const propertyData = await getPropertyData(propertyId);
         
         if (ownershipData?.slotsOwned && ownershipData.slotsOwned > 0 && propertyData) {
@@ -296,7 +130,13 @@ export function PropertyCard({ propertyId, onSelect }: PropertyCardProps) {
           let ownedInSet = 0;
           for (const prop of propertiesInSet) {
             try {
-              const ownership = await getOwnershipData(prop.id);
+              let ownership;
+              if (spectatorMode && spectatorWallet && program) {
+                const spectatorPublicKey = new PublicKey(spectatorWallet);
+                ownership = await fetchOwnershipData(program, spectatorPublicKey, prop.id);
+              } else {
+                ownership = await getOwnershipData(prop.id);
+              }
               if (ownership && ownership.slotsOwned > 0) {
                 ownedInSet++;
               }
@@ -321,7 +161,7 @@ export function PropertyCard({ propertyId, onSelect }: PropertyCardProps) {
     };
 
     fetchOwnership();
-  }, [connected, publicKey, propertyId, program, getOwnershipData, getPropertyData, refreshKey, property.name, property.setId]);
+  }, [connected, publicKey, propertyId, program, getOwnershipData, getPropertyData, refreshKey, property.name, property.setId, spectatorMode, spectatorWallet]);
 
   // Extract color from Tailwind classes
   const getColorHex = (colorClass: string) => {
@@ -356,15 +196,36 @@ export function PropertyCard({ propertyId, onSelect }: PropertyCardProps) {
   const colorHex = getColorHex(property.color);
   const darkerColorHex = getDarkerColorHex(property.color);
 
+  // Get background based on theme
+  const getCardBackground = () => {
+    if (cardTheme.id === 'default') {
+      return `linear-gradient(135deg, rgba(88, 28, 135, 0.8), rgba(109, 40, 217, 0.6))`;
+    } else if (cardTheme.id === 'neon') {
+      return `linear-gradient(135deg, rgba(147, 51, 234, 0.9), rgba(236, 72, 153, 0.7))`;
+    } else if (cardTheme.id === 'gold') {
+      return `linear-gradient(135deg, rgba(251, 191, 36, 0.9), rgba(245, 158, 11, 0.7))`;
+    } else if (cardTheme.id === 'minimal') {
+      return `rgba(255, 255, 255, 0.95)`;
+    }
+    return `linear-gradient(135deg, rgba(88, 28, 135, 0.8), rgba(109, 40, 217, 0.6))`;
+  };
+
+  const getTextColor = () => {
+    return cardTheme.id === 'minimal' ? '#1f2937' : '#e9d5ff';
+  };
+
   return (
     <button
       onClick={() => onSelect(propertyId)}
       className="w-full h-full relative overflow-hidden cursor-pointer group"
       style={{
-        background: `linear-gradient(135deg, rgba(88, 28, 135, 0.8), rgba(109, 40, 217, 0.6))`,
+        background: getCardBackground(),
         border: `1px solid ${colorHex}`,
         borderRadius: '0px',
         transition: 'all 0.3s ease',
+        boxShadow: cardTheme.id === 'neon' ? `0 0 15px ${colorHex}40` : 
+                   cardTheme.id === 'gold' ? `0 0 15px rgba(251, 191, 36, 0.4)` : 
+                   cardTheme.id === 'minimal' ? `0 2px 8px rgba(0, 0, 0, 0.15)` : 'none',
       }}
     >
       {/* Animated shine effect */}
@@ -403,7 +264,7 @@ export function PropertyCard({ propertyId, onSelect }: PropertyCardProps) {
             <div 
               className="text-[7px] font-bold leading-tight uppercase truncate"
               style={{
-                color: '#e9d5ff',
+                color: getTextColor(),
                 letterSpacing: '0.5px',
               }}
             >
@@ -433,6 +294,25 @@ export function PropertyCard({ propertyId, onSelect }: PropertyCardProps) {
           )}
         </div>
 
+        {/* Combined Cooldown/Status Indicator - Moved above price */}
+        {activeCooldowns.length > 0 && (
+          <div 
+            className="px-1 py-0.5 flex-shrink-0"
+            style={{
+              background: 'rgba(12, 5, 25, 0.9)',
+              borderTop: `1px solid ${colorHex}30`,
+            }}
+          >
+            <div className="flex items-center justify-center gap-1">
+              {activeCooldowns.map((cooldown, index) => (
+                <span key={index} className="text-[10px]">
+                  {cooldown.icon}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Price section at bottom */}
         <div 
           className="px-1 py-0.5 flex-shrink-0"
@@ -447,30 +327,6 @@ export function PropertyCard({ propertyId, onSelect }: PropertyCardProps) {
             </div>
           </div>
         </div>
-
-        {/* Combined Cooldown/Status Indicator */}
-        {activeCooldowns.length > 0 && (
-          <div 
-            className="px-1 py-0.5 flex-shrink-0"
-            style={{
-              background: 'rgba(12, 5, 25, 0.9)',
-              borderTop: `1px solid ${colorHex}30`,
-            }}
-          >
-            <div className="flex items-center justify-center gap-1">
-              {activeCooldowns.map((cooldown, index) => (
-                <div key={index} className="flex items-center gap-0.5">
-                  <span className="text-[8px]">{cooldown.icon}</span>
-                  {cooldown.time && (
-                    <span className="text-[6px] font-semibold text-purple-300">
-                      {cooldown.time}
-                    </span>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
       </div>
 
       {/* Hover effect enhancement */}

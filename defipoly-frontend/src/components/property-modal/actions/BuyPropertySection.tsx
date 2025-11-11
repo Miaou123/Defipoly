@@ -77,10 +77,15 @@ export function BuyPropertySection({
   const maxSlotsToBuy = useMemo(() => {
     if (!property || !propertyData) return 1;
     
+    // Get the max per player limit
+    const maxPerPlayer = property.maxPerPlayer;
+    const currentlyOwned = propertyData.owned || 0;
+    const remainingAllowed = Math.max(0, maxPerPlayer - currentlyOwned);
+    
     return Math.min(
       propertyData.availableSlots || 1,
       Math.floor(balance / property.price) || 1,
-      (propertyData.maxSlotsPerProperty || property.totalSlots) - (propertyData.owned || 0)
+      remainingAllowed
     );
   }, [property, propertyData, balance]);
 
@@ -150,7 +155,7 @@ export function BuyPropertySection({
   const dailyIncome = Math.floor((property.price * property.yieldBps) / 10000);
   const buyCost = property.price * slotsToBuy;
   const isThisPropertyBlocked = isOnCooldown && lastPurchasedPropertyId !== propertyId;
-  const canBuy = balance >= buyCost && !isThisPropertyBlocked;
+  const canBuy = balance >= buyCost;
 
   const boostedDailyIncome = (setBonusInfo.hasCompleteSet || setBonusInfo.willCompleteSet) 
     ? Math.floor(dailyIncome * 1.4 * slotsToBuy) 
@@ -208,26 +213,6 @@ export function BuyPropertySection({
   return (
     <>
       <div className="bg-purple-900/20 rounded-xl p-3 border border-purple-500/20 space-y-2.5">
-        {/* Cooldown Warning */}
-        {isThisPropertyBlocked && (
-          <div className="bg-orange-900/30 border border-orange-500/40 rounded-lg p-2">
-            <button
-              onClick={() => setShowCooldownModal(true)}
-              className="w-full text-left flex items-start gap-2 hover:bg-orange-800/20 rounded p-1 transition-colors"
-            >
-              <Clock className="w-4 h-4 text-orange-400 mt-0.5 flex-shrink-0" />
-              <div className="flex-1 min-w-0">
-                <div className="text-xs text-orange-300 font-semibold">
-                  ⏰ Set Cooldown: {formatCooldown(cooldownRemaining)}
-                </div>
-                <div className="text-[10px] text-orange-400/80 mt-0.5">
-                  Buy this property or wait {formatCooldown(cooldownRemaining)} to buy from the same set
-                </div>
-              </div>
-            </button>
-          </div>
-        )}
-
         {/* Header with Slots and Cost */}
         <div className="flex items-center justify-between mb-2.5">
           {/* Slots Control */}
@@ -243,9 +228,24 @@ export function BuyPropertySection({
               >
                 −
               </button>
-              <div className="w-12 h-8 flex items-center justify-center bg-purple-950/70 rounded">
-                <span className="text-white text-xl font-bold">{slotsToBuy}</span>
-              </div>
+              <input
+                type="number"
+                min="1"
+                max={maxSlotsToBuy}
+                value={slotsToBuy}
+                onChange={(e) => {
+                  const value = parseInt(e.target.value) || 1;
+                  setSlotsToBuy(Math.min(Math.max(1, value), maxSlotsToBuy));
+                }}
+                disabled={loading || isThisPropertyBlocked}
+                className="w-12 h-8 bg-purple-950/70 rounded text-white text-xl font-bold text-center border-none outline-none disabled:opacity-50 [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                style={{ 
+                  MozAppearance: 'textfield',
+                  WebkitAppearance: 'none',
+                  margin: 0,
+                }}
+                onFocus={(e) => e.target.select()}
+              />
               <button
                 onClick={() => setSlotsToBuy(Math.min(maxSlotsToBuy, slotsToBuy + 1))}
                 disabled={slotsToBuy >= maxSlotsToBuy || loading || isThisPropertyBlocked}
@@ -272,13 +272,13 @@ export function BuyPropertySection({
           <div className="flex items-start gap-1.5 text-purple-200">
             <ChartIcon size={16} className="text-purple-400 mt-0.5" />
             <span className="text-xs leading-relaxed">
-              Max: {maxSlotsToBuy} • Available: {propertyData?.availableSlots || 0}
+              Max per player: <span className="font-bold text-white">{property.maxPerPlayer}</span> slots • Can buy: <span className="font-bold text-white">{maxSlotsToBuy}</span>
             </span>
           </div>
           <div className="flex items-start gap-1.5 text-purple-200">
             <CoinsIcon size={16} className="text-purple-400 mt-0.5" />
             <span className="text-xs leading-relaxed">
-              Daily income: <span className="font-bold text-green-400">+{boostedDailyIncome.toLocaleString()} DEFI</span>
+              Daily income: <span className="font-bold text-white">+{boostedDailyIncome.toLocaleString()} DEFI</span>
             </span>
           </div>
           
@@ -328,7 +328,7 @@ export function BuyPropertySection({
           ) : isThisPropertyBlocked ? (
             <>
               <Clock className="inline w-3.5 h-3.5 mr-1" />
-              On Cooldown
+              On Cooldown ({formatCooldown(cooldownRemaining)})
             </>
           ) : (
             'Buy Slots'

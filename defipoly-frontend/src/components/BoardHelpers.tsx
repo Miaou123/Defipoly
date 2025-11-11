@@ -24,7 +24,6 @@ export function CornerSquare({ icon, label, bgColor }: CornerSquareProps) {
         className="absolute inset-0 pointer-events-none"
         style={{
           border: '2px solid rgba(139, 92, 246, 0.3)',
-          borderRadius: '8px',
         }}
       />
 
@@ -53,16 +52,6 @@ export function CornerSquare({ icon, label, bgColor }: CornerSquareProps) {
           </div>
         </div>
 
-        {/* Bottom section - empty for now */}
-        <div 
-          className="px-1 py-1 flex-shrink-0"
-          style={{
-            background: 'rgba(12, 5, 25, 0.8)',
-            borderTop: '1px solid rgba(139, 92, 246, 0.3)',
-          }}
-        >
-          <div className="h-3"></div>
-        </div>
       </div>
     </div>
   );

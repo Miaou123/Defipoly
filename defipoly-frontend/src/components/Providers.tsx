@@ -4,16 +4,19 @@ import { WalletContextProvider } from "@/contexts/WalletContext";
 import { NotificationProvider } from "@/contexts/NotificationContext";
 import { PropertyRefreshProvider } from '@/contexts/PropertyRefreshContext';
 import { StealCooldownProvider } from '@/contexts/StealCooldownContext';
+import { ThemeProvider } from '@/contexts/ThemeContext';
 
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
     <WalletContextProvider>
       <NotificationProvider>
-        <PropertyRefreshProvider>
-          <StealCooldownProvider>
-          {children}
-          </StealCooldownProvider>
-        </PropertyRefreshProvider>
+        <ThemeProvider>
+          <PropertyRefreshProvider>
+            <StealCooldownProvider>
+            {children}
+            </StealCooldownProvider>
+          </PropertyRefreshProvider>
+        </ThemeProvider>
       </NotificationProvider>
     </WalletContextProvider>
   );

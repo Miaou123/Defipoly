@@ -196,6 +196,9 @@ export const gameApi = {
     
   getStealCooldowns: (playerAddress: string) =>
     apiGet(`/api/steal-cooldown/${playerAddress}`),
+    
+  getOwnershipDetails: (playerAddress: string, propertyId: number) =>
+    apiGet(`/api/ownership/${playerAddress}/${propertyId}`),
 };
 
 // Export everything for maximum flexibility

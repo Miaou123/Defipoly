@@ -19,77 +19,20 @@ const { getDatabase } = require('../config/database');
  * Total: ~225K points (well under 1M target)
  */
 function calculateLeaderboardScore(stats) {
-  let score = 0;
-  
-  // Convert lamports to SOL for all calculations
   const earnedSOL = stats.total_earned / 1e9;
-  const spentSOL = stats.total_spent / 1e9;
   
-  // 1. Wealth Component (30% weight)
-  // Scale: 1 SOL earned = 0.3 points
-  // Top player (442K SOL) = ~133K points
-  score += earnedSOL * 0.3;
+  // Weighted activity score (prevents spam exploitation)
+  const activityScore = 
+    (stats.properties_bought * 1) +      // Basic action
+    (stats.successful_steals * 3) +      // Harder action  
+    (stats.complete_sets * 10) +         // Major achievement
+    (stats.shields_activated * 2);       // Defensive play
   
-  // 2. Activity Component (25% weight)
-  // Properties: 100 points each
-  // Complete sets: 5000 points each (major achievement)
-  score += stats.properties_bought * 100;
-  score += stats.complete_sets * 5000;
+  const activityMultiplier = 1 + (activityScore / 50);
   
-  // 3. Combat Component (20% weight)
-  // Successful steals: 500 points each
-  score += stats.successful_steals * 500;
-  
-  // Win rate bonus (max 5000 points)
-  const stealWinRate = stats.successful_steals + stats.failed_steals > 0
-    ? stats.successful_steals / (stats.successful_steals + stats.failed_steals)
-    : 0;
-  score += stealWinRate * 5000;
-  
-  // 4. Efficiency Component (15% weight)
-  // ROI multiplier (max 50,000 points for amazing ROI)
-  const roi = spentSOL > 0 ? earnedSOL / spentSOL : 0;
-  const roiBonus = Math.min(roi * 25000, 50000); // Cap at 200% ROI
-  score += roiBonus;
-  
-  // 5. Defense Component (10% weight)
-  // Shields: 100 points each
-  score += stats.shields_activated * 100;
-  
-  // Defense rating bonus (max 10,000 points)
-  const defenseRating = stats.total_slots_owned > 0
-    ? 1 - (stats.times_stolen / Math.max(stats.total_slots_owned, 1))
-    : 0;
-  score += defenseRating * 10000;
-  
-  return Math.floor(score);
+  return Math.floor(earnedSOL * activityMultiplier);
 }
 
-/**
- * Calculate ROI ratio
- */
-function calculateROI(totalEarned, totalSpent) {
-  if (totalSpent === 0) return 0;
-  return parseFloat((totalEarned / totalSpent).toFixed(4));
-}
-
-/**
- * Calculate steal win rate
- */
-function calculateStealWinRate(successful, failed) {
-  const total = successful + failed;
-  if (total === 0) return 0;
-  return parseFloat((successful / total).toFixed(4));
-}
-
-/**
- * Calculate defense rating
- */
-function calculateDefenseRating(timesStolen, totalSlots) {
-  if (totalSlots === 0) return 0;
-  const rating = 1 - (timesStolen / totalSlots);
-  return Math.max(0, Math.min(1, rating)); // Clamp between 0 and 1
-}
 
 /**
  * Update player stats when an action occurs
@@ -259,21 +202,15 @@ async function recalculatePlayerScore(walletAddress) {
         if (err) return reject(err);
         if (!stats) return resolve(); // Player doesn't exist yet
 
-        // Calculate all scores
+        // Calculate leaderboard score
         const leaderboardScore = calculateLeaderboardScore(stats);
-        const roiRatio = calculateROI(stats.total_earned, stats.total_spent);
-        const stealWinRate = calculateStealWinRate(stats.successful_steals, stats.failed_steals);
-        const defenseRating = calculateDefenseRating(stats.times_stolen, stats.total_slots_owned);
 
-        // Update calculated fields
+        // Update only leaderboard score
         db.run(
           `UPDATE player_stats 
-           SET leaderboard_score = ?,
-               roi_ratio = ?,
-               steal_win_rate = ?,
-               defense_rating = ?
+           SET leaderboard_score = ?
            WHERE wallet_address = ?`,
-          [leaderboardScore, roiRatio, stealWinRate, defenseRating, walletAddress],
+          [leaderboardScore, walletAddress],
           (err) => {
             if (err) return reject(err);
             resolve();
@@ -381,8 +318,5 @@ module.exports = {
   getPlayerStats,
   recalculatePlayerScore,
   batchRecalculateScores,
-  calculateLeaderboardScore,
-  calculateROI,
-  calculateStealWinRate,
-  calculateDefenseRating
+  calculateLeaderboardScore
 };

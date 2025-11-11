@@ -36,7 +36,7 @@ interface PropertyShieldStatus {
 }
 
 export function ShieldAllModal({ ownedProperties, balance, onClose }: ShieldAllModalProps) {
-  const { activateMultipleShields } = useDefipoly();
+  const { activateShield } = useDefipoly();
   const { showSuccess, showError } = useNotification();
   const { triggerRefresh } = usePropertyRefresh();
   
@@ -112,23 +112,30 @@ export function ShieldAllModal({ ownedProperties, balance, onClose }: ShieldAllM
         console.log(`Processing ${selectedCount} properties in ${totalBatches} batches...`);
       }
   
-      // Execute batched transaction(s)
-      const signature = await activateMultipleShields(propertiesToShield);
+      // Execute individual shield activations
+      const successes = [];
+      for (const property of propertiesToShield) {
+        try {
+          const signature = await activateShield(property.propertyId, property.slotsToShield);
+          successes.push(signature);
+        } catch (error) {
+          console.error(`Failed to shield property ${property.propertyId}:`, error);
+          updatePropertyStatus(property.propertyId, 'error', error instanceof Error ? error.message : 'Unknown error');
+        }
+      }
       
-      if (signature) {
+      if (successes.length > 0) {
         // Mark all as success
         selectedProperties.forEach(property => {
           updatePropertyStatus(property.propertyId, 'success');
         });
   
-        const message = totalBatches > 1 
-          ? `Successfully shielded ${selectedCount} properties in ${totalBatches} transactions!`
-          : `Successfully shielded ${selectedCount} propert${selectedCount === 1 ? 'y' : 'ies'} in one transaction!`;
+        const message = `Successfully shielded ${successes.length} out of ${selectedCount} properties!`;
   
         showSuccess(
           'Properties Shielded!',
           message,
-          signature !== 'already-processed' ? signature : undefined
+          successes[0] !== 'already-processed' ? successes[0] : undefined
         );
         
         triggerRefresh();

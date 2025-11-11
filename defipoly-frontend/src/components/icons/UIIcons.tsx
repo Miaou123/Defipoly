@@ -515,6 +515,46 @@ export const getActionIcon = (actionType: string): React.ReactNode => {
   return ACTION_ICONS[actionType] || <span className="text-gray-400">•</span>;
 };
 
+// Sword/Combat icon for battle-related features
+export const SwordIcon: React.FC<IconProps> = ({ className = '', size = 24 }) => (
+  <svg 
+    width={size} 
+    height={size} 
+    viewBox="0 0 24 24" 
+    fill="none" 
+    xmlns="http://www.w3.org/2000/svg"
+    className={className}
+  >
+    <path 
+      d="M14.5 9.5L9 15L7 13l5.5-5.5m6-4.5l-8.5 8.5m7 0l2 2m0 0l3 3-1 1-3-3m-2-2l-1.5 1.5M3 20l5-5" 
+      stroke="currentColor" 
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+    <path d="M19 4l1 1-5 5-1-1z" fill="currentColor" opacity="0.2"/>
+  </svg>
+);
+
+// Collection icon for sets/collections
+export const CollectionIcon: React.FC<IconProps> = ({ className = '', size = 24 }) => (
+  <svg 
+    width={size} 
+    height={size} 
+    viewBox="0 0 24 24" 
+    fill="none" 
+    xmlns="http://www.w3.org/2000/svg"
+    className={className}
+  >
+    <rect x="3" y="3" width="18" height="18" rx="2" fill="currentColor" opacity="0.1"/>
+    <rect x="3" y="3" width="18" height="18" rx="2" stroke="currentColor" strokeWidth="2"/>
+    <rect x="7" y="7" width="4" height="4" rx="1" fill="currentColor"/>
+    <rect x="13" y="7" width="4" height="4" rx="1" fill="currentColor"/>
+    <rect x="7" y="13" width="4" height="4" rx="1" fill="currentColor"/>
+    <rect x="13" y="13" width="4" height="4" rx="1" fill="currentColor"/>
+  </svg>
+);
+
 // ============================================
 // DEFAULT EXPORT (optional, for convenience)
 // ============================================
@@ -541,6 +581,8 @@ export default {
   LightningIcon,
   InfoIcon,
   GiftIcon,
+  SwordIcon,
+  CollectionIcon,
   ACTION_ICONS,
   getActionIcon,
 };

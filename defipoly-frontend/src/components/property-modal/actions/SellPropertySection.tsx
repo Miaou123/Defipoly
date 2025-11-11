@@ -3,12 +3,15 @@
 // Refactored to match buy section style
 // ============================================
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useWallet } from '@solana/wallet-adapter-react';
 import { useDefipoly } from '@/hooks/useDefipoly';
 import { useNotification } from '@/contexts/NotificationContext';
 import { usePropertyRefresh } from '@/contexts/PropertyRefreshContext';
 import { PROPERTIES } from '@/utils/constants';
 import { ChartIcon } from '@/components/icons/UIIcons';
+import { UnownedOverlay } from '../UnownedOverlay';
+import { getSellValueInfo } from '@/utils/sellValue';
 
 interface SellPropertySectionProps {
   propertyId: number;
@@ -27,15 +30,77 @@ export function SellPropertySection({
   setLoading,
   onClose
 }: SellPropertySectionProps) {
-  const { sellProperty } = useDefipoly();
+  const { sellProperty, getOwnershipData } = useDefipoly();
   const { showSuccess, showError } = useNotification();
   const { triggerRefresh } = usePropertyRefresh();
+  const { publicKey } = useWallet();
   
   const [slotsToSell, setSlotsToSell] = useState(1);
+  const [ownershipDetails, setOwnershipDetails] = useState<any>(null);
+  const [sellValueInfo, setSellValueInfo] = useState<any>(null);
 
-  // Base sell value is 15% (1500 bps), can go up to 30% (3000 bps) after 14 days
-  const estimatedReceive = (property.price * slotsToSell * 0.15); // Minimum estimate
   const maxSlotsToSell = propertyData?.owned || 0;
+
+  // Use the blockchain ownership data that we already have
+  useEffect(() => {
+    if (!publicKey || !propertyData?.owned) {
+      setOwnershipDetails(null);
+      setSellValueInfo(null);
+      return;
+    }
+
+    const fetchOwnershipDetails = async () => {
+      try {
+        const ownershipData = await getOwnershipData(propertyId);
+        if (ownershipData?.purchaseTimestamp) {
+          // Convert BN timestamp to seconds
+          const purchaseTimestamp = ownershipData.purchaseTimestamp.toNumber();
+          const sellInfo = getSellValueInfo(property.price, slotsToSell, purchaseTimestamp);
+          
+          setOwnershipDetails({ buyTimestamp: purchaseTimestamp });
+          setSellValueInfo(sellInfo);
+          
+          console.log('💰 Sell Value Debug:', {
+            propertyId,
+            purchaseTimestamp,
+            currentTime: Math.floor(Date.now() / 1000),
+            sellInfo
+          });
+        } else {
+          console.warn('No purchase timestamp found in ownership data');
+          setSellValueInfo({
+            sellValue: property.price * slotsToSell * 0.15,
+            sellPercentage: 0.15,
+            percentageDisplay: "15.0",
+            daysHeld: "Unknown",
+            isMaxValue: false
+          });
+        }
+      } catch (error) {
+        console.warn('Could not fetch ownership details from blockchain:', error);
+        // Fallback to base value calculation
+        setSellValueInfo({
+          sellValue: property.price * slotsToSell * 0.15,
+          sellPercentage: 0.15,
+          percentageDisplay: "15.0",
+          daysHeld: "Unknown",
+          isMaxValue: false
+        });
+      }
+    };
+
+    fetchOwnershipDetails();
+  }, [publicKey, propertyId, property.price, slotsToSell, propertyData?.owned, getOwnershipData]);
+
+  // Update sell value when slots change
+  useEffect(() => {
+    if (ownershipDetails?.buyTimestamp) {
+      const sellInfo = getSellValueInfo(property.price, slotsToSell, ownershipDetails.buyTimestamp);
+      setSellValueInfo(sellInfo);
+    }
+  }, [slotsToSell, property.price, ownershipDetails?.buyTimestamp]);
+
+  const estimatedReceive = sellValueInfo?.sellValue || (property.price * slotsToSell * 0.15);
 
   const handleSell = async () => {
     if (loading) return;
@@ -71,7 +136,75 @@ export function SellPropertySection({
     }
   };
 
-  if (!propertyData || propertyData.owned === 0) return null;
+  // Show mock data if user doesn't own any slots
+  if (!propertyData || propertyData.owned === 0) {
+    const mockContent = (
+      <div className="mt-2 p-3 bg-gradient-to-br from-purple-900/40 to-indigo-900/40 rounded-xl border border-purple-500/30">
+        {/* Header with Slots and Value */}
+        <div className="flex items-center justify-between mb-2.5">
+          {/* Slots Control */}
+          <div className="flex items-center gap-2">
+            <span className="text-purple-300 text-xs font-semibold uppercase tracking-wider">
+              Slots
+            </span>
+            <div className="flex items-center gap-1.5 bg-purple-950/50 rounded-lg p-0.5 border border-purple-500/30">
+              <button className="w-8 h-8 flex items-center justify-center bg-purple-600/30 rounded text-white font-bold text-lg">
+                −
+              </button>
+              <div className="w-12 h-8 flex items-center justify-center bg-950/70 rounded">
+                <span className="text-white text-xl font-bold">1</span>
+              </div>
+              <button className="w-8 h-8 flex items-center justify-center bg-purple-600/30 rounded text-white font-bold text-lg">
+                +
+              </button>
+            </div>
+          </div>
+
+          {/* Value Display */}
+          <div className="flex items-center gap-2">
+            <span className="text-purple-300 text-xs font-semibold uppercase tracking-wider">
+              Value
+            </span>
+            <span className="text-xl font-bold text-white">
+              ~{Math.round(property.price * 0.15).toLocaleString()}
+            </span>
+          </div>
+        </div>
+
+        {/* Info Section - Compact */}
+        <div className="space-y-1 mb-2.5">
+          <div className="flex items-start gap-1.5 text-purple-200">
+            <ChartIcon size={16} className="text-purple-400 mt-0.5" />
+            <span className="text-xs leading-relaxed">
+              Max: your owned slots
+            </span>
+          </div>
+          <div className="flex items-start gap-1.5 text-purple-200">
+            <span className="text-sm">💵</span>
+            <span className="text-xs leading-relaxed">
+              Sell value: 15-30% of buy price (based on days held)
+            </span>
+          </div>
+          <div className="flex items-start gap-1.5 text-amber-300">
+            <span className="text-sm">⚠️</span>
+            <span className="text-xs leading-relaxed">
+              Held longer = better value (max 30% after 14 days)
+            </span>
+          </div>
+        </div>
+
+        {/* Action Button - Disabled */}
+        <button
+          disabled
+          className="w-full py-2 rounded-lg font-semibold text-sm bg-gray-800/30 cursor-not-allowed text-gray-500 border border-gray-700/30"
+        >
+          Sell Slots
+        </button>
+      </div>
+    );
+
+    return <UnownedOverlay>{mockContent}</UnownedOverlay>;
+  }
 
   return (
     <div className="mt-2 p-3 bg-gradient-to-br from-purple-900/40 to-indigo-900/40 rounded-xl border border-purple-500/30">
@@ -90,9 +223,24 @@ export function SellPropertySection({
             >
               −
             </button>
-            <div className="w-12 h-8 flex items-center justify-center bg-950/70 rounded">
-              <span className="text-white text-xl font-bold">{slotsToSell}</span>
-            </div>
+            <input
+              type="number"
+              min="1"
+              max={maxSlotsToSell}
+              value={slotsToSell}
+              onChange={(e) => {
+                const value = parseInt(e.target.value) || 1;
+                setSlotsToSell(Math.min(Math.max(1, value), maxSlotsToSell));
+              }}
+              disabled={loading}
+              className="w-12 h-8 bg-purple-950/70 rounded text-white text-xl font-bold text-center border-none outline-none disabled:opacity-50 [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+              style={{ 
+                MozAppearance: 'textfield',
+                WebkitAppearance: 'none',
+                margin: 0,
+              }}
+              onFocus={(e) => e.target.select()}
+            />
             <button
               onClick={() => setSlotsToSell(Math.min(maxSlotsToSell, slotsToSell + 1))}
               disabled={slotsToSell >= maxSlotsToSell || loading}
@@ -119,19 +267,30 @@ export function SellPropertySection({
         <div className="flex items-start gap-1.5 text-purple-200">
           <ChartIcon size={16} className="text-purple-400 mt-0.5" />
           <span className="text-xs leading-relaxed">
-            Max: {maxSlotsToSell} slots owned
+            Max: <span className="font-bold text-white">{maxSlotsToSell}</span> slots owned
           </span>
         </div>
         <div className="flex items-start gap-1.5 text-purple-200">
           <span className="text-sm">💵</span>
           <span className="text-xs leading-relaxed">
-            Sell value: 15-30% of buy price (based on days held)
+            Current sell value: <span className="font-bold text-white">{sellValueInfo?.percentageDisplay || "15.0"}%</span> of buy price
           </span>
         </div>
+        {sellValueInfo?.daysHeld && (
+          <div className="flex items-start gap-1.5 text-purple-200">
+            <span className="text-sm">📅</span>
+            <span className="text-xs leading-relaxed">
+              Held for: <span className="font-bold text-white">{sellValueInfo.daysHeld}</span>
+            </span>
+          </div>
+        )}
         <div className="flex items-start gap-1.5 text-amber-300">
-          <span className="text-sm">⚠️</span>
+          <span className="text-sm">{sellValueInfo?.isMaxValue ? "✅" : "⚠️"}</span>
           <span className="text-xs leading-relaxed">
-            Held longer = better value (max 30% after 14 days)
+            {sellValueInfo?.isMaxValue 
+              ? "Maximum sell value reached (30%)" 
+              : "Hold longer for better selling value (max 30% after 14 days)"
+            }
           </span>
         </div>
       </div>

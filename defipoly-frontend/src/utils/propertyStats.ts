@@ -41,7 +41,7 @@ export async function fetchPropertyStats(propertyId: number): Promise<PropertySt
  */
 export async function fetchAllPropertiesStats(): Promise<Map<number, PropertyStats>> {
   try {
-    const response = await fetch(`${BACKEND_URL}/api/properties/stats`);
+    const response = await fetch(`${API_BASE_URL}/api/properties/stats`);
     
     if (!response.ok) {
       console.error(`Failed to fetch all properties stats: ${response.status}`);

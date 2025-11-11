@@ -52,14 +52,33 @@ export async function checkTokenAccountExists(
   connection: Connection,
   owner: PublicKey
 ): Promise<boolean> {
-  const tokenAccount = await getAssociatedTokenAddress(
-    TOKEN_MINT,
-    owner,
-    false,
-    TOKEN_PROGRAM_ID,
-    ASSOCIATED_TOKEN_PROGRAM_ID
-  );
+  try {
+    const tokenAccount = await getAssociatedTokenAddress(
+      TOKEN_MINT,
+      owner,
+      false,
+      TOKEN_PROGRAM_ID,
+      ASSOCIATED_TOKEN_PROGRAM_ID
+    );
 
-  const accountInfo = await connection.getAccountInfo(tokenAccount);
-  return accountInfo !== null;
+    // Add retry logic for RPC failures
+    let retries = 3;
+    while (retries > 0) {
+      try {
+        const accountInfo = await connection.getAccountInfo(tokenAccount);
+        return accountInfo !== null;
+      } catch (error: any) {
+        retries--;
+        if (retries === 0) throw error;
+        
+        // Wait before retry (exponential backoff)
+        await new Promise(resolve => setTimeout(resolve, (4 - retries) * 1000));
+      }
+    }
+    
+    return false;
+  } catch (error: any) {
+    console.error(`failed to get info about account ${owner.toString()}:`, error);
+    return false; // Assume doesn't exist on error
+  }
 }

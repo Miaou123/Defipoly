@@ -260,7 +260,7 @@ export class PersistentCache<T> {
 
   private clearOldest(): void {
     const keys = Object.keys(localStorage).filter(k => k.startsWith(this.prefix));
-    let oldest: { key: string; timestamp: number } | null = null;
+    let oldest: { key: string; timestamp: number } | undefined;
     
     keys.forEach(key => {
       try {

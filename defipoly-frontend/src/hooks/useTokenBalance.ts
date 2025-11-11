@@ -28,7 +28,26 @@ export function useTokenBalance() {
           publicKey
         );
         
-        const accountInfo = await connection.getAccountInfo(tokenAccount);
+        // Add retry logic for RPC calls
+        let retries = 3;
+        let accountInfo = null;
+        
+        while (retries > 0) {
+          try {
+            accountInfo = await connection.getAccountInfo(tokenAccount);
+            break;
+          } catch (error: any) {
+            retries--;
+            if (retries === 0) {
+              console.error('Error fetching token balance:', error);
+              setBalance(0);
+              return;
+            }
+            
+            // Wait before retry
+            await new Promise(resolve => setTimeout(resolve, (4 - retries) * 1000));
+          }
+        }
         
         if (!accountInfo) {
           // Token account doesn't exist yet

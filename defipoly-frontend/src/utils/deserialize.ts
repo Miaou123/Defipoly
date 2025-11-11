@@ -29,6 +29,14 @@ export function deserializeOwnership(data: Buffer): PropertyOwnership {
   const shieldExpiry = new BN(data.slice(offset, offset + 8), 'le');
   offset += 8;
 
+  // shield_cooldown_duration: i64 (8 bytes)
+  const shieldCooldownDuration = new BN(data.slice(offset, offset + 8), 'le');
+  offset += 8;
+
+  // steal_protection_expiry: i64 (8 bytes)  
+  const stealProtectionExpiry = new BN(data.slice(offset, offset + 8), 'le');
+  offset += 8;
+
   // bump: u8 (1 byte)
   const bump = data.readUInt8(offset);
 
@@ -39,6 +47,8 @@ export function deserializeOwnership(data: Buffer): PropertyOwnership {
     slotsShielded,
     purchaseTimestamp,
     shieldExpiry,
+    shieldCooldownDuration,
+    stealProtectionExpiry,
     bump,
   };
 }

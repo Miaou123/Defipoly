@@ -25,14 +25,11 @@ router.use('/steal-cooldown', stealCooldownRouter);
 const { getPlayerOwnership } = require('../controllers/statsController');
 router.get('/ownership/:wallet', getPlayerOwnership);
 
-// Get leaderboard by type
-// GET /api/leaderboard?type=overall&limit=100&offset=0
-// Types: overall, wealth, efficiency, combat, defense, collections, income
+// Get overall leaderboard
+// GET /api/leaderboard?limit=100&offset=0
 router.get('/leaderboard', leaderboardController.getLeaderboard);
 
-// Get player's ranks across all leaderboards
-// GET /api/leaderboard/ranks/:wallet
-router.get('/leaderboard/ranks/:wallet', leaderboardController.getPlayerRanks);
+// Player ranks endpoint removed as part of leaderboard simplification
 
 // Get overall leaderboard stats
 // GET /api/leaderboard/stats

@@ -373,5 +373,5 @@ export function getPropertiesBySetId(setId: number) {
 }
 
 export function getSetBonus(setId: number) {
-  return SET_BONUSES[setId as keyof typeof SET_BONUSES];
+  return SET_BONUSES[setId.toString() as keyof typeof SET_BONUSES];
 }

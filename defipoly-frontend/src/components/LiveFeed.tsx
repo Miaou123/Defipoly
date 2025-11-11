@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useConnection } from '@solana/wallet-adapter-react';
+import { useRouter } from 'next/navigation';
 import { PROGRAM_ID, getPropertyById } from '@/utils/constants';
 import { BorshCoder, EventParser } from '@coral-xyz/anchor';
 import { getProfilesBatch, ProfileData } from '@/utils/profileStorage';
@@ -22,6 +23,7 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3
 
 export function LiveFeed() {
   const { connection } = useConnection();
+  const router = useRouter();
   const [feed, setFeed] = useState<FeedItem[]>([]);
   const [profiles, setProfiles] = useState<Record<string, ProfileData>>({});
   const [loading, setLoading] = useState(true);
@@ -40,6 +42,12 @@ export function LiveFeed() {
     if (tokens >= 1e6) return `${(tokens / 1e6).toFixed(2)}M`;
     if (tokens >= 1e3) return `${(tokens / 1e3).toFixed(1)}K`;
     return tokens.toFixed(2);
+  };
+
+  const handleActionClick = (item: FeedItem) => {
+    if (item.playerAddress) {
+      router.push(`/spectator/${item.playerAddress}`);
+    }
   };
 
   // Convert backend action to feed item
@@ -282,6 +290,7 @@ export function LiveFeed() {
         <h2 className="text-base font-semibold text-purple-200 border-b border-purple-500/20 pb-2">
           Live Activity
         </h2>
+        <p className="text-xs text-purple-400 mt-1">Click on any action to view player's board</p>
       </div>
 
       {/* Scrollable Content */}
@@ -304,7 +313,8 @@ export function LiveFeed() {
           {feed.map((item) => (
             <div
               key={item.txSignature}
-              className={`p-3 bg-purple-900/10 rounded-xl border-l-4 text-xs text-purple-200 leading-relaxed transition-all ${
+              onClick={() => handleActionClick(item)}
+              className={`p-3 bg-purple-900/10 rounded-xl border-l-4 text-xs text-purple-200 leading-relaxed transition-all cursor-pointer hover:bg-purple-900/20 ${
                 item.type === 'buy' ? 'border-green-400' :
                 item.type === 'steal' ? 'border-red-400' :
                 item.type === 'claim' ? 'border-blue-400' :

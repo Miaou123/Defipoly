@@ -5,14 +5,30 @@ import { getProfilesBatch, ProfileData } from '@/utils/profileStorage';
 import { TrophyIcon } from './icons/UIIcons';
 
 interface LeaderboardEntry {
+  rank: number;
   walletAddress: string;
-  dailyIncome: number;
+  displayName: string;
+  leaderboardScore: number;
+  totalEarned: number;
+  propertiesBought: number;
+  successfulSteals: number;
+  completeSets: number;
+  shieldsActivated: number;
+}
+
+interface LeaderboardData {
+  leaderboard: LeaderboardEntry[];
+  pagination: {
+    limit: number;
+    offset: number;
+    count: number;
+  };
 }
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3101';
 
 export function Leaderboard() {
-  const [leaders, setLeaders] = useState<LeaderboardEntry[]>([]);
+  const [leaderboardData, setLeaderboardData] = useState<LeaderboardData | null>(null);
   const [profiles, setProfiles] = useState<Record<string, ProfileData>>({});
   const [loading, setLoading] = useState(true);
 
@@ -22,27 +38,26 @@ export function Leaderboard() {
       try {
         console.log('🏆 Fetching leaderboard from backend...');
         
-        // ✅ Reduced from 10 to 5
-        const response = await fetch(`${API_BASE_URL}/api/leaderboard?limit=5`);
+        const response = await fetch(`${API_BASE_URL}/api/leaderboard?limit=50`);
         
         if (!response.ok) {
           throw new Error('Failed to fetch leaderboard');
         }
         
-        const data = await response.json();
+        const data: LeaderboardData = await response.json();
         
         console.log(`🏆 Found ${data.leaderboard.length} players`);
-        setLeaders(data.leaderboard);
+        setLeaderboardData(data);
         
         // Fetch profiles for all wallet addresses
-        const walletAddresses = data.leaderboard.map((entry: LeaderboardEntry) => entry.walletAddress);
+        const walletAddresses = data.leaderboard.map((entry) => entry.walletAddress);
         if (walletAddresses.length > 0) {
           const profilesData = await getProfilesBatch(walletAddresses);
           setProfiles(profilesData);
         }
       } catch (error) {
         console.error('❌ Error fetching leaderboard:', error);
-        setLeaders([]);
+        setLeaderboardData(null);
       } finally {
         setLoading(false);
       }
@@ -65,7 +80,11 @@ export function Leaderboard() {
     return profile?.username || formatAddress(address);
   };
 
-  const formatIncome = (lamports: number) => {
+  const handlePlayerClick = (leader: LeaderboardEntry) => {
+    window.location.href = `/spectator/${leader.walletAddress}`;
+  };
+
+  const formatTokenAmount = (lamports: number) => {
     const tokens = lamports / 1e9;
     if (tokens >= 1e9) return `${(tokens / 1e9).toFixed(1)}B`;
     if (tokens >= 1e6) return `${(tokens / 1e6).toFixed(1)}M`;
@@ -74,23 +93,27 @@ export function Leaderboard() {
   };
 
   return (
-    <div className="bg-purple-900/8 backdrop-blur-xl rounded-2xl border border-purple-500/20 max-h-[300px] overflow-hidden flex flex-col">
-      {/* Header - Reduced padding */}
+    <div className="bg-purple-900/8 backdrop-blur-xl rounded-2xl border border-purple-500/20 max-h-[500px] overflow-hidden flex flex-col">
+      {/* Header */}
       <div className="p-4 pb-2">
-        <h2 className="text-lg font-bold text-white">
-          Leaderboard
-        </h2>
-        <p className="text-xs text-purple-400 mt-0.5">Top players by daily income</p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-lg font-bold text-white">
+              🏆 Leaderboard
+            </h2>
+            <p className="text-xs text-purple-400 mt-0.5">Click on a player to see their board</p>
+          </div>
+        </div>
       </div>
 
-      {/* Scrollable Content - Reduced padding */}
+      {/* Scrollable Content */}
       <div className="flex-1 overflow-y-auto px-4 pb-4">
         {loading ? (
           <div className="text-center py-8">
             <div className="text-xl mb-1">⏳</div>
             <div className="text-xs text-purple-300">Loading...</div>
           </div>
-        ) : leaders.length === 0 ? (
+        ) : !leaderboardData || leaderboardData.leaderboard.length === 0 ? (
           <div className="text-center py-8">
             <TrophyIcon size={24} className="mx-auto mb-1 text-yellow-400" />
             <div className="text-xs text-purple-400">No players yet</div>
@@ -98,27 +121,28 @@ export function Leaderboard() {
           </div>
         ) : (
           <div className="space-y-0.5">
-            {leaders.map((leader, index) => {
-              const isTop3 = index < 3;
-              const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : '';
+            {leaderboardData.leaderboard.map((leader) => {
+              const isTop3 = leader.rank <= 3;
+              const medal = leader.rank === 1 ? '🥇' : leader.rank === 2 ? '🥈' : leader.rank === 3 ? '🥉' : '';
               
               return (
                 <div
                   key={leader.walletAddress}
-                  className={`flex items-center gap-3 py-2 px-2 rounded-lg transition-all ${
+                  onClick={() => handlePlayerClick(leader)}
+                  className={`flex items-center gap-3 py-2 px-2 rounded-lg transition-all cursor-pointer ${
                     isTop3 
                       ? 'bg-white/[0.03] hover:bg-white/[0.08]' 
                       : 'bg-white/[0.01] hover:bg-white/[0.05]'
                   }`}
                 >
-                  {/* Rank - Reduced size */}
+                  {/* Rank */}
                   <div className={`text-xs font-bold w-6 text-center ${
                     isTop3 ? 'text-yellow-400' : 'text-purple-400'
                   }`}>
-                    {medal || `#${index + 1}`}
+                    {medal || `#${leader.rank}`}
                   </div>
                   
-                  {/* Profile Picture - Smaller */}
+                  {/* Profile Picture */}
                   <div className="w-8 h-8 rounded-full overflow-hidden bg-purple-500/10 flex-shrink-0">
                     {profiles[leader.walletAddress]?.profilePicture ? (
                       <img 
@@ -133,29 +157,24 @@ export function Leaderboard() {
                     )}
                   </div>
                   
-                  {/* Name and Address - Reduced font size */}
+                  {/* Name and Details */}
                   <div className="flex-1 min-w-0">
                     <div className={`font-semibold text-xs truncate ${
                       isTop3 ? 'text-white' : 'text-purple-100'
                     }`}>
                       {getDisplayName(leader.walletAddress)}
                     </div>
-                    {profiles[leader.walletAddress]?.username && (
-                      <div className="text-[10px] text-purple-500 font-mono">
-                        {formatAddress(leader.walletAddress)}
-                      </div>
-                    )}
                   </div>
                   
-                  {/* Income - Compact */}
+                  {/* Score */}
                   <div className="text-right">
                     <div className={`text-xs font-bold font-mono ${
-                      isTop3 ? 'text-green-400' : 'text-green-500'
+                      isTop3 ? 'text-yellow-400' : 'text-purple-300'
                     }`}>
-                      {formatIncome(leader.dailyIncome)}
+                      {leader.leaderboardScore.toLocaleString()}
                     </div>
                     <div className="text-[9px] text-purple-500 uppercase tracking-wider">
-                      per day
+                      score
                     </div>
                   </div>
                 </div>

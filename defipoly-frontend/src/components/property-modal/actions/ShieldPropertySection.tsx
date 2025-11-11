@@ -10,6 +10,7 @@ import { usePropertyRefresh } from '@/contexts/PropertyRefreshContext';
 import { PROPERTIES } from '@/utils/constants';
 import { Clock, Shield } from 'lucide-react';
 import { ShieldIcon, TimerIcon, WarningIcon } from '@/components/icons/UIIcons';
+import { UnownedOverlay } from '../UnownedOverlay';
 
 interface ShieldPropertySectionProps {
   propertyId: number;
@@ -142,7 +143,78 @@ export function ShieldPropertySection({
     }
   };
 
-  if (!propertyData || totalSlots === 0) return null;
+  // Show mock data if user doesn't own any slots
+  if (!propertyData || totalSlots === 0) {
+    const mockContent = (
+      <div className="mt-2 p-3 bg-gradient-to-br from-purple-900/40 to-indigo-900/40 rounded-xl border border-purple-500/30">
+        {/* Header with Duration, Cost, and Cooldown */}
+        <div className="flex items-center justify-between mb-2.5">
+          {/* Duration Control */}
+          <div className="flex items-center gap-2">
+            <span className="text-purple-300 text-xs font-semibold uppercase tracking-wider">
+              Duration
+            </span>
+            <div className="flex items-center gap-1.5 bg-purple-950/50 rounded-lg p-0.5 border border-purple-500/30">
+              <button className="w-8 h-8 flex items-center justify-center bg-purple-600/30 rounded text-white font-bold text-lg">
+                −
+              </button>
+              <div className="w-12 h-8 flex items-center justify-center bg-purple-950/70 rounded">
+                <span className="text-white text-xl font-bold">24</span>
+              </div>
+              <button className="w-8 h-8 flex items-center justify-center bg-purple-600/30 rounded text-white font-bold text-lg">
+                +
+              </button>
+            </div>
+            <span className="text-purple-300 text-xs font-medium">h</span>
+          </div>
+
+          {/* Cost and Cooldown */}
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <span className="text-purple-300 text-xs font-semibold uppercase tracking-wider">
+                Cost
+              </span>
+              <span className="text-yellow-400 text-xl font-bold">
+                {Math.round(property.price * 0.05).toLocaleString()}
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-purple-300 text-xs font-semibold uppercase tracking-wider">
+                CD
+              </span>
+              <span className="text-orange-400 text-xl font-bold">6h</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Info Section - Compact */}
+        <div className="space-y-1 mb-2.5">
+          <div className="flex items-start gap-1.5 text-purple-200">
+            <ShieldIcon size={16} className="text-cyan-400 mt-0.5" />
+            <span className="text-xs leading-relaxed">
+              Protects <span className="font-bold text-white">your slots</span> for 24 hours
+            </span>
+          </div>
+          <div className="flex items-start gap-1.5 text-purple-200">
+            <TimerIcon size={16} className="text-purple-400 mt-0.5" />
+            <span className="text-xs leading-relaxed">
+              6h cooldown after expiry (25% of duration)
+            </span>
+          </div>
+        </div>
+
+        {/* Action Button - Disabled */}
+        <button
+          disabled
+          className="w-full py-2 rounded-lg font-semibold text-sm bg-gray-800/30 cursor-not-allowed text-gray-500 border border-gray-700/30"
+        >
+          Activate Shield
+        </button>
+      </div>
+    );
+
+    return <UnownedOverlay>{mockContent}</UnownedOverlay>;
+  }
 
   // Cooldown state - Compact version
   if (isInCooldown && !isShieldActive) {
@@ -204,9 +276,24 @@ export function ShieldPropertySection({
             >
               −
             </button>
-            <div className="w-12 h-8 flex items-center justify-center bg-950/70 rounded">
-              <span className="text-white text-xl font-bold">{selectedHours}</span>
-            </div>
+            <input
+              type="number"
+              min="1"
+              max="48"
+              value={selectedHours}
+              onChange={(e) => {
+                const value = parseInt(e.target.value) || 1;
+                setSelectedHours(Math.min(Math.max(1, value), 48));
+              }}
+              disabled={loading}
+              className="w-12 h-8 bg-purple-950/70 rounded text-white text-xl font-bold text-center border-none outline-none disabled:opacity-50 [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+              style={{ 
+                MozAppearance: 'textfield',
+                WebkitAppearance: 'none',
+                margin: 0,
+              }}
+              onFocus={(e) => e.target.select()}
+            />
             <button
               onClick={increaseHours}
               disabled={selectedHours >= 48 || loading}

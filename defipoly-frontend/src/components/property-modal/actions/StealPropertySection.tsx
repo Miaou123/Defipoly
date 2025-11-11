@@ -130,7 +130,7 @@ export function StealPropertySection({
   return (
     <div className="bg-gradient-to-br from-purple-900/40 to-indigo-900/40 rounded-xl p-4 border border-purple-500/30">
       <div className="flex items-center justify-between mb-3">
-        <h3 className="text-lg font-bold text-purple-200">Random Steal</h3>
+        <h3 className="text-lg font-bold text-purple-200">Steal</h3>
         {isOnStealCooldown && stealCooldownRemaining > 0 && (
           <div className="flex items-center gap-1.5 text-yellow-400 text-xs bg-yellow-400/10 px-2 py-1 rounded-md border border-yellow-400/20">
             <Clock className="w-3.5 h-3.5" />
@@ -167,7 +167,7 @@ export function StealPropertySection({
         <div className="flex items-start gap-1.5 text-purple-200">
           <DiceIcon size={16} className="text-purple-400 mt-0.5" />
           <span className="text-xs leading-relaxed">
-            <strong>Truly Random:</strong> Target selected on-chain from all unprotected owners
+            <strong>Random:</strong> Target selected on-chain from all unprotected owners
           </span>
         </div>
         
@@ -197,8 +197,8 @@ export function StealPropertySection({
         <div className="flex items-start gap-1.5 text-purple-200">
           <LightningIcon size={16} className="text-yellow-400 mt-0.5" />
           <span className="text-xs leading-relaxed">
-            {/* ✅ FIXED: Uses cooldownHours which exists in PROPERTIES constant */}
-            Your cooldown: {(property.cooldownHours || 24) / 2}h between steal attempts
+            {/* ✅ FIXED: Uses cooldown field which exists in PROPERTIES constant */}
+            Your cooldown: {(property.cooldown || 24) / 2}h between steal attempts
           </span>
         </div>
       </div>

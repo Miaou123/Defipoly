@@ -150,7 +150,7 @@ export function PropertyModal({ propertyId, onClose }: PropertyModalProps) {
   const baseIncomePerSlot = dailyIncome;
   
   // Get variable set bonus from SET_BONUSES based on setId
-  const setBonus = SET_BONUSES[property.setId as keyof typeof SET_BONUSES];
+  const setBonus = SET_BONUSES[property.setId.toString() as keyof typeof SET_BONUSES];
   const setBonusPercent = setBonus?.percent || 40;  // e.g., 30.00 for Brown, 50.00 for Dark Blue
   const setBonusBps = setBonus?.bps || 4000;        // e.g., 3000 for Brown, 5000 for Dark Blue
   
@@ -252,7 +252,7 @@ export function PropertyModal({ propertyId, onClose }: PropertyModalProps) {
                         ✨ Complete Set Bonus Active
                       </span>
                       <span className="text-amber-300">
-                        +{setBonusPercent.toFixed(1)}% on {setBonusInfo.boostedSlots} slot{setBonusInfo.boostedSlots !== 1 ? 's' : ''}
+                        +{setBonusPercent.toFixed(1)}% on {setBonusInfo?.boostedSlots || 0} slot{(setBonusInfo?.boostedSlots || 0) !== 1 ? 's' : ''}
                       </span>
                     </div>
                   </div>
@@ -272,9 +272,11 @@ export function PropertyModal({ propertyId, onClose }: PropertyModalProps) {
                       <span className="text-lg font-bold text-purple-100">{totalSlots - availableSlots}</span>
                       <span className="text-[9px] text-purple-400 ml-1">/ {totalSlots} slots filled</span>
                     </div>
-                    <div>
-                      <span className="text-lg font-bold text-purple-100">{availableSlots}</span>
-                      <span className="text-[9px] text-purple-400 ml-1">available</span>
+                    <div className="text-right">
+                      <div>
+                        <span className="text-lg font-bold text-purple-100">{availableSlots}</span>
+                        <span className="text-[9px] text-purple-400 ml-1">available</span>
+                      </div>
                     </div>
                   </div>
                   
