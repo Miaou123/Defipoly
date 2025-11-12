@@ -21,7 +21,7 @@ const ThemeContext = createContext<ThemeContextType | null>(null);
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const { publicKey } = useWallet();
   
-  const [boardTheme, setBoardTheme] = useState('default');
+  const [boardTheme, setBoardTheme] = useState('dark');
   const [propertyCardTheme, setPropertyCardTheme] = useState('dark');
   const [customBoardBackground, setCustomBoardBackground] = useState<string | null>(null);
   const [customPropertyCardBackground, setCustomPropertyCardBackground] = useState<string | null>(null);

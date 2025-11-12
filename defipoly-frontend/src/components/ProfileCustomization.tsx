@@ -149,6 +149,32 @@ export function ProfileCustomization({
     }
   };
 
+  // Get preview background for board
+  const getBoardPreviewBackground = () => {
+    if (customBoardBackground) {
+      return `url(${customBoardBackground})`;
+    }
+    return getBoardTheme(boardTheme).boardBackground;
+  };
+
+  // Get preview background for property cards
+  const getPropertyPreviewBackground = () => {
+    if (customPropertyCardBackground) {
+      return `url(${customPropertyCardBackground})`;
+    }
+    const theme = getPropertyCardTheme(propertyCardTheme);
+    // Convert Tailwind classes to actual gradients
+    if (propertyCardTheme === 'neon') {
+      return 'linear-gradient(135deg, rgba(147, 51, 234, 0.9), rgba(236, 72, 153, 0.7))';
+    } else if (propertyCardTheme === 'gold') {
+      return 'linear-gradient(135deg, rgba(251, 191, 36, 0.9), rgba(245, 158, 11, 0.7))';
+    } else if (propertyCardTheme === 'minimal') {
+      return 'rgba(255, 255, 255, 0.95)';
+    }
+    // Default
+    return 'linear-gradient(135deg, rgba(88, 28, 135, 0.8), rgba(109, 40, 217, 0.6))';
+  };
+
 
   return (
     <>
@@ -257,11 +283,9 @@ export function ProfileCustomization({
             <div 
               className="w-full aspect-square rounded border-2 border-purple-500/25 mb-1.5 overflow-hidden"
               style={{
-                backgroundImage: customBoardBackground ? `url(${customBoardBackground})` : undefined,
-                background: !customBoardBackground ? getBoardTheme(boardTheme).boardBackground : undefined,
-                backgroundSize: customBoardBackground ? 'cover' : undefined,
-                backgroundPosition: customBoardBackground ? 'center' : undefined,
-                backgroundRepeat: customBoardBackground ? 'no-repeat' : undefined,
+                background: getBoardPreviewBackground(),
+                backgroundSize: 'cover',
+                backgroundPosition: 'center'
               }}
             />
             <button
@@ -278,11 +302,9 @@ export function ProfileCustomization({
             <div 
               className="w-full aspect-square rounded border-2 border-purple-500/25 mb-1.5 overflow-hidden"
               style={{
-                backgroundImage: customPropertyCardBackground ? `url(${customPropertyCardBackground})` : undefined,
-                background: !customPropertyCardBackground ? getPropertyCardTheme(propertyCardTheme).background : undefined,
-                backgroundSize: customPropertyCardBackground ? 'cover' : undefined,
-                backgroundPosition: customPropertyCardBackground ? 'center' : undefined,
-                backgroundRepeat: customPropertyCardBackground ? 'no-repeat' : undefined,
+                background: getPropertyPreviewBackground(),
+                backgroundSize: 'cover',
+                backgroundPosition: 'center'
               }}
             />
             <button

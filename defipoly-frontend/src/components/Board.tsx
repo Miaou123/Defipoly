@@ -37,7 +37,7 @@ export function Board({ onSelectProperty, spectatorMode = false, spectatorWallet
 
           {/* ========== TOP-left CORNER: DEFIPOLY ========== */}
           <div className="col-start-1 row-start-1">
-            <CornerSquare icon="🎲" label="DEFIPOLY" bgColor="bg-purple-600" />
+            <CornerSquare icon="🎲" label="DEFIPOLY" bgColor="bg-purple-600" theme={currentPropertyCardTheme} />
           </div>
           
           {/* ========== TOP ROW: Red (12-13) + Yellow (14-16) ========== */}
@@ -146,7 +146,7 @@ export function Board({ onSelectProperty, spectatorMode = false, spectatorWallet
           
           {/* ========== BOTTOM-RIGHT CORNER: DEFIPOLY ========== */}
           <div className="col-start-7 row-start-7">
-            <CornerSquare icon="🎲" label="DEFIPOLY" bgColor="bg-purple-600" />
+            <CornerSquare icon="🎲" label="DEFIPOLY" bgColor="bg-purple-600" theme={currentPropertyCardTheme} />
           </div>
         </div>
       </div>

@@ -119,7 +119,7 @@ export function BoardThemeModal({
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div
-                    className="w-16 h-10 rounded border border-purple-500/30"
+                    className="w-16 h-16 rounded border border-purple-500/30"
                     style={{
                       backgroundImage: `url(${customBackground})`,
                       backgroundSize: 'cover',

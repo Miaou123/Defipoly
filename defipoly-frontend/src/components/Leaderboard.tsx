@@ -93,7 +93,7 @@ export function Leaderboard() {
   };
 
   return (
-    <div className="bg-purple-900/8 backdrop-blur-xl rounded-2xl border border-purple-500/20 max-h-[500px] overflow-hidden flex flex-col">
+    <div className="bg-purple-900/8 backdrop-blur-xl rounded-2xl border border-purple-500/20 max-h-[400px] overflow-hidden flex flex-col">
       {/* Header */}
       <div className="p-4 pb-2">
         <div className="flex items-center justify-between">

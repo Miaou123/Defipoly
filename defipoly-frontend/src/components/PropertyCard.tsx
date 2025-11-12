@@ -212,18 +212,21 @@ export function PropertyCard({ propertyId, onSelect, spectatorMode = false, spec
 
   // Get background based on theme with fallback
   const getCardBackground = () => {
-    try {
-      // Check if there's a custom property card background
-      if (themeContext.propertyCardTheme === 'custom' && themeContext.customPropertyCardBackground) {
-        return `url(${themeContext.customPropertyCardBackground})`;
-      }
-      
-      // Use the background from the theme object, which now contains CSS gradient strings
-      return cardTheme.background || 'linear-gradient(135deg, rgba(88, 28, 135, 1), rgba(109, 40, 217, 1))';
-    } catch (error) {
-      // Fallback to default if there's any error - fully opaque
-      return 'linear-gradient(135deg, rgba(88, 28, 135, 1), rgba(109, 40, 217, 1))';
+    // Check for custom theme and use custom background from context
+    if (cardTheme.id === 'custom' && themeContext.customPropertyCardBackground) {
+      return `url(${themeContext.customPropertyCardBackground}) center/cover`;
     }
+    
+    if (cardTheme.id === 'default') {
+      return `linear-gradient(135deg, rgba(88, 28, 135, 0.8), rgba(109, 40, 217, 0.6))`;
+    } else if (cardTheme.id === 'neon') {
+      return `linear-gradient(135deg, rgba(147, 51, 234, 0.9), rgba(236, 72, 153, 0.7))`;
+    } else if (cardTheme.id === 'gold') {
+      return `linear-gradient(135deg, rgba(251, 191, 36, 0.9), rgba(245, 158, 11, 0.7))`;
+    } else if (cardTheme.id === 'minimal') {
+      return `rgba(255, 255, 255, 0.95)`;
+    }
+    return `linear-gradient(135deg, rgba(88, 28, 135, 0.8), rgba(109, 40, 217, 0.6))`;
   };
 
   // Get additional style properties with error handling
@@ -232,17 +235,16 @@ export function PropertyCard({ propertyId, onSelect, spectatorMode = false, spec
       const isCustomBg = themeContext.propertyCardTheme === 'custom' && themeContext.customPropertyCardBackground;
       
       const styles: React.CSSProperties = {
-        background: getCardBackground(),
         border: isCustomBg ? 'none' : `1px solid ${colorHex || '#8b5cf6'}`,
         borderRadius: '0px',
         transition: 'all 0.3s ease',
       };
 
-      // Add conditional styles safely
+      // Use either background shorthand OR individual properties, never mix
       if (isCustomBg) {
-        styles.backgroundSize = 'cover';
-        styles.backgroundPosition = 'center';
-        styles.backgroundRepeat = 'no-repeat';
+        styles.background = `url(${themeContext.customPropertyCardBackground}) center/cover no-repeat`;
+      } else {
+        styles.background = getCardBackground();
       }
 
       // Add theme-specific shadows only for non-custom backgrounds
@@ -292,6 +294,56 @@ export function PropertyCard({ propertyId, onSelect, spectatorMode = false, spec
           left: '-50%',
         }}
       />
+
+{/* Holographic effect for completed sets - Dual Layer Fixed */}
+{hasCompleteSet && (
+  <div 
+    className="absolute inset-0 pointer-events-none"
+    style={{ zIndex: 15 }}
+  >
+    {/* Rotating rainbow prism layer */}
+    <div
+      className="absolute"
+      style={{
+        inset: '-100%',
+        background: `conic-gradient(from 0deg at 50% 50%,
+          rgba(255, 0, 0, 0.6),
+          rgba(255, 165, 0, 0.6),
+          rgba(255, 255, 0, 0.6),
+          rgba(0, 255, 0, 0.6),
+          rgba(0, 255, 255, 0.6),
+          rgba(0, 0, 255, 0.6),
+          rgba(255, 0, 255, 0.6),
+          rgba(255, 0, 0, 0.6)
+        )`,
+        animation: 'holographic-rotate 12s linear infinite',
+        mixBlendMode: 'overlay',
+        opacity: 0.85,
+      }}
+    />
+    
+    {/* Sparkle layer on top */}
+    <div
+      className="absolute inset-0"
+      style={{
+        backgroundImage: `
+          radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 1) 0%, rgba(255, 255, 255, 0.9) 2%, transparent 6%),
+          radial-gradient(circle at 25% 25%, rgba(255, 255, 255, 1) 0%, transparent 4%),
+          radial-gradient(circle at 75% 25%, rgba(255, 255, 255, 1) 0%, transparent 4%),
+          radial-gradient(circle at 25% 75%, rgba(255, 255, 255, 1) 0%, transparent 4%),
+          radial-gradient(circle at 75% 75%, rgba(255, 255, 255, 1) 0%, transparent 4%),
+          radial-gradient(circle at 35% 35%, rgba(255, 255, 255, 0.9) 0%, transparent 3%),
+          radial-gradient(circle at 65% 35%, rgba(255, 255, 255, 0.9) 0%, transparent 3%),
+          radial-gradient(circle at 35% 65%, rgba(255, 255, 255, 0.9) 0%, transparent 3%),
+          radial-gradient(circle at 65% 65%, rgba(255, 255, 255, 0.9) 0%, transparent 3%)
+        `,
+        animation: 'diamond-twinkle 1.8s ease-in-out infinite',
+        filter: 'brightness(1.5)',
+        zIndex: 2,
+      }}
+    />
+  </div>
+)}
 
       {/* Card content */}
       <div className="relative z-20 flex flex-col h-full">
@@ -410,6 +462,24 @@ export function PropertyCard({ propertyId, onSelect, spectatorMode = false, spec
           }
           50% {
             transform: translateY(-10px) scale(0.25);
+          }
+        }
+
+        @keyframes holographic-rotate {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+      
+        @keyframes diamond-twinkle {
+          0%, 100% { 
+            opacity: 0.7; 
+            transform: scale(1); 
+            filter: brightness(1.3); 
+          }
+          50% { 
+            opacity: 1; 
+            transform: scale(1.5); 
+            filter: brightness(2); 
           }
         }
       `}</style>
