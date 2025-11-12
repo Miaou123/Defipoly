@@ -27,6 +27,9 @@ interface PlayerStats {
   totalSlotsOwned: number;
   successfulSteals: number;
   failedSteals: number;
+  completedSets: number;
+  shieldsUsed: number;
+  boardValue: number;
 }
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3101';
@@ -53,6 +56,9 @@ export default function ProfilePage() {
     totalSlotsOwned: 0,
     successfulSteals: 0,
     failedSteals: 0,
+    completedSets: 0,
+    shieldsUsed: 0,
+    boardValue: 0,
   });
 
   // Redirect if not connected
@@ -124,6 +130,9 @@ export default function ProfilePage() {
           totalSlotsOwned: statsData.totalSlotsOwned || 0,
           successfulSteals: statsData.successfulSteals || 0,
           failedSteals: statsData.failedSteals || 0,
+          completedSets: statsData.completedSets || 0,
+          shieldsUsed: statsData.shieldsUsed || 0,
+          boardValue: statsData.boardValue || 0,
         });
         
         // Convert actions to activities
@@ -233,78 +242,6 @@ export default function ProfilePage() {
     }
   };
 
-  const handleProfilePictureUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    if (!publicKey) return;
-    
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    // Validate file type
-    if (!file.type.startsWith('image/')) {
-      showError('Invalid File', 'Please upload an image file');
-      return;
-    }
-
-    // Validate file size (2MB)
-    if (file.size > 2 * 1024 * 1024) {
-      showError('File Too Large', 'Please use an image under 2MB.');
-      return;
-    }
-
-    setUploadingPicture(true);
-
-    try {
-      // Compress image
-      const compressedImage = await compressImage(file);
-      
-      // Upload to backend
-      const response = await fetch(`${API_BASE_URL}/api/profile`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          wallet: publicKey.toString(),
-          profilePicture: compressedImage,
-        }),
-      });
-
-      if (response.ok) {
-        setProfilePicture(compressedImage);
-        showSuccess('Upload Success', 'Profile picture updated');
-        console.log('✅ Profile picture uploaded');
-      } else {
-        showError('Upload Failed', 'Failed to upload profile picture');
-      }
-    } catch (error) {
-      console.error('Error uploading profile picture:', error);
-      showError('Upload Error', 'Error uploading profile picture');
-    } finally {
-      setUploadingPicture(false);
-    }
-  };
-
-  const handleRemoveProfilePicture = async () => {
-    if (!publicKey) return;
-
-    try {
-      const response = await fetch(`${API_BASE_URL}/api/profile`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          wallet: publicKey.toString(),
-          profilePicture: null,
-        }),
-      });
-
-      if (response.ok) {
-        setProfilePicture(null);
-        showSuccess('Removed', 'Profile picture removed');
-        console.log('✅ Profile picture removed');
-      }
-    } catch (error) {
-      console.error('Error removing profile picture:', error);
-    }
-  };
-
   const formatTimestamp = (timestamp: number) => {
     const date = new Date(timestamp);
     const now = Date.now();
@@ -340,90 +277,102 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="min-h-screen relative z-10">
-      {/* Compact Top Bar */}
-      <div className="border-b border-purple-500/20 bg-black/30 backdrop-blur-xl">
-        <div className="container mx-auto px-6 py-4 flex items-center justify-between max-w-6xl">
-          {/* Logo */}
-          <div className="flex items-center gap-3">
-            <div className="text-2xl">🎲</div>
-            <div>
-              <h1 className="text-lg font-bold text-purple-100 leading-tight">Defipoly</h1>
-              <p className="text-xs text-purple-400 leading-tight">Profile</p>
-            </div>
+    <div className="min-h-screen relative z-10 flex flex-col">
+      {/* Top Bar with Defipoly and Back Button */}
+      <div className="w-full px-4 py-3 flex items-center justify-between flex-shrink-0">
+        {/* Defipoly Logo - Left */}
+        <div className="flex items-center gap-3">
+          <div className="text-2xl">🎲</div>
+          <div>
+            <h1 className="text-lg font-bold text-purple-100">Defipoly</h1>
+          </div>
+        </div>
+
+        {/* Back Button - Right */}
+        <button
+          onClick={() => router.push('/')}
+          className="px-4 py-1.5 bg-purple-600 hover:bg-purple-500 rounded-lg transition-colors text-white text-xs font-semibold flex items-center gap-1.5 shadow-lg"
+        >
+          <span>←</span> Back to Game
+        </button>
+      </div>
+
+      {/* Main Content - Centered with max width */}
+      <div className="flex-1 container mx-auto px-4 pt-2 pb-4 max-w-7xl">
+        {/* Main Grid Layout */}
+        <div className="grid grid-cols-1 lg:grid-cols-[350px_1fr] gap-5 h-[calc(100vh-120px)]">
+          {/* Left Column - Profile & Customization */}
+          <div className="bg-purple-900/20 backdrop-blur-xl rounded-2xl border border-purple-500/20 p-6 overflow-y-auto">
+            <ProfileCustomization
+              profilePicture={profilePicture}
+              setProfilePicture={setProfilePicture}
+              username={username}
+              setUsername={setUsername}
+              editingUsername={editingUsername}
+              setEditingUsername={setEditingUsername}
+              tempUsername={tempUsername}
+              setTempUsername={setTempUsername}
+              onSaveUsername={handleSaveUsername}
+              boardTheme={themeContext.boardTheme}
+              setBoardTheme={themeContext.setBoardTheme}
+              propertyCardTheme={themeContext.propertyCardTheme}
+              setPropertyCardTheme={themeContext.setPropertyCardTheme}
+              customBoardBackground={themeContext.customBoardBackground}
+              setCustomBoardBackground={themeContext.setCustomBoardBackground}
+              customPropertyCardBackground={themeContext.customPropertyCardBackground}
+              setCustomPropertyCardBackground={themeContext.setCustomPropertyCardBackground}
+              walletAddress={publicKey.toString()}
+            />
           </div>
 
-          {/* Back Button */}
-          <button
-            onClick={() => router.push('/')}
-            className="px-6 py-2.5 bg-purple-600 hover:bg-purple-500 rounded-xl transition-colors text-white font-semibold flex items-center gap-2 shadow-lg"
-          >
-            <span>←</span> Back to Game
-          </button>
-        </div>
-      </div>
-      
-      <div className="container mx-auto px-4 py-8 max-w-6xl">
-        {/* Wallet Address Header */}
-        <div className="mb-6 text-center">
-          <p className="text-purple-400 font-mono text-sm">
-            {publicKey.toString()}
-          </p>
-        </div>
-
-        <div className="space-y-6">
-          {/* Profile & Theme Customization */}
-          <ProfileCustomization
-            profilePicture={profilePicture}
-            setProfilePicture={setProfilePicture}
-            username={username}
-            setUsername={setUsername}
-            editingUsername={editingUsername}
-            setEditingUsername={setEditingUsername}
-            tempUsername={tempUsername}
-            setTempUsername={setTempUsername}
-            onSaveUsername={handleSaveUsername}
-            boardTheme={themeContext.boardTheme}
-            setBoardTheme={themeContext.setBoardTheme}
-            propertyCardTheme={themeContext.propertyCardTheme}
-            setPropertyCardTheme={themeContext.setPropertyCardTheme}
-            customBoardBackground={themeContext.customBoardBackground}
-            setCustomBoardBackground={themeContext.setCustomBoardBackground}
-            customPropertyCardBackground={themeContext.customPropertyCardBackground}
-            setCustomPropertyCardBackground={themeContext.setCustomPropertyCardBackground}
-          />
-
-          {/* Stats & Activity Row */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Right Column - Stats & Activity */}
+          <div className="grid grid-rows-[auto_1fr] gap-4 overflow-hidden">
             {/* Quick Stats Card */}
-            <div className="lg:col-span-1">
-              <div className="bg-purple-900/20 backdrop-blur-xl rounded-2xl border border-purple-500/20 p-6">
-                <h2 className="text-lg font-bold text-purple-100 mb-4">📊 Quick Stats</h2>
-                
-                <div className="space-y-4">
-                  <div className="flex justify-between items-center">
-                    <span className="text-purple-300 text-sm">Total Slots</span>
-                    <span className="text-purple-100 font-bold text-lg">{stats.totalSlotsOwned}</span>
+            <div className="bg-purple-900/20 backdrop-blur-xl rounded-2xl border border-purple-500/20 p-5 flex-shrink-0">
+              <h2 className="text-base font-bold text-purple-100 mb-4 flex items-center gap-2">
+                <span>📊</span> Quick Stats
+              </h2>
+              
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="text-center p-3 bg-purple-900/20 rounded-xl">
+                  <div className="text-xs text-purple-300 mb-1 font-semibold">Total Slots</div>
+                  <div className="text-xl font-bold text-purple-100">{stats.totalSlotsOwned}</div>
+                </div>
+                <div className="text-center p-3 bg-purple-900/20 rounded-xl">
+                  <div className="text-xs text-purple-300 mb-1 font-semibold">Properties</div>
+                  <div className="text-xl font-bold text-purple-100">{stats.propertiesBought}</div>
+                </div>
+                <div className="text-center p-3 bg-purple-900/20 rounded-xl">
+                  <div className="text-xs text-purple-300 mb-1 font-semibold">Completed Sets</div>
+                  <div className="text-xl font-bold text-purple-100">{stats.completedSets}</div>
+                </div>
+                <div className="text-center p-3 bg-purple-900/20 rounded-xl">
+                  <div className="text-xs text-purple-300 mb-1 font-semibold">Steals</div>
+                  <div className="text-xl font-bold text-purple-100">{stats.successfulSteals + stats.failedSteals}</div>
+                  <div className="text-[10px] text-purple-400 mt-0.5">
+                    <span className="text-red-400">{stats.failedSteals}</span>
+                    {' / '}
+                    <span className="text-green-400">{stats.successfulSteals}</span>
                   </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-purple-300 text-sm">Total Steals</span>
-                    <div className="flex items-center gap-2">
-                      <span className="text-purple-100 font-bold text-lg">{stats.successfulSteals + stats.failedSteals}</span>
-                      <span className="text-purple-400 text-sm">
-                        (<span className="text-red-400 font-semibold">{stats.failedSteals}</span>
-                        {' / '}
-                        <span className="text-green-400 font-semibold">{stats.successfulSteals}</span>)
-                      </span>
-                    </div>
+                </div>
+                <div className="text-center p-3 bg-purple-900/20 rounded-xl md:col-span-2">
+                  <div className="text-xs text-purple-300 mb-1 font-semibold">Shields Used</div>
+                  <div className="text-xl font-bold text-purple-100">{stats.shieldsUsed}</div>
+                </div>
+                <div className="text-center p-3 bg-purple-900/20 rounded-xl md:col-span-2">
+                  <div className="text-xs text-purple-300 mb-1 font-semibold">Board Value</div>
+                  <div className="text-xl font-bold text-purple-100">
+                    {(stats.boardValue / 1e9).toFixed(2)} DEFI
                   </div>
                 </div>
               </div>
             </div>
 
             {/* Activity History */}
-            <div className="lg:col-span-2">
-              <div className="bg-purple-900/20 backdrop-blur-xl rounded-2xl border border-purple-500/20 p-6">
-              <h2 className="text-xl font-bold text-purple-100 mb-4">Activity History</h2>
+            <div className="bg-purple-900/20 backdrop-blur-xl rounded-2xl border border-purple-500/20 p-5 flex flex-col overflow-hidden">
+              <h2 className="text-base font-bold text-purple-100 mb-4 flex items-center gap-2 flex-shrink-0">
+                <span>📜</span> Activity History
+              </h2>
               
               {loading ? (
                 <div className="text-center py-16">
@@ -437,7 +386,7 @@ export default function ProfilePage() {
                   <div className="text-sm text-purple-500 mt-2">Start playing to see your history!</div>
                 </div>
               ) : (
-                <div className="space-y-2 max-h-[700px] overflow-y-auto pr-2">
+                <div className="flex-1 overflow-y-auto pr-2 space-y-2">
                   {activities.map((activity) => (
                     <div
                       key={activity.signature}
@@ -469,7 +418,6 @@ export default function ProfilePage() {
                   ))}
                 </div>
               )}
-              </div>
             </div>
           </div>
         </div>

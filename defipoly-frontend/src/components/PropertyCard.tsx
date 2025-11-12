@@ -13,6 +13,7 @@ import { fetchOwnershipData, fetchPropertyData } from '@/utils/program';
 
 import { PROPERTIES } from '@/utils/constants';
 import { PropertyCardTheme } from '@/utils/themes';
+import { useTheme } from '@/contexts/ThemeContext';
 
 // Helper function for formatting numbers without hydration issues
 const formatNumber = (num: number): string => {
@@ -32,16 +33,29 @@ export function PropertyCard({ propertyId, onSelect, spectatorMode = false, spec
   const { connected, publicKey } = useWallet();
   const { getOwnershipData, getPropertyData, program } = useDefipoly();
   const { refreshKey } = usePropertyRefresh();
+  const themeContext = useTheme();
   
-  // Default theme if none provided
+  // Default theme if none provided - dark mode
   const cardTheme = theme || {
-    id: 'default',
-    name: 'Default',
-    background: 'bg-white/10 backdrop-blur-sm',
-    border: 'border border-white/20',
+    id: 'dark',
+    name: 'Dark Mode',
+    background: 'linear-gradient(135deg, rgba(31, 41, 55, 0.95), rgba(17, 24, 39, 0.9))',
+    border: 'border border-gray-600/50',
     textColor: 'text-white',
-    accent: 'text-purple-300'
+    accent: 'text-gray-300'
   };
+
+  // Ensure theme context is available
+  if (!themeContext) {
+    return (
+      <button
+        onClick={() => onSelect(propertyId)}
+        className="w-full h-full relative overflow-hidden cursor-pointer bg-gray-700/60 border border-gray-500"
+      >
+        Loading...
+      </button>
+    );
+  }
   
   const [buildingLevel, setBuildingLevel] = useState(0);
   const [shieldActive, setShieldActive] = useState(false);
@@ -196,18 +210,63 @@ export function PropertyCard({ propertyId, onSelect, spectatorMode = false, spec
   const colorHex = getColorHex(property.color);
   const darkerColorHex = getDarkerColorHex(property.color);
 
-  // Get background based on theme
+  // Get background based on theme with fallback
   const getCardBackground = () => {
-    if (cardTheme.id === 'default') {
-      return `linear-gradient(135deg, rgba(88, 28, 135, 0.8), rgba(109, 40, 217, 0.6))`;
-    } else if (cardTheme.id === 'neon') {
-      return `linear-gradient(135deg, rgba(147, 51, 234, 0.9), rgba(236, 72, 153, 0.7))`;
-    } else if (cardTheme.id === 'gold') {
-      return `linear-gradient(135deg, rgba(251, 191, 36, 0.9), rgba(245, 158, 11, 0.7))`;
-    } else if (cardTheme.id === 'minimal') {
-      return `rgba(255, 255, 255, 0.95)`;
+    try {
+      // Check if there's a custom property card background
+      if (themeContext.propertyCardTheme === 'custom' && themeContext.customPropertyCardBackground) {
+        return `url(${themeContext.customPropertyCardBackground})`;
+      }
+      
+      // Use the background from the theme object, which now contains CSS gradient strings
+      return cardTheme.background || 'linear-gradient(135deg, rgba(88, 28, 135, 1), rgba(109, 40, 217, 1))';
+    } catch (error) {
+      // Fallback to default if there's any error - fully opaque
+      return 'linear-gradient(135deg, rgba(88, 28, 135, 1), rgba(109, 40, 217, 1))';
     }
-    return `linear-gradient(135deg, rgba(88, 28, 135, 0.8), rgba(109, 40, 217, 0.6))`;
+  };
+
+  // Get additional style properties with error handling
+  const getStyleProps = () => {
+    try {
+      const isCustomBg = themeContext.propertyCardTheme === 'custom' && themeContext.customPropertyCardBackground;
+      
+      const styles: React.CSSProperties = {
+        background: getCardBackground(),
+        border: isCustomBg ? 'none' : `1px solid ${colorHex || '#8b5cf6'}`,
+        borderRadius: '0px',
+        transition: 'all 0.3s ease',
+      };
+
+      // Add conditional styles safely
+      if (isCustomBg) {
+        styles.backgroundSize = 'cover';
+        styles.backgroundPosition = 'center';
+        styles.backgroundRepeat = 'no-repeat';
+      }
+
+      // Add theme-specific shadows only for non-custom backgrounds
+      if (!isCustomBg) {
+        if (cardTheme.id === 'neon' && colorHex) {
+          styles.boxShadow = `0 0 15px ${colorHex}40`;
+        } else if (cardTheme.id === 'gold') {
+          styles.boxShadow = '0 0 15px rgba(251, 191, 36, 0.4)';
+        } else if (cardTheme.id === 'minimal') {
+          styles.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.15)';
+        }
+      }
+
+      return styles;
+    } catch (error) {
+      console.warn('PropertyCard style error:', error);
+      // Return minimal safe styles - dark theme
+      return {
+        background: 'linear-gradient(135deg, rgba(31, 41, 55, 0.95), rgba(17, 24, 39, 0.9))',
+        border: '1px solid #6b7280',
+        borderRadius: '0px',
+        transition: 'all 0.3s ease',
+      };
+    }
   };
 
   const getTextColor = () => {
@@ -218,15 +277,7 @@ export function PropertyCard({ propertyId, onSelect, spectatorMode = false, spec
     <button
       onClick={() => onSelect(propertyId)}
       className="w-full h-full relative overflow-hidden cursor-pointer group"
-      style={{
-        background: getCardBackground(),
-        border: `1px solid ${colorHex}`,
-        borderRadius: '0px',
-        transition: 'all 0.3s ease',
-        boxShadow: cardTheme.id === 'neon' ? `0 0 15px ${colorHex}40` : 
-                   cardTheme.id === 'gold' ? `0 0 15px rgba(251, 191, 36, 0.4)` : 
-                   cardTheme.id === 'minimal' ? `0 2px 8px rgba(0, 0, 0, 0.15)` : 'none',
-      }}
+      style={getStyleProps()}
     >
       {/* Animated shine effect */}
       <div 

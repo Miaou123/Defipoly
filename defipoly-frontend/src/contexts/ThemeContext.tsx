@@ -21,8 +21,8 @@ const ThemeContext = createContext<ThemeContextType | null>(null);
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const { publicKey } = useWallet();
   
-  const [boardTheme, setBoardTheme] = useState('classic');
-  const [propertyCardTheme, setPropertyCardTheme] = useState('default');
+  const [boardTheme, setBoardTheme] = useState('default');
+  const [propertyCardTheme, setPropertyCardTheme] = useState('dark');
   const [customBoardBackground, setCustomBoardBackground] = useState<string | null>(null);
   const [customPropertyCardBackground, setCustomPropertyCardBackground] = useState<string | null>(null);
 
@@ -81,16 +81,12 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
   const getBoardThemeStyles = () => {
     if (boardTheme === 'custom' && customBoardBackground) {
+      console.log('Using custom board background:', customBoardBackground);
       return `url(${customBoardBackground}) center/cover`;
     }
     
-    const themeMap: Record<string, string> = {
-      'classic': 'linear-gradient(135deg, rgba(12, 5, 25, 0.95), rgba(26, 11, 46, 0.9))',
-      'ocean': 'linear-gradient(135deg, rgba(6, 78, 59, 0.95), rgba(17, 94, 89, 0.9))',
-      'fire': 'linear-gradient(135deg, rgba(127, 29, 29, 0.95), rgba(154, 52, 18, 0.9))',
-      'dark': 'linear-gradient(135deg, rgba(17, 24, 39, 0.95), rgba(0, 0, 0, 0.9))',
-    };
-    return themeMap[boardTheme] || themeMap['classic'];
+    // Default background when no custom theme is set
+    return 'linear-gradient(135deg, rgba(12, 5, 25, 0.95), rgba(26, 11, 46, 0.9))';
   };
 
   const getPropertyCardThemeId = () => {

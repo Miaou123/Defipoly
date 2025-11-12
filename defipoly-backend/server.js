@@ -25,6 +25,29 @@ const PORT = process.env.PORT || 3101;
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));
 
+// Serve static files for uploads (local development)
+const path = require('path');
+const uploadDir = process.env.UPLOAD_DIR || './uploads';
+const uploadUrlPrefix = process.env.UPLOAD_URL_PREFIX || '/uploads';
+
+// Ensure upload directory exists
+const fs = require('fs');
+if (!fs.existsSync(uploadDir)) {
+  console.log('Creating upload directory:', uploadDir);
+  fs.mkdirSync(uploadDir, { recursive: true });
+}
+
+// Serve uploaded files
+app.use(uploadUrlPrefix, express.static(path.resolve(uploadDir), {
+  maxAge: '30d',
+  etag: true,
+  setHeaders: (res, path) => {
+    if (path.endsWith('.gif')) {
+      res.setHeader('Content-Type', 'image/gif');
+    }
+  }
+}));
+
 // Health check endpoint (outside of /api)
 app.get('/health', (req, res) => {
   res.json({ 

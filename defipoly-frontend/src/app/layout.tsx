@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { Providers } from "@/components/Providers";
+import { CSSLoadChecker } from "@/components/CSSLoadChecker";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -24,6 +25,7 @@ export default function RootLayout({
         <div className="orb orb-3"></div>
         
         <Providers>
+          <CSSLoadChecker />
           {children}
         </Providers>
       </body>
