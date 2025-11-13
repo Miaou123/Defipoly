@@ -218,45 +218,6 @@ export function RewardsPanel() {
             )}
           </div>
 
-          {/* Stats Cards */}
-          <div className="flex gap-3">
-            <div className="flex-1 rounded-lg p-3 text-center relative overflow-hidden" style={{
-              background: 'rgba(0, 0, 0, 0.5)',
-              border: '2px solid rgba(147, 51, 234, 0.6)'
-            }}>
-              {/* Scanline animation */}
-              <div className="absolute top-0 left-0 w-full h-[2px] animate-scanline" style={{
-                background: 'linear-gradient(90deg, transparent, #9333ea, transparent)'
-              }}></div>
-              
-              <div className="text-[9px] text-purple-300 uppercase tracking-wide font-bold mb-1">DAILY</div>
-              <div className="text-[22px] font-black tabular-nums text-white" style={{
-                fontFamily: 'Courier New, monospace'
-              }}>
-                {dailyIncome.toLocaleString()}
-              </div>
-              <div className="text-[9px] text-purple-400 mt-[2px]">DEFI/day</div>
-            </div>
-            
-            <div className="flex-1 rounded-lg p-3 text-center relative overflow-hidden" style={{
-              background: 'rgba(0, 0, 0, 0.5)',
-              border: '2px solid rgba(147, 51, 234, 0.6)'
-            }}>
-              {/* Scanline animation */}
-              <div className="absolute top-0 left-0 w-full h-[2px] animate-scanline" style={{
-                background: 'linear-gradient(90deg, transparent, #9333ea, transparent)',
-                animationDelay: '1s'
-              }}></div>
-              
-              <div className="text-[9px] text-purple-300 uppercase tracking-wide font-bold mb-1">TOTAL CLAIMED</div>
-              <div className="text-[22px] font-black tabular-nums text-white" style={{
-                fontFamily: 'Courier New, monospace'
-              }}>
-                {Math.floor(totalEarned).toLocaleString()}
-              </div>
-              <div className="text-[9px] text-purple-400 mt-[2px]">DEFI</div>
-            </div>
-          </div>
         </div>
       )}
       

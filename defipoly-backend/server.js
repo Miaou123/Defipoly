@@ -5,12 +5,15 @@
 
 const express = require('express');
 const cors = require('cors');
+const { createServer } = require('http');
+const { Server } = require('socket.io');
 const { initDatabase, closeDatabase } = require('./src/config/database');
 const routes = require('./src/routes');
 const errorHandler = require('./src/middleware/errorHandler');
 const WSSListener = require('./src/services/wssListener');
 const GapDetector = require('./src/services/gapDetector');
 const { router: wssMonitoringRouter, initMonitoring } = require('./src/routes/wssMonitoring');
+const { initSocketIO, getIO } = require('./src/services/socketService');
 
 // Load environment variables
 require('dotenv').config();
@@ -19,10 +22,14 @@ require('dotenv').config();
 const idl = require('./src/idl/defipoly_program.json');
 
 const app = express();
+const httpServer = createServer(app);
 const PORT = process.env.PORT || 3101;
 
 // Middleware
-app.use(cors());
+app.use(cors({
+  origin: process.env.FRONTEND_URL || 'http://localhost:3100',
+  credentials: true
+}));
 app.use(express.json({ limit: '10mb' }));
 
 // Serve static files for uploads (local development)
@@ -133,6 +140,10 @@ async function startServer() {
     // Initialize database
     await initDatabase();
 
+    // Initialize Socket.IO
+    const io = initSocketIO(httpServer);
+    console.log('🔌 Socket.IO server initialized');
+
     // Initialize WSS if enabled
     if (process.env.ENABLE_WSS !== 'false') {
       await initializeWSS();
@@ -140,8 +151,8 @@ async function startServer() {
       console.log('⚠️  WebSocket listener disabled (ENABLE_WSS=false)');
     }
 
-    // Start Express server
-    app.listen(PORT, () => {
+    // Start HTTP server (not just Express)
+    httpServer.listen(PORT, () => {
       console.log(`\n🚀 Defipoly API v2.0 running on port ${PORT}`);
       console.log(`📊 Database: SQLite (defipoly.db)`);
       console.log(`✅ Profile storage enabled`);
@@ -150,6 +161,7 @@ async function startServer() {
       console.log(`✅ Player stats & leaderboard enabled`);
       console.log(`🔌 WebSocket listener ${process.env.ENABLE_WSS !== 'false' ? 'enabled' : 'disabled'}`);
       console.log(`🔍 Gap detection ${process.env.ENABLE_WSS !== 'false' ? 'enabled' : 'disabled'}`);
+      console.log(`📢 Socket.IO server enabled on port ${PORT}`);
       console.log(`\n📡 Available endpoints:`);
       console.log(`   GET  /health`);
       console.log(`   GET  /api/game/constants`);

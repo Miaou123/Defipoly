@@ -42,8 +42,8 @@ const updateProfile = (req, res) => {
      VALUES (?, ?, ?, ?)
      ON CONFLICT(wallet_address) 
      DO UPDATE SET 
-       username = COALESCE(?, username),
-       profile_picture = COALESCE(?, profile_picture),
+       username = ?,
+       profile_picture = ?,
        updated_at = ?`,
     [wallet, username, profilePicture, updatedAt, username, profilePicture, updatedAt],
     (err) => {

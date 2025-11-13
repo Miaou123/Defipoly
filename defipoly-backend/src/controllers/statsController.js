@@ -1,9 +1,11 @@
 const { getDatabase } = require('../config/database');
+const { updatePlayerCalculatedStats } = require('../services/playerStatsCalculator');
 
 const getPlayerStats = (req, res) => {
   const { wallet } = req.params;
   const db = getDatabase();
 
+  // Get stats from database (with pre-calculated values)
   db.get(
     'SELECT * FROM player_stats WHERE wallet_address = ?',
     [wallet],
@@ -22,14 +24,16 @@ const getPlayerStats = (req, res) => {
           successfulSteals: 0,
           failedSteals: 0,
           rewardsClaimed: 0,
-          shieldsActivated: 0,
+          shieldsUsed: 0,
           totalSpent: 0,
           totalEarned: 0,
           totalSlotsOwned: 0,
-          dailyIncome: 0
+          dailyIncome: 0,
+          completedSets: 0
         });
       }
       
+      // Return pre-calculated stats directly
       res.json({
         walletAddress: row.wallet_address,
         totalActions: row.total_actions,
@@ -38,11 +42,12 @@ const getPlayerStats = (req, res) => {
         successfulSteals: row.successful_steals,
         failedSteals: row.failed_steals,
         rewardsClaimed: row.rewards_claimed,
-        shieldsActivated: row.shields_activated,
+        shieldsUsed: row.shields_activated,
         totalSpent: row.total_spent,
         totalEarned: row.total_earned,
         totalSlotsOwned: row.total_slots_owned,
-        dailyIncome: row.daily_income || 0, // ✅ ADDED: Return daily income from database
+        dailyIncome: row.daily_income || 0,
+        completedSets: row.complete_sets || 0,
         lastActionTime: row.last_action_time,
         updatedAt: row.updated_at
       });

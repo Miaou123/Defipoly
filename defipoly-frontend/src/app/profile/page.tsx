@@ -29,7 +29,8 @@ interface PlayerStats {
   failedSteals: number;
   completedSets: number;
   shieldsUsed: number;
-  boardValue: number;
+  dailyIncome: number;
+  rewardsClaimed: number;
 }
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3101';
@@ -58,7 +59,8 @@ export default function ProfilePage() {
     failedSteals: 0,
     completedSets: 0,
     shieldsUsed: 0,
-    boardValue: 0,
+    dailyIncome: 0,
+    rewardsClaimed: 0,
   });
 
   // Redirect if not connected
@@ -132,7 +134,8 @@ export default function ProfilePage() {
           failedSteals: statsData.failedSteals || 0,
           completedSets: statsData.completedSets || 0,
           shieldsUsed: statsData.shieldsUsed || 0,
-          boardValue: statsData.boardValue || 0,
+          dailyIncome: statsData.dailyIncome || 0,
+          rewardsClaimed: statsData.rewardsClaimed || 0,
         });
         
         // Convert actions to activities
@@ -330,7 +333,7 @@ export default function ProfilePage() {
             {/* Quick Stats Card */}
             <div className="bg-purple-900/20 backdrop-blur-xl rounded-2xl border border-purple-500/20 p-5 flex-shrink-0">
               <h2 className="text-base font-bold text-purple-100 mb-4 flex items-center gap-2">
-                <span>📊</span> Quick Stats
+                <span>📊</span> Stats
               </h2>
               
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -359,11 +362,15 @@ export default function ProfilePage() {
                   <div className="text-xs text-purple-300 mb-1 font-semibold">Shields Used</div>
                   <div className="text-xl font-bold text-purple-100">{stats.shieldsUsed}</div>
                 </div>
-                <div className="text-center p-3 bg-purple-900/20 rounded-xl md:col-span-2">
-                  <div className="text-xs text-purple-300 mb-1 font-semibold">Board Value</div>
+                <div className="text-center p-3 bg-purple-900/20 rounded-xl">
+                  <div className="text-xs text-purple-300 mb-1 font-semibold">Daily Income</div>
                   <div className="text-xl font-bold text-purple-100">
-                    {(stats.boardValue / 1e9).toFixed(2)} DEFI
+                    {stats.dailyIncome.toLocaleString()} DEFI
                   </div>
+                </div>
+                <div className="text-center p-3 bg-purple-900/20 rounded-xl">
+                  <div className="text-xs text-purple-300 mb-1 font-semibold">Total Claimed</div>
+                  <div className="text-xl font-bold text-purple-100">{Math.floor(stats.totalEarned / 1e9).toLocaleString()}</div>
                 </div>
               </div>
             </div>

@@ -12,13 +12,17 @@ import {
   ShieldPropertyExplanationModal,
   StealPropertyExplanationModal
 } from '@/components/MechanicsExplanationModals';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ChevronUp, ChevronDown } from 'lucide-react';
+import { useWallet } from '@solana/wallet-adapter-react';
+import { getProfile } from '@/utils/profileStorage';
 
 export default function Home() {
+  const { publicKey } = useWallet();
   const [selectedProperty, setSelectedProperty] = useState<number | null>(null);
   const [activeExplanationModal, setActiveExplanationModal] = useState<'buy' | 'sell' | 'shield' | 'steal' | null>(null);
   const [showActionBar, setShowActionBar] = useState(true);
+  const [profilePicture, setProfilePicture] = useState<string | null>(null);
 
   const handleBuyProceed = () => {
     console.log('User understood Buy mechanic, proceeding...');
@@ -39,6 +43,37 @@ export default function Home() {
     console.log('User understood Steal mechanic, proceeding...');
     setActiveExplanationModal(null);
   };
+
+  // Load profile picture
+  useEffect(() => {
+    if (publicKey) {
+      getProfile(publicKey.toString())
+        .then(profile => {
+          setProfilePicture(profile.profilePicture);
+        })
+        .catch(error => {
+          console.error('Error loading profile:', error);
+        });
+
+      // Listen for profile updates
+      const handleProfileUpdate = async () => {
+        try {
+          const updatedProfile = await getProfile(publicKey.toString());
+          setProfilePicture(updatedProfile.profilePicture);
+        } catch (error) {
+          console.error('Error updating profile:', error);
+        }
+      };
+
+      window.addEventListener('storage', handleProfileUpdate);
+      window.addEventListener('profileUpdated', handleProfileUpdate);
+
+      return () => {
+        window.removeEventListener('storage', handleProfileUpdate);
+        window.removeEventListener('profileUpdated', handleProfileUpdate);
+      };
+    }
+  }, [publicKey]);
 
   return (
     <div className="h-screen overflow-hidden relative">
@@ -61,7 +96,7 @@ export default function Home() {
 
         {/* CENTER: Board */}
         <div className="flex items-center justify-center overflow-hidden">
-          <Board onSelectProperty={setSelectedProperty} />
+          <Board onSelectProperty={setSelectedProperty} profilePicture={profilePicture} />
         </div>
         
         {/* RIGHT COLUMN: Profile/Wallet + Leaderboard + Live Feed */}

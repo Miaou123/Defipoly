@@ -5,6 +5,7 @@
 // ============================================
 
 const { getDatabase } = require('../config/database');
+const { updatePlayerCalculatedStats } = require('./playerStatsCalculator');
 
 /**
  * Calculate composite leaderboard score
@@ -35,31 +36,75 @@ function calculateLeaderboardScore(stats) {
 
 
 /**
+ * Helper function to update property ownership
+ */
+async function updatePropertyOwnership(walletAddress, propertyId, slotsDelta) {
+  const db = getDatabase();
+  
+  return new Promise((resolve, reject) => {
+    if (!propertyId || propertyId === null || slotsDelta === 0) {
+      return resolve(); // Skip if no property or no slot change
+    }
+    
+    db.run(
+      `INSERT INTO property_ownership (wallet_address, property_id, slots_owned, last_updated)
+       VALUES (?, ?, ?, ?)
+       ON CONFLICT(wallet_address, property_id) 
+       DO UPDATE SET 
+         slots_owned = MAX(0, slots_owned + ?),
+         last_updated = ?`,
+      [walletAddress, propertyId, slotsDelta, Math.floor(Date.now() / 1000), slotsDelta, Math.floor(Date.now() / 1000)],
+      (err) => {
+        if (err) {
+          console.error('Error updating property ownership:', err);
+          reject(err);
+        } else {
+          // Update calculated stats (daily income, completed sets, total slots)
+          updatePlayerCalculatedStats(walletAddress, () => {
+            resolve();
+          });
+        }
+      }
+    );
+  });
+}
+
+/**
  * Update player stats when an action occurs
- * ENHANCED VERSION with full leaderboard tracking
+ * ENHANCED VERSION with full leaderboard tracking and property ownership
  */
 async function updatePlayerStats(walletAddress, actionType, amount = 0, slots = 0, propertyId = null) {
   const db = getDatabase();
 
-  return new Promise((resolve, reject) => {
-    // First, ensure the player exists
-    db.run(
-      `INSERT OR IGNORE INTO player_stats 
-       (wallet_address, total_actions, properties_bought, properties_sold, 
-        successful_steals, failed_steals, shields_activated, rewards_claimed,
-        total_spent, total_earned, total_slots_owned, daily_income, complete_sets,
-        times_stolen, leaderboard_score, roi_ratio, steal_win_rate, defense_rating)
-       VALUES (?, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)`,
-      [walletAddress],
-      (err) => {
-        if (err) {
-          console.error('Error initializing player stats:', err);
-          return reject(err);
-        }
+  return new Promise(async (resolve, reject) => {
+    try {
+      // First, update property ownership if relevant
+      if (actionType === 'buy' && slots > 0 && propertyId !== null) {
+        await updatePropertyOwnership(walletAddress, propertyId, slots);
+      } else if (actionType === 'sell' && slots > 0 && propertyId !== null) {
+        await updatePropertyOwnership(walletAddress, propertyId, -slots);
+      } else if (actionType === 'steal_success' && slots > 0 && propertyId !== null) {
+        await updatePropertyOwnership(walletAddress, propertyId, slots);
+      }
 
-        // Update stats based on action type
-        let updateQuery = '';
-        let params = [];
+      // Then, ensure the player exists in stats
+      db.run(
+        `INSERT OR IGNORE INTO player_stats 
+         (wallet_address, total_actions, properties_bought, properties_sold, 
+          successful_steals, failed_steals, shields_activated, rewards_claimed,
+          total_spent, total_earned, total_slots_owned, daily_income, complete_sets,
+          times_stolen, leaderboard_score, roi_ratio, steal_win_rate, defense_rating)
+         VALUES (?, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)`,
+        [walletAddress],
+        (err) => {
+          if (err) {
+            console.error('Error initializing player stats:', err);
+            return reject(err);
+          }
+
+          // Update stats based on action type
+          let updateQuery = '';
+          let params = [];
 
         switch (actionType) {
           case 'buy':
@@ -153,6 +198,10 @@ async function updatePlayerStats(walletAddress, actionType, amount = 0, slots = 
         }
       }
     );
+    } catch (error) {
+      console.error('Error in updatePlayerStats:', error);
+      reject(error);
+    }
   });
 }
 
@@ -162,28 +211,39 @@ async function updatePlayerStats(walletAddress, actionType, amount = 0, slots = 
 async function updateTargetOnSteal(targetAddress, propertyId, slotsStolen = 1) {
   const db = getDatabase();
 
-  return new Promise((resolve, reject) => {
-    db.run(
-      `UPDATE player_stats 
-       SET times_stolen = times_stolen + 1,
-           total_slots_owned = total_slots_owned - ?
-       WHERE wallet_address = ?`,
-      [slotsStolen, targetAddress],
-      (err) => {
-        if (err) {
-          console.error('Error updating target stats:', err);
-          return reject(err);
-        }
-
-        // Recalculate score for victim too
-        recalculatePlayerScore(targetAddress)
-          .then(() => {
-            console.log(`✅ Updated victim stats for ${targetAddress}`);
-            resolve();
-          })
-          .catch(reject);
+  return new Promise(async (resolve, reject) => {
+    try {
+      // First, update property ownership (victim loses slots)
+      if (propertyId !== null && slotsStolen > 0) {
+        await updatePropertyOwnership(targetAddress, propertyId, -slotsStolen);
       }
-    );
+
+      // Then update player stats
+      db.run(
+        `UPDATE player_stats 
+         SET times_stolen = times_stolen + 1,
+             total_slots_owned = total_slots_owned - ?
+         WHERE wallet_address = ?`,
+        [slotsStolen, targetAddress],
+        (err) => {
+          if (err) {
+            console.error('Error updating target stats:', err);
+            return reject(err);
+          }
+
+          // Recalculate score for victim too
+          recalculatePlayerScore(targetAddress)
+            .then(() => {
+              console.log(`✅ Updated victim stats for ${targetAddress}`);
+              resolve();
+            })
+            .catch(reject);
+        }
+      );
+    } catch (error) {
+      console.error('Error in updateTargetOnSteal:', error);
+      reject(error);
+    }
   });
 }
 
@@ -315,6 +375,7 @@ async function batchRecalculateScores() {
 module.exports = {
   updatePlayerStats,
   updateTargetOnSteal,
+  updatePropertyOwnership,
   getPlayerStats,
   recalculatePlayerScore,
   batchRecalculateScores,

@@ -192,23 +192,7 @@ export function PropertyCard({ propertyId, onSelect, spectatorMode = false, spec
     return colorMap[colorClass] || '#8b5cf6';
   };
 
-  // Get darker version of the color for the bar
-  const getDarkerColorHex = (colorClass: string) => {
-    const colorMap: { [key: string]: string } = {
-      'bg-amber-900': '#451a03',    // Much darker brown
-      'bg-sky-300': '#0369a1',      // Much darker light blue
-      'bg-pink-400': '#be185d',     // Much darker pink
-      'bg-orange-500': '#c2410c',   // Much darker orange
-      'bg-red-600': '#991b1b',      // Much darker red
-      'bg-yellow-400': '#a16207',   // Much darker yellow
-      'bg-green-600': '#15803d',    // Much darker green
-      'bg-blue-900': '#0c1844',     // Much darker dark blue
-    };
-    return colorMap[colorClass] || '#6d28d9';
-  };
-
   const colorHex = getColorHex(property.color);
-  const darkerColorHex = getDarkerColorHex(property.color);
 
   // Get background based on theme with fallback
   const getCardBackground = () => {
@@ -226,7 +210,7 @@ export function PropertyCard({ propertyId, onSelect, spectatorMode = false, spec
     } else if (cardTheme.id === 'minimal') {
       return `rgba(255, 255, 255, 0.95)`;
     }
-    return `linear-gradient(135deg, rgba(88, 28, 135, 0.8), rgba(109, 40, 217, 0.6))`;
+    return `linear-gradient(to bottom right, rgba(31, 41, 55, 0.95), rgba(17, 24, 39, 0.9))`;
   };
 
   // Get additional style properties with error handling
@@ -235,8 +219,6 @@ export function PropertyCard({ propertyId, onSelect, spectatorMode = false, spec
       const isCustomBg = themeContext.propertyCardTheme === 'custom' && themeContext.customPropertyCardBackground;
       
       const styles: React.CSSProperties = {
-        border: isCustomBg ? 'none' : `1px solid ${colorHex || '#8b5cf6'}`,
-        borderRadius: '0px',
         transition: 'all 0.3s ease',
       };
 
@@ -247,15 +229,9 @@ export function PropertyCard({ propertyId, onSelect, spectatorMode = false, spec
         styles.background = getCardBackground();
       }
 
-      // Add theme-specific shadows only for non-custom backgrounds
+      // Add border
       if (!isCustomBg) {
-        if (cardTheme.id === 'neon' && colorHex) {
-          styles.boxShadow = `0 0 15px ${colorHex}40`;
-        } else if (cardTheme.id === 'gold') {
-          styles.boxShadow = '0 0 15px rgba(251, 191, 36, 0.4)';
-        } else if (cardTheme.id === 'minimal') {
-          styles.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.15)';
-        }
+        styles.border = `1px solid ${colorHex}80`;
       }
 
       return styles;
@@ -263,16 +239,16 @@ export function PropertyCard({ propertyId, onSelect, spectatorMode = false, spec
       console.warn('PropertyCard style error:', error);
       // Return minimal safe styles - dark theme
       return {
-        background: 'linear-gradient(135deg, rgba(31, 41, 55, 0.95), rgba(17, 24, 39, 0.9))',
+        background: 'linear-gradient(to bottom right, rgba(31, 41, 55, 0.95), rgba(17, 24, 39, 0.9))',
         border: '1px solid #6b7280',
-        borderRadius: '0px',
+        borderRadius: '16px',
         transition: 'all 0.3s ease',
       };
     }
   };
 
   const getTextColor = () => {
-    return cardTheme.id === 'minimal' ? '#1f2937' : '#e9d5ff';
+    return cardTheme.id === 'minimal' ? '#1f2937' : '#ffffff';
   };
 
   return (
@@ -295,97 +271,62 @@ export function PropertyCard({ propertyId, onSelect, spectatorMode = false, spec
         }}
       />
 
-{/* Holographic effect for completed sets - Dual Layer Fixed */}
-{hasCompleteSet && (
-  <div 
-    className="absolute inset-0 pointer-events-none"
-    style={{ zIndex: 15 }}
-  >
-    {/* Rotating rainbow prism layer */}
-    <div
-      className="absolute"
-      style={{
-        inset: '-100%',
-        background: `conic-gradient(from 0deg at 50% 50%,
-          rgba(255, 0, 0, 0.6),
-          rgba(255, 165, 0, 0.6),
-          rgba(255, 255, 0, 0.6),
-          rgba(0, 255, 0, 0.6),
-          rgba(0, 255, 255, 0.6),
-          rgba(0, 0, 255, 0.6),
-          rgba(255, 0, 255, 0.6),
-          rgba(255, 0, 0, 0.6)
-        )`,
-        animation: 'holographic-rotate 12s linear infinite',
-        mixBlendMode: 'overlay',
-        opacity: 0.85,
-      }}
-    />
-    
-    {/* Sparkle layer on top */}
-    <div
-      className="absolute inset-0"
-      style={{
-        backgroundImage: `
-          radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 1) 0%, rgba(255, 255, 255, 0.9) 2%, transparent 6%),
-          radial-gradient(circle at 25% 25%, rgba(255, 255, 255, 1) 0%, transparent 4%),
-          radial-gradient(circle at 75% 25%, rgba(255, 255, 255, 1) 0%, transparent 4%),
-          radial-gradient(circle at 25% 75%, rgba(255, 255, 255, 1) 0%, transparent 4%),
-          radial-gradient(circle at 75% 75%, rgba(255, 255, 255, 1) 0%, transparent 4%),
-          radial-gradient(circle at 35% 35%, rgba(255, 255, 255, 0.9) 0%, transparent 3%),
-          radial-gradient(circle at 65% 35%, rgba(255, 255, 255, 0.9) 0%, transparent 3%),
-          radial-gradient(circle at 35% 65%, rgba(255, 255, 255, 0.9) 0%, transparent 3%),
-          radial-gradient(circle at 65% 65%, rgba(255, 255, 255, 0.9) 0%, transparent 3%)
-        `,
-        animation: 'diamond-twinkle 1.8s ease-in-out infinite',
-        filter: 'brightness(1.5)',
-        zIndex: 2,
-      }}
-    />
-  </div>
-)}
-
-      {/* Card content */}
-      <div className="relative z-20 flex flex-col h-full">
-        {/* Darker color bar at top with diagonal clip */}
+      {/* Holographic effect for completed sets */}
+      {hasCompleteSet && (
         <div 
-          className="h-4 w-full flex-shrink-0"
+          className="absolute top-0 left-0 w-full h-full pointer-events-none z-15"
           style={{
-            background: darkerColorHex,
+            background: 'linear-gradient(45deg, #ff0080, #ff8c00, #40e0d0, #00ff00, #ff0080)',
+            backgroundSize: '400% 400%',
+            animation: 'holographic-shift 8s ease infinite',
+            opacity: 0.25,
+            mixBlendMode: 'overlay',
+          }}
+        />
+      )}
+
+      {/* Card content - Design 2: Corner Badge Style */}
+      <div className="relative z-20 flex flex-col h-full">
+        {/* Color strip on left side */}
+        <div 
+          className="absolute top-0 left-0 w-1.5 h-full z-30"
+          style={{
+            background: colorHex,
+            boxShadow: `0 0 10px ${colorHex}99`,
+          }}
+        />
+
+        {/* Corner badge on top right */}
+        <div 
+          className="absolute top-0 right-0 w-8 h-8 sm:w-10 sm:h-10 z-20"
+          style={{
+            background: colorHex,
+            clipPath: 'polygon(0 0, 100% 0, 100% 100%)',
           }}
         />
 
         {/* Property Name */}
         <div 
-          className="px-1 py-1.5 flex-shrink-0"
-          style={{
-            background: 'rgba(12, 5, 25, 0.6)',
-            borderBottom: `1px solid ${colorHex}40`,
-          }}
+          className="px-3 py-3 flex-shrink-0 relative z-25"
         >
-          <div className="text-center">
-            <div 
-              className="text-[7px] font-bold leading-tight uppercase truncate"
-              style={{
-                color: getTextColor(),
-                letterSpacing: '0.5px',
-              }}
-            >
-              {property.name}
-            </div>
+          <div 
+            className="text-[7px] sm:text-[8px] font-bold leading-tight uppercase pr-10"
+            style={{
+              color: getTextColor(),
+              letterSpacing: '0.3px',
+              lineHeight: '1.2',
+            }}
+          >
+            {property.name}
           </div>
         </div>
 
         {/* Building display area */}
         <div 
-          className="flex-1 flex items-center justify-center px-1 py-2 min-h-0"
-          style={{
-            background: 'linear-gradient(135deg, rgba(88, 28, 135, 0.4), rgba(109, 40, 217, 0.2))',
-          }}
+          className="flex-1 flex items-center justify-center px-1 min-h-0"
         >
           {buildingLevel === 0 ? (
             <div className="w-full h-full flex items-center justify-center">
-              {/* Scale down to 30% on mobile, 35% on larger screens */}
               <div className="scale-[0.3] sm:scale-[0.35]">
                 <LocationPin color={property.color} size="small" />
               </div>
@@ -397,50 +338,35 @@ export function PropertyCard({ propertyId, onSelect, spectatorMode = false, spec
           )}
         </div>
 
-        {/* Combined Cooldown/Status Indicator - Moved above price */}
-        {activeCooldowns.length > 0 && (
-          <div 
-            className="px-1 py-0.5 flex-shrink-0"
-            style={{
-              background: 'rgba(12, 5, 25, 0.9)',
-              borderTop: `1px solid ${colorHex}30`,
-            }}
-          >
-            <div className="flex items-center justify-center gap-1">
+        {/* Price and Cooldowns side by side at bottom */}
+        <div className="px-4 pb-1.5 flex items-center justify-between gap-2 flex-shrink-0">
+          {/* Price on left */}
+          <div className="text-[8px] font-semibold text-yellow-300">
+            ${formatNumber(property.price)}
+          </div>
+          
+          {/* Cooldown badges on right */}
+          {activeCooldowns.length > 0 && (
+            <div className="flex gap-1">
               {activeCooldowns.map((cooldown, index) => (
-                <span key={index} className="text-[10px]">
+                <span key={index} className="text-[8px]">
                   {cooldown.icon}
                 </span>
               ))}
             </div>
-          </div>
-        )}
-
-        {/* Price section at bottom */}
-        <div 
-          className="px-1 py-0.5 flex-shrink-0"
-          style={{
-            background: 'rgba(12, 5, 25, 0.8)',
-            borderTop: `1px solid ${colorHex}30`,
-          }}
-        >
-          <div className="text-center">
-            <div className="text-[7px] font-semibold text-purple-300">
-              ${formatNumber(property.price)}
-            </div>
-          </div>
+          )}
         </div>
       </div>
 
       {/* Hover effect enhancement */}
       <style jsx>{`
         button:hover {
-          transform:  scale(1.10);
+          transform: scale(1.10);
           box-shadow: 
             0 0 50px ${colorHex}cc,
             0 0 100px ${colorHex}80,
             inset 0 0 40px ${colorHex}33 !important;
-            z-index: 50 !important;
+          z-index: 50 !important;
         }
 
         @keyframes shine-sweep {
@@ -452,34 +378,15 @@ export function PropertyCard({ propertyId, onSelect, spectatorMode = false, spec
           }
         }
 
-        .building-float {
-          animation: float 3s ease-in-out infinite;
-        }
-
-        @keyframes float {
-          0%, 100% {
-            transform: translateY(0) scale(0.25);
+        @keyframes holographic-shift {
+          0% {
+            background-position: 0% 50%;
           }
           50% {
-            transform: translateY(-10px) scale(0.25);
+            background-position: 100% 50%;
           }
-        }
-
-        @keyframes holographic-rotate {
-          0% { transform: rotate(0deg); }
-          100% { transform: rotate(360deg); }
-        }
-      
-        @keyframes diamond-twinkle {
-          0%, 100% { 
-            opacity: 0.7; 
-            transform: scale(1); 
-            filter: brightness(1.3); 
-          }
-          50% { 
-            opacity: 1; 
-            transform: scale(1.5); 
-            filter: brightness(2); 
+          100% {
+            background-position: 0% 50%;
           }
         }
       `}</style>

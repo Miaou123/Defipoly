@@ -9,9 +9,10 @@ interface CornerSquareProps {
   label: string;
   bgColor: string;
   theme?: PropertyCardTheme;
+  profilePicture?: string | null;
 }
 
-export function CornerSquare({ icon, label, bgColor, theme }: CornerSquareProps) {
+export function CornerSquare({ icon, label, bgColor, theme, profilePicture }: CornerSquareProps) {
   const themeContext = useTheme();
   
   // Default theme if not provided
@@ -63,31 +64,41 @@ export function CornerSquare({ icon, label, bgColor, theme }: CornerSquareProps)
       }}
     >
       {/* Card content */}
-      <div className="relative flex flex-col h-full">
-        {/* Top color bar */}
-        <div 
-          className="h-4 w-full flex-shrink-0"
-          style={{
-            background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.4), rgba(109, 40, 217, 0.3))',
-          }}
+      {profilePicture ? (
+        // Profile picture display - just the image, no text
+        <img 
+          src={profilePicture} 
+          alt="Player" 
+          className="w-full h-full object-cover"
         />
-
-        {/* Middle section with dice and DeFiPoly text */}
-        <div 
-          className="flex-1 flex flex-col items-center justify-center gap-1 px-2 py-2"
-          style={{
-            background: 'linear-gradient(135deg, rgba(88, 28, 135, 0.4), rgba(109, 40, 217, 0.2))',
-          }}
-        >
-          <DiceIcon size={48} className={getDiceColor()} />
+      ) : (
+        // Default display - original design with dice and text
+        <div className="relative flex flex-col h-full">
+          {/* Top color bar */}
           <div 
-            className="text-[10px] font-black uppercase tracking-wider"
-            style={{ color: getTextColor() }}
+            className="h-4 w-full flex-shrink-0"
+            style={{
+              background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.4), rgba(109, 40, 217, 0.3))',
+            }}
+          />
+
+          {/* Middle section with dice and DeFiPoly text */}
+          <div 
+            className="flex-1 flex flex-col items-center justify-center gap-1 px-2 py-2"
+            style={{
+              background: 'linear-gradient(135deg, rgba(88, 28, 135, 0.4), rgba(109, 40, 217, 0.2))',
+            }}
           >
-            DeFiPoly
+            <DiceIcon size={48} className={getDiceColor()} />
+            <div 
+              className="text-[10px] font-black uppercase tracking-wider"
+              style={{ color: getTextColor() }}
+            >
+              DeFiPoly
+            </div>
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

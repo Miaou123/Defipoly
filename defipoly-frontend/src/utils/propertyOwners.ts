@@ -26,9 +26,9 @@ export async function fetchPropertyOwners(
     // Direct approach: fetch all ownership accounts using getProgramAccounts
     const filters: GetProgramAccountsFilter[] = [
       {
-        // Account discriminator for PropertyOwnership (8 bytes)
-        // 🆕 UPDATED SIZE: Added 8 bytes for steal_protection_expiry
-        dataSize: 8 + 32 + 1 + 2 + 2 + 8 + 8 + 8 + 1, // Was 62, now 70
+        // Account discriminator for PropertyOwnership
+        // 🔧 FIXED: Updated to actual account size seen on-chain (110 bytes)
+        dataSize: 110, // Updated from 70 to match actual account size
       }
     ];
 
@@ -50,6 +50,11 @@ export async function fetchPropertyOwners(
       try {
         // Manually decode the account data
         const data = account.data;
+        
+        // Debug: log account size for first few accounts
+        if (owners.length < 3) {
+          console.log(`📊 Account ${pubkey.toString().slice(0, 8)}... has ${data.length} bytes`);
+        }
         
         // Skip discriminator (8 bytes)
         let offset = 8;

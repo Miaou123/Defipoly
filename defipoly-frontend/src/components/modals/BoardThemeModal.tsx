@@ -56,6 +56,9 @@ export function BoardThemeModal({
       formData.append('wallet', publicKey.toString());
       formData.append('uploadType', 'board');
       formData.append('themeType', 'board');
+      if (customBackground) {
+        formData.append('oldBackgroundUrl', customBackground);
+      }
 
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3101'}/api/profile/upload/theme`, {
         method: 'POST',
@@ -81,7 +84,22 @@ export function BoardThemeModal({
     }
   };
 
-  const handleRemoveCustom = () => {
+  const handleRemoveCustom = async () => {
+    if (customBackground && customBackground.startsWith('/uploads/') && publicKey) {
+      try {
+        await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3101'}/api/profile/upload/delete`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            wallet: publicKey.toString(),
+            fileUrl: customBackground,
+          }),
+        });
+      } catch (error) {
+        console.error('Error deleting board background:', error);
+      }
+    }
+    
     onCustomBackgroundChange(null);
     onThemeChange('default');
     showSuccess('Removed', 'Custom board theme removed');

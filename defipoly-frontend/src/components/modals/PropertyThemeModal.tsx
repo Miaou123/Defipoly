@@ -1,8 +1,7 @@
 'use client';
-
 import { useState, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { X, Upload } from 'lucide-react';
+import { X } from 'lucide-react';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { useNotification } from '@/contexts/NotificationContext';
 
@@ -15,7 +14,6 @@ interface PropertyThemeModalProps {
   onCustomBackgroundChange: (bg: string | null) => void;
 }
 
-
 export function PropertyThemeModal({
   isOpen,
   onClose,
@@ -27,21 +25,53 @@ export function PropertyThemeModal({
   const { publicKey } = useWallet();
   const { showSuccess, showError } = useNotification();
   const [customColor, setCustomColor] = useState('#9333ea');
-  const [activeTab, setActiveTab] = useState<'color' | 'image'>('color');
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleCustomColorApply = () => {
-    onCustomBackgroundChange(`data:image/svg+xml,${encodeURIComponent(`
-      <svg width="100" height="100" xmlns="http://www.w3.org/2000/svg">
+  const handleCustomColorApply = async () => {
+    if (!publicKey) return;
+    
+    setUploading(true);
+    try {
+      const svgContent = `<svg width="100" height="100" xmlns="http://www.w3.org/2000/svg">
         <rect width="100" height="100" fill="${customColor}" />
-      </svg>
-    `)}`);
-    onThemeChange('custom');
-    showSuccess('Applied', 'Custom color applied');
+      </svg>`;
+      const blob = new Blob([svgContent], { type: 'image/svg+xml' });
+      const file = new File([blob], 'color-theme.svg', { type: 'image/svg+xml' });
+      
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('wallet', publicKey.toString());
+      formData.append('uploadType', 'card');
+      formData.append('themeType', 'card');
+      if (customBackground) {
+        formData.append('oldBackgroundUrl', customBackground);
+      }
+
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3101'}/api/profile/upload/theme`, {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        onCustomBackgroundChange(data.backgroundUrl);
+        onThemeChange('custom');
+        showSuccess('Applied', 'Custom color applied');
+      } else {
+        showError('Failed', 'Failed to apply custom color');
+      }
+    } catch (error) {
+      console.error('Error applying custom color:', error);
+      showError('Error', 'Error applying custom color');
+    } finally {
+      setUploading(false);
+    }
   };
 
   const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (!publicKey) return;
+    
     const file = event.target.files?.[0];
     if (!file) return;
 
@@ -50,33 +80,62 @@ export function PropertyThemeModal({
       return;
     }
 
-    if (file.size > 5 * 1024 * 1024) { // 5MB limit
+    if (file.size > 5 * 1024 * 1024) {
       showError('File too large', 'Please select an image under 5MB');
       return;
     }
 
     setUploading(true);
     try {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const result = e.target?.result as string;
-        onCustomBackgroundChange(result);
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('wallet', publicKey.toString());
+      formData.append('uploadType', 'card');
+      formData.append('themeType', 'card');
+      if (customBackground) {
+        formData.append('oldBackgroundUrl', customBackground);
+      }
+
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3101'}/api/profile/upload/theme`, {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        console.log('Card upload successful, setting background:', data.backgroundUrl);
+        onCustomBackgroundChange(data.backgroundUrl);
         onThemeChange('custom');
-        showSuccess('Applied', 'Custom image applied');
-        setUploading(false);
-      };
-      reader.onerror = () => {
-        showError('Upload failed', 'Failed to read the image file');
-        setUploading(false);
-      };
-      reader.readAsDataURL(file);
+        showSuccess('Upload Success', 'Property card theme updated');
+      } else {
+        const errorData = await response.text();
+        console.error('Upload failed:', errorData);
+        showError('Upload Failed', 'Failed to upload property card theme');
+      }
     } catch (error) {
-      showError('Upload failed', 'An error occurred while uploading');
+      console.error('Error uploading property card theme:', error);
+      showError('Upload Error', 'Error uploading property card theme');
+    } finally {
       setUploading(false);
     }
   };
 
-  const handleRemoveCustom = () => {
+  const handleRemoveCustom = async () => {
+    if (customBackground && customBackground.startsWith('/uploads/') && publicKey) {
+      try {
+        await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3101'}/api/profile/upload/delete`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            wallet: publicKey.toString(),
+            fileUrl: customBackground,
+          }),
+        });
+      } catch (error) {
+        console.error('Error deleting property card background:', error);
+      }
+    }
+    
     onCustomBackgroundChange(null);
     onThemeChange('dark');
     showSuccess('Removed', 'Custom background removed');
@@ -87,140 +146,102 @@ export function PropertyThemeModal({
   return createPortal(
     <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-[9999] p-4" onClick={onClose}>
       <div 
-        className="bg-gradient-to-br from-purple-950/95 via-purple-900/95 to-purple-950/95 backdrop-blur-xl rounded-2xl border-2 border-purple-500/30 shadow-2xl shadow-purple-500/20 max-w-2xl w-full overflow-hidden max-h-[80vh] overflow-y-auto" 
+        className="bg-gradient-to-br from-purple-950/95 via-purple-900/95 to-purple-950/95 backdrop-blur-xl rounded-2xl border-2 border-purple-500/30 shadow-2xl shadow-purple-500/20 max-w-[600px] w-full overflow-hidden" 
         onClick={e => e.stopPropagation()}
       >
         <div className="p-6">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-bold text-purple-100 flex items-center gap-2">
-            <span>🎨</span> Customize Property Cards
-          </h2>
-          <button
-            onClick={onClose}
-            className="p-2 text-purple-400 hover:text-white transition-colors"
-          >
-            <X size={20} />
-          </button>
-        </div>
-
-        {/* Tab Navigation */}
-        <div className="flex mb-6">
-          <button
-            onClick={() => setActiveTab('color')}
-            className={`flex-1 py-3 px-4 text-sm font-medium rounded-l-lg border transition-colors ${
-              activeTab === 'color'
-                ? 'bg-purple-600 border-purple-500 text-white'
-                : 'bg-purple-800/20 border-purple-500/30 text-purple-300 hover:bg-purple-700/30'
-            }`}
-          >
-            🎨 Solid Color
-          </button>
-          <button
-            onClick={() => setActiveTab('image')}
-            className={`flex-1 py-3 px-4 text-sm font-medium rounded-r-lg border transition-colors ${
-              activeTab === 'image'
-                ? 'bg-purple-600 border-purple-500 text-white'
-                : 'bg-purple-800/20 border-purple-500/30 text-purple-300 hover:bg-purple-700/30'
-            }`}
-          >
-            🖼️ Custom Image
-          </button>
-        </div>
-
-        {/* Color Tab */}
-        {activeTab === 'color' && (
-          <div className="space-y-6">
-            <div>
-              <label className="text-sm text-purple-200 block mb-2">Choose Color</label>
-              <input
-                type="color"
-                value={customColor}
-                onChange={(e) => setCustomColor(e.target.value)}
-                className="w-full h-16 rounded-lg border-2 border-purple-500/30 bg-transparent cursor-pointer"
-              />
-            </div>
-            
-            {/* Preview */}
-            <div className="p-4 bg-purple-800/20 rounded-lg border border-purple-500/20">
-              <div className="text-sm text-purple-200 mb-3">Preview</div>
-              <div className="flex justify-center">
-                <div 
-                  className="w-20 h-20 rounded border-2 border-purple-400/30 flex items-center justify-center text-xs text-white font-medium"
-                  style={{
-                    backgroundColor: customColor
-                  }}
-                >
-                  Property
-                </div>
-              </div>
-            </div>
-            
+          {/* Header */}
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-xl font-bold text-purple-100 flex items-center gap-2">
+              <span>🎨</span> Customize Property Cards
+            </h2>
             <button
-              onClick={handleCustomColorApply}
-              className="w-full px-6 py-3 bg-green-600 hover:bg-green-500 rounded-lg transition-colors text-white font-medium"
+              onClick={onClose}
+              className="p-2 text-purple-400 hover:text-white transition-colors"
             >
-              Apply Solid Color
+              <X size={20} />
             </button>
           </div>
-        )}
-
-        {/* Image Tab */}
-        {activeTab === 'image' && (
-          <div className="space-y-6">
-            <div>
-              <label className="text-sm text-purple-200 block mb-2">Upload Image</label>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                onChange={handleImageUpload}
-                className="hidden"
-              />
-              <button
-                onClick={() => fileInputRef.current?.click()}
-                disabled={uploading}
-                className="w-full h-16 border-2 border-dashed border-purple-500/30 rounded-lg flex items-center justify-center gap-2 text-purple-300 hover:border-purple-400/50 hover:text-purple-200 transition-colors disabled:opacity-50"
-              >
-                <Upload size={20} />
-                {uploading ? 'Uploading...' : 'Click to upload image'}
-              </button>
-              <div className="text-xs text-purple-400 mt-2">
-                Supported formats: JPG, PNG, GIF • Max size: 5MB
+          
+          {/* Content Row */}
+          <div className="grid grid-cols-2 gap-5 mb-4">
+            {/* Controls */}
+            <div className="flex flex-col gap-3">
+              {/* Solid Color */}
+              <div>
+                <div className="text-sm font-semibold text-purple-200 mb-3">Solid Color</div>
+                <div className="flex gap-2 items-center">
+                  <input
+                    type="color"
+                    value={customColor}
+                    onChange={(e) => setCustomColor(e.target.value)}
+                    className="w-9 h-9 rounded border-2 border-purple-500/30 bg-transparent cursor-pointer"
+                  />
+                  <button
+                    onClick={handleCustomColorApply}
+                    disabled={uploading}
+                    className="flex-1 px-4 py-2 bg-green-600 hover:bg-green-500 disabled:opacity-50 rounded transition-colors text-white text-sm font-medium"
+                  >
+                    {uploading ? 'Applying...' : 'Apply'}
+                  </button>
+                </div>
               </div>
+
+              {/* Custom Image */}
+              <div className="border-t border-purple-500/20 pt-3">
+                <div className="text-sm font-semibold text-purple-200 mb-3">Custom Image</div>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageUpload}
+                  className="hidden"
+                />
+                <div 
+                  onClick={() => fileInputRef.current?.click()}
+                  className="border-2 border-dashed border-purple-500/30 rounded-lg p-4 text-center bg-purple-800/20 cursor-pointer hover:border-purple-500/50 transition-colors"
+                >
+                  <p className="text-purple-200 text-xs mb-1">
+                    {uploading ? '⏳ Uploading...' : '📤 Click to upload'}
+                  </p>
+                  <small className="text-purple-400 text-[10px]">
+                    JPG, PNG, GIF, SVG • Max 5MB
+                  </small>
+                </div>
+              </div>
+
+              {/* Remove Button */}
+              {customBackground && (
+                <button
+                  onClick={handleRemoveCustom}
+                  className="w-full px-3 py-2 bg-red-600/80 hover:bg-red-600 rounded transition-colors text-white text-xs"
+                >
+                  Remove Background
+                </button>
+              )}
             </div>
 
             {/* Preview */}
-            {customBackground && (
-              <div className="p-4 bg-purple-800/20 rounded-lg border border-purple-500/20">
-                <div className="text-sm text-purple-200 mb-3">Current Custom Background</div>
-                <div className="flex justify-center">
-                  <div 
-                    className="w-20 h-20 rounded border-2 border-purple-400/30 flex items-center justify-center text-xs text-white font-medium"
-                    style={{
-                      background: `url(${customBackground}) center/cover`
-                    }}
-                  >
-                    Property
-                  </div>
-                </div>
-                <button
-                  onClick={handleRemoveCustom}
-                  className="w-full mt-4 px-4 py-2 bg-red-600/20 hover:bg-red-600/30 border border-red-500/30 rounded-lg transition-colors text-red-300 text-sm"
-                >
-                  Remove Custom Background
-                </button>
+            <div className="bg-purple-800/20 rounded-lg border border-purple-500/20 p-4 flex items-center justify-center min-h-[120px]">
+              <div 
+                className="w-20 h-24 rounded border-2 border-purple-500/30 flex items-center justify-center text-[10px] text-purple-200 font-medium"
+                style={{
+                  background: customBackground 
+                    ? `url(${customBackground}) center/cover`
+                    : customColor
+                }}
+              >
+                Card
               </div>
-            )}
+            </div>
           </div>
-        )}
 
-        {/* Footer */}
-        <div className="mt-6 text-center">
-          <div className="text-xs text-purple-400">
-            💡 Your custom style will apply to all property cards on the board
+          {/* Footer */}
+          <div className="text-center">
+            <div className="text-xs text-purple-400">
+              💡 Your custom style will apply to all property cards on the board
+            </div>
           </div>
-        </div>
         </div>
       </div>
     </div>,

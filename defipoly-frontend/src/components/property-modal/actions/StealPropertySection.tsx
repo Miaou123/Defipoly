@@ -109,6 +109,10 @@ export function StealPropertySection({
       
       const errorMsg = error?.message || error?.toString() || 'Unknown error';
       
+      // Always refresh cooldown state after any steal attempt (success or failure)
+      // because the blockchain might have applied a cooldown even if the transaction failed
+      await refetchStealCooldown();
+      
       if (errorMsg.includes('No eligible targets')) {
         showError(
           'No Targets Available',
@@ -122,6 +126,9 @@ export function StealPropertySection({
       } else {
         showError('Steal Failed', errorMsg);
       }
+      
+      // Also trigger refresh for other components
+      triggerRefresh();
     } finally {
       setLoading(false);
     }

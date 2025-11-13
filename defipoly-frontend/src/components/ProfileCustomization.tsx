@@ -6,6 +6,8 @@ import { useNotification } from '@/contexts/NotificationContext';
 import { BoardThemeModal } from '@/components/modals/BoardThemeModal';
 import { PropertyThemeModal } from '@/components/modals/PropertyThemeModal';
 import { getBoardTheme, getPropertyCardTheme } from '@/utils/themes';
+import { clearProfileCache } from '@/utils/profileStorage';
+import { Edit3, Camera } from 'lucide-react';
 
 interface ProfileCustomizationProps {
   // Profile picture props
@@ -66,6 +68,20 @@ export function ProfileCustomization({
   
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Helper function for property card preview background - INSIDE component so it has access to propertyCardTheme
+  const getPropertyPreviewBackgroundGradient = () => {
+    if (propertyCardTheme === 'default') {
+      return 'linear-gradient(135deg, rgba(88, 28, 135, 0.8), rgba(109, 40, 217, 0.6))';
+    } else if (propertyCardTheme === 'neon') {
+      return 'linear-gradient(135deg, rgba(147, 51, 234, 0.9), rgba(236, 72, 153, 0.7))';
+    } else if (propertyCardTheme === 'gold') {
+      return 'linear-gradient(135deg, rgba(251, 191, 36, 0.9), rgba(245, 158, 11, 0.7))';
+    } else if (propertyCardTheme === 'minimal') {
+      return 'rgba(255, 255, 255, 0.95)';
+    }
+    return 'linear-gradient(to bottom right, rgba(31, 41, 55, 0.95), rgba(17, 24, 39, 0.9))';
+  };
+
   // Profile picture handlers
   const handleProfilePictureUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     if (!publicKey) return;
@@ -111,43 +127,6 @@ export function ProfileCustomization({
     }
   };
 
-  const handleRemoveProfilePicture = async () => {
-    if (!publicKey) return;
-
-    try {
-      // Delete the file if it's hosted on our server
-      if (profilePicture && profilePicture.startsWith('/uploads/')) {
-        await fetch(`${API_BASE_URL}/api/profile/upload/delete`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            wallet: publicKey.toString(),
-            fileUrl: profilePicture,
-          }),
-        });
-      }
-
-      // Update profile to remove picture and username
-      const response = await fetch(`${API_BASE_URL}/api/profile`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          wallet: publicKey.toString(),
-          profilePicture: null,
-          username: null,
-        }),
-      });
-
-      if (response.ok) {
-        setProfilePicture(null);
-        setUsername('');
-        setTempUsername('');
-        showSuccess('Profile Reset', 'Profile picture and username removed');
-      }
-    } catch (error) {
-      console.error('Error resetting profile:', error);
-    }
-  };
 
   // Get preview background for board
   const getBoardPreviewBackground = () => {
@@ -180,16 +159,25 @@ export function ProfileCustomization({
     <>
       {/* Profile Header */}
       <div className="text-center pb-5 mb-5 border-b border-purple-500/20">
-        <div className="w-24 h-24 mx-auto rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center overflow-hidden border-3 border-purple-500/30 mb-3">
-          {profilePicture ? (
-            <img 
-              src={profilePicture} 
-              alt="Profile" 
-              className="w-full h-full object-cover"
-            />
-          ) : (
-            <span className="text-4xl">👤</span>
-          )}
+        <div className="relative w-24 h-24 mx-auto mb-3 group">
+          <div className="w-full h-full rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center overflow-hidden border-3 border-purple-500/30">
+            {profilePicture ? (
+              <img 
+                src={profilePicture} 
+                alt="Profile" 
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <span className="text-4xl">👤</span>
+            )}
+          </div>
+          {/* Hover Overlay */}
+          <div 
+            className="absolute inset-0 bg-black/60 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+            onClick={() => fileInputRef.current?.click()}
+          >
+            <Camera size={20} className="text-white" />
+          </div>
         </div>
 
         <input
@@ -208,8 +196,9 @@ export function ProfileCustomization({
               value={tempUsername}
               onChange={(e) => setTempUsername(e.target.value)}
               placeholder="Enter username"
-              className="w-full px-3 py-1.5 bg-purple-900/50 border border-purple-500/30 rounded-lg text-purple-100 placeholder-purple-500 focus:outline-none focus:border-purple-400 text-xs"
+              className="w-full px-3 py-1.5 bg-purple-900/50 border border-purple-500/30 rounded-lg text-purple-100 placeholder-purple-500 focus:outline-none focus:border-purple-400 text-sm text-center"
               maxLength={20}
+              autoFocus
             />
             <div className="flex gap-2">
               <button
@@ -230,44 +219,30 @@ export function ProfileCustomization({
             </div>
           </div>
         ) : (
-          <>
-            {username ? (
-              <div className="text-lg font-bold text-purple-100 mb-2">{username}</div>
-            ) : (
-              <div className="text-purple-500 italic text-sm mb-2">No username set</div>
-            )}
+          <div className="mb-3">
+            <div className="relative group">
+              <div 
+                className="cursor-pointer min-h-[32px] flex items-center justify-center px-3 py-1 rounded-lg hover:bg-purple-900/30 transition-colors"
+                onClick={() => setEditingUsername(true)}
+              >
+                {username ? (
+                  <div className="text-lg font-bold text-purple-100">{username}</div>
+                ) : (
+                  <div className="text-purple-500 italic text-sm">Click to set username</div>
+                )}
+                {/* Hover Edit Icon */}
+                <div className="absolute right-1 top-1/2 transform -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <Edit3 size={12} className="text-purple-400" />
+                </div>
+              </div>
+            </div>
             {/* Wallet Address below username */}
-            <div className="text-[10px] font-mono text-purple-400 mb-3 break-all px-2">
+            <div className="text-[10px] font-mono text-purple-400 break-all px-2">
               {walletAddress}
             </div>
-          </>
+          </div>
         )}
 
-        {/* Action Buttons */}
-        <div className="flex gap-2">
-          <button
-            onClick={() => fileInputRef.current?.click()}
-            disabled={uploadingPicture}
-            className="flex-1 px-3 py-1.5 bg-purple-600 hover:bg-purple-500 rounded-md transition-colors text-xs font-semibold disabled:opacity-50"
-          >
-            {uploadingPicture ? '...' : '📷 Photo'}
-          </button>
-          {(profilePicture || username) && (
-            <button
-              onClick={handleRemoveProfilePicture}
-              className="px-3 py-1.5 bg-red-600/80 hover:bg-red-600 rounded-md transition-colors text-xs font-semibold"
-              title="Reset profile (remove picture and username)"
-            >
-              ✕
-            </button>
-          )}
-          <button
-            onClick={() => setEditingUsername(true)}
-            className="flex-1 px-3 py-1.5 bg-purple-600 hover:bg-purple-500 rounded-md transition-colors text-xs font-semibold"
-          >
-            ✏️ {username ? 'Edit' : 'Name'}
-          </button>
-        </div>
       </div>
 
       {/* Customization Section */}
@@ -280,39 +255,50 @@ export function ProfileCustomization({
           {/* Board Background */}
           <div className="text-center">
             <div className="text-[10px] text-purple-400 mb-1.5 font-semibold">🎮 Board</div>
-            <div 
-              className="w-full aspect-square rounded border-2 border-purple-500/25 mb-1.5 overflow-hidden"
-              style={{
-                background: getBoardPreviewBackground(),
-                backgroundSize: 'cover',
-                backgroundPosition: 'center'
-              }}
-            />
-            <button
-              onClick={() => setShowBoardThemeModal(true)}
-              className="w-full px-2 py-1 bg-purple-600 hover:bg-purple-500 rounded-md transition-colors text-[10px] font-semibold"
-            >
-              Customize
-            </button>
+            <div className="relative group">
+              <div 
+                className="w-full aspect-square rounded border-2 border-purple-500/25 overflow-hidden cursor-pointer"
+                style={{
+                  background: getBoardPreviewBackground(),
+                  backgroundSize: 'cover',
+                  backgroundPosition: 'center'
+                }}
+                onClick={() => setShowBoardThemeModal(true)}
+              />
+              {/* Hover Overlay */}
+              <div 
+                className="absolute inset-0 bg-black/60 rounded flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                onClick={() => setShowBoardThemeModal(true)}
+              >
+                <Camera size={16} className="text-white" />
+              </div>
+            </div>
           </div>
 
           {/* Property Card Style */}
           <div className="text-center">
             <div className="text-[10px] text-purple-400 mb-1.5 font-semibold">🏠 Cards</div>
-            <div 
-              className="w-full aspect-square rounded border-2 border-purple-500/25 mb-1.5 overflow-hidden"
-              style={{
-                background: getPropertyPreviewBackground(),
-                backgroundSize: 'cover',
-                backgroundPosition: 'center'
-              }}
-            />
-            <button
-              onClick={() => setShowPropertyThemeModal(true)}
-              className="w-full px-2 py-1 bg-purple-600 hover:bg-purple-500 rounded-md transition-colors text-[10px] font-semibold"
-            >
-              Customize
-            </button>
+            <div className="relative group">
+              <div 
+                className="w-full aspect-square rounded border-2 border-purple-500/25 overflow-hidden cursor-pointer"
+                style={{
+                  backgroundImage: propertyCardTheme === 'custom' && customPropertyCardBackground 
+                    ? `url(${customPropertyCardBackground})` 
+                    : getPropertyPreviewBackgroundGradient(),
+                  backgroundSize: 'cover',
+                  backgroundPosition: 'center',
+                  backgroundRepeat: 'no-repeat',
+                }}
+                onClick={() => setShowPropertyThemeModal(true)}
+              />
+              {/* Hover Overlay */}
+              <div 
+                className="absolute inset-0 bg-black/60 rounded flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                onClick={() => setShowPropertyThemeModal(true)}
+              >
+                <Camera size={16} className="text-white" />
+              </div>
+            </div>
           </div>
         </div>
       </div>

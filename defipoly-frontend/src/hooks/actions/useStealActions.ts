@@ -54,9 +54,35 @@ export const useStealActions = (
     try {
       console.log(`🎲 Initiating random steal for property ${propertyId}...`);
 
+      // Check backend API for available targets first
+      const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3101';
+      
+      try {
+        const statsResponse = await fetch(`${API_BASE_URL}/api/properties/${propertyId}/stats`);
+        if (statsResponse.ok) {
+          const stats = await statsResponse.json();
+          console.log(`🔍 Backend reports ${stats.ownersWithUnshieldedSlots} unshielded owners for property ${propertyId}`);
+          
+          if (stats.ownersWithUnshieldedSlots === 0) {
+            throw new Error('No eligible targets found. All owners are either shielded or have steal protection active.');
+          }
+        }
+      } catch (error) {
+        console.warn('Could not fetch backend stats, continuing with chain query...', error);
+      }
+
       // Fetch all owners of this property
       const owners = await fetchPropertyOwners(connection, program, propertyId);
-      console.log(`📊 Found ${owners.length} total owners`);
+      console.log(`📊 Found ${owners.length} total owners from chain`);
+
+      // If chain parsing failed but backend shows targets, try alternative approach
+      if (owners.length === 0) {
+        console.warn('⚠️  Chain parsing returned 0 owners, but backend shows targets exist');
+        console.warn('📝 This suggests a data structure mismatch in fetchPropertyOwners()');
+        
+        // For now, throw a more specific error
+        throw new Error('Unable to fetch property owners from chain. The account data structure may have changed.');
+      }
 
       // Filter for eligible targets
       const currentTime = Math.floor(Date.now() / 1000);

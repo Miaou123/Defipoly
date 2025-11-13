@@ -22,7 +22,8 @@ function getStealCooldownForProperty(wallet, propertyId, callback) {
   }
 
   // Get cooldown duration (half of buy cooldown)
-  const buyCooldownSeconds = property.cooldownHours * 3600;
+  const buyCooldownHours = property.cooldown || property.cooldownHours || 24; // Fallback to 24h
+  const buyCooldownSeconds = buyCooldownHours * 3600;
   const stealCooldownDuration = buyCooldownSeconds / 2;
 
   console.log(`⏱️  [STEAL COOLDOWN] Cooldown duration for property ${propIdNum}: ${stealCooldownDuration}s (${stealCooldownDuration/3600}h)`);
@@ -113,7 +114,8 @@ function getAllStealCooldowns(wallet, callback) {
         const property = PROPERTIES.find(p => p.id === row.property_id);
         if (!property) return;
 
-        const buyCooldownSeconds = property.cooldownHours * 3600;
+        const buyCooldownHours = property.cooldown || property.cooldownHours || 24; // Fallback to 24h
+        const buyCooldownSeconds = buyCooldownHours * 3600;
         const stealCooldownDuration = buyCooldownSeconds / 2;
         const elapsed = now - row.last_steal_time;
         const remaining = Math.max(0, stealCooldownDuration - elapsed);

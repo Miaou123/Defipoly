@@ -1,13 +1,11 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
-import { useConnection } from '@solana/wallet-adapter-react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { PROGRAM_ID, getPropertyById } from '@/utils/constants';
-import { BorshCoder, EventParser } from '@coral-xyz/anchor';
+import { getPropertyById } from '@/utils/constants';
 import { getProfilesBatch, ProfileData } from '@/utils/profileStorage';
-import idl from '@/idl/defipoly_program.json';
 import { getActionIcon } from './icons/UIIcons';
+import { useWebSocket } from '@/contexts/WebSocketContext';
 
 interface FeedItem {
   message: string;
@@ -22,11 +20,12 @@ interface FeedItem {
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3101';
 
 export function LiveFeed() {
-  const { connection } = useConnection();
   const router = useRouter();
+  const { socket, connected } = useWebSocket();
   const [feed, setFeed] = useState<FeedItem[]>([]);
   const [profiles, setProfiles] = useState<Record<string, ProfileData>>({});
   const [loading, setLoading] = useState(true);
+  const initialLoadDone = useRef(false);
 
   const formatAddress = (address: string) => {
     return `${address.slice(0, 4)}...${address.slice(-4)}`;
@@ -50,17 +49,22 @@ export function LiveFeed() {
     }
   };
 
-  // Convert backend action to feed item
+  // Convert backend action to feed item (stable function to prevent loops)
   const actionToFeedItem = useCallback((action: any): FeedItem | null => {
     const property = action.propertyId !== null && action.propertyId !== undefined 
       ? getPropertyById(action.propertyId)
       : null;
     const propertyName = property ? property.name : 'Unknown Property';
 
+    const getProfileName = (address: string) => {
+      const profile = profiles[address];
+      return profile?.username || formatAddress(address);
+    };
+
     switch (action.actionType) {
       case 'buy':
         return {
-          message: `${getDisplayName(action.playerAddress)} bought ${propertyName} for ${formatAmount(action.amount || 0)} DEFI`,
+          message: `${getProfileName(action.playerAddress)} bought ${propertyName} for ${formatAmount(action.amount || 0)} DEFI`,
           type: 'buy',
           timestamp: action.blockTime * 1000,
           txSignature: action.txSignature,
@@ -70,7 +74,7 @@ export function LiveFeed() {
 
       case 'sell':
         return {
-          message: `${getDisplayName(action.playerAddress)} sold ${action.slots || 0} slots of ${propertyName} for ${formatAmount(action.amount || 0)} DEFI`,
+          message: `${getProfileName(action.playerAddress)} sold ${action.slots || 0} slots of ${propertyName} for ${formatAmount(action.amount || 0)} DEFI`,
           type: 'sell',
           timestamp: action.blockTime * 1000,
           txSignature: action.txSignature,
@@ -80,7 +84,7 @@ export function LiveFeed() {
 
       case 'steal_success':
         return {
-          message: `${getDisplayName(action.playerAddress)} stole from ${getDisplayName(action.targetAddress)} on ${propertyName}!`,
+          message: `${getProfileName(action.playerAddress)} stole ${action.slots || 1} slots from ${getProfileName(action.targetAddress)} at ${propertyName}`,
           type: 'steal',
           timestamp: action.blockTime * 1000,
           txSignature: action.txSignature,
@@ -91,7 +95,18 @@ export function LiveFeed() {
 
       case 'steal_failed':
         return {
-          message: `${getDisplayName(action.playerAddress)} failed to steal from ${getDisplayName(action.targetAddress)} on ${propertyName}`,
+          message: `${getProfileName(action.playerAddress)} failed to steal from ${getProfileName(action.targetAddress)} at ${propertyName}`,
+          type: 'steal',
+          timestamp: action.blockTime * 1000,
+          txSignature: action.txSignature,
+          propertyId: action.propertyId,
+          playerAddress: action.playerAddress,
+          targetAddress: action.targetAddress,
+        };
+
+      case 'steal_attempt':
+        return {
+          message: `${getProfileName(action.playerAddress)} attempted to steal from ${getProfileName(action.targetAddress)} at ${propertyName}`,
           type: 'steal',
           timestamp: action.blockTime * 1000,
           txSignature: action.txSignature,
@@ -102,7 +117,7 @@ export function LiveFeed() {
 
       case 'shield':
         return {
-          message: `${getDisplayName(action.playerAddress)} activated shield on ${propertyName}`,
+          message: `${getProfileName(action.playerAddress)} shielded ${propertyName}`,
           type: 'shield',
           timestamp: action.blockTime * 1000,
           txSignature: action.txSignature,
@@ -112,7 +127,7 @@ export function LiveFeed() {
 
       case 'claim':
         return {
-          message: `${getDisplayName(action.playerAddress)} claimed ${formatAmount(action.amount || 0)} DEFI rewards`,
+          message: `${getProfileName(action.playerAddress)} claimed ${formatAmount(action.amount || 0)} DEFI reward`,
           type: 'claim',
           timestamp: action.blockTime * 1000,
           txSignature: action.txSignature,
@@ -122,7 +137,7 @@ export function LiveFeed() {
       default:
         return null;
     }
-  }, [profiles]);
+  }, []); // Remove profiles dependency to prevent loops
 
   const addFeedItem = useCallback((item: FeedItem) => {
     setFeed(prev => {
@@ -132,11 +147,12 @@ export function LiveFeed() {
     });
   }, []);
 
-  // Fetch historical actions from backend
+  // Fetch historical actions from backend (only once)
   useEffect(() => {
+    if (initialLoadDone.current) return;
+
     const fetchHistoricalActions = async () => {
       try {
-        console.log('📡 Fetching recent actions from backend...');
         const response = await fetch(`${API_BASE_URL}/api/actions/recent?limit=50`);
         
         if (!response.ok) {
@@ -144,15 +160,11 @@ export function LiveFeed() {
         }
         
         const data = await response.json();
-        console.log('📦 Received actions from backend:', data.actions?.length || 0);
         
         if (data.actions && Array.isArray(data.actions)) {
           const feedItems = data.actions
             .map((action: any) => actionToFeedItem(action))
             .filter((item: FeedItem | null): item is FeedItem => item !== null);
-          
-          console.log('✅ Converted to feed items:', feedItems.length);
-          console.log('Sample feed item:', feedItems[0]);
           
           setFeed(feedItems);
           
@@ -168,192 +180,196 @@ export function LiveFeed() {
             setProfiles(profilesData);
           }
         }
+        initialLoadDone.current = true;
       } catch (error) {
         console.error('❌ Error fetching from backend:', error);
-        // Fallback: try to fetch from blockchain if backend fails
-        console.log('⚠️ Falling back to blockchain fetch...');
+        initialLoadDone.current = true;
       } finally {
         setLoading(false);
       }
     };
 
     fetchHistoricalActions();
-  }, [actionToFeedItem]);
+  }, []); // Remove actionToFeedItem dependency
 
-  // Subscribe to real-time blockchain events
+  // Subscribe to WebSocket events for real-time updates
   useEffect(() => {
-    let subscriptionId: number | null = null;
+    if (!socket || !connected) return;
 
-    const subscribeToLogs = async () => {
-      try {
-        console.log('📡 Subscribing to real-time program logs...');
+    const handleRecentAction = async (data: any) => {
+      // Convert WebSocket data to FeedItem
+      const property = data.propertyId !== null && data.propertyId !== undefined 
+        ? getPropertyById(data.propertyId)
+        : null;
+      const propertyName = property ? property.name : 'Unknown Property';
+      
+      const getProfileName = (address: string) => {
+        const profile = profiles[address];
+        return profile?.username || formatAddress(address);
+      };
+      
+      let feedItem: FeedItem | null = null;
+      
+      switch (data.type) {
+        case 'buy':
+          feedItem = {
+            message: `${getProfileName(data.buyer)} bought ${propertyName} for ${formatAmount(data.price || 0)} DEFI`,
+            type: 'buy',
+            timestamp: data.timestamp || Date.now(),
+            txSignature: data.txSignature,
+            propertyId: data.propertyId,
+            playerAddress: data.buyer,
+          };
+          break;
+          
+        case 'sell':
+          feedItem = {
+            message: `${getProfileName(data.seller)} sold ${data.slots || 0} slots of ${propertyName} for ${formatAmount(data.price || 0)} DEFI`,
+            type: 'sell',
+            timestamp: data.timestamp || Date.now(),
+            txSignature: data.txSignature,
+            propertyId: data.propertyId,
+            playerAddress: data.seller,
+          };
+          break;
+          
+        case 'steal':
+          feedItem = {
+            message: `${getProfileName(data.attacker)} stole ${data.slots || 1} slots from ${getProfileName(data.victim)} at ${propertyName}`,
+            type: 'steal',
+            timestamp: data.timestamp || Date.now(),
+            txSignature: data.txSignature,
+            propertyId: data.propertyId,
+            playerAddress: data.attacker,
+            targetAddress: data.victim,
+          };
+          break;
+          
+        case 'shield':
+          feedItem = {
+            message: `${getProfileName(data.owner)} shielded ${propertyName}`,
+            type: 'shield',
+            timestamp: data.timestamp || Date.now(),
+            txSignature: data.txSignature,
+            propertyId: data.propertyId,
+            playerAddress: data.owner,
+          };
+          break;
+          
+        case 'reward':
+          feedItem = {
+            message: `${getProfileName(data.wallet)} claimed ${formatAmount(data.amount || 0)} DEFI reward`,
+            type: 'claim',
+            timestamp: data.timestamp || Date.now(),
+            txSignature: data.txSignature,
+            playerAddress: data.wallet,
+          };
+          break;
+          
+        case 'steal-failed':
+          feedItem = {
+            message: `${getProfileName(data.attacker)} failed to steal from ${getProfileName(data.victim)} at ${propertyName}`,
+            type: 'steal',
+            timestamp: data.timestamp || Date.now(),
+            txSignature: data.txSignature,
+            propertyId: data.propertyId,
+            playerAddress: data.attacker,
+            targetAddress: data.victim,
+          };
+          break;
+
+        case 'steal-attempted':
+          feedItem = {
+            message: `${getProfileName(data.attacker)} attempted to steal from ${getProfileName(data.victim)} at ${propertyName}`,
+            type: 'steal',
+            timestamp: data.timestamp || Date.now(),
+            txSignature: data.txSignature,
+            propertyId: data.propertyId,
+            playerAddress: data.attacker,
+            targetAddress: data.victim,
+          };
+          break;
+      }
+      
+      if (feedItem) {
+        addFeedItem(feedItem);
         
-        const coder = new BorshCoder(idl as any);
-        const eventParser = new EventParser(PROGRAM_ID, coder);
-
-        subscriptionId = connection.onLogs(
-          PROGRAM_ID,
-          async (logs) => {
-            try {
-              const events = eventParser.parseLogs(logs.logs);
-              
-              for (const event of events) {
-                const action: any = {
-                  txSignature: logs.signature,
-                  blockTime: Date.now() / 1000,
-                };
-                
-                switch (event.name) {
-                  case 'PropertyBoughtEvent':
-                  case 'propertyBoughtEvent':
-                    action.actionType = 'buy';
-                    action.playerAddress = event.data.player.toString();
-                    action.propertyId = event.data.propertyId;
-                    action.amount = Number(event.data.totalCost || event.data.price);
-                    break;
-                  
-                  case 'PropertySoldEvent':
-                  case 'propertySoldEvent':
-                    action.actionType = 'sell';
-                    action.playerAddress = event.data.player.toString();
-                    action.propertyId = event.data.propertyId;
-                    action.amount = Number(event.data.amount);
-                    action.slots = event.data.slots;
-                    break;
-                  
-                  case 'StealSuccessEvent':
-                  case 'stealSuccessEvent':
-                    action.actionType = 'steal_success';
-                    action.playerAddress = event.data.attacker.toString();
-                    action.targetAddress = event.data.target.toString();
-                    action.propertyId = event.data.propertyId;
-                    break;
-                  
-                  case 'StealFailedEvent':
-                  case 'stealFailedEvent':
-                    action.actionType = 'steal_failed';
-                    action.playerAddress = event.data.attacker.toString();
-                    action.targetAddress = event.data.target.toString();
-                    action.propertyId = event.data.propertyId;
-                    break;
-                  
-                  case 'ShieldActivatedEvent':
-                  case 'shieldActivatedEvent':
-                    action.actionType = 'shield';
-                    action.playerAddress = event.data.player.toString();
-                    action.propertyId = event.data.propertyId;
-                    break;
-                  
-                  case 'RewardsClaimedEvent':
-                  case 'rewardsClaimedEvent':
-                    action.actionType = 'claim';
-                    action.playerAddress = event.data.player.toString();
-                    action.amount = Number(event.data.amount);
-                    break;
-                  
-                  default:
-                    continue;
-                }
-                
-                const feedItem = actionToFeedItem(action);
-                if (feedItem) {
-                  addFeedItem(feedItem);
-                }
-              }
-            } catch (error) {
-              console.error('Error parsing real-time event:', error);
-            }
-          },
-          'confirmed'
-        );
-
-        console.log('✅ Subscribed to real-time logs');
-      } catch (error) {
-        console.error('Error subscribing to logs:', error);
+        // Fetch profiles for new addresses
+        const newAddresses = new Set<string>();
+        if (data.buyer) newAddresses.add(data.buyer);
+        if (data.seller) newAddresses.add(data.seller);
+        if (data.attacker) newAddresses.add(data.attacker);
+        if (data.victim) newAddresses.add(data.victim);
+        if (data.owner) newAddresses.add(data.owner);
+        if (data.wallet) newAddresses.add(data.wallet);
+        
+        if (newAddresses.size > 0) {
+          const profilesData = await getProfilesBatch(Array.from(newAddresses));
+          setProfiles(prev => ({ ...prev, ...profilesData }));
+        }
       }
     };
 
-    subscribeToLogs();
+    // Listen to the recent-action event
+    socket.on('recent-action', handleRecentAction);
 
+    // Cleanup
     return () => {
-      if (subscriptionId !== null) {
-        connection.removeOnLogsListener(subscriptionId);
-        console.log('🔌 Unsubscribed from program logs');
-      }
+      socket.off('recent-action', handleRecentAction);
     };
-  }, [connection, addFeedItem, actionToFeedItem]);
+  }, [socket, connected]); // Simplified dependencies
 
-  return (
-    <div className="bg-purple-900/8 backdrop-blur-xl rounded-2xl border border-purple-500/20 max-h-[280px] overflow-hidden flex flex-col">
-      {/* Header - Sticky */}
-      <div className="p-4 pb-2">
-        <h2 className="text-base font-semibold text-purple-200 border-b border-purple-500/20 pb-2">
-          Live Activity
-        </h2>
-        <p className="text-xs text-purple-400 mt-1">Click on any action to view player's board</p>
-      </div>
-
-      {/* Scrollable Content */}
-      <div className="flex-1 overflow-y-auto px-4 pb-4">
-      {loading ? (
-        <div className="text-center py-8">
-          <div className="text-xl mb-1">⏳</div>
-          <div className="text-xs text-purple-300">Loading activity...</div>
-        </div>
-      ) : feed.length === 0 ? (
-        <div className="text-center py-8">
-          <div className="text-3xl mb-2 opacity-50">📡</div>
-          <div className="text-xs text-gray-400">
-            No activity yet<br />
-            Be the first to make a move!
+  // Display loading state
+  if (loading) {
+    return (
+      <div className="bg-black/20 backdrop-blur-sm rounded-lg p-4 h-[400px]">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-bold text-white/90">Live Feed</h3>
+          <div className="flex items-center gap-1.5">
+            <div className="w-2 h-2 bg-yellow-500 rounded-full animate-pulse" />
+            <span className="text-xs text-white/60">Loading...</span>
           </div>
         </div>
-      ) : (
-        <div className="space-y-2">
-          {feed.map((item) => (
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-black/20 backdrop-blur-sm rounded-lg p-4">
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-lg font-bold text-white/90">Live Feed</h3>
+        <div className="flex items-center gap-1.5">
+          <div className={`w-2 h-2 rounded-full ${connected ? 'bg-green-500' : 'bg-red-500'}`} />
+          <span className="text-xs text-white/60">{connected ? 'Live' : 'Offline'}</span>
+        </div>
+      </div>
+      
+      <div className="space-y-2 max-h-[350px] overflow-y-auto">
+        {feed.length === 0 ? (
+          <p className="text-sm text-white/60 text-center py-8">
+            No recent actions yet...
+          </p>
+        ) : (
+          feed.map((item, index) => (
             <div
-              key={item.txSignature}
+              key={item.txSignature || index}
+              className="flex items-start gap-2 p-2 rounded hover:bg-white/5 transition-colors cursor-pointer group"
               onClick={() => handleActionClick(item)}
-              className={`p-3 bg-purple-900/10 rounded-xl border-l-4 text-xs text-purple-200 leading-relaxed transition-all cursor-pointer hover:bg-purple-900/20 ${
-                item.type === 'buy' ? 'border-green-400' :
-                item.type === 'steal' ? 'border-red-400' :
-                item.type === 'claim' ? 'border-blue-400' :
-                item.type === 'sell' ? 'border-orange-400' :
-                'border-amber-400'
-              }`}
             >
-              <div className="flex items-center gap-2">
-                {/* Profile Picture - Smaller */}
-                {item.playerAddress && (
-                  <div className="w-5 h-5 rounded-full overflow-hidden bg-purple-500/20 border border-purple-500/30 flex-shrink-0">
-                    {profiles[item.playerAddress]?.profilePicture ? (
-                      <img 
-                        src={profiles[item.playerAddress].profilePicture || ''} 
-                        alt="Profile"
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-purple-300 text-[9px] font-bold">
-                        {getDisplayName(item.playerAddress).slice(0, 2).toUpperCase()}
-                      </div>
-                    )}
-                  </div>
-                )}
-                
-                {/* Action Icon */}
-                <div className="flex-shrink-0">
-                  {getActionIcon(item.type === 'steal' ? 'steal_success' : item.type)}
-                </div>
-                
-                {/* Message */}
-                <div className="flex-1 min-w-0">
+              <div className="mt-0.5 text-white/70 group-hover:text-white/90 transition-colors">
+                {getActionIcon(item.type)}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm text-white/80 break-words group-hover:text-white/90 transition-colors">
                   {item.message}
-                </div>
+                </p>
+                <p className="text-xs text-white/40 mt-0.5">
+                  {new Date(item.timestamp).toLocaleTimeString()}
+                </p>
               </div>
             </div>
-          ))}
-        </div>
-      )}
+          ))
+        )}
       </div>
     </div>
   );

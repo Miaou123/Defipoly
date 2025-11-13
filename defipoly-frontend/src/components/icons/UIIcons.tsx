@@ -555,6 +555,62 @@ export const CollectionIcon: React.FC<IconProps> = ({ className = '', size = 24 
   </svg>
 );
 
+// Hexagon Badge with House for leaderboard rankings
+interface HexagonBadgeProps {
+  rank: 1 | 2 | 3;
+  size?: number;
+  className?: string;
+}
+
+export const HexagonBadge: React.FC<HexagonBadgeProps> = ({ rank, size = 32, className = '' }) => {
+  const colors = {
+    1: { fill: '#FFD700', stroke: '#B8860B', inner: '#FFEC8B' },
+    2: { fill: '#C0C0C0', stroke: '#808080', inner: '#E8E8E8' },
+    3: { fill: '#CD7F32', stroke: '#8B4513', inner: '#DEB887' }
+  };
+  const color = colors[rank];
+  
+  return (
+    <svg 
+      width={size} 
+      height={size} 
+      viewBox="0 0 32 32" 
+      fill="none"
+      className={className}
+    >
+      <defs>
+        <linearGradient id={`hex-gradient-${rank}`} x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor={color.inner} />
+          <stop offset="100%" stopColor={color.fill} />
+        </linearGradient>
+      </defs>
+      <path d="M16 2 L28 9 L28 23 L16 30 L4 23 L4 9 Z" 
+            fill={`url(#hex-gradient-${rank})`} 
+            stroke={color.stroke} 
+            strokeWidth="2" />
+      <path d="M16 6 L24 11 L24 21 L16 26 L8 21 L8 11 Z" 
+            fill="rgba(255,255,255,0.2)" 
+            stroke={color.stroke} 
+            strokeWidth="1" 
+            opacity="0.6" />
+      
+      {/* House Icon */}
+      <path d="M16 10 L11 14 L11 21 L21 21 L21 14 Z" 
+            fill={color.stroke} 
+            opacity="0.8" />
+      <path d="M16 10 L11 14 L11 21 L21 21 L21 14 Z" 
+            stroke="#ffffff" 
+            strokeWidth="1" 
+            fill="none" />
+      <rect x="14" y="17" width="4" height="4" fill="#ffffff" opacity="0.6" />
+      <path d="M16 10 L21 14 M16 10 L11 14" 
+            stroke="#ffffff" 
+            strokeWidth="1.5" 
+            strokeLinecap="round" />
+    </svg>
+  );
+};
+
 // ============================================
 // DEFAULT EXPORT (optional, for convenience)
 // ============================================
@@ -583,6 +639,7 @@ export default {
   GiftIcon,
   SwordIcon,
   CollectionIcon,
+  HexagonBadge,
   ACTION_ICONS,
   getActionIcon,
 };

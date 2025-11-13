@@ -46,11 +46,11 @@ const storage = multer.diskStorage({
 
 // File filter
 const fileFilter = (req, file, cb) => {
-  const allowedMimes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+  const allowedMimes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml'];
   if (allowedMimes.includes(file.mimetype)) {
     cb(null, true);
   } else {
-    cb(new Error('Invalid file type. Only JPEG, PNG, GIF and WebP are allowed.'), false);
+    cb(new Error('Invalid file type. Only JPEG, PNG, GIF, WebP and SVG are allowed.'), false);
   }
 };
 
@@ -88,6 +88,20 @@ const optimizeImage = async (req, res, next) => {
     
     const filePath = req.file.path;
     const filename = req.file.filename;
+    
+    // Skip optimization for SVG files
+    if (req.file.mimetype === 'image/svg+xml') {
+      const finalPath = path.join(finalDir, filename);
+      fs.renameSync(filePath, finalPath);
+      
+      req.file.path = finalPath;
+      const baseUrl = process.env.NODE_ENV === 'production' ? '' : 'http://localhost:3101';
+      req.file.url = `${baseUrl}${UPLOAD_URL_PREFIX}/${subDir}/${filename}`;
+      
+      console.log('SVG file moved to:', req.file.url);
+      return next();
+    }
+    
     const finalPath = path.join(finalDir, filename);
     
     console.log('Moving file from temp to final location:', { from: filePath, to: finalPath });

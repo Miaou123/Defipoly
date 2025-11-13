@@ -34,11 +34,13 @@ const uploadProfilePicture = [
           }
 
           // Delete old file if exists
-          if (row && row.profile_picture && row.profile_picture.startsWith(UPLOAD_URL_PREFIX)) {
-            const oldFilePath = row.profile_picture.replace(UPLOAD_URL_PREFIX, '');
+          if (row && row.profile_picture && row.profile_picture.includes('/uploads/')) {
+            const urlParts = row.profile_picture.split('/uploads/');
+            const oldFilePath = urlParts[urlParts.length - 1];
             const fullOldPath = path.join(process.env.UPLOAD_DIR || './uploads', oldFilePath);
             if (fs.existsSync(fullOldPath)) {
               fs.unlinkSync(fullOldPath);
+              console.log('Deleted old profile picture:', fullOldPath);
             }
           }
 
@@ -82,7 +84,7 @@ const uploadThemeBackground = [
         fileDetails: req.file
       });
 
-      const { wallet, themeType } = req.body;
+      const { wallet, themeType, oldBackgroundUrl } = req.body;
       
       if (!wallet) {
         console.error('No wallet address provided');
@@ -97,6 +99,28 @@ const uploadThemeBackground = [
       if (!req.file) {
         console.error('No file in request');
         return res.status(400).json({ error: 'No file uploaded' });
+      }
+
+      // Delete old theme background if exists
+      console.log('Checking old background URL:', oldBackgroundUrl);
+      console.log('UPLOAD_URL_PREFIX:', UPLOAD_URL_PREFIX);
+      
+      if (oldBackgroundUrl && oldBackgroundUrl.includes('/uploads/')) {
+        // Extract the file path more reliably
+        const urlParts = oldBackgroundUrl.split('/uploads/');
+        const oldFilePath = urlParts[urlParts.length - 1];
+        const fullOldPath = path.join(process.env.UPLOAD_DIR || './uploads', oldFilePath);
+        
+        console.log('Attempting to delete:', fullOldPath);
+        
+        if (fs.existsSync(fullOldPath)) {
+          fs.unlinkSync(fullOldPath);
+          console.log(`Deleted old ${themeType} background: ${fullOldPath}`);
+        } else {
+          console.log(`File not found: ${fullOldPath}`);
+        }
+      } else {
+        console.log('No old background to delete or invalid URL format');
       }
 
       const fileUrl = req.file.url;
@@ -119,22 +143,30 @@ const deleteUpload = async (req, res) => {
   try {
     const { wallet, fileUrl } = req.body;
     
+    console.log('Delete request:', { wallet, fileUrl });
+    
     if (!wallet || !fileUrl) {
       return res.status(400).json({ error: 'Wallet and file URL required' });
     }
 
     // Verify the file URL is from our uploads
-    if (!fileUrl.startsWith(UPLOAD_URL_PREFIX)) {
+    if (!fileUrl.includes('/uploads/')) {
       return res.status(400).json({ error: 'Invalid file URL' });
     }
 
-    // Extract file path
-    const filePath = fileUrl.replace(UPLOAD_URL_PREFIX, '');
+    // Extract file path more reliably (handles both /uploads/ and http://localhost:3101/uploads/)
+    const urlParts = fileUrl.split('/uploads/');
+    const filePath = urlParts[urlParts.length - 1];
     const fullPath = path.join(process.env.UPLOAD_DIR || './uploads', filePath);
+
+    console.log('Attempting to delete file:', fullPath);
 
     // Delete file if exists
     if (fs.existsSync(fullPath)) {
       fs.unlinkSync(fullPath);
+      console.log('File deleted successfully:', fullPath);
+    } else {
+      console.log('File not found:', fullPath);
     }
 
     res.json({ success: true, message: 'File deleted successfully' });
