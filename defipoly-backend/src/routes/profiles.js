@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { getProfile, updateProfile, getProfilesBatch } = require('../controllers/profileController');
+const { getProfile, updateProfile, getProfilesBatch, removeProfilePicture, updateThemePreferences } = require('../controllers/profileController');
 const { uploadProfilePicture, uploadThemeBackground, deleteUpload } = require('../controllers/uploadController');
 
 // GET /api/profile/:wallet
@@ -21,5 +21,11 @@ router.post('/upload/theme', uploadThemeBackground);
 
 // POST /api/profile/upload/delete
 router.post('/upload/delete', deleteUpload);
+
+// DELETE /api/profile/:wallet/picture
+router.delete('/:wallet/picture', removeProfilePicture);
+
+// POST /api/profile/themes
+router.post('/themes', updateThemePreferences);
 
 module.exports = router;

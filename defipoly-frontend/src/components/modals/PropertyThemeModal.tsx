@@ -1,9 +1,11 @@
 'use client';
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { X } from 'lucide-react';
+import { X, Home } from 'lucide-react';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { useNotification } from '@/contexts/NotificationContext';
+import { clearProfileCache, getProfile } from '@/utils/profileStorage';
+import { CornerSquare } from '../BoardHelpers';
 
 interface PropertyThemeModalProps {
   isOpen: boolean;
@@ -26,6 +28,57 @@ export function PropertyThemeModal({
   const { showSuccess, showError } = useNotification();
   const [customColor, setCustomColor] = useState('#9333ea');
   const [uploading, setUploading] = useState(false);
+  const [cornerSquareStyle, setCornerSquareStyle] = useState<'property' | 'profile'>('property');
+  const [currentProfilePicture, setCurrentProfilePicture] = useState<string | null>(null);
+  
+  // Load current user's profile picture for preview
+  useEffect(() => {
+    if (publicKey) {
+      getProfile(publicKey.toString())
+        .then(profile => {
+          setCurrentProfilePicture(profile.profilePicture);
+          setCornerSquareStyle(profile.cornerSquareStyle || 'property');
+        })
+        .catch(error => {
+          console.error('Error loading profile for preview:', error);
+        });
+    }
+  }, [publicKey]);
+  
+  // Save corner style to backend
+  const saveCornerStyle = async (style: 'property' | 'profile') => {
+    if (!publicKey) return;
+    
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3101'}/api/profile/themes`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          wallet: publicKey.toString(),
+          cornerSquareStyle: style,
+        }),
+      });
+      
+      if (response.ok) {
+        // Clear cache so main page picks up the new corner style
+        clearProfileCache(publicKey.toString());
+        // Trigger a profile update event
+        window.dispatchEvent(new CustomEvent('profileUpdated'));
+        showSuccess('Saved', 'Corner style preference saved');
+      } else {
+        showError('Failed', 'Failed to save corner style preference');
+      }
+    } catch (error) {
+      console.error('Error saving corner style:', error);
+      showError('Error', 'Error saving corner style');
+    }
+  };
+  
+  // Handle corner style change
+  const handleCornerStyleChange = (style: 'property' | 'profile') => {
+    setCornerSquareStyle(style);
+    saveCornerStyle(style);
+  };
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleCustomColorApply = async () => {
@@ -153,7 +206,8 @@ export function PropertyThemeModal({
           {/* Header */}
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-xl font-bold text-purple-100 flex items-center gap-2">
-              <span>🎨</span> Customize Property Cards
+              <Home size={20} className="text-purple-300" />
+              Customize Property Cards
             </h2>
             <button
               onClick={onClose}
@@ -162,6 +216,9 @@ export function PropertyThemeModal({
               <X size={20} />
             </button>
           </div>
+
+          {/* Separator Line */}
+          <div className="border-t border-purple-500/20 mb-6"></div>
           
           {/* Content Row */}
           <div className="grid grid-cols-2 gap-5 mb-4">
@@ -232,6 +289,59 @@ export function PropertyThemeModal({
                 }}
               >
                 Card
+              </div>
+            </div>
+          </div>
+
+          {/* Corner Square Customization */}
+          <div className="border-t border-purple-500/20 pt-6 mb-4">
+            <div className="text-sm font-semibold text-purple-200 mb-3">Corner Square Style</div>
+            <div className="grid grid-cols-2 gap-4">
+              {/* Property Card Style Option */}
+              <div 
+                onClick={() => handleCornerStyleChange('property')}
+                className={`cursor-pointer rounded-lg border-2 p-3 transition-all ${
+                  cornerSquareStyle === 'property' 
+                    ? 'border-purple-500 bg-purple-500/20' 
+                    : 'border-purple-500/30 bg-purple-800/10 hover:border-purple-500/50'
+                }`}
+              >
+                <div className="text-xs text-purple-200 mb-2 font-medium">Property Card</div>
+                <div 
+                  className="w-full aspect-square rounded border-2 border-purple-500/30"
+                  style={{
+                    background: customBackground 
+                      ? `url(${customBackground}) center/cover`
+                      : 'linear-gradient(135deg, rgba(147, 51, 234, 0.9), rgba(236, 72, 153, 0.7))'
+                  }}
+                />
+                {!customBackground && (
+                  <p className="text-[9px] text-purple-400 mt-1 text-center">No custom background set</p>
+                )}
+              </div>
+
+              {/* Profile Picture Style Option */}
+              <div 
+                onClick={() => handleCornerStyleChange('profile')}
+                className={`cursor-pointer rounded-lg border-2 p-3 transition-all ${
+                  cornerSquareStyle === 'profile' 
+                    ? 'border-purple-500 bg-purple-500/20' 
+                    : 'border-purple-500/30 bg-purple-800/10 hover:border-purple-500/50'
+                }`}
+              >
+                <div className="text-xs text-purple-200 mb-2 font-medium">Profile Picture</div>
+                <div className="w-full aspect-square">
+                  <CornerSquare 
+                    icon="🎲" 
+                    label="GO" 
+                    bgColor="#8b5cf6"
+                    profilePicture={currentProfilePicture}
+                    cornerSquareStyle="profile"
+                  />
+                </div>
+                {!currentProfilePicture && (
+                  <p className="text-[9px] text-purple-400 mt-1 text-center">No profile picture set</p>
+                )}
               </div>
             </div>
           </div>

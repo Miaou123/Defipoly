@@ -42,11 +42,42 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     }
   }, [publicKey]);
 
-  // Save themes to localStorage when they change
+  // Save themes to both backend and localStorage when they change
+  const saveThemeToBackend = async (themeData: any) => {
+    if (!publicKey) return;
+    
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3101'}/api/profile/themes`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          wallet: publicKey.toString(),
+          ...themeData,
+        }),
+      });
+      
+      if (!response.ok) {
+        console.error('Failed to save theme to backend:', response.statusText);
+      } else {
+        console.log('Theme saved to backend successfully');
+      }
+    } catch (error) {
+      console.error('Error saving theme to backend:', error);
+    }
+  };
+
   useEffect(() => {
     if (publicKey) {
       const walletKey = publicKey.toString();
       localStorage.setItem(`boardTheme_${walletKey}`, boardTheme);
+      
+      // Save to backend
+      saveThemeToBackend({ 
+        boardTheme,
+        propertyCardTheme,
+        customBoardBackground,
+        customPropertyCardBackground 
+      });
     }
   }, [boardTheme, publicKey]);
 
@@ -54,6 +85,14 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     if (publicKey) {
       const walletKey = publicKey.toString();
       localStorage.setItem(`propertyTheme_${walletKey}`, propertyCardTheme);
+      
+      // Save to backend
+      saveThemeToBackend({ 
+        boardTheme,
+        propertyCardTheme,
+        customBoardBackground,
+        customPropertyCardBackground 
+      });
     }
   }, [propertyCardTheme, publicKey]);
 
@@ -65,6 +104,14 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       } else {
         localStorage.removeItem(`customBoard_${walletKey}`);
       }
+      
+      // Save to backend
+      saveThemeToBackend({ 
+        boardTheme,
+        propertyCardTheme,
+        customBoardBackground,
+        customPropertyCardBackground 
+      });
     }
   }, [customBoardBackground, publicKey]);
 
@@ -76,6 +123,14 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       } else {
         localStorage.removeItem(`customProperty_${walletKey}`);
       }
+      
+      // Save to backend
+      saveThemeToBackend({ 
+        boardTheme,
+        propertyCardTheme,
+        customBoardBackground,
+        customPropertyCardBackground 
+      });
     }
   }, [customPropertyCardBackground, publicKey]);
 

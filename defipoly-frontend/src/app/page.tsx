@@ -23,6 +23,7 @@ export default function Home() {
   const [activeExplanationModal, setActiveExplanationModal] = useState<'buy' | 'sell' | 'shield' | 'steal' | null>(null);
   const [showActionBar, setShowActionBar] = useState(true);
   const [profilePicture, setProfilePicture] = useState<string | null>(null);
+  const [cornerSquareStyle, setCornerSquareStyle] = useState<'property' | 'profile'>('property');
 
   const handleBuyProceed = () => {
     console.log('User understood Buy mechanic, proceeding...');
@@ -49,7 +50,13 @@ export default function Home() {
     if (publicKey) {
       getProfile(publicKey.toString())
         .then(profile => {
+          console.log('🔍 [MAIN PAGE] Loaded profile for main game:', profile);
           setProfilePicture(profile.profilePicture);
+          setCornerSquareStyle(profile.cornerSquareStyle || 'property');
+          console.log('🔍 [MAIN PAGE] Set state:', {
+            profilePicture: profile.profilePicture,
+            cornerSquareStyle: profile.cornerSquareStyle || 'property'
+          });
         })
         .catch(error => {
           console.error('Error loading profile:', error);
@@ -60,6 +67,7 @@ export default function Home() {
         try {
           const updatedProfile = await getProfile(publicKey.toString());
           setProfilePicture(updatedProfile.profilePicture);
+          setCornerSquareStyle(updatedProfile.cornerSquareStyle || 'property');
         } catch (error) {
           console.error('Error updating profile:', error);
         }
@@ -96,7 +104,7 @@ export default function Home() {
 
         {/* CENTER: Board */}
         <div className="flex items-center justify-center overflow-hidden">
-          <Board onSelectProperty={setSelectedProperty} profilePicture={profilePicture} />
+          <Board onSelectProperty={setSelectedProperty} profilePicture={profilePicture} cornerSquareStyle={cornerSquareStyle} />
         </div>
         
         {/* RIGHT COLUMN: Profile/Wallet + Leaderboard + Live Feed */}

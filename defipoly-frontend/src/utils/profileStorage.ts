@@ -8,6 +8,11 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3
 export interface ProfileData {
   username: string | null;
   profilePicture: string | null;
+  cornerSquareStyle: 'property' | 'profile' | null;
+  boardTheme: string | null;
+  propertyCardTheme: string | null;
+  customBoardBackground: string | null;
+  customPropertyCardBackground: string | null;
   lastUpdated: number;
 }
 
@@ -38,6 +43,11 @@ export async function getProfile(address: string): Promise<ProfileData> {
       const profile: ProfileData = {
         username: data.username || null,
         profilePicture: data.profilePicture || null,
+        cornerSquareStyle: data.cornerSquareStyle || 'property',
+        boardTheme: data.boardTheme || 'dark',
+        propertyCardTheme: data.propertyCardTheme || 'dark',
+        customBoardBackground: data.customBoardBackground || null,
+        customPropertyCardBackground: data.customPropertyCardBackground || null,
         lastUpdated: data.updatedAt || 0,
       };
 
@@ -48,7 +58,16 @@ export async function getProfile(address: string): Promise<ProfileData> {
 
     // If 404, no profile exists yet
     if (response.status === 404) {
-      return { username: null, profilePicture: null, lastUpdated: 0 };
+      return { 
+        username: null, 
+        profilePicture: null, 
+        cornerSquareStyle: 'property',
+        boardTheme: 'dark',
+        propertyCardTheme: 'dark', 
+        customBoardBackground: null,
+        customPropertyCardBackground: null,
+        lastUpdated: 0 
+      };
     }
   } catch (error) {
     console.warn('API unavailable, using localStorage fallback:', error);
@@ -80,6 +99,11 @@ export async function getProfilesBatch(addresses: string[]): Promise<Record<stri
         profiles[address] = {
           username: profile.username || null,
           profilePicture: profile.profilePicture || null,
+          cornerSquareStyle: profile.cornerSquareStyle || 'property',
+          boardTheme: profile.boardTheme || 'dark',
+          propertyCardTheme: profile.propertyCardTheme || 'dark',
+          customBoardBackground: profile.customBoardBackground || null,
+          customPropertyCardBackground: profile.customPropertyCardBackground || null,
           lastUpdated: profile.updatedAt || 0,
         };
 
@@ -191,6 +215,133 @@ export async function setProfilePicture(address: string, base64Image: string): P
 }
 
 /**
+ * Set corner square style for a wallet address
+ */
+export async function setCornerSquareStyle(address: string, style: 'property' | 'profile'): Promise<boolean> {
+  try {
+    // Get current profile data
+    const currentProfile = await getProfile(address);
+    
+    const response = await fetch(`${API_BASE_URL}/api/profile`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        wallet: address,
+        username: currentProfile.username,
+        profilePicture: currentProfile.profilePicture,
+        cornerSquareStyle: style,
+      }),
+    });
+
+    if (response.ok) {
+      // Clear cache
+      profileCache.delete(address);
+      
+      // Also save to localStorage as backup
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(`corner_square_${address}`, style);
+        localStorage.setItem(`profile_updated_${address}`, Date.now().toString());
+      }
+      
+      return true;
+    }
+  } catch (error) {
+    console.error('Failed to save corner square style to API:', error);
+  }
+
+  // Fallback to localStorage only
+  if (typeof window !== 'undefined') {
+    localStorage.setItem(`corner_square_${address}`, style);
+    localStorage.setItem(`profile_updated_${address}`, Date.now().toString());
+  }
+  
+  return false;
+}
+
+/**
+ * Set theme preferences for a wallet address
+ */
+export async function setThemePreferences(address: string, themes: {
+  boardTheme?: string;
+  propertyCardTheme?: string;
+  customBoardBackground?: string | null;
+  customPropertyCardBackground?: string | null;
+}): Promise<boolean> {
+  try {
+    // Get current profile data
+    const currentProfile = await getProfile(address);
+    
+    const response = await fetch(`${API_BASE_URL}/api/profile`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        wallet: address,
+        username: currentProfile.username,
+        profilePicture: currentProfile.profilePicture,
+        cornerSquareStyle: currentProfile.cornerSquareStyle,
+        boardTheme: themes.boardTheme ?? currentProfile.boardTheme,
+        propertyCardTheme: themes.propertyCardTheme ?? currentProfile.propertyCardTheme,
+        customBoardBackground: themes.customBoardBackground ?? currentProfile.customBoardBackground,
+        customPropertyCardBackground: themes.customPropertyCardBackground ?? currentProfile.customPropertyCardBackground,
+      }),
+    });
+
+    if (response.ok) {
+      // Clear cache
+      profileCache.delete(address);
+      
+      // Also save to localStorage as backup
+      if (typeof window !== 'undefined') {
+        if (themes.boardTheme) localStorage.setItem(`boardTheme_${address}`, themes.boardTheme);
+        if (themes.propertyCardTheme) localStorage.setItem(`propertyTheme_${address}`, themes.propertyCardTheme);
+        if (themes.customBoardBackground !== undefined) {
+          if (themes.customBoardBackground) {
+            localStorage.setItem(`customBoard_${address}`, themes.customBoardBackground);
+          } else {
+            localStorage.removeItem(`customBoard_${address}`);
+          }
+        }
+        if (themes.customPropertyCardBackground !== undefined) {
+          if (themes.customPropertyCardBackground) {
+            localStorage.setItem(`customProperty_${address}`, themes.customPropertyCardBackground);
+          } else {
+            localStorage.removeItem(`customProperty_${address}`);
+          }
+        }
+        localStorage.setItem(`profile_updated_${address}`, Date.now().toString());
+      }
+      
+      return true;
+    }
+  } catch (error) {
+    console.error('Failed to save theme preferences to API:', error);
+  }
+
+  // Fallback to localStorage only
+  if (typeof window !== 'undefined') {
+    if (themes.boardTheme) localStorage.setItem(`boardTheme_${address}`, themes.boardTheme);
+    if (themes.propertyCardTheme) localStorage.setItem(`propertyTheme_${address}`, themes.propertyCardTheme);
+    if (themes.customBoardBackground !== undefined) {
+      if (themes.customBoardBackground) {
+        localStorage.setItem(`customBoard_${address}`, themes.customBoardBackground);
+      } else {
+        localStorage.removeItem(`customBoard_${address}`);
+      }
+    }
+    if (themes.customPropertyCardBackground !== undefined) {
+      if (themes.customPropertyCardBackground) {
+        localStorage.setItem(`customProperty_${address}`, themes.customPropertyCardBackground);
+      } else {
+        localStorage.removeItem(`customProperty_${address}`);
+      }
+    }
+    localStorage.setItem(`profile_updated_${address}`, Date.now().toString());
+  }
+  
+  return false;
+}
+
+/**
  * Remove profile picture
  */
 export async function removeProfilePicture(address: string): Promise<boolean> {
@@ -234,16 +385,35 @@ export async function removeProfilePicture(address: string): Promise<boolean> {
  */
 function getProfileFromLocalStorage(address: string): ProfileData {
   if (typeof window === 'undefined') {
-    return { username: null, profilePicture: null, lastUpdated: 0 };
+    return { 
+      username: null, 
+      profilePicture: null, 
+      cornerSquareStyle: 'property',
+      boardTheme: 'dark',
+      propertyCardTheme: 'dark',
+      customBoardBackground: null,
+      customPropertyCardBackground: null, 
+      lastUpdated: 0 
+    };
   }
 
   const username = localStorage.getItem(`username_${address}`);
   const profilePicture = localStorage.getItem(`pfp_${address}`);
+  const cornerSquareStyle = (localStorage.getItem(`corner_square_${address}`) || 'property') as 'property' | 'profile';
+  const boardTheme = localStorage.getItem(`boardTheme_${address}`) || 'dark';
+  const propertyCardTheme = localStorage.getItem(`propertyTheme_${address}`) || 'dark';
+  const customBoardBackground = localStorage.getItem(`customBoard_${address}`) || null;
+  const customPropertyCardBackground = localStorage.getItem(`customProperty_${address}`) || null;
   const lastUpdated = parseInt(localStorage.getItem(`profile_updated_${address}`) || '0');
 
   return {
     username,
     profilePicture,
+    cornerSquareStyle,
+    boardTheme,
+    propertyCardTheme,
+    customBoardBackground,
+    customPropertyCardBackground,
     lastUpdated,
   };
 }

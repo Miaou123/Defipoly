@@ -186,7 +186,7 @@ async function storeTransactionData(data) {
         data.txSignature,  // ✅ Correct field name
         data.actionType,
         data.playerAddress,
-        data.propertyId || null,
+        data.propertyId !== undefined ? data.propertyId : null,
         data.targetAddress || null,
         data.amount || null,
         data.slots || null,

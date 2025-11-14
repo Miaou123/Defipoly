@@ -27,9 +27,10 @@ interface PropertyCardProps {
   spectatorMode?: boolean;
   spectatorWallet?: string;
   theme?: PropertyCardTheme;
+  customPropertyCardBackground?: string | null;
 }
 
-export function PropertyCard({ propertyId, onSelect, spectatorMode = false, spectatorWallet, theme }: PropertyCardProps) {
+export function PropertyCard({ propertyId, onSelect, spectatorMode = false, spectatorWallet, theme, customPropertyCardBackground }: PropertyCardProps) {
   const { connected, publicKey } = useWallet();
   const { getOwnershipData, getPropertyData, program } = useDefipoly();
   const { refreshKey } = usePropertyRefresh();
@@ -196,9 +197,10 @@ export function PropertyCard({ propertyId, onSelect, spectatorMode = false, spec
 
   // Get background based on theme with fallback
   const getCardBackground = () => {
-    // Check for custom theme and use custom background from context
-    if (cardTheme.id === 'custom' && themeContext.customPropertyCardBackground) {
-      return `url(${themeContext.customPropertyCardBackground}) center/cover`;
+    // Check for custom background from props first, then from context
+    const customBackground = customPropertyCardBackground || (cardTheme.id === 'custom' && themeContext.customPropertyCardBackground);
+    if (customBackground) {
+      return `url(${customBackground}) center/cover`;
     }
     
     if (cardTheme.id === 'default') {
@@ -216,7 +218,7 @@ export function PropertyCard({ propertyId, onSelect, spectatorMode = false, spec
   // Get additional style properties with error handling
   const getStyleProps = () => {
     try {
-      const isCustomBg = themeContext.propertyCardTheme === 'custom' && themeContext.customPropertyCardBackground;
+      const isCustomBg = customPropertyCardBackground || (themeContext.propertyCardTheme === 'custom' && themeContext.customPropertyCardBackground);
       
       const styles: React.CSSProperties = {
         transition: 'all 0.3s ease',
@@ -224,7 +226,8 @@ export function PropertyCard({ propertyId, onSelect, spectatorMode = false, spec
 
       // Use either background shorthand OR individual properties, never mix
       if (isCustomBg) {
-        styles.background = `url(${themeContext.customPropertyCardBackground}) center/cover no-repeat`;
+        const backgroundImage = customPropertyCardBackground || themeContext.customPropertyCardBackground;
+        styles.background = `url(${backgroundImage}) center/cover no-repeat`;
       } else {
         styles.background = getCardBackground();
       }

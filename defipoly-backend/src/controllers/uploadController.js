@@ -126,11 +126,61 @@ const uploadThemeBackground = [
       const fileUrl = req.file.url;
       console.log('File uploaded successfully:', fileUrl);
       
-      res.json({ 
-        success: true, 
-        backgroundUrl: fileUrl,
-        message: `${themeType} background uploaded successfully`
-      });
+      // Update the database with the new theme settings
+      const db = getDatabase();
+      const updatedAt = Date.now();
+      
+      if (themeType === 'board') {
+        // Update board theme settings
+        db.run(
+          `INSERT INTO profiles (wallet_address, board_theme, custom_board_background, updated_at)
+           VALUES (?, ?, ?, ?)
+           ON CONFLICT(wallet_address) 
+           DO UPDATE SET 
+             board_theme = ?,
+             custom_board_background = ?,
+             updated_at = ?`,
+          [wallet, 'custom', fileUrl, updatedAt, 'custom', fileUrl, updatedAt],
+          (err) => {
+            if (err) {
+              console.error('Database error updating board theme:', err);
+              return res.status(500).json({ error: 'Failed to save board theme to database' });
+            }
+            
+            console.log('Board theme saved to database:', fileUrl);
+            res.json({ 
+              success: true, 
+              backgroundUrl: fileUrl,
+              message: `${themeType} background uploaded successfully`
+            });
+          }
+        );
+      } else if (themeType === 'card') {
+        // Update property card theme settings
+        db.run(
+          `INSERT INTO profiles (wallet_address, property_card_theme, custom_property_card_background, updated_at)
+           VALUES (?, ?, ?, ?)
+           ON CONFLICT(wallet_address) 
+           DO UPDATE SET 
+             property_card_theme = ?,
+             custom_property_card_background = ?,
+             updated_at = ?`,
+          [wallet, 'custom', fileUrl, updatedAt, 'custom', fileUrl, updatedAt],
+          (err) => {
+            if (err) {
+              console.error('Database error updating property card theme:', err);
+              return res.status(500).json({ error: 'Failed to save property card theme to database' });
+            }
+            
+            console.log('Property card theme saved to database:', fileUrl);
+            res.json({ 
+              success: true, 
+              backgroundUrl: fileUrl,
+              message: `${themeType} background uploaded successfully`
+            });
+          }
+        );
+      }
     } catch (error) {
       console.error('Upload error details:', error);
       res.status(500).json({ error: error.message || 'Upload failed' });

@@ -20,7 +20,13 @@ export default function SpectatorPage() {
       
       try {
         const profiles = await getProfilesBatch([walletAddress]);
-        setProfile(profiles[walletAddress] || null);
+        const profileData = profiles[walletAddress] || null;
+        console.log('🔍 [SPECTATOR] Fetched profile data for', walletAddress, ':', profileData);
+        console.log('🔍 [SPECTATOR] Custom backgrounds:', {
+          customBoardBackground: profileData?.customBoardBackground,
+          customPropertyCardBackground: profileData?.customPropertyCardBackground
+        });
+        setProfile(profileData);
       } catch (error) {
         console.error('Error fetching profile:', error);
       } finally {
@@ -58,6 +64,15 @@ export default function SpectatorPage() {
     );
   }
 
+  console.log('🎯 [SPECTATOR] Passing to Board component:', {
+    profilePicture: profile?.profilePicture || null,
+    cornerSquareStyle: profile?.cornerSquareStyle || 'property',
+    boardTheme: profile?.boardTheme || 'dark',
+    propertyCardTheme: profile?.propertyCardTheme || 'dark',
+    customBoardBackground: profile?.customBoardBackground || null,
+    customPropertyCardBackground: profile?.customPropertyCardBackground || null
+  });
+
   return (
     <div className="min-h-screen p-6 relative z-10">
       <div className="max-w-7xl mx-auto">
@@ -65,6 +80,12 @@ export default function SpectatorPage() {
           onSelectProperty={() => {}} // No property actions in spectator mode
           spectatorMode={true}
           spectatorWallet={walletAddress}
+          profilePicture={profile?.profilePicture || null}
+          cornerSquareStyle={profile?.cornerSquareStyle || 'property'}
+          boardTheme={profile?.boardTheme || 'dark'}
+          propertyCardTheme={profile?.propertyCardTheme || 'dark'}
+          customBoardBackground={profile?.customBoardBackground || null}
+          customPropertyCardBackground={profile?.customPropertyCardBackground || null}
         />
       </div>
     </div>

@@ -258,11 +258,20 @@ export function ProfileCustomization({
             <div className="relative group">
               <div 
                 className="w-full aspect-square rounded border-2 border-purple-500/25 overflow-hidden cursor-pointer"
-                style={{
-                  background: getBoardPreviewBackground(),
-                  backgroundSize: 'cover',
-                  backgroundPosition: 'center'
-                }}
+                style={(() => {
+                  const bgValue = getBoardPreviewBackground();
+                  if (bgValue.startsWith('url(')) {
+                    return {
+                      backgroundImage: bgValue,
+                      backgroundSize: 'cover',
+                      backgroundPosition: 'center'
+                    };
+                  } else {
+                    return {
+                      background: bgValue
+                    };
+                  }
+                })()}
                 onClick={() => setShowBoardThemeModal(true)}
               />
               {/* Hover Overlay */}
@@ -281,14 +290,20 @@ export function ProfileCustomization({
             <div className="relative group">
               <div 
                 className="w-full aspect-square rounded border-2 border-purple-500/25 overflow-hidden cursor-pointer"
-                style={{
-                  backgroundImage: propertyCardTheme === 'custom' && customPropertyCardBackground 
-                    ? `url(${customPropertyCardBackground})` 
-                    : getPropertyPreviewBackgroundGradient(),
-                  backgroundSize: 'cover',
-                  backgroundPosition: 'center',
-                  backgroundRepeat: 'no-repeat',
-                }}
+                style={(() => {
+                  if (propertyCardTheme === 'custom' && customPropertyCardBackground) {
+                    return {
+                      backgroundImage: `url(${customPropertyCardBackground})`,
+                      backgroundSize: 'cover',
+                      backgroundPosition: 'center',
+                      backgroundRepeat: 'no-repeat',
+                    };
+                  } else {
+                    return {
+                      background: getPropertyPreviewBackgroundGradient(),
+                    };
+                  }
+                })()}
                 onClick={() => setShowPropertyThemeModal(true)}
               />
               {/* Hover Overlay */}

@@ -10,10 +10,18 @@ interface CornerSquareProps {
   bgColor: string;
   theme?: PropertyCardTheme;
   profilePicture?: string | null;
+  cornerSquareStyle?: 'property' | 'profile';
 }
 
-export function CornerSquare({ icon, label, bgColor, theme, profilePicture }: CornerSquareProps) {
+export function CornerSquare({ icon, label, bgColor, theme, profilePicture, cornerSquareStyle = 'property' }: CornerSquareProps) {
   const themeContext = useTheme();
+  
+  // Debug logging for corner squares
+  console.log('🏠 [CORNER] CornerSquare props:', {
+    cornerSquareStyle,
+    profilePicture,
+    hasProfilePic: !!profilePicture
+  });
   
   // Default theme if not provided
   const cardTheme = theme || {
@@ -64,15 +72,18 @@ export function CornerSquare({ icon, label, bgColor, theme, profilePicture }: Co
       }}
     >
       {/* Card content */}
-      {profilePicture ? (
+      {cornerSquareStyle === 'profile' && profilePicture ? (
         // Profile picture display - just the image, no text
         <img 
           src={profilePicture} 
           alt="Player" 
           className="w-full h-full object-cover"
         />
+      ) : cornerSquareStyle === 'property' ? (
+        // Property card style - just the background, no content
+        <div className="w-full h-full" />
       ) : (
-        // Default display - original design with dice and text
+        // Default display - original design with dice and text (fallback)
         <div className="relative flex flex-col h-full">
           {/* Top color bar */}
           <div 
