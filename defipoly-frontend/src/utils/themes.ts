@@ -75,6 +75,14 @@ export const PROPERTY_CARD_THEMES: PropertyCardTheme[] = [
     accent: 'text-gray-700'
   },
   {
+    id: 'dark',
+    name: 'Dark Mode',
+    background: 'linear-gradient(135deg, rgba(31, 41, 55, 0.95), rgba(17, 24, 39, 0.9))',
+    border: 'border border-gray-600/50',
+    textColor: 'text-white',
+    accent: 'text-gray-300'
+  },
+  {
     id: 'custom',
     name: 'Custom',
     background: 'bg-white/10 backdrop-blur-sm',

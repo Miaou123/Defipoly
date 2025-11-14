@@ -200,6 +200,33 @@ export const XCircleIcon: React.FC<IconProps> = ({ className = '', size = 24 }) 
   </svg>
 );
 
+
+// RSS Feed icon for Live Feed
+export const FeedIcon: React.FC<IconProps> = ({ className = '', size = 24 }) => (
+  <svg 
+    width={size} 
+    height={size} 
+    viewBox="0 0 24 24" 
+    fill="none" 
+    xmlns="http://www.w3.org/2000/svg"
+    className={className}
+  >
+    <circle cx="6" cy="18" r="2" fill="currentColor"/>
+    <path 
+      d="M4 12a8 8 0 0 1 8 8" 
+      stroke="currentColor" 
+      strokeWidth="2"
+      strokeLinecap="round"
+    />
+    <path 
+      d="M4 6a14 14 0 0 1 14 14" 
+      stroke="currentColor" 
+      strokeWidth="2"
+      strokeLinecap="round"
+    />
+  </svg>
+);
+
 export const SparklesIcon: React.FC<IconProps> = ({ className = '', size = 24 }) => (
   <svg 
     width={size} 

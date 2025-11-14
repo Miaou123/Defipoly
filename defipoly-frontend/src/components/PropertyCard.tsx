@@ -197,10 +197,23 @@ export function PropertyCard({ propertyId, onSelect, spectatorMode = false, spec
 
   // Get background based on theme with fallback
   const getCardBackground = () => {
-    // Check for custom background from props first, then from context
-    const customBackground = customPropertyCardBackground || (cardTheme.id === 'custom' && themeContext.customPropertyCardBackground);
-    if (customBackground) {
-      return `url(${customBackground}) center/cover`;
+    // In spectator mode, ONLY use the props provided, never fall back to theme context
+    if (spectatorMode) {
+      // If custom background is explicitly provided, use it
+      if (customPropertyCardBackground) {
+        return `url(${customPropertyCardBackground}) center/cover`;
+      }
+      // Otherwise use the theme's default background, NOT the context's custom background
+      if (cardTheme.id === 'custom') {
+        // For custom theme without a custom background, use dark theme as default
+        return `linear-gradient(to bottom right, rgba(31, 41, 55, 0.95), rgba(17, 24, 39, 0.9))`;
+      }
+    } else {
+      // In normal mode, check for custom background from props first, then from context
+      const customBackground = customPropertyCardBackground || (cardTheme.id === 'custom' && themeContext.customPropertyCardBackground);
+      if (customBackground) {
+        return `url(${customBackground}) center/cover`;
+      }
     }
     
     if (cardTheme.id === 'default') {
@@ -218,7 +231,10 @@ export function PropertyCard({ propertyId, onSelect, spectatorMode = false, spec
   // Get additional style properties with error handling
   const getStyleProps = () => {
     try {
-      const isCustomBg = customPropertyCardBackground || (themeContext.propertyCardTheme === 'custom' && themeContext.customPropertyCardBackground);
+      // In spectator mode, only check props, never theme context
+      const isCustomBg = spectatorMode 
+        ? customPropertyCardBackground !== null && customPropertyCardBackground !== undefined
+        : (customPropertyCardBackground || (themeContext.propertyCardTheme === 'custom' && themeContext.customPropertyCardBackground));
       
       const styles: React.CSSProperties = {
         transition: 'all 0.3s ease',
@@ -226,7 +242,10 @@ export function PropertyCard({ propertyId, onSelect, spectatorMode = false, spec
 
       // Use either background shorthand OR individual properties, never mix
       if (isCustomBg) {
-        const backgroundImage = customPropertyCardBackground || themeContext.customPropertyCardBackground;
+        // In spectator mode, only use the provided custom background
+        const backgroundImage = spectatorMode 
+          ? customPropertyCardBackground 
+          : (customPropertyCardBackground || themeContext.customPropertyCardBackground);
         styles.background = `url(${backgroundImage}) center/cover no-repeat`;
       } else {
         styles.background = getCardBackground();

@@ -1,9 +1,8 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import { getProfilesBatch, ProfileData } from '@/utils/profileStorage';
-import { TrophyIcon, HexagonBadge } from './icons/UIIcons';
-import { useWebSocket } from '@/contexts/WebSocketContext';
+import { TrophyIcon } from './icons/UIIcons';
 
 interface LeaderboardEntry {
   rank: number;
@@ -29,19 +28,16 @@ interface LeaderboardData {
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3101';
 
 export function Leaderboard() {
-  const { socket, connected } = useWebSocket();
   const [leaderboardData, setLeaderboardData] = useState<LeaderboardData | null>(null);
   const [profiles, setProfiles] = useState<Record<string, ProfileData>>({});
   const [loading, setLoading] = useState(true);
-  const initialLoadDone = useRef(false);
 
-  // Initial fetch (only once)
   useEffect(() => {
-    if (initialLoadDone.current) return;
-
-    const fetchInitialLeaderboard = async () => {
+    const fetchLeaderboard = async () => {
       setLoading(true);
       try {
+        console.log('🏆 Fetching leaderboard from backend...');
+        
         const response = await fetch(`${API_BASE_URL}/api/leaderboard?limit=50`);
         
         if (!response.ok) {
@@ -49,6 +45,8 @@ export function Leaderboard() {
         }
         
         const data: LeaderboardData = await response.json();
+        
+        console.log(`🏆 Found ${data.leaderboard.length} players`);
         setLeaderboardData(data);
         
         // Fetch profiles for all wallet addresses
@@ -57,67 +55,21 @@ export function Leaderboard() {
           const profilesData = await getProfilesBatch(walletAddresses);
           setProfiles(profilesData);
         }
-        
-        initialLoadDone.current = true;
       } catch (error) {
         console.error('❌ Error fetching leaderboard:', error);
         setLeaderboardData(null);
-        initialLoadDone.current = true;
       } finally {
         setLoading(false);
       }
     };
 
-    fetchInitialLeaderboard();
+    fetchLeaderboard();
+    
+    // Refresh every 30 seconds
+    const interval = setInterval(fetchLeaderboard, 30000);
+    
+    return () => clearInterval(interval);
   }, []);
-
-  // WebSocket event listeners for real-time updates
-  useEffect(() => {
-    if (!socket || !connected) return;
-
-    const handleLeaderboardChanged = async (data: any) => {
-      console.log('🏆 Leaderboard updated via WebSocket:', data);
-      
-      if (data.topPlayers && Array.isArray(data.topPlayers)) {
-        // Convert backend format to frontend format
-        const formattedLeaderboard = data.topPlayers.map((player: any) => ({
-          rank: player.rank,
-          walletAddress: player.walletAddress,
-          displayName: `${player.walletAddress.slice(0, 4)}...${player.walletAddress.slice(-4)}`,
-          leaderboardScore: player.leaderboardScore,
-          totalEarned: player.totalEarned || 0,
-          propertiesBought: player.propertiesBought || 0,
-          successfulSteals: player.successfulSteals || 0,
-          completeSets: player.completeSets || 0,
-          shieldsActivated: player.shieldsActivated || 0
-        }));
-
-        setLeaderboardData({
-          leaderboard: formattedLeaderboard,
-          pagination: {
-            limit: formattedLeaderboard.length,
-            offset: 0,
-            count: formattedLeaderboard.length
-          }
-        });
-
-        // Fetch profiles for any new addresses
-        const walletAddresses = formattedLeaderboard.map((entry: any) => entry.walletAddress);
-        const newAddresses = walletAddresses.filter(addr => !profiles[addr]);
-        
-        if (newAddresses.length > 0) {
-          const profilesData = await getProfilesBatch(newAddresses);
-          setProfiles(prev => ({ ...prev, ...profilesData }));
-        }
-      }
-    };
-
-    socket.on('leaderboard-changed', handleLeaderboardChanged);
-
-    return () => {
-      socket.off('leaderboard-changed', handleLeaderboardChanged);
-    };
-  }, [socket, connected, profiles]);
 
   const formatAddress = (address: string) => {
     return `${address.slice(0, 4)}...${address.slice(-4)}`;
@@ -141,7 +93,7 @@ export function Leaderboard() {
   };
 
   return (
-    <div className="bg-purple-900/8 backdrop-blur-xl rounded-2xl border border-purple-500/20 max-h-[400px] overflow-hidden flex flex-col">
+    <div className="bg-purple-900/8 backdrop-blur-xl rounded-2xl border border-purple-500/20 h-full overflow-hidden flex flex-col">
       {/* Header */}
       <div className="p-4 pb-2">
         <div className="flex items-center justify-between">
@@ -184,14 +136,10 @@ export function Leaderboard() {
                   }`}
                 >
                   {/* Rank */}
-                  <div className="w-6 flex justify-center items-center">
-                    {isTop3 ? (
-                      <HexagonBadge rank={leader.rank as 1 | 2 | 3} size={24} />
-                    ) : (
-                      <div className="text-xs font-bold text-purple-400">
-                        #{leader.rank}
-                      </div>
-                    )}
+                  <div className={`text-xs font-bold w-6 text-center ${
+                    isTop3 ? 'text-yellow-400' : 'text-purple-400'
+                  }`}>
+                    {medal || `#${leader.rank}`}
                   </div>
                   
                   {/* Profile Picture */}

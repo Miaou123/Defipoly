@@ -5,7 +5,7 @@ import { Portfolio } from '@/components/Portfolio';
 import { Leaderboard } from '@/components/Leaderboard';
 import { LiveFeed } from '@/components/LiveFeed';
 import { PropertyModal } from '@/components/property-modal';
-import { SideHeader } from '@/components/SideHeader';
+import { ProfileWallet } from '@/components/ProfileWallet';
 import { 
   BuyPropertyExplanationModal,
   SellPropertyExplanationModal,
@@ -88,12 +88,16 @@ export default function Home() {
       {/* Main grid layout - fixed height, no scrolling */}
       <div className="grid grid-cols-1 xl:grid-cols-[minmax(320px,400px)_minmax(800px,1fr)_minmax(320px,400px)] gap-6 p-4 h-full w-full mx-auto">
         {/* LEFT COLUMN: Logo + Portfolio */}
-        <div className="flex flex-col gap-4 overflow-hidden">
+        <div className="flex flex-col gap-2 overflow-hidden">
           {/* Logo at top of left column */}
-          <div className="flex items-center gap-3 rounded-xl px-4 py-3 shadow-xl flex-shrink-0">
-            <div className="text-2xl">🎲</div>
+          <div className="flex items-center gap-3 rounded-xl px-4 flex-shrink-0">
+            <img 
+              src="/logo.svg" 
+              alt="Defipoly Logo" 
+              className="w-12 h-12 object-contain"
+            />
             <div>
-              <h1 className="text-lg font-bold text-purple-100">Defipoly</h1>
+              <h1 className="text-2xl font-bold text-purple-100">Defipoly</h1>
             </div>
           </div>
           
@@ -108,18 +112,27 @@ export default function Home() {
         </div>
         
         {/* RIGHT COLUMN: Profile/Wallet + Leaderboard + Live Feed */}
-        <div className="flex flex-col gap-4 overflow-hidden">
+        <div className="flex flex-col gap-2 overflow-hidden">
           {/* Profile & Wallet at top of right column */}
           <div className="flex-shrink-0">
-            <SideHeader />
+            <ProfileWallet />
           </div>
           
-          <div className="flex-1 overflow-auto space-y-4 pr-2">
-            <Leaderboard />
-            <LiveFeed />
+          {/* Fixed height container - no scrolling */}
+          <div className="flex-1 flex flex-col gap-4 overflow-hidden">
+            {/* Leaderboard - 60% of space */}
+            <div className="h-[55%]">
+              <Leaderboard />
+            </div>
+            
+            {/* Live Feed - 40% of space */}
+            <div className="h-[43%]">
+              <LiveFeed />
+            </div>
           </div>
         </div>
       </div>
+
 
       <PropertyModal 
         propertyId={selectedProperty}

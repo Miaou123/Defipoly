@@ -283,13 +283,17 @@ export default function ProfilePage() {
     <div className="min-h-screen relative z-10 flex flex-col">
       {/* Top Bar with Defipoly and Back Button */}
       <div className="w-full px-4 py-3 flex items-center justify-between flex-shrink-0">
-        {/* Defipoly Logo - Left */}
-        <div className="flex items-center gap-3">
-          <div className="text-2xl">🎲</div>
-          <div>
-            <h1 className="text-lg font-bold text-purple-100">Defipoly</h1>
+          {/* Logo at top of left column */}
+          <div className="flex items-center gap-3 rounded-xl px-4 flex-shrink-0">
+            <img 
+              src="/logo.svg" 
+              alt="Defipoly Logo" 
+              className="w-12 h-12 object-contain"
+            />
+            <div>
+              <h1 className="text-2xl font-bold text-purple-100">Defipoly</h1>
+            </div>
           </div>
-        </div>
 
         {/* Back Button - Right */}
         <button

@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { getPropertyById } from '@/utils/constants';
 import { getProfilesBatch, ProfileData } from '@/utils/profileStorage';
-import { getActionIcon } from './icons/UIIcons';
+import { getActionIcon, FeedIcon } from './icons/UIIcons';
 import { useWebSocket } from '@/contexts/WebSocketContext';
 
 interface FeedItem {
@@ -319,56 +319,62 @@ export function LiveFeed() {
     };
   }, [socket, connected]); // Simplified dependencies
 
-  // Display loading state
-  if (loading) {
-    return (
-      <div className="bg-black/20 backdrop-blur-sm rounded-lg p-4 h-[400px]">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-bold text-white/90">Live Feed</h3>
+  return (
+    <div className="bg-purple-900/8 backdrop-blur-xl rounded-2xl border border-purple-500/20 h-full flex flex-col overflow-hidden">
+      {/* Header - matching Leaderboard/Portfolio style - NON-SCROLLABLE */}
+      <div className="p-4 pb-2">
+        <div className="flex items-center justify-between">
+          <div>
+            <div className="flex items-center gap-2 border-b border-purple-500/20 pb-2">
+              <FeedIcon size={20} className="text-white" />
+              <h2 className="text-lg font-bold text-white">Live Feed</h2>
+            </div>
+            <p className="text-xs text-purple-400 mt-1">Click on an action to see the player's board</p>
+          </div>
           <div className="flex items-center gap-1.5">
-            <div className="w-2 h-2 bg-yellow-500 rounded-full animate-pulse" />
-            <span className="text-xs text-white/60">Loading...</span>
+            <div className={`w-2 h-2 rounded-full ${connected ? 'bg-green-500' : 'bg-red-500'}`} />
+            <span className="text-xs text-purple-400">{connected ? 'Live' : 'Offline'}</span>
           </div>
         </div>
       </div>
-    );
-  }
 
-  return (
-    <div className="bg-black/20 backdrop-blur-sm rounded-lg p-4">
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-bold text-white/90">Live Feed</h3>
-        <div className="flex items-center gap-1.5">
-          <div className={`w-2 h-2 rounded-full ${connected ? 'bg-green-500' : 'bg-red-500'}`} />
-          <span className="text-xs text-white/60">{connected ? 'Live' : 'Offline'}</span>
-        </div>
-      </div>
-      
-      <div className="space-y-2 max-h-[350px] overflow-y-auto">
-        {feed.length === 0 ? (
-          <p className="text-sm text-white/60 text-center py-8">
-            No recent actions yet...
-          </p>
-        ) : (
-          feed.map((item, index) => (
-            <div
-              key={item.txSignature || index}
-              className="flex items-start gap-2 p-2 rounded hover:bg-white/5 transition-colors cursor-pointer group"
-              onClick={() => handleActionClick(item)}
-            >
-              <div className="mt-0.5 text-white/70 group-hover:text-white/90 transition-colors">
-                {getActionIcon(item.type)}
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm text-white/80 break-words group-hover:text-white/90 transition-colors">
-                  {item.message}
-                </p>
-                <p className="text-xs text-white/40 mt-0.5">
-                  {new Date(item.timestamp).toLocaleTimeString()}
-                </p>
-              </div>
+      {/* Scrollable Content - matches Portfolio structure */}
+      <div className="flex-1 overflow-y-auto px-4 pb-6">
+        {loading ? (
+          <div className="text-center py-8">
+            <div className="text-xl mb-1">⏳</div>
+            <div className="text-xs text-purple-300">Loading activity...</div>
+          </div>
+        ) : feed.length === 0 ? (
+          <div className="text-center py-8">
+            <div className="text-3xl mb-2 opacity-50">📡</div>
+            <div className="text-xs text-gray-400">
+              No activity yet<br />
+              Be the first to make a move!
             </div>
-          ))
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {feed.map((item, index) => (
+              <div
+                key={item.txSignature || index}
+                onClick={() => handleActionClick(item)}
+                className="flex items-start gap-2 p-2 rounded-lg bg-white/[0.01] hover:bg-white/[0.05] transition-all cursor-pointer group"
+              >
+                <div className="mt-0.5 text-purple-400 group-hover:text-purple-300 transition-colors">
+                  {getActionIcon(item.type)}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm text-purple-100 break-words group-hover:text-white transition-colors">
+                    {item.message}
+                  </p>
+                  <p className="text-xs text-purple-500 mt-0.5">
+                    {new Date(item.timestamp).toLocaleTimeString()}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
         )}
       </div>
     </div>
