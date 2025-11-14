@@ -48,6 +48,7 @@ export default function ProfilePage() {
   const [activities, setActivities] = useState<Activity[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploadingPicture, setUploadingPicture] = useState(false);
+  const [leaderboardRank, setLeaderboardRank] = useState<number | null>(null);
   const [stats, setStats] = useState<PlayerStats>({
     walletAddress: '',
     totalActions: 0,
@@ -121,6 +122,22 @@ export default function ProfilePage() {
         }
         const actionsData = await actionsResponse.json();
         console.log('📦 Received actions:', actionsData.actions?.length || 0);
+        
+        // Fetch leaderboard to get user's rank
+        try {
+          const leaderboardResponse = await fetch(`${API_BASE_URL}/api/leaderboard?limit=100`);
+          if (leaderboardResponse.ok) {
+            const leaderboardData = await leaderboardResponse.json();
+            const userEntry = leaderboardData.leaderboard.find(
+              (entry: any) => entry.walletAddress === walletAddress
+            );
+            if (userEntry) {
+              setLeaderboardRank(userEntry.rank);
+            }
+          }
+        } catch (error) {
+          console.error('Error fetching leaderboard rank:', error);
+        }
         
         // Set stats
         setStats({
@@ -341,37 +358,54 @@ export default function ProfilePage() {
               </h2>
               
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                {/* Leaderboard Rank */}
+                <div className="text-center p-3 bg-purple-900/20 rounded-xl">
+                  <div className="text-xs text-purple-300 mb-1 font-semibold">Leaderboard Rank</div>
+                  <div className="text-xl font-bold text-yellow-400">
+                    {leaderboardRank ? `#${leaderboardRank}` : 'N/A'}
+                  </div>
+                </div>
+                
                 <div className="text-center p-3 bg-purple-900/20 rounded-xl">
                   <div className="text-xs text-purple-300 mb-1 font-semibold">Total Slots</div>
                   <div className="text-xl font-bold text-purple-100">{stats.totalSlotsOwned}</div>
                 </div>
+                
                 <div className="text-center p-3 bg-purple-900/20 rounded-xl">
                   <div className="text-xs text-purple-300 mb-1 font-semibold">Properties</div>
                   <div className="text-xl font-bold text-purple-100">{stats.propertiesBought}</div>
                 </div>
+                
                 <div className="text-center p-3 bg-purple-900/20 rounded-xl">
                   <div className="text-xs text-purple-300 mb-1 font-semibold">Completed Sets</div>
                   <div className="text-xl font-bold text-purple-100">{stats.completedSets}</div>
                 </div>
+                
+                {/* Steals - side by side with total */}
                 <div className="text-center p-3 bg-purple-900/20 rounded-xl">
                   <div className="text-xs text-purple-300 mb-1 font-semibold">Steals</div>
-                  <div className="text-xl font-bold text-purple-100">{stats.successfulSteals + stats.failedSteals}</div>
-                  <div className="text-[10px] text-purple-400 mt-0.5">
-                    <span className="text-red-400">{stats.failedSteals}</span>
-                    {' / '}
-                    <span className="text-green-400">{stats.successfulSteals}</span>
+                  <div className="flex items-center justify-center gap-2">
+                    <div className="text-xl font-bold text-purple-100">{stats.successfulSteals + stats.failedSteals}</div>
+                    <div className="text-[10px] text-purple-400">
+                      <span className="text-green-400">{stats.successfulSteals}</span>
+                      <span className="text-purple-500">/</span>
+                      <span className="text-red-400">{stats.failedSteals}</span>
+                    </div>
                   </div>
                 </div>
-                <div className="text-center p-3 bg-purple-900/20 rounded-xl md:col-span-2">
+                
+                <div className="text-center p-3 bg-purple-900/20 rounded-xl">
                   <div className="text-xs text-purple-300 mb-1 font-semibold">Shields Used</div>
                   <div className="text-xl font-bold text-purple-100">{stats.shieldsUsed}</div>
                 </div>
+                
                 <div className="text-center p-3 bg-purple-900/20 rounded-xl">
                   <div className="text-xs text-purple-300 mb-1 font-semibold">Daily Income</div>
                   <div className="text-xl font-bold text-purple-100">
-                    {stats.dailyIncome.toLocaleString()} DEFI
+                    {stats.dailyIncome.toLocaleString()}
                   </div>
                 </div>
+                
                 <div className="text-center p-3 bg-purple-900/20 rounded-xl">
                   <div className="text-xs text-purple-300 mb-1 font-semibold">Total Claimed</div>
                   <div className="text-xl font-bold text-purple-100">{Math.floor(stats.totalEarned / 1e9).toLocaleString()}</div>

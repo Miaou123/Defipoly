@@ -247,10 +247,6 @@ export function ProfileCustomization({
 
       {/* Customization Section */}
       <div>
-        <h3 className="text-xs font-bold text-purple-100 mb-3 flex items-center gap-2">
-          <span>🎨</span> Customization
-        </h3>
-
         <div className="grid grid-cols-2 gap-3">
           {/* Board Background */}
           <div className="text-center">
