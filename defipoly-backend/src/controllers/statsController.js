@@ -55,13 +55,24 @@ const getPlayerStats = (req, res) => {
   );
 };
 
+/**
+ * Get complete ownership data for a wallet
+ * UPDATED: Now returns shield info and timestamps
+ */
 const getPlayerOwnership = (req, res) => {
   const { wallet } = req.params;
   const db = getDatabase();
 
   db.all(
-    `SELECT property_id, slots_owned FROM property_ownership 
-     WHERE wallet_address = ? AND slots_owned > 0`,
+    `SELECT 
+      property_id, 
+      slots_owned, 
+      slots_shielded,
+      shield_expiry,
+      last_updated
+     FROM property_ownership 
+     WHERE wallet_address = ? AND slots_owned > 0
+     ORDER BY property_id ASC`,
     [wallet],
     (err, rows) => {
       if (err) {
@@ -69,7 +80,16 @@ const getPlayerOwnership = (req, res) => {
         return res.status(500).json({ error: 'Database error' });
       }
       
-      res.json({ ownerships: rows });
+      // Format response with complete ownership data
+      const ownerships = rows.map(row => ({
+        propertyId: row.property_id,
+        slotsOwned: row.slots_owned,
+        slotsShielded: row.slots_shielded || 0,
+        shieldExpiry: row.shield_expiry || 0,
+        lastUpdated: row.last_updated
+      }));
+      
+      res.json({ ownerships });
     }
   );
 };

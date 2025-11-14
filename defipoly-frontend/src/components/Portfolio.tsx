@@ -1,15 +1,16 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useWallet, useConnection } from '@solana/wallet-adapter-react';
+import { useWallet } from '@solana/wallet-adapter-react';
 import { PROPERTIES } from '@/utils/constants';
 import { getSetName, isSetComplete, getMinSlots } from '@/utils/gameHelpers';
 import { useDefipoly } from '@/hooks/useDefipoly';
 import type { PropertyOwnership } from '@/types/accounts';
-import { Shield, ChevronDown, ChevronRight, Award, Trophy, Zap, Wallet } from 'lucide-react';
+import { Shield, ChevronDown, ChevronRight, Award, Zap, Wallet } from 'lucide-react';
 import { ShieldAllModal } from './ShieldAllModal';
 import { useTokenBalance } from '@/hooks/useTokenBalance';
 import { BuildingIcon } from './icons/UIIcons';
+import { useRewards } from '@/hooks/useRewards';
 
 interface OwnedProperty extends PropertyOwnership {
   propertyInfo: typeof PROPERTIES[0];
@@ -24,24 +25,13 @@ const calculateDailyIncome = (price: number, yieldBps: number): number => {
   return Math.floor((price * yieldBps) / 10000);
 };
 
-// Group properties by setId from PROPERTIES constant
-const PROPERTY_SETS = PROPERTIES.reduce((acc, prop) => {
-  if (!acc[prop.setId]) {
-    acc[prop.setId] = [];
-  }
-  acc[prop.setId].push(prop);
-  return acc;
-}, {} as Record<number, typeof PROPERTIES>);
-
 export function Portfolio({ onSelectProperty }: PortfolioProps) {
   const { publicKey, connected } = useWallet();
-  const { connection } = useConnection();
   const { getOwnershipData, program } = useDefipoly();
   const { balance, loading: balanceLoading } = useTokenBalance();
+  const { dailyIncome: rewardsDailyIncome } = useRewards(); // Use dailyIncome from useRewards hook
   const [ownedProperties, setOwnedProperties] = useState<OwnedProperty[]>([]);
   const [loading, setLoading] = useState(false);
-  const [dailyIncome, setDailyIncome] = useState(0);
-  const [portfolioValue, setPortfolioValue] = useState(0);
   const [currentTime, setCurrentTime] = useState(Date.now());
   const [expandedSets, setExpandedSets] = useState<Set<number>>(new Set([0, 1, 2, 3, 4, 5, 6, 7]));
   const [showShieldAllModal, setShowShieldAllModal] = useState(false);
@@ -59,8 +49,6 @@ export function Portfolio({ onSelectProperty }: PortfolioProps) {
   useEffect(() => {
     if (!publicKey || !connected || !program) {
       setOwnedProperties([]);
-      setDailyIncome(0);
-      setPortfolioValue(0);
       return;
     }
 
@@ -68,8 +56,6 @@ export function Portfolio({ onSelectProperty }: PortfolioProps) {
       setLoading(true);
       try {
         const ownerships: OwnedProperty[] = [];
-        let totalIncome = 0;
-        let totalValue = 0;
 
         for (const property of PROPERTIES) {
           try {
@@ -80,11 +66,6 @@ export function Portfolio({ onSelectProperty }: PortfolioProps) {
                 propertyInfo: property,
               };
               ownerships.push(ownedProperty);
-              
-              const dailyIncome = calculateDailyIncome(property.price, property.yieldBps);
-              const income = dailyIncome * ownership.slotsOwned;
-              totalIncome += income;
-              totalValue += property.price * ownership.slotsOwned;
             }
           } catch (error) {
             // Property not owned or error fetching
@@ -92,8 +73,6 @@ export function Portfolio({ onSelectProperty }: PortfolioProps) {
         }
 
         setOwnedProperties(ownerships);
-        setDailyIncome(totalIncome);
-        setPortfolioValue(totalValue);
       } catch (error) {
         console.error('Error fetching portfolio:', error);
       } finally {
@@ -169,7 +148,6 @@ export function Portfolio({ onSelectProperty }: PortfolioProps) {
 
   // Calculate shield cost for a property
   const calculateShieldCost = (property: typeof PROPERTIES[0], slots: number): number => {
-    // Use actual shield cost BPS from property config (graduated 10-17% by set)
     const shieldCostBps = property.shieldCostBps;
     const dailyIncomePerSlot = calculateDailyIncome(property.price, property.yieldBps);
     return Math.floor((dailyIncomePerSlot * shieldCostBps * slots) / 10000);
@@ -260,9 +238,9 @@ export function Portfolio({ onSelectProperty }: PortfolioProps) {
                   </div>
                 </div>
                 <div className="text-right">
-                  <div className="text-[10px] text-purple-400 uppercase tracking-wide">Value</div>
-                  <div className="text-sm font-bold text-purple-200">
-                    {portfolioValue > 0 ? (portfolioValue / 1000).toFixed(0) + 'K' : '0'}
+                  <div className="text-[10px] text-purple-400 uppercase tracking-wide">Daily Rewards</div>
+                  <div className="text-sm font-bold text-green-400">
+                    {rewardsDailyIncome > 0 ? rewardsDailyIncome.toLocaleString() : '0'}
                   </div>
                 </div>
               </div>
@@ -289,7 +267,7 @@ export function Portfolio({ onSelectProperty }: PortfolioProps) {
             <BuildingIcon size={60} className="mx-auto mb-3 text-purple-400 opacity-50" />
             <div className="text-sm text-gray-400">
               No properties yet<br />
-              Click on the board to start building!
+              Click on a property to start building!
             </div>
           </div>
         )}
@@ -299,10 +277,8 @@ export function Portfolio({ onSelectProperty }: PortfolioProps) {
           <div className="space-y-3">
             {Object.entries(groupedProperties)
               .sort(([aSetId, aProps], [bSetId, bProps]) => {
-                // Get owned property IDs for completion check
                 const ownedPropertyIds = getOwnedPropertyIds();
                 
-                // Calculate total income for set A
                 const aSetIdNum = Number(aSetId);
                 const aIsComplete = isSetComplete(aSetIdNum, ownedPropertyIds);
                 const aMinSlots = getMinSlots(aSetIdNum);
@@ -311,7 +287,6 @@ export function Portfolio({ onSelectProperty }: PortfolioProps) {
                   return sum + income.totalIncome;
                 }, 0);
 
-                // Calculate total income for set B
                 const bSetIdNum = Number(bSetId);
                 const bIsComplete = isSetComplete(bSetIdNum, ownedPropertyIds);
                 const bMinSlots = getMinSlots(bSetIdNum);
@@ -320,14 +295,12 @@ export function Portfolio({ onSelectProperty }: PortfolioProps) {
                   return sum + income.totalIncome;
                 }, 0);
 
-                // Sort by total income descending (highest first)
                 return bTotalIncome - aTotalIncome;
               })
               .map(([setIdStr, setProperties]) => {
               const setId = Number(setIdStr);
               const isExpanded = expandedSets.has(setId);
               
-              // Get owned property IDs for this specific check
               const ownedPropertyIds = getOwnedPropertyIds();
               const isComplete = isSetComplete(setId, ownedPropertyIds);
               const minSlots = getMinSlots(setId);
@@ -413,11 +386,10 @@ export function Portfolio({ onSelectProperty }: PortfolioProps) {
                                 </div>
                               </div>
                               
-                              {/* ALWAYS show detailed breakdown - same format for both complete and non-complete */}
+                              {/* Income breakdown */}
                               <div className="flex items-center gap-2 text-xs flex-wrap">
                                 {isComplete && income.bonusedSlots > 0 ? (
                                   <>
-                                    {/* Complete set with bonus */}
                                     <div className="flex items-center gap-1">
                                       <Zap className="w-3 h-3 text-green-400" />
                                       <span className="text-green-400 font-bold">{income.bonusedSlots}×</span>
@@ -437,7 +409,6 @@ export function Portfolio({ onSelectProperty }: PortfolioProps) {
                                   </>
                                 ) : (
                                   <>
-                                    {/* Non-complete set - SAME FORMAT, just no bonus */}
                                     <div className="flex items-center gap-1">
                                       <span className="text-purple-400 font-bold">{owned.slotsOwned}×</span>
                                       <span className="text-purple-300">{calculateDailyIncome(owned.propertyInfo.price, owned.propertyInfo.yieldBps)}</span>

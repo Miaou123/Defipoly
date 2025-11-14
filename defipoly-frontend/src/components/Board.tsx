@@ -115,10 +115,10 @@ export function Board({ onSelectProperty, spectatorMode = false, spectatorWallet
               
               if (hasCustomBackground) {
                 // Check if backgroundImage is already a full CSS background value or just a URL
-                if (backgroundImage.includes('url(') && backgroundImage.includes('center/cover')) {
+                if (backgroundImage && backgroundImage.includes('url(') && backgroundImage.includes('center/cover')) {
                   // It's a full CSS background value from getBoardThemeStyles()
                   styles.background = backgroundImage;
-                } else {
+                } else if (backgroundImage) {
                   // It's just a URL, so format it properly
                   styles.backgroundImage = `url(${backgroundImage})`;
                   styles.backgroundSize = 'cover';

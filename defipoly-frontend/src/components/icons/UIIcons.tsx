@@ -532,6 +532,7 @@ export const GiftIcon: React.FC<IconProps> = ({ className = '', size = 24 }) => 
 
 export const ACTION_ICONS: Record<string, React.ReactNode> = {
   'buy': <BuildingIcon className="text-purple-400" size={16} />,
+  'sell': <CoinsIcon className="text-orange-400" size={16} />,
   'steal_success': <TargetIcon className="text-red-400" size={16} />,
   'steal_failed': <XCircleIcon className="text-gray-400" size={16} />,
   'shield': <ShieldIcon className="text-cyan-400" size={16} />,

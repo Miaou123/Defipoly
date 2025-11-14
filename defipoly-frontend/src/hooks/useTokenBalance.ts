@@ -8,7 +8,6 @@ export function useTokenBalance() {
   const { publicKey } = useWallet();
   const [balance, setBalance] = useState(0);
   const [loading, setLoading] = useState(false);
-  const [isInitialLoad, setIsInitialLoad] = useState(true);
 
   useEffect(() => {
     if (!publicKey) {
@@ -17,10 +16,7 @@ export function useTokenBalance() {
     }
 
     const fetchBalance = async () => {
-      // Only show loading state on initial load
-      if (isInitialLoad) {
-        setLoading(true);
-      }
+      setLoading(true);
       
       try {
         const tokenAccount = await getAssociatedTokenAddress(
@@ -44,7 +40,7 @@ export function useTokenBalance() {
               return;
             }
             
-            // Wait before retry
+            // Wait before retry (exponential backoff)
             await new Promise(resolve => setTimeout(resolve, (4 - retries) * 1000));
           }
         }
@@ -61,19 +57,13 @@ export function useTokenBalance() {
         console.error('Error fetching token balance:', error);
         setBalance(0);
       } finally {
-        if (isInitialLoad) {
-          setLoading(false);
-          setIsInitialLoad(false);
-        }
+        setLoading(false);
       }
     };
 
+    // Only fetch once on mount or when publicKey changes - no polling
     fetchBalance();
-
-    // Refresh balance every 10 seconds
-    const interval = setInterval(fetchBalance, 10000);
-    return () => clearInterval(interval);
-  }, [publicKey, connection, isInitialLoad]);
+  }, [publicKey, connection]);
 
   return { balance, loading };
 }

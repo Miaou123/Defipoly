@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { getProfilesBatch, ProfileData } from '@/utils/profileStorage';
-import { TrophyIcon } from './icons/UIIcons';
+import { TrophyIcon, HexagonBadge } from './icons/UIIcons';
 
 interface LeaderboardEntry {
   rank: number;
@@ -98,10 +98,13 @@ export function Leaderboard() {
       <div className="p-4 pb-2">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-lg font-bold text-white">
-              🏆 Leaderboard
-            </h2>
-            <p className="text-xs text-purple-400 mt-0.5">Click on a player to see their board</p>
+            <div className="flex items-center gap-2 border-b border-purple-500/20 pb-2">
+              <TrophyIcon size={20} className="text-yellow-400" />
+              <h2 className="text-lg font-bold text-white">
+                Leaderboard
+              </h2>
+            </div>
+            <p className="text-xs text-purple-400 mt-1">Click on a player to see their board</p>
           </div>
         </div>
       </div>
@@ -123,7 +126,6 @@ export function Leaderboard() {
           <div className="space-y-0.5">
             {leaderboardData.leaderboard.map((leader) => {
               const isTop3 = leader.rank <= 3;
-              const medal = leader.rank === 1 ? '🥇' : leader.rank === 2 ? '🥈' : leader.rank === 3 ? '🥉' : '';
               
               return (
                 <div
@@ -135,11 +137,15 @@ export function Leaderboard() {
                       : 'bg-white/[0.01] hover:bg-white/[0.05]'
                   }`}
                 >
-                  {/* Rank */}
-                  <div className={`text-xs font-bold w-6 text-center ${
-                    isTop3 ? 'text-yellow-400' : 'text-purple-400'
-                  }`}>
-                    {medal || `#${leader.rank}`}
+                  {/* Rank - Use HexagonBadge for top 3 */}
+                  <div className="w-8 flex items-center justify-center">
+                    {isTop3 ? (
+                      <HexagonBadge rank={leader.rank as 1 | 2 | 3} size={32} />
+                    ) : (
+                      <div className="text-xs font-bold text-purple-400">
+                        #{leader.rank}
+                      </div>
+                    )}
                   </div>
                   
                   {/* Profile Picture */}

@@ -50,7 +50,7 @@ export function useDefipoly() {
   }, [provider]);
 
 
-  // Check initialization status
+  // Check initialization status - ONLY ON MOUNT, NO POLLING
   useEffect(() => {
     if (!wallet) {
       setTokenBalance(0);
@@ -65,7 +65,7 @@ export function useDefipoly() {
         const hasTokenAccount = await checkTokenAccountExists(connection, wallet.publicKey);
         setTokenAccountExists(hasTokenAccount);
 
-        // Fetch token balance if account exists
+        // Fetch token balance if account exists (only on mount)
         if (hasTokenAccount) {
           try {
             const tokenAccount = await getAssociatedTokenAddress(
@@ -90,9 +90,8 @@ export function useDefipoly() {
       }
     };
 
+    // Only run once on mount - no polling interval
     checkInitialization();
-    const interval = setInterval(checkInitialization, 10000);
-    return () => clearInterval(interval);
   }, [wallet, connection, program]);
 
   const createTokenAccount = useCallback(async () => {

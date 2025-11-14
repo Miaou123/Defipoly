@@ -1,20 +1,17 @@
 'use client';
 
-import { DiceIcon } from './icons/UIIcons';
-import { PropertyCardTheme } from '@/utils/themes';
 import { useTheme } from '@/contexts/ThemeContext';
 
 interface CornerSquareProps {
   icon: string;
   label: string;
   bgColor: string;
-  theme?: PropertyCardTheme;
   profilePicture?: string | null;
   cornerSquareStyle?: 'property' | 'profile';
   customPropertyCardBackground?: string | null;
 }
 
-export function CornerSquare({ icon, label, bgColor, theme, profilePicture, cornerSquareStyle = 'property', customPropertyCardBackground }: CornerSquareProps) {
+export function CornerSquare({ icon, label, bgColor, profilePicture, cornerSquareStyle = 'property', customPropertyCardBackground }: CornerSquareProps) {
   const themeContext = useTheme();
   
   // Debug logging for corner squares
@@ -25,93 +22,105 @@ export function CornerSquare({ icon, label, bgColor, theme, profilePicture, corn
     customPropertyCardBackground,
     themeContextCustomPropertyCardBackground: themeContext.customPropertyCardBackground
   });
-  
-  // Default theme if not provided
-  const cardTheme = theme || {
-    id: 'default',
-    name: 'Default',
-    background: 'bg-white/10 backdrop-blur-sm',
-    border: 'border border-white/20',
-    textColor: 'text-white',
-    accent: 'text-purple-300'
-  };
 
-  // Get background based on theme (same logic as PropertyCard)
-  const getCardBackground = () => {
-    // Check for custom theme and use custom background
-    // Prioritize passed prop over themeContext for spectator mode compatibility
-    const customBackground = customPropertyCardBackground || themeContext.customPropertyCardBackground;
-    if (cardTheme.id === 'custom' && customBackground) {
-      return `url(${customBackground}) center/cover`;
+  // Helper to check if custom background is a solid color (not an image URL)
+  const isCustomBackgroundSolidColor = () => {
+    const customBg = customPropertyCardBackground || themeContext.customPropertyCardBackground;
+    
+    console.log('🎨 [CORNER] Checking if solid color:', {
+      customBg,
+      hasValue: !!customBg,
+      startsWithHash: customBg?.startsWith('#'),
+      startsWithRgb: customBg?.startsWith('rgb'),
+      startsWithHttp: customBg?.startsWith('http'),
+      startsWithSlash: customBg?.startsWith('/'),
+      hasImageExt: customBg?.includes('.png') || customBg?.includes('.jpg')
+    });
+    
+    if (!customBg) return false;
+    
+    // If it starts with http, https, /, or contains common image extensions, it's an image URL
+    if (customBg.startsWith('http') || customBg.startsWith('/') || 
+        customBg.includes('.png') || customBg.includes('.jpg') || 
+        customBg.includes('.jpeg') || customBg.includes('.webp') || 
+        customBg.includes('.gif')) {
+      console.log('🎨 [CORNER] Detected as IMAGE URL');
+      return false;
     }
     
-    if (cardTheme.id === 'default') {
-      return `linear-gradient(135deg, rgba(88, 28, 135, 0.8), rgba(109, 40, 217, 0.6))`;
-    } else if (cardTheme.id === 'neon') {
-      return `linear-gradient(135deg, rgba(147, 51, 234, 0.9), rgba(236, 72, 153, 0.7))`;
-    } else if (cardTheme.id === 'gold') {
-      return `linear-gradient(135deg, rgba(251, 191, 36, 0.9), rgba(245, 158, 11, 0.7))`;
-    } else if (cardTheme.id === 'minimal') {
-      return `rgba(255, 255, 255, 0.95)`;
+    // If it starts with # or rgb/rgba, it's a color
+    if (customBg.startsWith('#') || customBg.startsWith('rgb')) {
+      console.log('🎨 [CORNER] Detected as SOLID COLOR');
+      return true;
     }
-    return `linear-gradient(135deg, rgba(88, 28, 135, 0.8), rgba(109, 40, 217, 0.6))`;
+    
+    console.log('🎨 [CORNER] Could not determine type, treating as color');
+    // If we can't determine, assume it's a color
+    return true;
   };
 
-  const getTextColor = () => {
-    return cardTheme.id === 'minimal' ? '#1f2937' : '#e9d5ff';
-  };
+  // Check if we have a custom background (solid color or image)
+  const hasCustomBackground = !!(customPropertyCardBackground || themeContext.customPropertyCardBackground);
+  const isCustomSolidColor = hasCustomBackground && isCustomBackgroundSolidColor();
 
-  const getDiceColor = () => {
-    if (cardTheme.id === 'minimal') return 'text-gray-700';
-    if (cardTheme.id === 'neon') return 'text-pink-300';
-    if (cardTheme.id === 'gold') return 'text-yellow-300';
-    return 'text-purple-400';
+  console.log('🏠 [CORNER] Final decision:', {
+    hasCustomBackground,
+    isCustomSolidColor,
+    cornerSquareStyle,
+    willShowLogo: !(cornerSquareStyle === 'profile' && profilePicture) && 
+                   !(cornerSquareStyle === 'property' && hasCustomBackground && !isCustomSolidColor)
+  });
+
+  // Get background - either custom or default dark
+  const getBackground = () => {
+    const customBg = customPropertyCardBackground || themeContext.customPropertyCardBackground;
+    if (customBg) {
+      // Custom background - either solid color or image URL
+      if (isCustomSolidColor) {
+        return customBg; // Solid color like #9333ea
+      } else {
+        return `url(${customBg}) center/cover`; // Image URL
+      }
+    }
+    // Default dark theme
+    return `linear-gradient(to bottom right, rgba(31, 41, 55, 0.95), rgba(17, 24, 39, 0.9))`;
   };
 
   return (
     <div 
       className="w-full h-full relative overflow-hidden"
       style={{
-        background: getCardBackground(),
+        background: getBackground(),
         border: '2px solid rgba(139, 92, 246, 0.3)',
       }}
     >
       {/* Card content */}
       {cornerSquareStyle === 'profile' && profilePicture ? (
-        // Profile picture display - just the image, no text
-        <img 
-          src={profilePicture} 
-          alt="Player" 
-          className="w-full h-full object-cover"
-        />
-      ) : cornerSquareStyle === 'property' ? (
-        // Property card style - just the background, no content
+        // Profile Picture Mode - Show profile picture
+        <div className="w-full h-full flex items-center justify-center p-2">
+          <img 
+            src={profilePicture} 
+            alt="Profile" 
+            className="w-full h-full object-cover rounded"
+          />
+        </div>
+      ) : cornerSquareStyle === 'property' && hasCustomBackground && !isCustomSolidColor ? (
+        // Property Card Mode with Custom Image Background - Show nothing (just the image background)
         <div className="w-full h-full" />
       ) : (
-        // Default display - original design with dice and text (fallback)
-        <div className="relative flex flex-col h-full">
-          {/* Top color bar */}
-          <div 
-            className="h-4 w-full flex-shrink-0"
-            style={{
-              background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.4), rgba(109, 40, 217, 0.3))',
-            }}
+        // Default OR Solid Color Mode - Show Logo and Text
+        <div className="w-full h-full flex flex-col items-center justify-center p-2 gap-1">
+          {/* Logo */}
+          <img 
+            src="/logo.svg" 
+            alt="Defipoly Logo" 
+            className="w-12 h-12 object-contain"
           />
-
-          {/* Middle section with dice and DeFiPoly text */}
+          {/* DEFIPOLY Text */}
           <div 
-            className="flex-1 flex flex-col items-center justify-center gap-1 px-2 py-2"
-            style={{
-              background: 'linear-gradient(135deg, rgba(88, 28, 135, 0.4), rgba(109, 40, 217, 0.2))',
-            }}
+            className="text-xs font-black tracking-wider text-white"
           >
-            <DiceIcon size={48} className={getDiceColor()} />
-            <div 
-              className="text-[10px] font-black uppercase tracking-wider"
-              style={{ color: getTextColor() }}
-            >
-              DeFiPoly
-            </div>
+            DEFIPOLY
           </div>
         </div>
       )}

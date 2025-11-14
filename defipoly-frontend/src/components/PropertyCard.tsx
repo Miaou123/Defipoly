@@ -1,19 +1,19 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { PublicKey } from '@solana/web3.js';
 import { useWallet } from '@solana/wallet-adapter-react';
-import { useDefipoly } from '@/hooks/useDefipoly';
 import { usePropertyRefresh } from '@/contexts/PropertyRefreshContext';
 import { useCooldown } from '@/hooks/useCooldown';
 import { useStealCooldownFromContext } from '@/contexts/StealCooldownContext';
 import { ShieldIcon, CoinsIcon, FlameIcon, PropertyMarkerIcon } from './icons/UIIcons';
 import { LocationPin, BUILDING_SVGS } from './icons/GameAssets';
-import { fetchOwnershipData, fetchPropertyData } from '@/utils/program';
 
 import { PROPERTIES } from '@/utils/constants';
 import { PropertyCardTheme } from '@/utils/themes';
 import { useTheme } from '@/contexts/ThemeContext';
+
+// API base URL for backend
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3101';
 
 // Helper function for formatting numbers without hydration issues
 const formatNumber = (num: number): string => {
@@ -32,7 +32,6 @@ interface PropertyCardProps {
 
 export function PropertyCard({ propertyId, onSelect, spectatorMode = false, spectatorWallet, theme, customPropertyCardBackground }: PropertyCardProps) {
   const { connected, publicKey } = useWallet();
-  const { getOwnershipData, getPropertyData, program } = useDefipoly();
   const { refreshKey } = usePropertyRefresh();
   const themeContext = useTheme();
   
@@ -93,18 +92,11 @@ export function PropertyCard({ propertyId, onSelect, spectatorMode = false, spec
     }
   }
 
-  // Fetch ownership data
+  // Fetch ownership data from BACKEND API (not RPC!)
   useEffect(() => {
-    // In spectator mode, we need program but not necessarily connected wallet
-    if (spectatorMode && (!program || !spectatorWallet)) {
-      setBuildingLevel(0);
-      setShieldActive(false);
-      setHasCompleteSet(false);
-      return;
-    }
+    const walletToFetch = spectatorMode ? spectatorWallet : publicKey?.toString();
     
-    // In normal mode, we need connected wallet
-    if (!spectatorMode && (!connected || !publicKey || !program)) {
+    if (!walletToFetch) {
       setBuildingLevel(0);
       setShieldActive(false);
       setHasCompleteSet(false);
@@ -113,55 +105,38 @@ export function PropertyCard({ propertyId, onSelect, spectatorMode = false, spec
 
     const fetchOwnership = async () => {
       try {
-        // Determine which wallet to use for ownership data
-        let ownershipData;
-        if (spectatorMode && spectatorWallet && program) {
-          // In spectator mode, fetch ownership for the spectator wallet
-          const spectatorPublicKey = new PublicKey(spectatorWallet);
-          ownershipData = await fetchOwnershipData(program, spectatorPublicKey, propertyId);
-        } else {
-          // In normal mode, use the connected wallet
-          ownershipData = await getOwnershipData(propertyId);
+        // ✅ Fetch from backend API instead of making RPC calls
+        const response = await fetch(`${API_BASE_URL}/api/ownership/${walletToFetch}`);
+        
+        if (!response.ok) {
+          throw new Error('Failed to fetch ownership');
         }
+
+        const data = await response.json();
+        const ownership = data.ownerships.find((o: any) => o.propertyId === propertyId);
         
-        const propertyData = await getPropertyData(propertyId);
-        
-        if (ownershipData?.slotsOwned && ownershipData.slotsOwned > 0 && propertyData) {
-          const slotsOwned = ownershipData.slotsOwned;
-          const maxPerPlayer = propertyData.maxPerPlayer;
-          
-          const progressRatio = slotsOwned / maxPerPlayer;
+        if (ownership && ownership.slotsOwned > 0) {
+          // Calculate building level based on slots owned
+          const maxPerPlayer = 10; // Default max per property
+          const progressRatio = ownership.slotsOwned / maxPerPlayer;
           const level = Math.ceil(progressRatio * 5);
           setBuildingLevel(level);
           
-          const now = Date.now() / 1000;
-          const isShielded = ownershipData.slotsShielded > 0 && ownershipData.shieldExpiry.toNumber() > now;
+          // Check if shield is active
+          const now = Math.floor(Date.now() / 1000);
+          const isShielded = ownership.slotsShielded > 0 && ownership.shieldExpiry > now;
           setShieldActive(isShielded);
           
+          // Check for complete set
           const setId = property.setId;
           const propertiesInSet = PROPERTIES.filter(p => p.setId === setId);
           const requiredProps = setId === 0 || setId === 7 ? 2 : 3;
           
-          let ownedInSet = 0;
-          for (const prop of propertiesInSet) {
-            try {
-              let ownership;
-              if (spectatorMode && spectatorWallet && program) {
-                const spectatorPublicKey = new PublicKey(spectatorWallet);
-                ownership = await fetchOwnershipData(program, spectatorPublicKey, prop.id);
-              } else {
-                ownership = await getOwnershipData(prop.id);
-              }
-              if (ownership && ownership.slotsOwned > 0) {
-                ownedInSet++;
-              }
-            } catch {
-              // Property not owned
-            }
-          }
+          const ownedInSet = data.ownerships.filter((o: any) => 
+            propertiesInSet.some(p => p.id === o.propertyId) && o.slotsOwned > 0
+          ).length;
           
           setHasCompleteSet(ownedInSet >= requiredProps);
-          
         } else {
           setBuildingLevel(0);
           setShieldActive(false);
@@ -176,7 +151,7 @@ export function PropertyCard({ propertyId, onSelect, spectatorMode = false, spec
     };
 
     fetchOwnership();
-  }, [connected, publicKey, propertyId, program, getOwnershipData, getPropertyData, refreshKey, property.name, property.setId, spectatorMode, spectatorWallet]);
+  }, [connected, publicKey, propertyId, refreshKey, property.setId, spectatorMode, spectatorWallet]);
 
   // Extract color from Tailwind classes
   const getColorHex = (colorClass: string) => {

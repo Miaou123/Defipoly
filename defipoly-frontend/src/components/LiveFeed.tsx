@@ -8,13 +8,20 @@ import { getActionIcon, FeedIcon } from './icons/UIIcons';
 import { useWebSocket } from '@/contexts/WebSocketContext';
 
 interface FeedItem {
-  message: string;
-  type: 'buy' | 'steal' | 'shield' | 'claim' | 'sell';
+  type: 'buy' | 'steal_success' | 'steal_failed' | 'shield' | 'claim' | 'sell';
   timestamp: number;
   txSignature: string;
   propertyId?: number;
   playerAddress?: string;
   targetAddress?: string;
+  slots?: number;
+  buyer?: string;
+  seller?: string;
+  attacker?: string;
+  victim?: string;
+  owner?: string;
+  wallet?: string;
+  success?: boolean;
 }
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3101';
@@ -36,16 +43,47 @@ export function LiveFeed() {
     return profile?.username || formatAddress(address);
   };
 
-  const formatAmount = (amount: number) => {
-    const tokens = amount / 1e9;
-    if (tokens >= 1e6) return `${(tokens / 1e6).toFixed(2)}M`;
-    if (tokens >= 1e3) return `${(tokens / 1e3).toFixed(1)}K`;
-    return tokens.toFixed(2);
+  const generateMessage = (item: FeedItem): string => {
+    const property = item.propertyId !== null && item.propertyId !== undefined 
+      ? getPropertyById(item.propertyId)
+      : null;
+    const propertyName = property ? property.name : 'Unknown Property';
+    
+    const playerAddr = item.playerAddress || item.buyer || item.seller || item.attacker || item.owner || item.wallet;
+    const targetAddr = item.targetAddress || item.victim;
+    
+    switch (item.type) {
+      case 'buy':
+        const buySlots = item.slots || 1;
+        return `${getDisplayName(playerAddr || '')} bought ${buySlots} slot${buySlots > 1 ? 's' : ''} at ${propertyName}`;
+        
+      case 'sell':
+        const sellSlots = item.slots || 1;
+        return `${getDisplayName(playerAddr || '')} sold ${sellSlots} slot${sellSlots > 1 ? 's' : ''} at ${propertyName}`;
+        
+      case 'steal_success':
+        const successSlots = item.slots || 1;
+        return `${getDisplayName(playerAddr || '')} stole ${propertyName} from ${getDisplayName(targetAddr || '')}`;
+        
+      case 'steal_failed':
+        return `${getDisplayName(playerAddr || '')} failed to steal ${propertyName} from ${getDisplayName(targetAddr || '')}`;
+        
+      case 'shield':
+        const shieldSlots = item.slots || 1;
+        return `${getDisplayName(playerAddr || '')} shielded ${shieldSlots} slot${shieldSlots > 1 ? 's' : ''} at ${propertyName}`;
+        
+      case 'claim':
+        return `${getDisplayName(playerAddr || '')} claimed rewards`;
+        
+      default:
+        return 'Unknown action';
+    }
   };
 
   const handleActionClick = (item: FeedItem) => {
-    if (item.playerAddress) {
-      router.push(`/spectator/${item.playerAddress}`);
+    const playerAddr = item.playerAddress || item.buyer || item.seller || item.attacker || item.owner || item.wallet;
+    if (playerAddr) {
+      router.push(`/spectator/${playerAddr}`);
     }
   };
 
@@ -54,118 +92,65 @@ export function LiveFeed() {
     const property = action.propertyId !== null && action.propertyId !== undefined 
       ? getPropertyById(action.propertyId)
       : null;
-    const propertyName = property ? property.name : 'Unknown Property';
-
-    const getProfileName = (address: string) => {
-      const profile = profiles[address];
-      return profile?.username || formatAddress(address);
-    };
-
-    switch (action.actionType) {
-      case 'buy':
-        return {
-          message: `${getProfileName(action.playerAddress)} bought ${propertyName} for ${formatAmount(action.amount || 0)} DEFI`,
-          type: 'buy',
-          timestamp: action.blockTime * 1000,
-          txSignature: action.txSignature,
-          propertyId: action.propertyId,
-          playerAddress: action.playerAddress,
-        };
-
-      case 'sell':
-        return {
-          message: `${getProfileName(action.playerAddress)} sold ${action.slots || 0} slots of ${propertyName} for ${formatAmount(action.amount || 0)} DEFI`,
-          type: 'sell',
-          timestamp: action.blockTime * 1000,
-          txSignature: action.txSignature,
-          propertyId: action.propertyId,
-          playerAddress: action.playerAddress,
-        };
-
-      case 'steal_success':
-        return {
-          message: `${getProfileName(action.playerAddress)} stole ${action.slots || 1} slots from ${getProfileName(action.targetAddress)} at ${propertyName}`,
-          type: 'steal',
-          timestamp: action.blockTime * 1000,
-          txSignature: action.txSignature,
-          propertyId: action.propertyId,
-          playerAddress: action.playerAddress,
-          targetAddress: action.targetAddress,
-        };
-
-      case 'steal_failed':
-        return {
-          message: `${getProfileName(action.playerAddress)} failed to steal from ${getProfileName(action.targetAddress)} at ${propertyName}`,
-          type: 'steal',
-          timestamp: action.blockTime * 1000,
-          txSignature: action.txSignature,
-          propertyId: action.propertyId,
-          playerAddress: action.playerAddress,
-          targetAddress: action.targetAddress,
-        };
-
-      case 'steal_attempt':
-        return {
-          message: `${getProfileName(action.playerAddress)} attempted to steal from ${getProfileName(action.targetAddress)} at ${propertyName}`,
-          type: 'steal',
-          timestamp: action.blockTime * 1000,
-          txSignature: action.txSignature,
-          propertyId: action.propertyId,
-          playerAddress: action.playerAddress,
-          targetAddress: action.targetAddress,
-        };
-
-      case 'shield':
-        return {
-          message: `${getProfileName(action.playerAddress)} shielded ${propertyName}`,
-          type: 'shield',
-          timestamp: action.blockTime * 1000,
-          txSignature: action.txSignature,
-          propertyId: action.propertyId,
-          playerAddress: action.playerAddress,
-        };
-
-      case 'claim':
-        return {
-          message: `${getProfileName(action.playerAddress)} claimed ${formatAmount(action.amount || 0)} DEFI reward`,
-          type: 'claim',
-          timestamp: action.blockTime * 1000,
-          txSignature: action.txSignature,
-          playerAddress: action.playerAddress,
-        };
-
-      default:
-        return null;
+    
+    // Backend uses 'actionType' field, not 'type'
+    const actionType = action.actionType || action.type;
+    if (!actionType) {
+      console.warn('⚠️ Action missing type:', action);
+      return null;
     }
-  }, []); // Remove profiles dependency to prevent loops
-
-  const addFeedItem = useCallback((item: FeedItem) => {
-    setFeed(prev => {
-      const exists = prev.some(existing => existing.txSignature === item.txSignature);
-      if (exists) return prev;
-      return [item, ...prev].slice(0, 50);
-    });
+    
+    // Determine the actual type - backend already uses steal_success/steal_failed
+    let feedType = actionType;
+    
+    // Map any legacy 'steal' type based on success flag
+    if (actionType === 'steal') {
+      feedType = action.success ? 'steal_success' : 'steal_failed';
+    }
+    
+    return {
+      type: feedType,
+      timestamp: action.blockTime ? action.blockTime * 1000 : (action.timestamp || Date.now()),
+      txSignature: action.txSignature,
+      propertyId: action.propertyId,
+      slots: action.slots,
+      buyer: action.buyer || (actionType === 'buy' ? action.playerAddress : undefined),
+      seller: action.seller || (actionType === 'sell' ? action.playerAddress : undefined),
+      attacker: action.attacker || (actionType.includes('steal') ? action.playerAddress : undefined),
+      victim: action.victim || action.targetAddress,
+      owner: action.owner || (actionType === 'shield' ? action.playerAddress : undefined),
+      wallet: action.wallet || (actionType === 'claim' ? action.playerAddress : undefined),
+      success: action.success,
+      playerAddress: action.playerAddress,
+      targetAddress: action.targetAddress || action.victim,
+    };
   }, []);
 
-  // Fetch historical actions from backend (only once)
+  // Initial load of historical actions
   useEffect(() => {
     if (initialLoadDone.current) return;
 
     const fetchHistoricalActions = async () => {
       try {
-        const response = await fetch(`${API_BASE_URL}/api/actions/recent?limit=50`);
+        console.log('🔍 Fetching recent actions from backend...');
+        const response = await fetch(`${API_BASE_URL}/api/actions/recent?limit=20`);
         
         if (!response.ok) {
+          console.error('❌ Backend responded with error:', response.status);
           throw new Error(`Backend responded with ${response.status}`);
         }
         
         const data = await response.json();
+        console.log('📦 Received data from backend:', data);
         
         if (data.actions && Array.isArray(data.actions)) {
+          console.log(`📋 Processing ${data.actions.length} actions...`);
+          
           const feedItems = data.actions
             .map((action: any) => actionToFeedItem(action))
             .filter((item: FeedItem | null): item is FeedItem => item !== null);
           
+          console.log(`✅ Created ${feedItems.length} feed items`);
           setFeed(feedItems);
           
           // Fetch profiles for all wallet addresses in the feed
@@ -175,10 +160,15 @@ export function LiveFeed() {
             if (item.targetAddress) allAddresses.add(item.targetAddress);
           });
           
+          console.log(`👥 Fetching profiles for ${allAddresses.size} addresses...`);
+          
           if (allAddresses.size > 0) {
             const profilesData = await getProfilesBatch(Array.from(allAddresses));
             setProfiles(profilesData);
+            console.log('✅ Profiles loaded');
           }
+        } else {
+          console.warn('⚠️ No actions array in response');
         }
         initialLoadDone.current = true;
       } catch (error) {
@@ -190,109 +180,53 @@ export function LiveFeed() {
     };
 
     fetchHistoricalActions();
-  }, []); // Remove actionToFeedItem dependency
+  }, []); // Empty dependency array - only run once on mount
 
   // Subscribe to WebSocket events for real-time updates
   useEffect(() => {
     if (!socket || !connected) return;
 
     const handleRecentAction = async (data: any) => {
-      // Convert WebSocket data to FeedItem
-      const property = data.propertyId !== null && data.propertyId !== undefined 
-        ? getPropertyById(data.propertyId)
-        : null;
-      const propertyName = property ? property.name : 'Unknown Property';
-      
-      const getProfileName = (address: string) => {
-        const profile = profiles[address];
-        return profile?.username || formatAddress(address);
-      };
-      
-      let feedItem: FeedItem | null = null;
-      
-      switch (data.type) {
-        case 'buy':
-          feedItem = {
-            message: `${getProfileName(data.buyer)} bought ${propertyName} for ${formatAmount(data.price || 0)} DEFI`,
-            type: 'buy',
-            timestamp: data.timestamp || Date.now(),
-            txSignature: data.txSignature,
-            propertyId: data.propertyId,
-            playerAddress: data.buyer,
-          };
-          break;
-          
-        case 'sell':
-          feedItem = {
-            message: `${getProfileName(data.seller)} sold ${data.slots || 0} slots of ${propertyName} for ${formatAmount(data.price || 0)} DEFI`,
-            type: 'sell',
-            timestamp: data.timestamp || Date.now(),
-            txSignature: data.txSignature,
-            propertyId: data.propertyId,
-            playerAddress: data.seller,
-          };
-          break;
-          
-        case 'steal':
-          feedItem = {
-            message: `${getProfileName(data.attacker)} stole ${data.slots || 1} slots from ${getProfileName(data.victim)} at ${propertyName}`,
-            type: 'steal',
-            timestamp: data.timestamp || Date.now(),
-            txSignature: data.txSignature,
-            propertyId: data.propertyId,
-            playerAddress: data.attacker,
-            targetAddress: data.victim,
-          };
-          break;
-          
-        case 'shield':
-          feedItem = {
-            message: `${getProfileName(data.owner)} shielded ${propertyName}`,
-            type: 'shield',
-            timestamp: data.timestamp || Date.now(),
-            txSignature: data.txSignature,
-            propertyId: data.propertyId,
-            playerAddress: data.owner,
-          };
-          break;
-          
-        case 'reward':
-          feedItem = {
-            message: `${getProfileName(data.wallet)} claimed ${formatAmount(data.amount || 0)} DEFI reward`,
-            type: 'claim',
-            timestamp: data.timestamp || Date.now(),
-            txSignature: data.txSignature,
-            playerAddress: data.wallet,
-          };
-          break;
-          
-        case 'steal-failed':
-          feedItem = {
-            message: `${getProfileName(data.attacker)} failed to steal from ${getProfileName(data.victim)} at ${propertyName}`,
-            type: 'steal',
-            timestamp: data.timestamp || Date.now(),
-            txSignature: data.txSignature,
-            propertyId: data.propertyId,
-            playerAddress: data.attacker,
-            targetAddress: data.victim,
-          };
-          break;
-
-        case 'steal-attempted':
-          feedItem = {
-            message: `${getProfileName(data.attacker)} attempted to steal from ${getProfileName(data.victim)} at ${propertyName}`,
-            type: 'steal',
-            timestamp: data.timestamp || Date.now(),
-            txSignature: data.txSignature,
-            propertyId: data.propertyId,
-            playerAddress: data.attacker,
-            targetAddress: data.victim,
-          };
-          break;
+      // Determine the actual type - if it's a steal, use success flag
+      let feedType = data.type;
+      if (data.type === 'steal') {
+        feedType = data.success ? 'steal_success' : 'steal_failed';
       }
       
+      const feedItem: FeedItem = {
+        type: feedType,
+        timestamp: data.timestamp || Date.now(),
+        txSignature: data.txSignature,
+        propertyId: data.propertyId,
+        slots: data.slots,
+        buyer: data.buyer,
+        seller: data.seller,
+        attacker: data.attacker,
+        victim: data.victim,
+        owner: data.owner,
+        wallet: data.wallet,
+        success: data.success,
+        playerAddress: data.buyer || data.seller || data.attacker || data.owner || data.wallet,
+        targetAddress: data.victim,
+      };
+      
       if (feedItem) {
-        addFeedItem(feedItem);
+        // Check if this exact action already exists in the feed
+        setFeed(prev => {
+          const isDuplicate = prev.some(existingItem => 
+            existingItem.txSignature === feedItem.txSignature &&
+            existingItem.type === feedItem.type &&
+            existingItem.playerAddress === feedItem.playerAddress &&
+            existingItem.propertyId === feedItem.propertyId
+          );
+          
+          // If it's a duplicate, don't add it
+          if (isDuplicate) {
+            return prev;
+          }
+          
+          return [feedItem, ...prev].slice(0, 50);
+        });
         
         // Fetch profiles for new addresses
         const newAddresses = new Set<string>();
@@ -317,7 +251,7 @@ export function LiveFeed() {
     return () => {
       socket.off('recent-action', handleRecentAction);
     };
-  }, [socket, connected]); // Simplified dependencies
+  }, [socket, connected, profiles]);
 
   return (
     <div className="bg-purple-900/8 backdrop-blur-xl rounded-2xl border border-purple-500/20 h-full flex flex-col overflow-hidden">
@@ -357,7 +291,7 @@ export function LiveFeed() {
           <div className="space-y-2">
             {feed.map((item, index) => (
               <div
-                key={item.txSignature || index}
+                key={`${item.txSignature}-${index}`}
                 onClick={() => handleActionClick(item)}
                 className="flex items-start gap-2 p-2 rounded-lg bg-white/[0.01] hover:bg-white/[0.05] transition-all cursor-pointer group"
               >
@@ -366,10 +300,7 @@ export function LiveFeed() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm text-purple-100 break-words group-hover:text-white transition-colors">
-                    {item.message}
-                  </p>
-                  <p className="text-xs text-purple-500 mt-0.5">
-                    {new Date(item.timestamp).toLocaleTimeString()}
+                    {generateMessage(item)}
                   </p>
                 </div>
               </div>
