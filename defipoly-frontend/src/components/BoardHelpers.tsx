@@ -11,16 +11,19 @@ interface CornerSquareProps {
   theme?: PropertyCardTheme;
   profilePicture?: string | null;
   cornerSquareStyle?: 'property' | 'profile';
+  customPropertyCardBackground?: string | null;
 }
 
-export function CornerSquare({ icon, label, bgColor, theme, profilePicture, cornerSquareStyle = 'property' }: CornerSquareProps) {
+export function CornerSquare({ icon, label, bgColor, theme, profilePicture, cornerSquareStyle = 'property', customPropertyCardBackground }: CornerSquareProps) {
   const themeContext = useTheme();
   
   // Debug logging for corner squares
   console.log('🏠 [CORNER] CornerSquare props:', {
     cornerSquareStyle,
     profilePicture,
-    hasProfilePic: !!profilePicture
+    hasProfilePic: !!profilePicture,
+    customPropertyCardBackground,
+    themeContextCustomPropertyCardBackground: themeContext.customPropertyCardBackground
   });
   
   // Default theme if not provided
@@ -36,8 +39,10 @@ export function CornerSquare({ icon, label, bgColor, theme, profilePicture, corn
   // Get background based on theme (same logic as PropertyCard)
   const getCardBackground = () => {
     // Check for custom theme and use custom background
-    if (cardTheme.id === 'custom' && themeContext.customPropertyCardBackground) {
-      return `url(${themeContext.customPropertyCardBackground}) center/cover`;
+    // Prioritize passed prop over themeContext for spectator mode compatibility
+    const customBackground = customPropertyCardBackground || themeContext.customPropertyCardBackground;
+    if (cardTheme.id === 'custom' && customBackground) {
+      return `url(${customBackground}) center/cover`;
     }
     
     if (cardTheme.id === 'default') {

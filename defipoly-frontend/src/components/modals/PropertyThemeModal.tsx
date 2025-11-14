@@ -337,6 +337,7 @@ export function PropertyThemeModal({
                     bgColor="#8b5cf6"
                     profilePicture={currentProfilePicture}
                     cornerSquareStyle="profile"
+                    customPropertyCardBackground={customBackground}
                   />
                 </div>
                 {!currentProfilePicture && (
