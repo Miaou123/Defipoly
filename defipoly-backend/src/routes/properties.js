@@ -1,16 +1,22 @@
-// ============================================
-// FILE: src/routes/properties.js
-// Add this new route file to your backend
-// ============================================
-
 const express = require('express');
 const router = express.Router();
-const { getPropertyStats, getAllPropertiesStats } = require('../controllers/propertyController');
+const { 
+  getPropertyStats, 
+  getAllPropertiesStats,
+  getPropertyState,
+  getAllPropertiesState
+} = require('../controllers/propertyController');
 
-// Get stats for a specific property
+// GET /api/properties/:propertyId/stats - Ownership stats
 router.get('/:propertyId/stats', getPropertyStats);
 
-// Get stats for all properties at once
+// GET /api/properties/stats - All properties ownership stats
 router.get('/stats', getAllPropertiesStats);
+
+// GET /api/properties/:propertyId/state - Available slots
+router.get('/:propertyId/state', getPropertyState);
+
+// GET /api/properties/state - All properties state
+router.get('/state', getAllPropertiesState);
 
 module.exports = router;

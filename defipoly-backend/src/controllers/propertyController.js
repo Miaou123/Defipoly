@@ -62,7 +62,81 @@ const getAllPropertiesStats = (req, res) => {
   );
 };
 
+/**
+ * NEW: Get property state (available slots) from blockchain sync
+ */
+const getPropertyState = (req, res) => {
+  const { propertyId } = req.params;
+  const db = getDatabase();
+
+  db.get(
+    `SELECT 
+      property_id,
+      available_slots,
+      max_slots_per_property,
+      last_synced
+     FROM properties_state 
+     WHERE property_id = ?`,
+    [parseInt(propertyId)],
+    (err, row) => {
+      if (err) {
+        console.error('Database error:', err);
+        return res.status(500).json({ error: 'Database error' });
+      }
+
+      if (!row) {
+        return res.status(404).json({ 
+          error: 'Property state not found',
+          message: 'Property state has not been synced yet. Try running a full sync.'
+        });
+      }
+
+      res.json({
+        propertyId: row.property_id,
+        availableSlots: row.available_slots,
+        maxSlots: row.max_slots_per_property,
+        lastSynced: row.last_synced
+      });
+    }
+  );
+};
+
+/**
+ * NEW: Get all properties state
+ */
+const getAllPropertiesState = (req, res) => {
+  const db = getDatabase();
+
+  db.all(
+    `SELECT 
+      property_id,
+      available_slots,
+      max_slots_per_property,
+      last_synced
+     FROM properties_state 
+     ORDER BY property_id ASC`,
+    [],
+    (err, rows) => {
+      if (err) {
+        console.error('Database error:', err);
+        return res.status(500).json({ error: 'Database error' });
+      }
+
+      const properties = rows.map(row => ({
+        propertyId: row.property_id,
+        availableSlots: row.available_slots,
+        maxSlots: row.max_slots_per_property,
+        lastSynced: row.last_synced
+      }));
+
+      res.json({ properties });
+    }
+  );
+};
+
 module.exports = {
   getPropertyStats,
-  getAllPropertiesStats
+  getAllPropertiesStats,
+  getPropertyState,
+  getAllPropertiesState
 };

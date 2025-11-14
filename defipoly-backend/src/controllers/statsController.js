@@ -57,7 +57,7 @@ const getPlayerStats = (req, res) => {
 
 /**
  * Get complete ownership data for a wallet
- * UPDATED: Now returns shield info and timestamps
+ * UPDATED: Now returns ALL 9 fields from PropertyOwnership
  */
 const getPlayerOwnership = (req, res) => {
   const { wallet } = req.params;
@@ -69,6 +69,10 @@ const getPlayerOwnership = (req, res) => {
       slots_owned, 
       slots_shielded,
       shield_expiry,
+      purchase_timestamp,
+      shield_cooldown_duration,
+      steal_protection_expiry,
+      bump,
       last_updated
      FROM property_ownership 
      WHERE wallet_address = ? AND slots_owned > 0
@@ -80,12 +84,16 @@ const getPlayerOwnership = (req, res) => {
         return res.status(500).json({ error: 'Database error' });
       }
       
-      // Format response with complete ownership data
+      // Format response with ALL ownership fields
       const ownerships = rows.map(row => ({
         propertyId: row.property_id,
         slotsOwned: row.slots_owned,
         slotsShielded: row.slots_shielded || 0,
         shieldExpiry: row.shield_expiry || 0,
+        purchaseTimestamp: row.purchase_timestamp || 0,
+        shieldCooldownDuration: row.shield_cooldown_duration || 0,
+        stealProtectionExpiry: row.steal_protection_expiry || 0,
+        bump: row.bump || 0,
         lastUpdated: row.last_updated
       }));
       

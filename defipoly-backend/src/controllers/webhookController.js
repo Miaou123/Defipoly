@@ -1,13 +1,20 @@
 // ============================================
 // FILE: webhookController.js
 // Transaction processor for both webhooks and WSS
-// FIXED: Handles array of actions from parseTransaction
+// UPDATED: Added blockchain sync calls for all events
 // ============================================
 
 const { parseTransaction } = require('../services/transactionProcessor');
 const { getDatabase } = require('../config/database');
 const { updatePlayerStats, updateTargetOnSteal } = require('../services/gameService');
 const { gameEvents } = require('../services/socketService');
+const { 
+  syncPropertyOwnership, 
+  syncPlayerSetCooldown, 
+  syncPlayerStealCooldown, 
+  syncPropertyState 
+} = require('../services/blockchainSyncService');
+const { PROPERTIES } = require('../config/constants');
 
 async function processWebhook(payload) {
   const transactions = Array.isArray(payload) ? payload : [payload];
@@ -42,6 +49,90 @@ async function processWebhook(payload) {
           );
         }
 
+        // ========== NEW: BLOCKCHAIN SYNC CALLS ==========
+        // Sync blockchain data to database based on action type
+        try {
+          switch (action.actionType) {
+            case 'buy':
+              console.log('   🔄 [SYNC] Syncing buy action data...');
+              
+              // Sync PropertyOwnership (includes purchase_timestamp)
+              await syncPropertyOwnership(action.playerAddress, action.propertyId);
+              
+              // Sync buy cooldown for this set
+              const property = PROPERTIES.find(p => p.id === action.propertyId);
+              if (property) {
+                await syncPlayerSetCooldown(action.playerAddress, property.setId);
+              }
+              
+              // Sync property available slots
+              await syncPropertyState(action.propertyId);
+              
+              console.log('   ✅ [SYNC] Buy data synced');
+              break;
+
+            case 'sell':
+              console.log('   🔄 [SYNC] Syncing sell action data...');
+              
+              // Sync PropertyOwnership (slots_owned decreased)
+              await syncPropertyOwnership(action.playerAddress, action.propertyId);
+              
+              // Sync property available slots
+              await syncPropertyState(action.propertyId);
+              
+              console.log('   ✅ [SYNC] Sell data synced');
+              break;
+
+            case 'shield':
+              console.log('   🔄 [SYNC] Syncing shield action data...');
+              
+              // Sync PropertyOwnership (includes shield_cooldown_duration)
+              await syncPropertyOwnership(action.playerAddress, action.propertyId);
+              
+              console.log('   ✅ [SYNC] Shield data synced');
+              break;
+
+            case 'steal_success':
+              console.log('   🔄 [SYNC] Syncing steal success data...');
+              
+              // Sync attacker's new ownership
+              await syncPropertyOwnership(action.playerAddress, action.propertyId);
+              
+              // Sync target's updated ownership (steal_protection_expiry set)
+              if (action.targetAddress) {
+                await syncPropertyOwnership(action.targetAddress, action.propertyId);
+              }
+              
+              // Sync steal cooldown for attacker
+              await syncPlayerStealCooldown(action.playerAddress, action.propertyId);
+              
+              console.log('   ✅ [SYNC] Steal success data synced');
+              break;
+
+            case 'steal_failed':
+              console.log('   🔄 [SYNC] Syncing steal failed data...');
+              
+              // Sync steal cooldown for attacker (still on cooldown even if failed)
+              await syncPlayerStealCooldown(action.playerAddress, action.propertyId);
+              
+              // Sync target's ownership (steal_protection_expiry set even on failed attempt)
+              if (action.targetAddress) {
+                await syncPropertyOwnership(action.targetAddress, action.propertyId);
+              }
+              
+              console.log('   ✅ [SYNC] Steal failed data synced');
+              break;
+
+            default:
+              // For other action types (claim, etc.), no blockchain sync needed
+              break;
+          }
+        } catch (syncError) {
+          console.error('   ❌ [SYNC] Error syncing blockchain data:', syncError.message);
+          // Don't fail the whole transaction if sync fails - continue processing
+        }
+        // ========== END BLOCKCHAIN SYNC CALLS ==========
+
         // Emit Socket.IO events based on action type
         try {
           switch (action.actionType) {
@@ -60,7 +151,18 @@ async function processWebhook(payload) {
               gameEvents.propertySold({
                 propertyId: action.propertyId,
                 seller: action.playerAddress,
-                price: action.amount,
+                received: action.amount,
+                slots: action.slots,
+                txSignature: action.txSignature,
+                timestamp: action.blockTime
+              });
+              break;
+              
+            case 'shield':
+              gameEvents.propertyShielded({
+                propertyId: action.propertyId,
+                player: action.playerAddress,
+                cost: action.amount,
                 slots: action.slots,
                 txSignature: action.txSignature,
                 timestamp: action.blockTime
@@ -72,76 +174,51 @@ async function processWebhook(payload) {
                 propertyId: action.propertyId,
                 attacker: action.playerAddress,
                 victim: action.targetAddress,
-                slots: action.slots,
-                txSignature: action.txSignature,
-                timestamp: action.blockTime
-              });
-              break;
-              
-            case 'shield':
-              gameEvents.propertyShielded({
-                propertyId: action.propertyId,
-                owner: action.playerAddress,
+                cost: action.amount,
                 txSignature: action.txSignature,
                 timestamp: action.blockTime
               });
               break;
               
             case 'claim':
-              gameEvents.rewardClaimed({
-                wallet: action.playerAddress,
+              gameEvents.rewardsClaimed({
+                player: action.playerAddress,
                 amount: action.amount,
                 txSignature: action.txSignature,
                 timestamp: action.blockTime
               });
               break;
-              
-            case 'steal_failed':
-              gameEvents.stealFailed({
-                propertyId: action.propertyId,
-                attacker: action.playerAddress,
-                victim: action.targetAddress,
-                cost: action.amount,
-                txSignature: action.txSignature,
-                timestamp: action.blockTime
-              });
-              break;
-              
-            case 'steal_attempt':
-              gameEvents.stealAttempted({
-                propertyId: action.propertyId,
-                attacker: action.playerAddress,
-                victim: action.targetAddress,
-                cost: action.amount,
-                txSignature: action.txSignature,
-                timestamp: action.blockTime
-              });
-              break;
           }
 
-          // Emit enhanced stats update for the player
+          // Emit recent action to live feed
+          gameEvents.recentAction({
+            actionType: action.actionType,
+            playerAddress: action.playerAddress,
+            targetAddress: action.targetAddress,
+            propertyId: action.propertyId,
+            amount: action.amount,
+            slots: action.slots,
+            success: action.success,
+            txSignature: action.txSignature,
+            timestamp: action.blockTime
+          });
+
+          // Update player stats for Socket.IO clients
           gameEvents.playerStatsUpdated({
             wallet: action.playerAddress,
             actionType: action.actionType
           });
 
-          // Emit detailed player stats change event
-          await gameEvents.playerStatsChanged(action.playerAddress);
-
-          // Emit ownership change for buy/sell/steal actions
-          if (['buy', 'sell', 'steal_success'].includes(action.actionType)) {
+          // Emit ownership change
+          if (action.propertyId !== undefined) {
             await gameEvents.ownershipChanged(action.playerAddress, action.propertyId);
-            
-            // Also emit rewards update since ownership affects rewards
-            await gameEvents.rewardsUpdated(action.playerAddress);
           }
 
-          // Emit rewards update for reward claims (to reset unclaimed rewards display)
-          if (action.actionType === 'claim') {
-            await gameEvents.rewardsUpdated(action.playerAddress);
-          }
+          // Update player's stats and rewards
+          await gameEvents.playerStatsChanged(action.playerAddress);
+          await gameEvents.rewardsUpdated(action.playerAddress);
 
-          // Emit stats update for target in steal
+          // If steal, update target player too
           if (action.actionType === 'steal_success' && action.targetAddress) {
             gameEvents.playerStatsUpdated({
               wallet: action.targetAddress,

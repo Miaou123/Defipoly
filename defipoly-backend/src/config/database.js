@@ -21,7 +21,7 @@ function initDatabase() {
 function createTables() {
   return new Promise((resolve, reject) => {
     let completed = 0;
-    const totalTables = 4;
+    const totalTables = 7; // Updated from 4 to 7
     let hasError = false;
 
     const checkCompletion = () => {
@@ -52,13 +52,19 @@ function createTables() {
       checkCompletion();
     });
 
-    // Property ownership table
+    // Property ownership table - NOW WITH ALL 9 FIELDS
     db.run(`
       CREATE TABLE IF NOT EXISTS property_ownership (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         wallet_address TEXT NOT NULL,
         property_id INTEGER NOT NULL,
         slots_owned INTEGER DEFAULT 0,
+        slots_shielded INTEGER DEFAULT 0,
+        shield_expiry INTEGER DEFAULT 0,
+        purchase_timestamp INTEGER DEFAULT 0,
+        shield_cooldown_duration INTEGER DEFAULT 0,
+        steal_protection_expiry INTEGER DEFAULT 0,
+        bump INTEGER DEFAULT 0,
         last_updated INTEGER DEFAULT (strftime('%s', 'now')),
         UNIQUE(wallet_address, property_id)
       )
@@ -113,6 +119,12 @@ function createTables() {
         total_earned INTEGER DEFAULT 0,
         total_slots_owned INTEGER DEFAULT 0,
         daily_income INTEGER DEFAULT 0,
+        leaderboard_score INTEGER DEFAULT 0,
+        roi_ratio REAL DEFAULT 0,
+        steal_win_rate REAL DEFAULT 0,
+        defense_rating REAL DEFAULT 0,
+        complete_sets INTEGER DEFAULT 0,
+        times_stolen INTEGER DEFAULT 0,
         last_action_time INTEGER,
         updated_at INTEGER DEFAULT (strftime('%s', 'now'))
       )
@@ -125,29 +137,85 @@ function createTables() {
       console.log('✅ Player stats table ready');
       checkCompletion();
     });
+
+    // Player Set Cooldowns table (NEW)
+    db.run(`
+      CREATE TABLE IF NOT EXISTS player_set_cooldowns (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        wallet_address TEXT NOT NULL,
+        set_id INTEGER NOT NULL,
+        last_purchase_timestamp INTEGER NOT NULL,
+        cooldown_duration INTEGER NOT NULL,
+        last_purchased_property_id INTEGER,
+        properties_owned_in_set TEXT,
+        properties_count INTEGER DEFAULT 0,
+        last_synced INTEGER DEFAULT (strftime('%s', 'now')),
+        UNIQUE(wallet_address, set_id)
+      )
+    `, (err) => {
+      if (err) {
+        console.error('Error creating player_set_cooldowns table:', err);
+        hasError = true;
+        return reject(err);
+      }
+      console.log('✅ Player set cooldowns table ready');
+      checkCompletion();
+    });
+
+    // Player Steal Cooldowns table (NEW)
+    db.run(`
+      CREATE TABLE IF NOT EXISTS player_steal_cooldowns (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        wallet_address TEXT NOT NULL,
+        property_id INTEGER NOT NULL,
+        last_steal_attempt_timestamp INTEGER NOT NULL,
+        cooldown_duration INTEGER NOT NULL,
+        last_synced INTEGER DEFAULT (strftime('%s', 'now')),
+        UNIQUE(wallet_address, property_id)
+      )
+    `, (err) => {
+      if (err) {
+        console.error('Error creating player_steal_cooldowns table:', err);
+        hasError = true;
+        return reject(err);
+      }
+      console.log('✅ Player steal cooldowns table ready');
+      checkCompletion();
+    });
+
+    // Properties State table (NEW)
+    db.run(`
+      CREATE TABLE IF NOT EXISTS properties_state (
+        property_id INTEGER PRIMARY KEY,
+        available_slots INTEGER NOT NULL,
+        max_slots_per_property INTEGER NOT NULL,
+        last_synced INTEGER DEFAULT (strftime('%s', 'now'))
+      )
+    `, (err) => {
+      if (err) {
+        console.error('Error creating properties_state table:', err);
+        hasError = true;
+        return reject(err);
+      }
+      console.log('✅ Properties state table ready');
+      checkCompletion();
+    });
   });
 }
 
 function createIndexes() {
   return new Promise((resolve) => {
-    // Create optimized indexes
+    // Existing indexes
     db.run(`CREATE INDEX IF NOT EXISTS idx_actions_player_time ON game_actions(player_address, block_time DESC)`);
     db.run(`CREATE INDEX IF NOT EXISTS idx_actions_type_time ON game_actions(action_type, block_time DESC)`);
     db.run(`CREATE INDEX IF NOT EXISTS idx_actions_property_time ON game_actions(property_id, block_time DESC)`);
     db.run(`CREATE INDEX IF NOT EXISTS idx_actions_player_type_property ON game_actions(player_address, action_type, property_id)`);
     db.run(`CREATE INDEX IF NOT EXISTS idx_ownership_wallet ON property_ownership(wallet_address)`);
     db.run(`CREATE INDEX IF NOT EXISTS idx_ownership_property ON property_ownership(property_id)`);
-    db.run(`ALTER TABLE player_stats ADD COLUMN total_slots_owned INTEGER DEFAULT 0`, () => {});
-    db.run(`ALTER TABLE player_stats ADD COLUMN daily_income INTEGER DEFAULT 0`, () => {});
-    db.run(`ALTER TABLE property_ownership ADD COLUMN slots_shielded INTEGER DEFAULT 0`, () => {});
-    db.run(`ALTER TABLE property_ownership ADD COLUMN shield_expiry INTEGER DEFAULT 0`, () => {});
-    db.run(`ALTER TABLE player_stats ADD COLUMN leaderboard_score INTEGER DEFAULT 0`, () => {});
-    db.run(`ALTER TABLE player_stats ADD COLUMN roi_ratio REAL DEFAULT 0`, () => {});
-    db.run(`ALTER TABLE player_stats ADD COLUMN steal_win_rate REAL DEFAULT 0`, () => {});
-    db.run(`ALTER TABLE player_stats ADD COLUMN defense_rating REAL DEFAULT 0`, () => {});
-    db.run(`ALTER TABLE player_stats ADD COLUMN complete_sets INTEGER DEFAULT 0`, () => {});
-    db.run(`ALTER TABLE player_stats ADD COLUMN times_stolen INTEGER DEFAULT 0`, () => {});
-
+    
+    // New indexes for cooldown tables
+    db.run(`CREATE INDEX IF NOT EXISTS idx_set_cooldowns_wallet_set ON player_set_cooldowns(wallet_address, set_id)`);
+    db.run(`CREATE INDEX IF NOT EXISTS idx_steal_cooldowns_wallet_property ON player_steal_cooldowns(wallet_address, property_id)`);
 
     console.log('✅ Database indexes created');
     resolve();
