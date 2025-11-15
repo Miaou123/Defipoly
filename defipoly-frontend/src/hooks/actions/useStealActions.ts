@@ -1,7 +1,7 @@
 // ============================================
-// UPDATED useStealActions.ts
-// FIXED: Added marketingTokenAccount (was missing!)
-// Now uses DEV_WALLET and MARKETING_WALLET from constants
+// MIGRATED useStealActions.ts
+// Now uses backend API for eligible targets instead of RPC calls
+// FIXES: Properly filters by steal_protection_expiry from database
 // ============================================
 
 import { useCallback } from 'react';
@@ -15,8 +15,6 @@ import {
   getPlayerPDA,
   getOwnershipPDA,
   getStealCooldownPDA,
-  fetchOwnershipData,
-  fetchPropertyData,
 } from '@/utils/program';
 import { 
   GAME_CONFIG, 
@@ -25,7 +23,8 @@ import {
   DEV_WALLET,
   MARKETING_WALLET 
 } from '@/utils/constants';
-import { fetchPropertyOwners } from '@/utils/propertyOwners';
+// ✅ NEW: Import API service
+import { fetchOwnershipData } from '@/services/api';
 
 interface StealResult {
   tx: string;
@@ -54,73 +53,63 @@ export const useStealActions = (
     try {
       console.log(`🎲 Initiating random steal for property ${propertyId}...`);
 
-      // Check backend API for available targets first
-      const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3101';
+      // ✅ NEW: Fetch ALL ownerships for this property from backend API
+      // This gets us ALL owners with their steal_protection_expiry data!
+      console.log('🔍 Fetching property owners from backend API...');
       
-      try {
-        const statsResponse = await fetch(`${API_BASE_URL}/api/properties/${propertyId}/stats`);
-        if (statsResponse.ok) {
-          const stats = await statsResponse.json();
-          console.log(`🔍 Backend reports ${stats.ownersWithUnshieldedSlots} unshielded owners for property ${propertyId}`);
-          
-          if (stats.ownersWithUnshieldedSlots === 0) {
-            throw new Error('No eligible targets found. All owners are either shielded or have steal protection active.');
-          }
-        }
-      } catch (error) {
-        console.warn('Could not fetch backend stats, continuing with chain query...', error);
+      const API_BASE_URL = process.env.NEXT_PUBLIC_PROFILE_API_URL || 'http://localhost:3005';
+      const response = await fetch(`${API_BASE_URL}/api/ownership`);
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch ownership data from backend');
       }
+      
+      const data = await response.json();
+      const allOwnerships = data.ownerships || [];
+      
+      // Filter for this specific property
+      const propertyOwners = allOwnerships.filter((o: any) => o.property_id === propertyId);
+      
+      console.log(`📊 Found ${propertyOwners.length} total owners for property ${propertyId}`);
 
-      // Fetch all owners of this property
-      const owners = await fetchPropertyOwners(connection, program, propertyId);
-      console.log(`📊 Found ${owners.length} total owners from chain`);
-
-      // If chain parsing failed but backend shows targets, try alternative approach
-      if (owners.length === 0) {
-        console.warn('⚠️  Chain parsing returned 0 owners, but backend shows targets exist');
-        console.warn('📝 This suggests a data structure mismatch in fetchPropertyOwners()');
-        
-        // For now, throw a more specific error
-        throw new Error('Unable to fetch property owners from chain. The account data structure may have changed.');
-      }
-
-      // Filter for eligible targets
+      // ✅ NEW: Filter for eligible targets using backend data
       const currentTime = Math.floor(Date.now() / 1000);
       const eligibleTargets = [];
 
-      for (const owner of owners) {
+      for (const ownership of propertyOwners) {
         // Skip self
-        if (owner.owner.equals(wallet.publicKey)) {
+        if (ownership.wallet_address === wallet.publicKey.toString()) {
+          console.log(`⏭️  Skipping self`);
           continue;
         }
+
+        // Calculate unshielded slots
+        const shieldActive = currentTime < ownership.shield_expiry;
+        const shieldedSlots = shieldActive ? ownership.slots_shielded : 0;
+        const unshieldedSlots = ownership.slots_owned - shieldedSlots;
 
         // Skip if no unshielded slots
-        if (owner.unshieldedSlots <= 0) {
+        if (unshieldedSlots <= 0) {
+          console.log(`⏭️  Skipping ${ownership.wallet_address.slice(0, 8)}... (no unshielded slots)`);
           continue;
         }
 
-        // Check for steal protection
-        const ownershipData = await fetchOwnershipData(program, owner.owner, propertyId);
-        if (ownershipData) {
-          const stealProtectionExpiry = typeof ownershipData.stealProtectionExpiry === 'number'
-            ? ownershipData.stealProtectionExpiry
-            : ownershipData.stealProtectionExpiry?.toNumber() || 0;
-
-          // Skip if steal protection is active
-          if (currentTime < stealProtectionExpiry) {
-            console.log(`⏭️  Skipping ${owner.owner.toString().slice(0, 8)}... (steal protection active)`);
-            continue;
-          }
+        // ✅ CRITICAL FIX: Check steal_protection_expiry from backend!
+        if (currentTime < ownership.steal_protection_expiry) {
+          console.log(`⏭️  Skipping ${ownership.wallet_address.slice(0, 8)}... (steal protection active until ${ownership.steal_protection_expiry})`);
+          continue;
         }
 
-        eligibleTargets.push(owner.owner);
+        // This target is eligible!
+        eligibleTargets.push(new PublicKey(ownership.wallet_address));
+        console.log(`✅ Eligible: ${ownership.wallet_address.slice(0, 8)}... (${unshieldedSlots} unshielded slots, no protection)`);
       }
 
       if (eligibleTargets.length === 0) {
         throw new Error('No eligible targets found. All owners are either shielded or have steal protection active.');
       }
 
-      console.log(`✅ Found ${eligibleTargets.length} eligible targets (unshielded + no steal protection)`);
+      console.log(`✅ Found ${eligibleTargets.length} eligible targets`);
 
       // Prepare remaining_accounts (pairs of ownership + player account)
       const remainingAccounts = [];
@@ -142,7 +131,7 @@ export const useStealActions = (
 
       console.log(`📦 Prepared ${remainingAccounts.length / 2} target pairs for remaining_accounts`);
 
-      // ✅ FIX: Get wallet addresses from constants
+      // Get token accounts
       const playerTokenAccount = await getAssociatedTokenAddress(TOKEN_MINT, wallet.publicKey);
       const devTokenAccount = await getAssociatedTokenAddress(TOKEN_MINT, DEV_WALLET);
       const marketingTokenAccount = await getAssociatedTokenAddress(TOKEN_MINT, MARKETING_WALLET);
@@ -158,7 +147,6 @@ export const useStealActions = (
       
       console.log('🎲 Executing truly random steal (target selected on-chain)...');
 
-      // ✅ FIX: Include marketingTokenAccount in accounts
       const tx = await program.methods
         .stealPropertyInstant(
           Array.from(userRandomness)
@@ -171,71 +159,66 @@ export const useStealActions = (
           playerTokenAccount,
           rewardPoolVault: REWARD_POOL,
           devTokenAccount,
-          marketingTokenAccount,  // ✅ CRITICAL FIX - WAS MISSING!
+          marketingTokenAccount,
+          attacker: wallet.publicKey,
           gameConfig: GAME_CONFIG,
           slotHashes: SYSVAR_SLOT_HASHES_PUBKEY,
-          attacker: wallet.publicKey,
           tokenProgram: TOKEN_PROGRAM_ID,
           systemProgram: SystemProgram.programId,
         })
         .remainingAccounts(remainingAccounts)
-        .rpc({ skipPreflight: false });
+        .rpc();
 
-      console.log('✅ Transaction sent:', tx);
+      console.log('✅ Steal transaction sent:', tx);
 
-      // Wait for confirmation
-      await provider.connection.confirmTransaction(tx, 'confirmed');
+      // Parse events to get result
+      let stealResult: StealResult = {
+        tx,
+        success: false,
+        vrfResult: '0',
+      };
 
-      // Parse logs to determine success
-      const txDetails = await provider.connection.getTransaction(tx, {
-        commitment: 'confirmed',
-        maxSupportedTransactionVersion: 0,
-      });
+      if (eventParser) {
+        const txDetails = await connection.getTransaction(tx, {
+          commitment: 'confirmed',
+          maxSupportedTransactionVersion: 0,
+        });
 
-      let success = false;
-      let vrfResult = 'unknown';
-      let targetAddress = undefined;
-
-      if (txDetails?.meta?.logMessages) {
-        const logs = txDetails.meta.logMessages;
-        
-        const successLog = logs.find(log => log.includes('✅ INSTANT STEAL SUCCESS'));
-        const failLog = logs.find(log => log.includes('❌ INSTANT STEAL FAILED'));
-        
-        if (successLog) {
-          success = true;
-          const targetMatch = successLog.match(/from ([A-Za-z0-9]{32,44})/);
-          const vrfMatch = successLog.match(/target_selection: (\d+)/);
+        if (txDetails?.meta?.logMessages) {
+          const events = eventParser.parseLogs(txDetails.meta.logMessages);
           
-          if (targetMatch) targetAddress = targetMatch[1];
-          if (vrfMatch) vrfResult = vrfMatch[1];
-          
-          console.log('✅ Steal succeeded! Target:', targetAddress, 'VRF:', vrfResult);
-        } else if (failLog) {
-          success = false;
-          const targetMatch = failLog.match(/targeted ([A-Za-z0-9]{32,44})/);
-          const vrfMatch = failLog.match(/target_selection: (\d+)/);
-          
-          if (targetMatch) targetAddress = targetMatch[1];
-          if (vrfMatch) vrfResult = vrfMatch[1];
-          
-          console.log('❌ Steal failed. Target:', targetAddress, 'VRF:', vrfResult);
+          for (const event of events) {
+            if (event.name === 'StealSuccessEvent') {
+              const eventData = event.data as any;
+              stealResult = {
+                tx,
+                success: true,
+                vrfResult: eventData.vrfResult?.toString() || '0',
+                targetAddress: eventData.target?.toString(),
+              };
+              console.log('🎉 STEAL SUCCESS!', stealResult);
+            } else if (event.name === 'StealFailedEvent') {
+              const eventData = event.data as any;
+              stealResult = {
+                tx,
+                success: false,
+                vrfResult: eventData.vrfResult?.toString() || '0',
+                targetAddress: eventData.target?.toString(),
+              };
+              console.log('❌ Steal failed', stealResult);
+            }
+          }
         }
       }
 
-      return {
-        tx,
-        success,
-        vrfResult,
-        targetAddress,
-      };
+      return stealResult;
       
     } catch (error: any) {
-      console.error('❌ Error in steal operation:', error);
+      console.error('❌ Error in stealPropertyInstant:', error);
       
       const errorMessage = error?.message || error?.toString() || '';
       
-      // Handle specific errors
+      // Better error messages
       if (errorMessage.includes('NoEligibleTargets')) {
         throw new Error('No eligible targets found. All slots are either shielded or have steal protection active.');
       }
@@ -255,7 +238,6 @@ export const useStealActions = (
       if (errorMessage.includes('already been processed') || 
           errorMessage.includes('AlreadyProcessed')) {
         console.log('✅ Transaction already processed');
-        // Still return success since it processed
         return {
           tx: 'already-processed',
           success: true,
