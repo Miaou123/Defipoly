@@ -65,7 +65,7 @@ export const useStealActions = (
       }
       
       const data = await response.json();
-      const allOwnerships = data.ownerships || [];
+      const allOwnerships = data.owners || [];
       
       // Filter for this specific property
       const propertyOwners = allOwnerships.filter((o: any) => o.property_id === propertyId);
