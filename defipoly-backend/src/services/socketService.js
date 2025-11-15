@@ -1,6 +1,7 @@
 // ============================================
 // Socket.IO Service
 // Handles real-time communication with frontend clients
+// FIXED: Added missing gameEvents functions
 // ============================================
 
 const { Server } = require('socket.io');
@@ -168,6 +169,7 @@ async function getPlayerOwnership(walletAddress) {
         GROUP_CONCAT(property_id) as property_ids
       FROM property_ownership 
       WHERE wallet_address = ?
+      AND slots_owned > 0
     `;
     
     db.get(query, [walletAddress], (err, row) => {
@@ -242,6 +244,17 @@ const gameEvents = {
   rewardClaimed: (data) => {
     emitToWallet(data.wallet, 'reward-claimed', data);
     emitToAll('recent-action', { type: 'reward', ...data });
+  },
+  
+  // ✅ NEW: Added missing functions
+  rewardsClaimed: (data) => {
+    emitToWallet(data.wallet, 'rewards-claimed', data);
+    emitToAll('recent-action', { type: 'claim', ...data });
+  },
+  
+  // ✅ NEW: Generic recent action event
+  recentAction: (data) => {
+    emitToAll('recent-action', data);
   },
   
   // Enhanced player events with detailed stats

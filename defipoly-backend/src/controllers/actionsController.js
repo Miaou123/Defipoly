@@ -1,5 +1,5 @@
 const { getDatabase } = require('../config/database');
-const { updatePlayerStats } = require('../services/playerStatsService');
+const { updatePlayerStats } = require('../services/gameService');
 
 const storeAction = (req, res) => {
   const action = req.body;
@@ -46,7 +46,14 @@ const storeAction = (req, res) => {
     console.log(`✅ [STORE ACTION] Inserted/Ignored action. Changes: ${this.changes}, Last ID: ${this.lastID}`);
 
     if (this.changes > 0) {
-      updatePlayerStats(action.playerAddress, action.actionType, action.amount);
+      // Use gameService's updatePlayerStats (takes 5 params)
+      updatePlayerStats(
+        action.playerAddress,
+        action.actionType,
+        action.amount,
+        action.slots,
+        action.propertyId
+      );
       console.log(`📊 [STORE ACTION] Updated player stats for ${action.playerAddress}`);
     } else {
       console.log(`ℹ️  [STORE ACTION] Action already exists (tx_signature conflict)`);
@@ -93,7 +100,14 @@ const storeActionsBatch = (req, res) => {
     ], function(err) {
       if (!err && this.changes > 0) {
         inserted++;
-        updatePlayerStats(action.playerAddress, action.actionType, action.amount);
+        // Use gameService's updatePlayerStats (takes 5 params)
+        updatePlayerStats(
+          action.playerAddress,
+          action.actionType,
+          action.amount,
+          action.slots,
+          action.propertyId
+        );
       }
     });
   });

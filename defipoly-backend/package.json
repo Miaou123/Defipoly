@@ -10,6 +10,8 @@
     "dev": "nodemon server.js",
     "kill-port": "node src/scripts/kill-port.js",
     "sync-blockchain": "node src/scripts/sync-blockchain-data.js",
+    "setup:full": "node src/scripts/setup-full.js",
+    "verify-sync": "node src/scripts/verify-complete-sync.js",
     "periodic-sync": "node src/scripts/periodic-sync.js",
     "pm2:start": "pm2 start server.js --name defipoly-api",
     "pm2:stop": "pm2 stop defipoly-api",
