@@ -57,6 +57,8 @@ const uploadProfilePicture = [
                 return res.status(500).json({ error: 'Database error' });
               }
               
+              console.log('Profile picture saved to database:', fileUrl);
+              
               res.json({ 
                 success: true, 
                 profilePicture: fileUrl,

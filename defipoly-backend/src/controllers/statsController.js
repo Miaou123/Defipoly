@@ -49,7 +49,8 @@ const getPlayerStats = (req, res) => {
         dailyIncome: row.daily_income || 0,
         completedSets: row.complete_sets || 0,
         lastActionTime: row.last_action_time,
-        updatedAt: row.updated_at
+        updatedAt: row.updated_at,
+        lastClaimTimestamp: row.last_claim_timestamp || 0,
       });
     }
   );

@@ -24,7 +24,6 @@ import { usePropertyActions } from './actions/usePropertyActions';
 import { useShieldActions } from './actions/useShieldActions';
 import { useRewardActions } from './actions/useRewardActions';
 import { useStealActions } from './actions/useStealActions';
-import { useDataFetchers } from './data/useDataFetchers';
 
 export function useDefipoly() {
   const { connection } = useConnection();
@@ -165,7 +164,6 @@ export function useDefipoly() {
     playerInitialized, setLoading
   );
   
-  const dataFetchers = useDataFetchers(program, wallet);
 
   return {
     program,
@@ -183,7 +181,5 @@ export function useDefipoly() {
     ...rewardActions,
     // Steal actions - ONLY random steal now
     ...stealActions,
-    // Data fetchers
-    ...dataFetchers
   };
 }

@@ -40,14 +40,14 @@ export function useOwnership(): UseOwnershipReturn {
       
       // Convert API format to frontend PropertyOwnership format
       const converted: PropertyOwnership[] = apiOwnerships.map(apiOwn => ({
-        player: new PublicKey(apiOwn.wallet_address),
-        propertyId: apiOwn.property_id,
-        slotsOwned: apiOwn.slots_owned,
-        slotsShielded: apiOwn.slots_shielded,
-        purchaseTimestamp: new BN(apiOwn.purchase_timestamp),
-        shieldExpiry: new BN(apiOwn.shield_expiry),
-        shieldCooldownDuration: new BN(apiOwn.shield_cooldown_duration),
-        stealProtectionExpiry: new BN(apiOwn.steal_protection_expiry),
+        player: publicKey,
+        propertyId: apiOwn.propertyId,
+        slotsOwned: apiOwn.slotsOwned,
+        slotsShielded: apiOwn.slotsShielded,
+        purchaseTimestamp: new BN(apiOwn.purchaseTimestamp),
+        shieldExpiry: new BN(apiOwn.shieldExpiry),
+        shieldCooldownDuration: new BN(apiOwn.shieldCooldownDuration),
+        stealProtectionExpiry: new BN(apiOwn.stealProtectionExpiry),
         bump: apiOwn.bump,
       }));
 
@@ -89,14 +89,14 @@ export async function fetchOwnershipForProperty(
   if (!apiOwnership) return null;
 
   return {
-    player: new PublicKey(apiOwnership.wallet_address),
-    propertyId: apiOwnership.property_id,
-    slotsOwned: apiOwnership.slots_owned,
-    slotsShielded: apiOwnership.slots_shielded,
-    purchaseTimestamp: new BN(apiOwnership.purchase_timestamp),
-    shieldExpiry: new BN(apiOwnership.shield_expiry),
-    shieldCooldownDuration: new BN(apiOwnership.shield_cooldown_duration),
-    stealProtectionExpiry: new BN(apiOwnership.steal_protection_expiry),
+    player: new PublicKey(wallet),
+    propertyId: apiOwnership.propertyId,
+    slotsOwned: apiOwnership.slotsOwned,
+    slotsShielded: apiOwnership.slotsShielded,
+    purchaseTimestamp: new BN(apiOwnership.purchaseTimestamp),
+    shieldExpiry: new BN(apiOwnership.shieldExpiry),
+    shieldCooldownDuration: new BN(apiOwnership.shieldCooldownDuration),
+    stealProtectionExpiry: new BN(apiOwnership.stealProtectionExpiry),
     bump: apiOwnership.bump,
   };
 }

@@ -70,47 +70,33 @@ export function useCooldowns(): UseCooldownsReturn {
   }, [fetchData]);
 
   const getSetCooldown = useCallback((setId: number): ApiPlayerSetCooldown | null => {
-    return setCooldowns.find(c => c.set_id === setId) || null;
+    if (!Array.isArray(setCooldowns)) return null;
+    return setCooldowns.find(c => c.setId === setId) || null;
   }, [setCooldowns]);
 
   const getStealCooldown = useCallback((propertyId: number): ApiPlayerStealCooldown | null => {
-    return stealCooldowns.find(c => c.property_id === propertyId) || null;
+    if (!Array.isArray(stealCooldowns)) return null;
+    return stealCooldowns.find(c => c.propertyId === propertyId) || null;
   }, [stealCooldowns]);
 
   const isSetOnCooldown = useCallback((setId: number): boolean => {
     const cooldown = getSetCooldown(setId);
-    if (!cooldown) return false;
-
-    const currentTime = Math.floor(Date.now() / 1000);
-    const cooldownEnd = cooldown.last_purchase_timestamp + cooldown.cooldown_duration;
-    return currentTime < cooldownEnd;
+    return cooldown?.isOnCooldown || false;
   }, [getSetCooldown]);
 
   const isStealOnCooldown = useCallback((propertyId: number): boolean => {
     const cooldown = getStealCooldown(propertyId);
-    if (!cooldown) return false;
-
-    const currentTime = Math.floor(Date.now() / 1000);
-    const cooldownEnd = cooldown.last_steal_timestamp + cooldown.cooldown_duration;
-    return currentTime < cooldownEnd;
+    return cooldown?.isOnCooldown || false;
   }, [getStealCooldown]);
 
   const getSetCooldownRemaining = useCallback((setId: number): number => {
     const cooldown = getSetCooldown(setId);
-    if (!cooldown) return 0;
-
-    const currentTime = Math.floor(Date.now() / 1000);
-    const cooldownEnd = cooldown.last_purchase_timestamp + cooldown.cooldown_duration;
-    return Math.max(0, cooldownEnd - currentTime);
+    return cooldown?.cooldownRemaining || 0;
   }, [getSetCooldown]);
 
   const getStealCooldownRemaining = useCallback((propertyId: number): number => {
     const cooldown = getStealCooldown(propertyId);
-    if (!cooldown) return 0;
-
-    const currentTime = Math.floor(Date.now() / 1000);
-    const cooldownEnd = cooldown.last_steal_timestamp + cooldown.cooldown_duration;
-    return Math.max(0, cooldownEnd - currentTime);
+    return cooldown?.cooldownRemaining || 0;
   }, [getStealCooldown]);
 
   return {

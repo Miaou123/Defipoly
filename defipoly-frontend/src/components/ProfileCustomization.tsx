@@ -115,6 +115,10 @@ export function ProfileCustomization({
       if (response.ok) {
         const data = await response.json();
         setProfilePicture(data.profilePicture);
+        // Clear profile cache so other components refresh
+        clearProfileCache(publicKey.toString());
+        // Trigger profile update event for other components
+        window.dispatchEvent(new Event('profileUpdated'));
         showSuccess('Upload Success', 'Profile picture updated');
       } else {
         showError('Upload Failed', 'Failed to upload profile picture');

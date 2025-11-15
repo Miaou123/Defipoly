@@ -1,7 +1,14 @@
+// ============================================
+// FILE: useRewards.ts
+// ✅ FINAL VERSION: 100% API-based, NO RPC calls!
+// Uses last_claim_timestamp from database instead of blockchain
+// ============================================
+
 import { useEffect, useState, useRef } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
-import { useDefipoly } from './useDefipoly';
 import { useWebSocket } from '@/contexts/WebSocketContext';
+import { useOwnership } from './useOwnership'; // ✅ API-based hook
+import { fetchPlayerStats } from '@/services/api'; // ✅ NEW: API call
 import { PROPERTIES } from '@/utils/constants';
 import { isSetComplete, getMinSlots } from '@/utils/gameHelpers';
 
@@ -11,60 +18,69 @@ const calculateDailyIncome = (price: number, yieldBps: number): number => {
 };
 
 export function useRewards() {
-  const { wallet } = useWallet();
+  const { publicKey } = useWallet();
   const { socket, connected } = useWebSocket();
-  const { getPlayerData, getOwnershipData, program } = useDefipoly();
+  
+  // ✅ Use API-based ownership hook (already fetched via API)
+  const { ownerships: apiOwnerships, loading: ownershipLoading } = useOwnership();
   
   const [ownerships, setOwnerships] = useState<any[]>([]);
-  const [lastClaimTime, setLastClaimTime] = useState<number>(Date.now());
+  const [lastClaimTime, setLastClaimTime] = useState<number>(Math.floor(Date.now() / 1000));
   const [dailyIncome, setDailyIncome] = useState(0);
   const [unclaimedRewards, setUnclaimedRewards] = useState(0);
   const [loading, setLoading] = useState(false);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
   const initialLoadDone = useRef(false);
 
-  // Initial data fetch (only once)
+  // ✅ NEW: Fetch last_claim_timestamp from API instead of RPC!
   useEffect(() => {
-    if (!wallet || !program || initialLoadDone.current) return;
+    if (!publicKey || initialLoadDone.current) return;
 
-    const fetchInitialData = async () => {
+    const processOwnerships = async () => {
       setLoading(true);
       setIsInitialLoad(true);
       
       try {
-        const playerData = await getPlayerData();
-        if (!playerData) {
+        // ✅ NEW: Get last claim time from API instead of blockchain!
+        const playerStats = await fetchPlayerStats(publicKey.toString());
+        
+        if (!playerStats) {
           setLoading(false);
           setIsInitialLoad(false);
           initialLoadDone.current = true;
           return;
         }
 
-        const ownershipPromises = PROPERTIES.map(async (prop) => {
-          const ownership = await getOwnershipData(prop.id);
-          if (ownership?.slotsOwned && ownership.slotsOwned > 0) {
+        // ✅ NEW: Use last_claim_timestamp from database
+        const lastClaim = playerStats.lastClaimTimestamp || Math.floor(Date.now() / 1000);
+        setLastClaimTime(lastClaim);
+
+        console.log('📅 Last claim time from API:', lastClaim, new Date(lastClaim * 1000).toISOString());
+
+        // ✅ Use ownerships from API hook (no RPC calls!)
+        const rewardsData = apiOwnerships
+          .filter(ownership => ownership.slotsOwned > 0)
+          .map(ownership => {
+            const property = PROPERTIES.find(p => p.id === ownership.propertyId);
+            if (!property) return null;
+
             return {
-              propertyId: prop.id,
+              propertyId: ownership.propertyId,
               slotsOwned: ownership.slotsOwned,
               purchaseTimestamp: ownership.purchaseTimestamp.toNumber(),
-              dailyIncomePerSlot: calculateDailyIncome(prop.price, prop.yieldBps),
+              dailyIncomePerSlot: calculateDailyIncome(property.price, property.yieldBps),
             };
-          }
-          return null;
-        });
+          })
+          .filter((o): o is NonNullable<typeof o> => o !== null);
 
-        const results = await Promise.all(ownershipPromises);
-        const validOwnerships = results.filter((o): o is NonNullable<typeof o> => o !== null);
-        
-        setOwnerships(validOwnerships);
-        setLastClaimTime(playerData.lastClaimTimestamp.toNumber());
-        
+        setOwnerships(rewardsData);
+
         // Calculate daily income with set bonuses
-        const ownedPropertyIds = validOwnerships.map(o => o.propertyId);
+        const ownedPropertyIds = rewardsData.map(o => o.propertyId);
         let totalDaily = 0;
         
         // Group by setId to calculate bonuses
-        const ownershipsBySet = validOwnerships.reduce((acc, ownership) => {
+        const ownershipsBySet = rewardsData.reduce((acc, ownership) => {
           const property = PROPERTIES.find(p => p.id === ownership.propertyId);
           if (!property) return acc;
           
@@ -100,7 +116,7 @@ export function useRewards() {
         setDailyIncome(totalDaily);
         initialLoadDone.current = true;
       } catch (error) {
-        console.error('Error fetching initial rewards data:', error);
+        console.error('Error processing rewards data:', error);
         initialLoadDone.current = true;
       } finally {
         setLoading(false);
@@ -108,86 +124,110 @@ export function useRewards() {
       }
     };
 
-    fetchInitialData();
-  }, [wallet, program, getPlayerData, getOwnershipData]);
+    processOwnerships();
+  }, [publicKey, apiOwnerships]);
 
-  // WebSocket event listeners for real-time updates
+  // ✅ WebSocket listeners (simplified - no RPC calls!)
   useEffect(() => {
-    if (!socket || !connected || !wallet) return;
+    if (!socket || !connected || !publicKey) return;
 
     const handleOwnershipChanged = async (data: any) => {
-      if (data.wallet === wallet.publicKey?.toString()) {
+      if (data.wallet === publicKey.toString()) {
         console.log('🏠 Ownership changed via WebSocket:', data);
         
-        // Re-fetch ownership data for updated calculations
-        // This is more efficient than polling every 30 seconds
         try {
-          const playerData = await getPlayerData();
-          if (!playerData) return;
+          // ✅ Get updated last claim time from API
+          const playerStats = await fetchPlayerStats(publicKey.toString());
+          if (playerStats) {
+            setLastClaimTime(playerStats.lastClaimTimestamp || Math.floor(Date.now() / 1000));
+          }
 
-          const ownershipPromises = PROPERTIES.map(async (prop) => {
-            const ownership = await getOwnershipData(prop.id);
-            if (ownership?.slotsOwned && ownership.slotsOwned > 0) {
+          // ✅ Use apiOwnerships from hook (already updated by useOwnership!)
+          const rewardsData = apiOwnerships
+            .filter(ownership => ownership.slotsOwned > 0)
+            .map(ownership => {
+              const property = PROPERTIES.find(p => p.id === ownership.propertyId);
+              if (!property) return null;
+
               return {
-                propertyId: prop.id,
+                propertyId: ownership.propertyId,
                 slotsOwned: ownership.slotsOwned,
                 purchaseTimestamp: ownership.purchaseTimestamp.toNumber(),
-                dailyIncomePerSlot: calculateDailyIncome(prop.price, prop.yieldBps),
+                dailyIncomePerSlot: calculateDailyIncome(property.price, property.yieldBps),
               };
-            }
-            return null;
-          });
-
-          const results = await Promise.all(ownershipPromises);
-          const validOwnerships = results.filter((o): o is NonNullable<typeof o> => o !== null);
+            })
+            .filter((o): o is NonNullable<typeof o> => o !== null);
           
-          setOwnerships(validOwnerships);
-          setLastClaimTime(playerData.lastClaimTimestamp.toNumber());
+          setOwnerships(rewardsData);
           
-          // Recalculate daily income
-          // [Same calculation logic as initial load - abbreviated for brevity]
-          const ownedPropertyIds = validOwnerships.map(o => o.propertyId);
+          // Recalculate daily income with set bonuses
+          const ownedPropertyIds = rewardsData.map(o => o.propertyId);
           let totalDaily = 0;
           
-          for (const ownership of validOwnerships) {
+          const ownershipsBySet = rewardsData.reduce((acc, ownership) => {
             const property = PROPERTIES.find(p => p.id === ownership.propertyId);
-            if (property) {
-              totalDaily += ownership.dailyIncomePerSlot * ownership.slotsOwned;
+            if (!property) return acc;
+            
+            if (!acc[property.setId]) {
+              acc[property.setId] = [];
+            }
+            acc[property.setId].push({ ownership, property });
+            return acc;
+          }, {} as Record<number, Array<{ ownership: any; property: typeof PROPERTIES[0] }>>);
+          
+          for (const [setIdStr, setOwnerships] of Object.entries(ownershipsBySet)) {
+            const setId = Number(setIdStr);
+            const hasCompleteSet = isSetComplete(setId, ownedPropertyIds);
+            const minSlots = getMinSlots(setId);
+            
+            for (const { ownership } of setOwnerships) {
+              const baseIncome = ownership.dailyIncomePerSlot * ownership.slotsOwned;
+              
+              if (hasCompleteSet && minSlots > 0) {
+                const bonusedSlots = Math.min(ownership.slotsOwned, minSlots);
+                const regularSlots = ownership.slotsOwned - bonusedSlots;
+                const bonusIncome = Math.floor(ownership.dailyIncomePerSlot * 1.4 * bonusedSlots);
+                const regularIncome = ownership.dailyIncomePerSlot * regularSlots;
+                totalDaily += (bonusIncome + regularIncome);
+              } else {
+                totalDaily += baseIncome;
+              }
             }
           }
           
           setDailyIncome(totalDaily);
         } catch (error) {
-          console.error('Error updating ownership from WebSocket:', error);
+          console.error('Error updating rewards on ownership change:', error);
         }
       }
     };
 
     const handleRewardsUpdated = (data: any) => {
-      if (data.wallet === wallet.publicKey?.toString()) {
-        console.log('🎁 Rewards updated via WebSocket:', data);
-        // The ownership change handler above will take care of the heavy lifting
-        // This is just for additional reward-specific updates if needed
+      if (data.wallet === publicKey.toString()) {
+        console.log('💰 Rewards updated via WebSocket');
+        // Trigger recalculation by updating state
+        setLastClaimTime(prev => prev);
       }
     };
 
     const handleRewardClaimed = async (data: any) => {
-      if (data.wallet === wallet.publicKey?.toString()) {
-        console.log('🎁 Reward claimed via WebSocket:', data);
+      if (data.wallet === publicKey.toString()) {
+        console.log('💰 Reward claimed via WebSocket');
         
-        // Reset unclaimed rewards to 0 and update last claim time
-        setUnclaimedRewards(0);
-        setLastClaimTime(Math.floor(Date.now() / 1000));
-        
-        // Optionally refresh ownership data to get updated lastClaimTime from blockchain
+        // ✅ NEW: Get updated last claim time from API
         try {
-          const playerData = await getPlayerData();
-          if (playerData) {
-            setLastClaimTime(playerData.lastClaimTimestamp.toNumber());
+          const playerStats = await fetchPlayerStats(publicKey.toString());
+          if (playerStats) {
+            setLastClaimTime(playerStats.lastClaimTimestamp || Math.floor(Date.now() / 1000));
           }
         } catch (error) {
           console.error('Error updating claim time:', error);
+          // Fallback: use current time
+          setLastClaimTime(Math.floor(Date.now() / 1000));
         }
+        
+        // Reset unclaimed rewards
+        setUnclaimedRewards(0);
       }
     };
 
@@ -200,7 +240,7 @@ export function useRewards() {
       socket.off('rewards-updated', handleRewardsUpdated);
       socket.off('reward-claimed', handleRewardClaimed);
     };
-  }, [socket, connected, wallet, getPlayerData, getOwnershipData]);
+  }, [socket, connected, publicKey, apiOwnerships]);
 
   // Client-side calculation (runs every second)
   useEffect(() => {
@@ -235,6 +275,6 @@ export function useRewards() {
     ownerships,
     dailyIncome,
     unclaimedRewards,
-    loading,
+    loading: loading || ownershipLoading,
   };
 }

@@ -78,7 +78,7 @@ export function PropertyCard({ propertyId, onSelect, spectatorMode = false, spec
   const isOnCooldown = isSetOnCooldown(setId);
   const cooldownRemaining = getSetCooldownRemaining(setId);
   const cooldownData = getSetCooldown(setId);
-  const lastPurchasedPropertyId = cooldownData?.last_purchased_property_id ?? null;
+  const lastPurchasedPropertyId = cooldownData?.lastPurchasedPropertyId ?? null;
   
   // Format cooldown time
   const formatCooldown = (seconds: number) => {
@@ -119,18 +119,18 @@ export function PropertyCard({ propertyId, onSelect, spectatorMode = false, spec
       try {
         // ✅ Use API service instead of direct fetch
         const ownerships = await fetchOwnershipData(walletToFetch);
-        const ownership = ownerships.find((o) => o.property_id === propertyId);
+        const ownership = ownerships.find((o) => o.propertyId === propertyId);
         
-        if (ownership && ownership.slots_owned > 0) {
+        if (ownership && ownership.slotsOwned > 0) {
           // Calculate building level based on slots owned
           const maxPerPlayer = property.maxPerPlayer || 10;
-          const progressRatio = ownership.slots_owned / maxPerPlayer;
+          const progressRatio = ownership.slotsOwned / maxPerPlayer;
           const level = Math.ceil(progressRatio * 5);
           setBuildingLevel(Math.min(level, 5)); // Cap at 5
           
           // Check if shield is active
           const now = Math.floor(Date.now() / 1000);
-          const isShielded = ownership.slots_shielded > 0 && ownership.shield_expiry > now;
+          const isShielded = ownership.slotsShielded > 0 && ownership.shieldExpiry > now;
           setShieldActive(isShielded);
           
           // Check for complete set
@@ -138,7 +138,7 @@ export function PropertyCard({ propertyId, onSelect, spectatorMode = false, spec
           const requiredProps = property.setId === 0 || property.setId === 7 ? 2 : 3;
           
           const ownedInSet = ownerships.filter((o) => 
-            propertiesInSet.some(p => p.id === o.property_id) && o.slots_owned > 0
+            propertiesInSet.some(p => p.id === o.propertyId) && o.slotsOwned > 0
           ).length;
           
           setHasCompleteSet(ownedInSet >= requiredProps);

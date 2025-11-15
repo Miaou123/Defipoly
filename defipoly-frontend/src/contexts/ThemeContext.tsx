@@ -26,8 +26,30 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [customBoardBackground, setCustomBoardBackground] = useState<string | null>(null);
   const [customPropertyCardBackground, setCustomPropertyCardBackground] = useState<string | null>(null);
 
-  // Load themes from localStorage on wallet connection
-  useEffect(() => {
+  // Fetch themes from backend
+  const fetchThemesFromBackend = async () => {
+    if (!publicKey) return;
+    
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3101'}/api/profile/themes/${publicKey.toString()}`);
+      
+      if (response.ok) {
+        const themes = await response.json();
+        if (themes.boardTheme) setBoardTheme(themes.boardTheme);
+        if (themes.propertyCardTheme) setPropertyCardTheme(themes.propertyCardTheme);
+        if (themes.customBoardBackground) setCustomBoardBackground(themes.customBoardBackground);
+        if (themes.customPropertyCardBackground) setCustomPropertyCardBackground(themes.customPropertyCardBackground);
+        console.log('Themes loaded from backend successfully');
+      }
+    } catch (error) {
+      console.error('Error fetching themes from backend:', error);
+      // Fallback to localStorage if backend fails
+      loadThemesFromLocalStorage();
+    }
+  };
+
+  // Load themes from localStorage as fallback
+  const loadThemesFromLocalStorage = () => {
     if (publicKey) {
       const walletKey = publicKey.toString();
       const savedBoardTheme = localStorage.getItem(`boardTheme_${walletKey}`);
@@ -39,6 +61,13 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       if (savedPropertyTheme) setPropertyCardTheme(savedPropertyTheme);
       if (savedCustomBoard) setCustomBoardBackground(savedCustomBoard);
       if (savedCustomProperty) setCustomPropertyCardBackground(savedCustomProperty);
+    }
+  };
+
+  // Load themes from backend first, fallback to localStorage on wallet connection
+  useEffect(() => {
+    if (publicKey) {
+      fetchThemesFromBackend();
     }
   }, [publicKey]);
 

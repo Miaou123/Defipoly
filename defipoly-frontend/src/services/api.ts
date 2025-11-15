@@ -1,46 +1,70 @@
 // ============================================
 // FILE: src/services/api.ts
 // Backend API service layer
+// ✅ UPDATED: Added ApiPlayerStats interface
 // ============================================
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_PROFILE_API_URL || 'http://localhost:3005';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3101';
 
 // ========== TYPES ==========
 
 export interface ApiPropertyOwnership {
-  wallet_address: string;
-  property_id: number;
-  slots_owned: number;
-  slots_shielded: number;
-  shield_expiry: number;
-  purchase_timestamp: number;
-  shield_cooldown_duration: number;
-  steal_protection_expiry: number;
+  propertyId: number;
+  slotsOwned: number;
+  slotsShielded: number;
+  shieldExpiry: number;
+  purchaseTimestamp: number;
+  shieldCooldownDuration: number;
+  stealProtectionExpiry: number;
   bump: number;
-  last_updated: number;
+  lastUpdated: number;
 }
 
 export interface ApiPlayerSetCooldown {
-  wallet_address: string;
-  set_id: number;
-  last_purchase_timestamp: number;
-  cooldown_duration: number;
-  last_purchased_property_id: number;
-  properties_owned_in_set: string; // JSON array
-  properties_count: number;
+  setId: number;
+  isOnCooldown: boolean;
+  lastPurchaseTimestamp: number;
+  cooldownDuration: number;
+  cooldownRemaining: number;
+  lastPurchasedPropertyId: number | null;
+  propertiesOwnedInSet: number[];
+  propertiesCount: number;
+  lastSynced: number;
 }
 
 export interface ApiPlayerStealCooldown {
-  wallet_address: string;
-  property_id: number;
-  last_steal_timestamp: number;
-  cooldown_duration: number;
+  propertyId: number;
+  isOnCooldown: boolean;
+  lastStealAttemptTimestamp: number;
+  cooldownDuration: number;
+  cooldownRemaining: number;
+  lastSynced: number;
 }
 
 export interface ApiPropertyState {
   property_id: number;
   available_slots: number;
   last_updated: number;
+}
+
+// ✅ NEW: Player stats interface
+export interface ApiPlayerStats {
+  walletAddress: string;
+  totalActions: number;
+  propertiesBought: number;
+  propertiesSold: number;
+  successfulSteals: number;
+  failedSteals: number;
+  rewardsClaimed: number;
+  shieldsUsed: number;
+  totalSpent: number;
+  totalEarned: number;
+  totalSlotsOwned: number;
+  dailyIncome: number;
+  completedSets: number;
+  lastActionTime?: number;
+  lastClaimTimestamp: number;  // ← This is the key field we need!
+  updatedAt: number;
 }
 
 // ========== OWNERSHIP ENDPOINTS ==========
@@ -122,7 +146,7 @@ export async function fetchAllPropertyStates(): Promise<ApiPropertyState[]> {
 
 // ========== PLAYER STATS ENDPOINT ==========
 
-export async function fetchPlayerStats(wallet: string) {
+export async function fetchPlayerStats(wallet: string): Promise<ApiPlayerStats> {
   const response = await fetch(`${API_BASE_URL}/api/stats/${wallet}`);
   if (!response.ok) {
     throw new Error(`Failed to fetch player stats: ${response.statusText}`);
@@ -134,13 +158,13 @@ export async function fetchPlayerStats(wallet: string) {
 
 export function convertApiOwnershipToFrontend(apiOwnership: ApiPropertyOwnership) {
   return {
-    propertyId: apiOwnership.property_id,
-    slotsOwned: apiOwnership.slots_owned,
-    slotsShielded: apiOwnership.slots_shielded,
-    shieldExpiry: apiOwnership.shield_expiry,
-    purchaseTimestamp: apiOwnership.purchase_timestamp,
-    shieldCooldownDuration: apiOwnership.shield_cooldown_duration,
-    stealProtectionExpiry: apiOwnership.steal_protection_expiry,
+    propertyId: apiOwnership.propertyId,
+    slotsOwned: apiOwnership.slotsOwned,
+    slotsShielded: apiOwnership.slotsShielded,
+    shieldExpiry: apiOwnership.shieldExpiry,
+    purchaseTimestamp: apiOwnership.purchaseTimestamp,
+    shieldCooldownDuration: apiOwnership.shieldCooldownDuration,
+    stealProtectionExpiry: apiOwnership.stealProtectionExpiry,
     bump: apiOwnership.bump,
   };
 }

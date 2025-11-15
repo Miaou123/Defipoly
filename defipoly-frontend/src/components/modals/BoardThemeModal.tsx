@@ -74,7 +74,23 @@ export function BoardThemeModal({
       } else {
         const errorData = await response.text();
         console.error('Upload failed:', errorData);
-        showError('Upload Failed', 'Failed to upload board theme');
+        
+        // Try to parse error message for better user feedback
+        let errorMessage = 'Failed to upload board theme';
+        try {
+          const errorObj = JSON.parse(errorData);
+          if (errorObj.error) {
+            if (errorObj.error.includes('database')) {
+              errorMessage = 'Database error. Please try again later.';
+            } else {
+              errorMessage = errorObj.error;
+            }
+          }
+        } catch {
+          // If parsing fails, use default message
+        }
+        
+        showError('Upload Failed', errorMessage);
       }
     } catch (error) {
       console.error('Error uploading board theme:', error);

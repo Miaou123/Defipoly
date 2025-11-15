@@ -9,17 +9,13 @@ import type { PropertyOwnership } from '@/types/accounts';
 import { Shield, ChevronDown, ChevronRight, Award, Zap, Wallet } from 'lucide-react';
 import { ShieldAllModal } from './ShieldAllModal';
 import { useTokenBalance } from '@/hooks/useTokenBalance';
-import { BUILDING_SVGS } from './icons/GameAssets';
+import { BuildingIcon } from './icons/UIIcons';
 import { useRewards } from '@/hooks/useRewards';
-// ✅ NEW: Import the API-based hook
+// ✅ Import the new API-based hook
 import { useOwnership } from '@/hooks/useOwnership';
 
 interface OwnedProperty extends PropertyOwnership {
   propertyInfo: typeof PROPERTIES[0];
-}
-
-interface OwnedPropertyWithShieldCost extends OwnedProperty {
-  shieldCost: number;
 }
 
 interface PortfolioProps {
@@ -35,10 +31,10 @@ export function Portfolio({ onSelectProperty }: PortfolioProps) {
   const { publicKey, connected } = useWallet();
   const { program } = useDefipoly(); // Still need program for transactions
   const { balance, loading: balanceLoading } = useTokenBalance();
-  const { dailyIncome: rewardsDailyIncome } = useRewards();
+  const { dailyIncome: rewardsDailyIncome } = useRewards(); // Use dailyIncome from useRewards hook
   
   // ✅ NEW: Use API-based ownership hook instead of RPC calls
-  const { ownerships, loading: ownershipLoading } = useOwnership();
+  const { ownerships, loading } = useOwnership();
   
   const [ownedProperties, setOwnedProperties] = useState<OwnedProperty[]>([]);
   const [currentTime, setCurrentTime] = useState(Date.now());
@@ -112,249 +108,328 @@ export function Portfolio({ onSelectProperty }: PortfolioProps) {
     setExpandedSets(newExpanded);
   };
 
-  // Group properties by set
-  const propertiesBySet = ownedProperties.reduce((acc, prop) => {
+  // Get owned property IDs for set completion check
+  const getOwnedPropertyIds = (): number[] => {
+    return ownedProperties.map(p => p.propertyInfo.id);
+  };
+
+  // Calculate income with set bonus
+  const calculateIncome = (owned: OwnedProperty, minSlots: number, isComplete: boolean) => {
+    if (!isComplete || minSlots === 0) {
+      return {
+        baseIncome: calculateDailyIncome(owned.propertyInfo.price, owned.propertyInfo.yieldBps) * owned.slotsOwned,
+        bonusIncome: 0,
+        totalIncome: calculateDailyIncome(owned.propertyInfo.price, owned.propertyInfo.yieldBps) * owned.slotsOwned,
+        bonusedSlots: 0,
+        regularSlots: owned.slotsOwned
+      };
+    }
+
+    const bonusedSlots = Math.min(owned.slotsOwned, minSlots);
+    const regularSlots = owned.slotsOwned - bonusedSlots;
+    const dailyIncomePerSlot = calculateDailyIncome(owned.propertyInfo.price, owned.propertyInfo.yieldBps);
+    const baseIncome = dailyIncomePerSlot * regularSlots;
+    const bonusIncome = Math.floor(dailyIncomePerSlot * 1.4 * bonusedSlots);
+    
+    return {
+      baseIncome,
+      bonusIncome,
+      totalIncome: baseIncome + bonusIncome,
+      bonusedSlots,
+      regularSlots
+    };
+  };
+
+  // Calculate shield cost for a property
+  const calculateShieldCost = (property: typeof PROPERTIES[0], slots: number): number => {
+    const shieldCostBps = property.shieldCostBps;
+    const dailyIncomePerSlot = calculateDailyIncome(property.price, property.yieldBps);
+    return Math.floor((dailyIncomePerSlot * shieldCostBps * slots) / 10000);
+  };
+
+  // Calculate shieldable properties with costs for ShieldAllModal
+  const shieldAllData = ownedProperties
+    .filter(owned => {
+      const shieldActive = isShieldActive(owned);
+      const unshieldedSlots = owned.slotsOwned - (shieldActive ? owned.slotsShielded : 0);
+      return unshieldedSlots > 0;
+    })
+    .map(owned => ({
+      propertyId: owned.propertyId,
+      propertyInfo: owned.propertyInfo,
+      slotsOwned: owned.slotsOwned,
+      shieldCost: calculateShieldCost(owned.propertyInfo, owned.slotsOwned)
+    }));
+
+  const hasShieldableProperties = shieldAllData.length > 0;
+  const shieldablePropertiesCount = shieldAllData.length;
+
+  // Render Shield All Button
+  const renderShieldAllButton = () => {
+    if (ownedProperties.length === 0) return null;
+
+    return (
+      <button
+        onClick={() => hasShieldableProperties && setShowShieldAllModal(true)}
+        disabled={!hasShieldableProperties}
+        className={`w-full mb-4 px-4 py-2.5 rounded-lg font-semibold text-sm transition-all flex items-center justify-center gap-2 ${
+          hasShieldableProperties
+            ? 'bg-gradient-to-r from-yellow-600 to-amber-600 hover:from-yellow-500 hover:to-amber-500 text-white'
+            : 'bg-gray-800/50 text-gray-500 cursor-not-allowed'
+        }`}
+      >
+        <Shield className="w-4 h-4" />
+        {hasShieldableProperties 
+          ? `Shield ${shieldablePropertiesCount} ${shieldablePropertiesCount === 1 ? 'Property' : 'Properties'}`
+          : 'All Properties Protected'
+        }
+      </button>
+    );
+  };
+
+  // Group owned properties by setId
+  const groupedProperties = ownedProperties.reduce((acc, prop) => {
     const setId = prop.propertyInfo.setId;
-    if (!acc[setId]) acc[setId] = [];
+    if (!acc[setId]) {
+      acc[setId] = [];
+    }
     acc[setId].push(prop);
     return acc;
   }, {} as Record<number, OwnedProperty[]>);
 
-  // Calculate total stats
   const totalSlots = ownedProperties.reduce((sum, p) => sum + p.slotsOwned, 0);
-  const totalShielded = ownedProperties.reduce((sum, p) => sum + p.slotsShielded, 0);
-  const totalUnshielded = totalSlots - totalShielded;
-
-  // Calculate complete sets
-  const completeSets = Object.keys(propertiesBySet).filter(setId => {
-    const setIdNum = parseInt(setId);
-    const owned = propertiesBySet[setIdNum];
-    return isSetComplete(setIdNum, owned.map(p => p.propertyInfo.id));
-  }).length;
-
-  // If not connected or no properties owned
-  if (!connected) {
-    return (
-      <div className="w-80 bg-gradient-to-br from-purple-900/90 via-purple-800/90 to-purple-900/90 rounded-xl border border-purple-500/30 shadow-2xl p-6">
-        <div className="flex items-center gap-3 mb-4">
-          <Wallet className="w-5 h-5 text-purple-300" />
-          <h2 className="text-lg font-bold text-purple-100">Portfolio</h2>
-        </div>
-        <p className="text-purple-300 text-sm text-center py-8">
-          Connect wallet to view your portfolio
-        </p>
-      </div>
-    );
-  }
-
-  // ✅ NEW: Show loading state while fetching from API
-  if (ownershipLoading) {
-    return (
-      <div className="w-80 bg-gradient-to-br from-purple-900/90 via-purple-800/90 to-purple-900/90 rounded-xl border border-purple-500/30 shadow-2xl p-6">
-        <div className="flex items-center gap-3 mb-4">
-          <Wallet className="w-5 h-5 text-purple-300" />
-          <h2 className="text-lg font-bold text-purple-100">Portfolio</h2>
-        </div>
-        <p className="text-purple-300 text-sm text-center py-8">
-          Loading portfolio...
-        </p>
-      </div>
-    );
-  }
-
-  if (ownedProperties.length === 0) {
-    return (
-      <div className="w-80 bg-gradient-to-br from-purple-900/90 via-purple-800/90 to-purple-900/90 rounded-xl border border-purple-500/30 shadow-2xl p-6">
-        <div className="flex items-center gap-3 mb-4">
-          <Wallet className="w-5 h-5 text-purple-300" />
-          <h2 className="text-lg font-bold text-purple-100">Portfolio</h2>
-        </div>
-        <p className="text-purple-300 text-sm text-center py-8">
-          You don&apos;t own any properties yet
-        </p>
-      </div>
-    );
-  }
 
   return (
     <>
-      <div className="w-80 bg-gradient-to-br from-purple-900/90 via-purple-800/90 to-purple-900/90 rounded-xl border border-purple-500/30 shadow-2xl overflow-hidden">
-        {/* Header */}
-        <div className="p-4 border-b border-purple-500/30">
-          <div className="flex items-center gap-3 mb-3">
-            <Wallet className="w-5 h-5 text-purple-300" />
-            <h2 className="text-lg font-bold text-purple-100">Portfolio</h2>
+      <div className="bg-purple-900/8 backdrop-blur-xl rounded-2xl border border-purple-500/20 h-full overflow-hidden flex flex-col">
+        {/* Header + Balance + Shield Button - Sticky */}
+        <div className="p-6 pb-4 space-y-4">
+          {/* Header */}
+          <div className="flex justify-between items-center">
+            <h2 className="text-xl font-bold text-white">My Portfolio</h2>
+            <span className="text-sm text-purple-400">{totalSlots} slots</span>
           </div>
 
-          {/* Stats Grid */}
-          <div className="grid grid-cols-2 gap-2">
-            <div className="bg-purple-950/50 rounded-lg p-2">
-              <div className="text-xs text-purple-400 mb-0.5">Total Slots</div>
-              <div className="text-lg font-bold text-purple-100">{totalSlots}</div>
-            </div>
-            <div className="bg-purple-950/50 rounded-lg p-2">
-              <div className="text-xs text-purple-400 mb-0.5">Complete Sets</div>
-              <div className="text-lg font-bold text-green-400">{completeSets}</div>
-            </div>
-            <div className="bg-purple-950/50 rounded-lg p-2">
-              <div className="text-xs text-purple-400 mb-0.5 flex items-center gap-1">
-                <Shield className="w-3 h-3" />
-                Shielded
+          {/* Token Balance Card - Compact */}
+          {connected && (
+            <div className="bg-gradient-to-br from-purple-800/40 to-purple-900/40 backdrop-blur-sm rounded-lg border border-purple-500/30 p-3">
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2">
+                  <div className="w-7 h-7 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center flex-shrink-0">
+                    <Wallet className="w-3.5 h-3.5 text-white" />
+                  </div>
+                  <div>
+                    <div className="text-[10px] text-purple-300 font-semibold uppercase tracking-wide">
+                      Balance
+                    </div>
+                    <div className="text-lg font-black text-white leading-tight">
+                      {balanceLoading ? (
+                        <span className="animate-pulse">...</span>
+                      ) : (
+                        balance.toLocaleString(undefined, { maximumFractionDigits: 0 })
+                      )}
+                    </div>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="text-[10px] text-purple-400 uppercase tracking-wide">Daily Rewards</div>
+                  <div className="text-sm font-bold text-green-400">
+                    {rewardsDailyIncome > 0 ? rewardsDailyIncome.toLocaleString() : '0'}
+                  </div>
+                </div>
               </div>
-              <div className="text-lg font-bold text-blue-400">{totalShielded}</div>
             </div>
-            <div className="bg-purple-950/50 rounded-lg p-2">
-              <div className="text-xs text-purple-400 mb-0.5">Unshielded</div>
-              <div className="text-lg font-bold text-orange-400">{totalUnshielded}</div>
-            </div>
-          </div>
-
-          {/* Income Display */}
-          <div className="mt-2 bg-gradient-to-r from-green-900/40 to-emerald-900/40 rounded-lg p-2 border border-green-500/30">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-1.5">
-                <Zap className="w-3.5 h-3.5 text-green-400" />
-                <span className="text-xs text-green-300">Daily Income</span>
-              </div>
-              <span className="text-sm font-bold text-green-400">
-                {rewardsDailyIncome.toLocaleString()} USDC
-              </span>
-            </div>
-          </div>
-
-          {/* Shield All Button */}
-          {totalUnshielded > 0 && (
-            <button
-              onClick={() => setShowShieldAllModal(true)}
-              className="mt-2 w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-500 hover:to-blue-600 text-white px-3 py-2 rounded-lg text-xs font-semibold transition-all flex items-center justify-center gap-1.5"
-            >
-              <Shield className="w-3.5 h-3.5" />
-              Shield All Unshielded
-            </button>
           )}
+          
+          {/* Shield All Button */}
+          {renderShieldAllButton()}
         </div>
 
-        {/* Properties by Set */}
-        <div className="max-h-96 overflow-y-auto custom-scrollbar">
-          {Object.keys(propertiesBySet)
-            .map(Number)
-            .sort((a, b) => a - b)
-            .map(setId => {
-              const setProps = propertiesBySet[setId];
+        {/* Scrollable Content */}
+        <div className="flex-1 overflow-y-auto px-6 pb-6">
+        {/* Loading State */}
+        {loading && ownedProperties.length === 0 && (
+          <div className="text-center py-12">
+            <div className="text-2xl mb-2">⏳</div>
+            <div className="text-sm text-purple-300">Loading portfolio...</div>
+          </div>
+        )}
+
+        {/* Empty State */}
+        {!loading && ownedProperties.length === 0 && (
+          <div className="text-center py-12">
+            <BuildingIcon size={60} className="mx-auto mb-3 text-purple-400 opacity-50" />
+            <div className="text-sm text-gray-400">
+              No properties yet<br />
+              Click on a property to start building!
+            </div>
+          </div>
+        )}
+
+        {/* Properties Grouped by Set - SORTED BY HIGHEST TO LOWEST DAILY REWARDS */}
+        {!loading && ownedProperties.length > 0 && (
+          <div className="space-y-3">
+            {Object.entries(groupedProperties)
+              .sort(([aSetId, aProps], [bSetId, bProps]) => {
+                const ownedPropertyIds = getOwnedPropertyIds();
+                
+                const aSetIdNum = Number(aSetId);
+                const aIsComplete = isSetComplete(aSetIdNum, ownedPropertyIds);
+                const aMinSlots = getMinSlots(aSetIdNum);
+                const aTotalIncome = aProps.reduce((sum, p) => {
+                  const income = calculateIncome(p, aMinSlots, aIsComplete);
+                  return sum + income.totalIncome;
+                }, 0);
+
+                const bSetIdNum = Number(bSetId);
+                const bIsComplete = isSetComplete(bSetIdNum, ownedPropertyIds);
+                const bMinSlots = getMinSlots(bSetIdNum);
+                const bTotalIncome = bProps.reduce((sum, p) => {
+                  const income = calculateIncome(p, bMinSlots, bIsComplete);
+                  return sum + income.totalIncome;
+                }, 0);
+
+                return bTotalIncome - aTotalIncome;
+              })
+              .map(([setIdStr, setProperties]) => {
+              const setId = Number(setIdStr);
               const isExpanded = expandedSets.has(setId);
+              
+              const ownedPropertyIds = getOwnedPropertyIds();
+              const isComplete = isSetComplete(setId, ownedPropertyIds);
+              const minSlots = getMinSlots(setId);
               const setName = getSetName(setId);
-              const isComplete = isSetComplete(setId, setProps.map(p => p.propertyInfo.id));
-              const setSlots = setProps.reduce((sum, p) => sum + p.slotsOwned, 0);
-              const setShielded = setProps.reduce((sum, p) => sum + p.slotsShielded, 0);
+              const setColorClass = setProperties[0].propertyInfo.color;
+              
+              const totalSlotsInSet = setProperties.reduce((sum, p) => sum + p.slotsOwned, 0);
+              const totalIncomeInSet = setProperties.reduce((sum, p) => {
+                const income = calculateIncome(p, minSlots, isComplete);
+                return sum + income.totalIncome;
+              }, 0);
 
               return (
-                <div key={setId} className="border-b border-purple-500/20 last:border-0">
-                  {/* Set Header */}
+                <div 
+                  key={`set-${setId}`}
+                  className="bg-white/[0.03] rounded-lg overflow-hidden border border-purple-500/10"
+                >
+                  {/* Set Header - Collapsible */}
                   <button
                     onClick={() => toggleSet(setId)}
-                    className="w-full p-3 hover:bg-purple-800/30 transition-colors flex items-center justify-between"
+                    className="w-full px-3 py-2.5 flex items-center justify-between hover:bg-white/[0.03] transition-all"
                   >
                     <div className="flex items-center gap-2">
-                      {isExpanded ? (
-                        <ChevronDown className="w-4 h-4 text-purple-400" />
-                      ) : (
+                      {isExpanded ? 
+                        <ChevronDown className="w-4 h-4 text-purple-400" /> : 
                         <ChevronRight className="w-4 h-4 text-purple-400" />
-                      )}
-                      <div className="text-left">
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm font-semibold text-purple-100">
-                            {setName}
-                          </span>
-                          {isComplete && (
-                            <Award className="w-3.5 h-3.5 text-green-400" />
-                          )}
-                        </div>
-                        <div className="text-xs text-purple-400">
-                          {setProps.length} {setProps.length === 1 ? 'property' : 'properties'} • {setSlots} slots
-                        </div>
-                      </div>
+                      }
+                      <div className={`${setColorClass} w-3 h-3 rounded-full`} />
+                      <span className="font-bold text-sm text-purple-100">{setName}</span>
                     </div>
-                    <div className="flex items-center gap-2">
-                      {setShielded > 0 && (
-                        <div className="flex items-center gap-1 bg-blue-900/40 px-2 py-0.5 rounded">
-                          <Shield className="w-3 h-3 text-blue-400" />
-                          <span className="text-xs text-blue-300">{setShielded}</span>
-                        </div>
-                      )}
+                    <div className="text-xs">
+                      <span className="text-purple-400">{totalSlotsInSet} slots • </span>
+                      <span className={isComplete ? 'text-green-400 font-bold' : 'text-purple-400'}>
+                        {totalIncomeInSet.toLocaleString()}/day
+                      </span>
                     </div>
                   </button>
-
-                  {/* Properties in Set */}
+                  
+                  {/* Expandable Content */}
                   {isExpanded && (
-                    <div className="px-3 pb-3 space-y-2">
-                      {setProps.map(owned => {
-                        const shieldActive = isShieldActive(owned);
-                        const unshieldedSlots = owned.slotsOwned - owned.slotsShielded;
-
-                        return (
-                          <div
-                            key={owned.propertyInfo.id}
-                            onClick={() => onSelectProperty(owned.propertyInfo.id)}
-                            className="bg-purple-950/40 hover:bg-purple-900/50 rounded-lg p-2.5 cursor-pointer transition-colors border border-purple-500/20"
-                          >
-                            <div className="flex items-start justify-between mb-1.5">
-                              <div className="flex items-center gap-2">
-                                {BUILDING_SVGS[owned.slotsOwned] || BUILDING_SVGS[5]}
-                                <div>
-                                  <div className="text-xs font-semibold text-purple-100">
+                    <div className="px-3 pb-2">
+                      {/* Set Bonus Info Banner */}
+                      {isComplete && (
+                        <div className="bg-green-900/30 rounded px-2 py-1.5 mb-2">
+                          <div className="text-[10px] text-green-300 font-bold uppercase tracking-wide flex items-center gap-1">
+                            <Award className="w-3 h-3" />
+                            Complete Set Bonus: +40%
+                          </div>
+                        </div>
+                      )}
+                      
+                      {/* Properties List with Detailed Breakdown */}
+                      <div className="space-y-1.5">
+                        {setProperties.map((owned) => {
+                          const income = calculateIncome(owned, minSlots, isComplete);
+                          const shieldActive = isShieldActive(owned);
+                          const timeRemaining = shieldActive 
+                            ? formatTimeRemaining(owned.shieldExpiry.toNumber())
+                            : null;
+                          
+                          return (
+                            <div 
+                              key={`property-${owned.propertyId}`}
+                              onClick={() => onSelectProperty(owned.propertyId)}
+                              className="bg-white/[0.02] rounded-lg px-2 py-2 hover:bg-white/[0.06] transition-all cursor-pointer"
+                            >
+                              <div className="flex items-center justify-between mb-1">
+                                <div className="flex-1 min-w-0">
+                                  <div className="text-xs font-bold text-purple-100 truncate">
                                     {owned.propertyInfo.name}
                                   </div>
-                                  <div className="text-[10px] text-purple-400">
-                                    {owned.slotsOwned} {owned.slotsOwned === 1 ? 'slot' : 'slots'}
+                                </div>
+                                <div className="text-right flex items-center gap-2">
+                                  <div className="text-xs font-bold text-purple-200">
+                                    {owned.slotsOwned} slot{owned.slotsOwned > 1 ? 's' : ''}
                                   </div>
+                                  {shieldActive && timeRemaining && (
+                                    <div className="text-xs bg-amber-500/20 text-amber-400 px-1.5 py-0.5 rounded font-mono flex items-center gap-1">
+                                      <Shield className="w-3 h-3" />
+                                      {timeRemaining}
+                                    </div>
+                                  )}
                                 </div>
                               </div>
-                              {shieldActive && (
-                                <div className="flex items-center gap-1 bg-blue-900/60 px-1.5 py-0.5 rounded">
-                                  <Shield className="w-3 h-3 text-blue-400" />
-                                  <span className="text-[10px] text-blue-300">
-                                    {formatTimeRemaining(owned.shieldExpiry.toNumber())}
-                                  </span>
-                                </div>
-                              )}
-                            </div>
-
-                            {/* Stats Bar */}
-                            <div className="flex items-center gap-2 text-[10px]">
-                              <div className="flex items-center gap-1 text-green-400">
-                                <Zap className="w-2.5 h-2.5" />
-                                {calculateDailyIncome(owned.propertyInfo.price, owned.propertyInfo.yieldBps)}
+                              
+                              {/* Income breakdown */}
+                              <div className="flex items-center gap-2 text-xs flex-wrap">
+                                {isComplete && income.bonusedSlots > 0 ? (
+                                  <>
+                                    <div className="flex items-center gap-1">
+                                      <Zap className="w-3 h-3 text-green-400" />
+                                      <span className="text-green-400 font-bold">{income.bonusedSlots}×</span>
+                                      <span className="text-green-300">{Math.floor(calculateDailyIncome(owned.propertyInfo.price, owned.propertyInfo.yieldBps) * 1.4)}</span>
+                                    </div>
+                                    {income.regularSlots > 0 && (
+                                      <>
+                                        <span className="text-purple-500">+</span>
+                                        <div className="flex items-center gap-1">
+                                          <span className="text-purple-400">{income.regularSlots}×</span>
+                                          <span className="text-purple-300">{calculateDailyIncome(owned.propertyInfo.price, owned.propertyInfo.yieldBps)}</span>
+                                        </div>
+                                      </>
+                                    )}
+                                    <span className="text-purple-500">=</span>
+                                    <span className="text-green-400 font-bold">{income.totalIncome.toLocaleString()}/day</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <div className="flex items-center gap-1">
+                                      <span className="text-purple-400 font-bold">{owned.slotsOwned}×</span>
+                                      <span className="text-purple-300">{calculateDailyIncome(owned.propertyInfo.price, owned.propertyInfo.yieldBps)}</span>
+                                    </div>
+                                    <span className="text-purple-500">=</span>
+                                    <span className="text-green-400 font-bold">{income.totalIncome.toLocaleString()}/day</span>
+                                  </>
+                                )}
                               </div>
-                              {owned.slotsShielded > 0 && (
-                                <div className="flex items-center gap-1 text-blue-400">
-                                  <Shield className="w-2.5 h-2.5" />
-                                  {owned.slotsShielded}
-                                </div>
-                              )}
-                              {unshieldedSlots > 0 && (
-                                <div className="text-orange-400">
-                                  {unshieldedSlots} unshielded
-                                </div>
-                              )}
                             </div>
-                          </div>
-                        );
-                      })}
+                          );
+                        })}
+                      </div>
                     </div>
                   )}
                 </div>
               );
             })}
+          </div>
+        )}
         </div>
       </div>
 
       {/* Shield All Modal */}
       {showShieldAllModal && (
         <ShieldAllModal
-          ownedProperties={ownedProperties.map(prop => ({
-            ...prop,
-            shieldCost: Math.floor((prop.propertyInfo.price * prop.propertyInfo.shieldCostBps) / 10000)
-          }))}
+          ownedProperties={shieldAllData}
           balance={balance}
           onClose={() => setShowShieldAllModal(false)}
         />

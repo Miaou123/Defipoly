@@ -27,8 +27,9 @@ function createTables() {
     const checkCompletion = () => {
       completed++;
       if (completed === totalTables && !hasError) {
-        // Create indexes after all tables are created
+        // Create indexes and run migrations after all tables are created
         createIndexes()
+          .then(() => runMigrations())
           .then(() => resolve())
           .catch(reject);
       }
@@ -40,6 +41,11 @@ function createTables() {
         wallet_address TEXT PRIMARY KEY,
         username TEXT,
         profile_picture TEXT,
+        board_theme TEXT DEFAULT 'dark',
+        property_card_theme TEXT DEFAULT 'dark',
+        custom_board_background TEXT,
+        custom_property_card_background TEXT,
+        corner_square_style TEXT DEFAULT 'property',
         updated_at INTEGER DEFAULT (strftime('%s', 'now'))
       )
     `, (err) => {
@@ -126,6 +132,7 @@ function createTables() {
         complete_sets INTEGER DEFAULT 0,
         times_stolen INTEGER DEFAULT 0,
         last_action_time INTEGER,
+        last_claim_timestamp INTEGER DEFAULT 0,
         updated_at INTEGER DEFAULT (strftime('%s', 'now'))
       )
     `, (err) => {
