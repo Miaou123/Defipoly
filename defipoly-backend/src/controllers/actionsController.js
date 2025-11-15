@@ -1,7 +1,8 @@
 const { getDatabase } = require('../config/database');
 const { updatePlayerStats } = require('../services/gameService');
+const { gameEvents } = require('../services/socketService');
 
-const storeAction = (req, res) => {
+const storeAction = async (req, res) => {
   const action = req.body;
   
   console.log('📥 [STORE ACTION] Received action:', JSON.stringify(action, null, 2));
@@ -43,10 +44,52 @@ const storeAction = (req, res) => {
       return res.status(500).json({ error: 'Database error', details: err.message });
     }
 
+    const isNew = this.changes > 0;
     console.log(`✅ [STORE ACTION] Inserted/Ignored action. Changes: ${this.changes}, Last ID: ${this.lastID}`);
 
-    if (this.changes > 0) {
-      // Use gameService's updatePlayerStats (takes 5 params)
+    // ✅ ALWAYS emit WebSocket events (even for duplicates)
+    // because WSS stores transactions without emitting events
+    try {
+      console.log(`📤 [STORE ACTION] Emitting WebSocket event for ${action.actionType}`);
+      
+      switch (action.actionType) {
+        case 'claim':
+          gameEvents.rewardsClaimed({
+            wallet: action.playerAddress,
+            amount: action.amount,
+            txSignature: action.txSignature,
+            timestamp: action.blockTime
+          });
+          break;
+        
+        case 'buy':
+          gameEvents.propertyBought({
+            propertyId: action.propertyId,
+            buyer: action.playerAddress,
+            price: action.amount,
+            slots: action.slots,
+            txSignature: action.txSignature,
+            timestamp: action.blockTime
+          });
+          break;
+        
+        case 'sell':
+          gameEvents.propertySold({
+            propertyId: action.propertyId,
+            seller: action.playerAddress,
+            received: action.amount,
+            slots: action.slots,
+            txSignature: action.txSignature,
+            timestamp: action.blockTime
+          });
+          break;
+      }
+    } catch (socketError) {
+      console.error('❌ [STORE ACTION] WebSocket emit error:', socketError);
+    }
+
+    // Only update stats if it's a new transaction
+    if (isNew) {
       updatePlayerStats(
         action.playerAddress,
         action.actionType,
@@ -61,7 +104,7 @@ const storeAction = (req, res) => {
 
     res.json({ 
       success: true, 
-      inserted: this.changes > 0,
+      inserted: isNew,
       actionType: action.actionType,
       txSignature: action.txSignature
     });

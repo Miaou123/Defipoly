@@ -28,9 +28,10 @@ interface PropertyCardProps {
   spectatorWallet?: string;
   theme?: PropertyCardTheme;
   customPropertyCardBackground?: string | null;
+  modalView?: boolean;
 }
 
-export function PropertyCard({ propertyId, onSelect, spectatorMode = false, spectatorWallet, theme, customPropertyCardBackground }: PropertyCardProps) {
+export function PropertyCard({ propertyId, onSelect, spectatorMode = false, spectatorWallet, theme, customPropertyCardBackground, modalView = false }: PropertyCardProps) {
   const { connected, publicKey } = useWallet();
   const { refreshKey } = usePropertyRefresh();
   const themeContext = useTheme();
@@ -339,14 +340,14 @@ export function PropertyCard({ propertyId, onSelect, spectatorMode = false, spec
         <div 
           className="px-3 py-3 flex-shrink-0 relative z-25"
         >
-          <div 
-            className="text-[7px] sm:text-[8px] font-bold leading-tight uppercase pr-10"
-            style={{
-              color: getTextColor(),
-              letterSpacing: '0.3px',
-              lineHeight: '1.2',
-            }}
-          >
+        <div 
+          className={`${modalView ? 'text-[11px]' : 'text-[7px] sm:text-[8px]'} font-bold leading-tight uppercase pr-10`}
+          style={{
+            color: getTextColor(),
+            letterSpacing: '0.3px',
+            lineHeight: '1.2',
+          }}
+        >
             {property.name}
           </div>
         </div>
@@ -357,12 +358,12 @@ export function PropertyCard({ propertyId, onSelect, spectatorMode = false, spec
         >
           {buildingLevel === 0 ? (
             <div className="w-full h-full flex items-center justify-center">
-              <div className="scale-[0.3] sm:scale-[0.35]">
+              <div className={modalView ? 'scale-[0.5]' : 'scale-[0.3] sm:scale-[0.35]'}>
                 <LocationPin color={property.color} size="small" />
               </div>
             </div>
           ) : (
-            <div className="w-full h-full flex items-center justify-center scale-[0.25]">
+            <div className={`w-full h-full flex items-center justify-center ${modalView ? 'scale-[0.4]' : 'scale-[0.25]'}`}>
               {BUILDING_SVGS[buildingLevel]}
             </div>
           )}
@@ -371,7 +372,7 @@ export function PropertyCard({ propertyId, onSelect, spectatorMode = false, spec
         {/* Price and Cooldowns side by side at bottom */}
         <div className="px-4 pb-1.5 flex items-center justify-between gap-2 flex-shrink-0">
           {/* Price on left */}
-          <div className="text-[8px] font-semibold text-yellow-300">
+          <div className={`${modalView ? 'text-[12px]' : 'text-[8px]'} font-semibold text-yellow-300`}>
             ${formatNumber(property.price)}
           </div>
           

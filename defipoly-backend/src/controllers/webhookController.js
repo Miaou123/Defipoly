@@ -182,7 +182,7 @@ async function processWebhook(payload) {
               
             case 'claim':
               gameEvents.rewardsClaimed({
-                player: action.playerAddress,
+                wallet: action.playerAddress,
                 amount: action.amount,
                 txSignature: action.txSignature,
                 timestamp: action.blockTime

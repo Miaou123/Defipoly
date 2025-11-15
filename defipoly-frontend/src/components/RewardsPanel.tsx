@@ -28,62 +28,68 @@ export function RewardsPanel() {
     claimingRef.current = true;
     setClaiming(true);
     
-    // ✅ Save the amount BEFORE claiming
-    const claimedAmount = unclaimedRewards;
-    
     try {
       const signature = await claimRewards();
       
       if (signature) {
-        // Backend logging in background - don't block success message
-        (async () => {
-          try {
-            await new Promise(resolve => setTimeout(resolve, 2000));
-            
-            const tx = await connection.getTransaction(signature, {
-              commitment: 'confirmed',
-              maxSupportedTransactionVersion: 0
-            });
-  
-            if (tx?.meta?.logMessages) {
-              const coder = new BorshCoder(idl as any);
-              const eventParser = new EventParser(PROGRAM_ID, coder);
-              const events = eventParser.parseLogs(tx.meta.logMessages);
-              
-              // ✅ Use the saved amount OR parse from event
-              let actualClaimedAmount = claimedAmount;
-              
-              for (const event of events) {
-                if (event.name === 'RewardsClaimedEvent' || event.name === 'rewardsClaimedEvent') {
-                  actualClaimedAmount = Number(event.data.amount);
-                  break;
-                }
-              }
-  
-              const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3101';
-              await fetch(`${API_BASE_URL}/api/actions`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  txSignature: signature,
-                  actionType: 'claim',
-                  playerAddress: publicKey.toString(),
-                  amount: actualClaimedAmount, // ✅ Now has the actual amount
-                  blockTime: tx.blockTime || Math.floor(Date.now() / 1000),
-                }),
-              });
-            }
-          } catch (backendError) {
-            console.warn('⚠️ Backend logging failed (non-critical):', backendError);
-          }
-        })();
+        // Parse the actual amount from blockchain FIRST before showing success
+        let actualClaimedAmount = 0;
         
-        // Show success immediately with amount
-        showSuccess(
-          'Rewards Claimed!', 
-          `Successfully claimed ${claimedAmount.toLocaleString()} DEFI!`,
-          signature !== 'already-processed' ? signature : undefined
-        );
+        try {
+          await new Promise(resolve => setTimeout(resolve, 2000));
+          
+          const tx = await connection.getTransaction(signature, {
+            commitment: 'confirmed',
+            maxSupportedTransactionVersion: 0
+          });
+  
+          if (tx?.meta?.logMessages) {
+            const coder = new BorshCoder(idl as any);
+            const eventParser = new EventParser(PROGRAM_ID, coder);
+            const events = eventParser.parseLogs(tx.meta.logMessages);
+            
+            for (const event of events) {
+              if (event.name === 'RewardsClaimedEvent' || event.name === 'rewardsClaimedEvent') {
+                actualClaimedAmount = Number(event.data.amount);
+                break;
+              }
+            }
+          }
+          
+          // If we got the amount from blockchain, use it. Otherwise fall back to calculation
+          const displayAmount = actualClaimedAmount > 0 ? actualClaimedAmount : unclaimedRewards;
+  
+          // Backend logging (only if tx exists)
+          if (tx) {
+            const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3101';
+            await fetch(`${API_BASE_URL}/api/actions`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                txSignature: signature,
+                actionType: 'claim',
+                playerAddress: publicKey.toString(),
+                amount: actualClaimedAmount,
+                blockTime: tx.blockTime || Math.floor(Date.now() / 1000),
+              }),
+            });
+          }
+  
+          // Show success with ACTUAL amount from blockchain
+          showSuccess(
+            'Rewards Claimed!', 
+            `Successfully claimed ${(displayAmount / 1e9).toFixed(2)} DEFI!`,
+            signature !== 'already-processed' ? signature : undefined
+          );
+        } catch (backendError) {
+          console.warn('⚠️ Backend logging failed (non-critical):', backendError);
+          // Still show success even if backend logging fails
+          showSuccess(
+            'Rewards Claimed!', 
+            `Successfully claimed rewards!`,
+            signature !== 'already-processed' ? signature : undefined
+          );
+        }
       }
     } catch (error) {
       console.error('Error claiming rewards:', error);
@@ -91,18 +97,13 @@ export function RewardsPanel() {
       const errorMessage = String(error instanceof Error ? error.message : error);
       if (errorMessage.includes('already been processed') || 
           errorMessage.includes('AlreadyProcessed')) {
-        showSuccess(
-          'Rewards Claimed!', 
-          `Successfully claimed ${claimedAmount.toLocaleString()} DEFI!`
-        );
+        showSuccess('Rewards Claimed!', 'Rewards have been claimed!');
       } else {
         showError('Claim Failed', 'Failed to claim rewards. Please try again.');
       }
     } finally {
-      setTimeout(() => {
-        setClaiming(false);
-        claimingRef.current = false;
-      }, 1000);
+      setClaiming(false);
+      claimingRef.current = false;
     }
   };
 

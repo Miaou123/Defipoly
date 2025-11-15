@@ -80,7 +80,10 @@ function getIO() {
  */
 function emitToWallet(walletAddress, event, data) {
   if (io && walletAddress) {
+    console.log(`📤 [SOCKET] Emitting '${event}' to wallet ${walletAddress.slice(0, 8)}...`);
     io.to(`wallet:${walletAddress}`).emit(event, data);
+  } else {
+    console.warn(`⚠️ [SOCKET] Cannot emit '${event}' - io or wallet missing`);
   }
 }
 
@@ -248,7 +251,8 @@ const gameEvents = {
   
   // ✅ NEW: Added missing functions
   rewardsClaimed: (data) => {
-    emitToWallet(data.wallet, 'rewards-claimed', data);
+    console.log(`🎉 [SOCKET] Reward claimed event for ${data.wallet?.slice(0, 8)}...`);
+    emitToWallet(data.wallet, 'reward-claimed', data);  // Changed to singular
     emitToAll('recent-action', { type: 'claim', ...data });
   },
   

@@ -260,17 +260,10 @@ export function useRewards() {
 
     const handleRewardClaimed = async (data: any) => {
       if (data.wallet === publicKey.toString()) {
-
         const now = Math.floor(Date.now() / 1000);
         setLastClaimTime(now);
         setUnclaimedRewards(0);
-        
-        fetchLastClaimFromBlockchain().then(blockchainLastClaim => {
-          if (blockchainLastClaim !== null) {
-            setLastClaimTime(blockchainLastClaim);
-            lastFetchTime.current = Date.now();
-          }
-        });
+        lastFetchTime.current = Date.now();
       }
     };
 

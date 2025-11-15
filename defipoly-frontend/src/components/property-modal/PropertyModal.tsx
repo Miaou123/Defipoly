@@ -218,15 +218,14 @@ export function PropertyModal({ propertyId, onClose }: PropertyModalProps) {
           {/* Content - COMPACT */}
           <div className="p-4 space-y-3 max-h-[70vh] overflow-y-auto">
             {/* Property Card + Details - SMALLER */}
-            <div className="grid grid-cols-[140px_1fr] gap-4">
+            <div className="grid grid-cols-[210px_1fr] gap-4">
               {/* Left: Property Card */}
-              <div className="flex justify-center">
-                <div className="w-[140px] h-[210px]">
-                  <PropertyCard 
-                    propertyId={propertyId} 
-                    onSelect={() => {}} 
-                  />
-                </div>
+              <div className="w-[200px] h-[300px]">
+                <PropertyCard 
+                  propertyId={propertyId} 
+                  onSelect={() => {}} 
+                  modalView={true}
+                />
               </div>
 
               {/* Right: Details */}
