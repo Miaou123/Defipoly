@@ -274,17 +274,45 @@ export function PropertyCard({ propertyId, onSelect, spectatorMode = false, spec
       />
 
       {/* Holographic effect for completed sets */}
-      {hasCompleteSet && (
-        <div 
-          className="absolute top-0 left-0 w-full h-full pointer-events-none z-15"
-          style={{
-            background: 'linear-gradient(45deg, #ff0080, #ff8c00, #40e0d0, #00ff00, #ff0080)',
-            backgroundSize: '400% 400%',
-            animation: 'holographic-shift 8s ease infinite',
-            opacity: 0.25,
-            mixBlendMode: 'overlay',
-          }}
-        />
+     {/* Enhanced holographic effects for completed sets - Inspired by trading card holo effect */}
+     {hasCompleteSet && (
+        <>
+          {/* Animated holographic gradient with color-dodge blend */}
+          <div 
+            className="absolute top-0 left-0 w-full h-full pointer-events-none z-15"
+            style={{
+              backgroundImage: 'linear-gradient(115deg, transparent 0%, rgb(0, 231, 255) 30%, rgb(255, 0, 231) 70%, transparent 100%)',
+              backgroundPosition: '0% 0%',
+              backgroundRepeat: 'no-repeat',
+              backgroundSize: '300% 300%',
+              mixBlendMode: 'color-dodge',
+              opacity: 0.2,
+              animation: 'holoGradient 12s ease infinite',
+            }}
+          />
+          
+          {/* Sparkles overlay with color-dodge blend */}
+          <div 
+            className="absolute top-0 left-0 w-full h-full pointer-events-none z-16"
+            style={{
+              backgroundImage: 'url("https://s3-us-west-2.amazonaws.com/s.cdpn.io/13471/sparkles.gif")',
+              backgroundPosition: 'center',
+              backgroundSize: '180%',
+              mixBlendMode: 'color-dodge',
+              opacity: 1,
+              animation: 'holoSparkle 12s ease infinite',
+            }}
+          />
+          
+          {/* Enhanced multi-color box shadow for depth */}
+          <div 
+            className="absolute inset-0 pointer-events-none z-14"
+            style={{
+              borderRadius: 'inherit',
+              boxShadow: '-3px -3px 3px 0 rgba(38, 230, 247, 0.3), 3px 3px 3px 0 rgba(247, 89, 228, 0.3), 0 0 6px 2px rgba(255, 231, 89, 0.3)',
+            }}
+          />
+        </>
       )}
 
       {/* Card content - Design 2: Corner Badge Style */}
@@ -389,6 +417,46 @@ export function PropertyCard({ propertyId, onSelect, spectatorMode = false, spec
           }
           100% {
             background-position: 0% 50%;
+          }
+        }
+
+        /* Holographic card animations inspired by trading cards */
+        @keyframes holoSparkle {
+          0%, 5% {
+            opacity: 0.1;
+          }
+          20% {
+            opacity: 1;
+          }
+          100% {
+            opacity: 0.1;
+          }
+        }
+
+        @keyframes holoGradient {
+          0%, 100% {
+            opacity: 0;
+            background-position: 0% 0%;
+          }
+          8% {
+            opacity: 0;
+          }
+          10% {
+            background-position: 0% 0%;
+          }
+          19% {
+            background-position: 100% 100%;
+            opacity: 0.5;
+          }
+          35% {
+            background-position: 100% 100%;
+          }
+          55% {
+            background-position: 0% 0%;
+            opacity: 0.3;
+          }
+          75% {
+            opacity: 0;
           }
         }
       `}</style>

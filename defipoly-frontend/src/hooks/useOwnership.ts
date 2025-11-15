@@ -26,17 +26,23 @@ export function useOwnership(): UseOwnershipReturn {
   const [error, setError] = useState<string | null>(null);
 
   const fetchData = useCallback(async () => {
+    console.log('🔍 [OWNERSHIP] fetchData called, publicKey:', publicKey?.toString());
+    
     if (!publicKey) {
+      console.log('🔍 [OWNERSHIP] No publicKey, clearing ownerships');
       setOwnerships([]);
       setError(null);
       return;
     }
-
+  
     setLoading(true);
     setError(null);
-
+  
     try {
+      console.log('🔍 [OWNERSHIP] Fetching from API...');
       const apiOwnerships = await fetchOwnershipData(publicKey.toString());
+      console.log('🔍 [OWNERSHIP] API returned:', apiOwnerships.length, 'ownerships');
+      console.log('🔍 [OWNERSHIP] First ownership:', apiOwnerships[0]);
       
       // Convert API format to frontend PropertyOwnership format
       const converted: PropertyOwnership[] = apiOwnerships.map(apiOwn => ({
@@ -50,17 +56,20 @@ export function useOwnership(): UseOwnershipReturn {
         stealProtectionExpiry: new BN(apiOwn.stealProtectionExpiry),
         bump: apiOwn.bump,
       }));
-
+  
+      console.log('🔍 [OWNERSHIP] Converted:', converted.length, 'ownerships');
+      console.log('🔍 [OWNERSHIP] Setting state...');
       setOwnerships(converted);
+      console.log('🔍 [OWNERSHIP] State set!');
     } catch (err) {
-      console.error('Error fetching ownership data:', err);
+      console.error('🔍 [OWNERSHIP] Error:', err);
       setError(err instanceof Error ? err.message : 'Failed to fetch ownership data');
       setOwnerships([]);
     } finally {
       setLoading(false);
     }
   }, [publicKey]);
-
+  
   // Fetch on mount and when wallet changes
   useEffect(() => {
     fetchData();

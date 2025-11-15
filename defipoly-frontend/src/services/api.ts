@@ -80,7 +80,7 @@ export async function fetchOwnershipData(wallet: string): Promise<ApiPropertyOwn
 
 export async function fetchSingleOwnership(wallet: string, propertyId: number): Promise<ApiPropertyOwnership | null> {
   const ownerships = await fetchOwnershipData(wallet);
-  return ownerships.find(o => o.property_id === propertyId) || null;
+  return ownerships.find(o => o.propertyId === propertyId) || null;
 }
 
 // ========== COOLDOWN ENDPOINTS ==========
@@ -126,14 +126,18 @@ export async function fetchAllStealCooldowns(wallet: string): Promise<ApiPlayerS
 // ========== PROPERTY STATE ENDPOINTS ==========
 
 export async function fetchPropertyState(propertyId: number): Promise<ApiPropertyState | null> {
-  const response = await fetch(`${API_BASE_URL}/api/properties/state/${propertyId}`);
-  if (!response.ok) {
-    if (response.status === 404) return null;
-    throw new Error(`Failed to fetch property state: ${response.statusText}`);
+    const response = await fetch(`${API_BASE_URL}/api/properties/${propertyId}/state`);
+    // ✅ Changed from /state/:id to /:id/state
+    if (!response.ok) {
+      throw new Error(`Failed to fetch property state: ${response.statusText}`);
+    }
+    const data = await response.json();
+    return {
+      property_id: data.propertyId,
+      available_slots: data.availableSlots,
+      last_updated: data.lastSynced
+    };
   }
-  const data = await response.json();
-  return data.state || null;
-}
 
 export async function fetchAllPropertyStates(): Promise<ApiPropertyState[]> {
   const response = await fetch(`${API_BASE_URL}/api/properties/state`);

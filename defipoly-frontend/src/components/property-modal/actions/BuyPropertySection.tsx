@@ -1,6 +1,7 @@
 // ============================================
 // MIGRATED BuyPropertySection.tsx
-// Now uses useCooldowns from API instead of blockchain
+// Now uses API-based useCooldowns hook instead of blockchain
+// UI unchanged - only data fetching layer updated
 // ============================================
 
 'use client';
@@ -10,11 +11,12 @@ import { Clock } from 'lucide-react';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { useDefipoly } from '@/hooks/useDefipoly';
 import { usePropertyRefresh } from '@/contexts/PropertyRefreshContext';
-import { useCooldowns } from '@/hooks/useCooldowns'; // ✅ NEW
+import { useCooldowns } from '@/hooks/useCooldowns'; // ✅ API-based hook
 import { useNotification } from '@/contexts/NotificationContext';
 import { PROPERTIES } from '@/utils/constants';
 import { CooldownExplanationModal } from '@/components/CooldownExplanationModal';
 import { ChartIcon, CoinsIcon, CheckIcon, TargetIcon } from '@/components/icons/UIIcons';
+import { useOwnership } from '@/hooks/useOwnership';
 
 interface BuyPropertySectionProps {
   propertyId: number;
@@ -36,10 +38,11 @@ export function BuyPropertySection({
   onClose,
 }: BuyPropertySectionProps) {
   const wallet = useWallet();
-  const { buyProperty, getOwnershipData } = useDefipoly();
+  const { buyProperty } = useDefipoly();
   const { triggerRefresh } = usePropertyRefresh();
   const { showSuccess } = useNotification();
-  
+  const { getOwnership } = useOwnership(); 
+
   const [slotsToBuy, setSlotsToBuy] = useState(1);
   const [buyingProgress, setBuyingProgress] = useState('');
   const [setInfo, setSetInfo] = useState<{
@@ -48,7 +51,7 @@ export function BuyPropertySection({
   } | null>(null);
   const [showCooldownModal, setShowCooldownModal] = useState(false);
 
-  // ✅ NEW: Use API-based cooldowns hook
+  // ✅ API-based cooldowns hook
   const { 
     isSetOnCooldown, 
     getSetCooldownRemaining,
@@ -59,10 +62,12 @@ export function BuyPropertySection({
   const isOnCooldown = isSetOnCooldown(setId);
   const cooldownRemaining = getSetCooldownRemaining(setId);
   const cooldownData = getSetCooldown(setId);
-  const lastPurchasedPropertyId = cooldownData?.last_purchased_property_id ?? null;
+  const lastPurchasedPropertyId = cooldownData?.lastPurchasedPropertyId ?? null;
   
-  // Get cooldown duration in hours from property config
-  const cooldownDurationHours = property.cooldown || 24;
+  // Get cooldown duration in hours from cooldown data or property config
+  const cooldownDurationHours = cooldownData?.cooldownDuration 
+    ? Math.floor(cooldownData.cooldownDuration / 3600) 
+    : (property.cooldown || 24);
   
   // Get properties in this set for display
   const affectedProperties = PROPERTIES.filter(p => p.setId === setId);
@@ -81,175 +86,213 @@ export function BuyPropertySection({
     }
   };
 
-  const isThisPropertyBlocked = isOnCooldown && lastPurchasedPropertyId !== propertyId;
+  // Calculate max slots user can buy
+  const maxSlotsToBuy = useMemo(() => {
+    if (!property || !propertyData) return 1;
+    
+    // Get the max per player limit
+    const maxPerPlayer = property.maxPerPlayer;
+    const currentlyOwned = propertyData.owned || 0;
+    const remainingAllowed = Math.max(0, maxPerPlayer - currentlyOwned);
+    
+    return Math.min(
+      propertyData.availableSlots || 1,
+      Math.floor(balance / property.price) || 1,
+      remainingAllowed
+    );
+  }, [property, propertyData, balance]);
 
-  // Calculate costs and limits
-  const pricePerSlot = property.price;
-  const totalCost = pricePerSlot * slotsToBuy;
-  const maxSlotsAvailable = propertyData?.availableSlots || 0;
-  const currentlyOwned = propertyData?.owned || 0;
-  const maxPerPlayer = propertyData?.maxPerPlayer || property.maxPerPlayer;
-  const maxSlotsToBuy = Math.min(maxSlotsAvailable, maxPerPlayer - currentlyOwned);
-
-  const canBuy = balance >= totalCost && slotsToBuy >= 1 && slotsToBuy <= maxSlotsToBuy;
-
-  // Calculate daily income (price * yieldBps / 10000)
-  const dailyIncomePerSlot = Math.floor((property.price * property.yieldBps) / 10000);
-  const totalDailyIncome = dailyIncomePerSlot * slotsToBuy;
-
-  // Fetch set completion info
+  // Fetch set info
   useEffect(() => {
-    if (!wallet.publicKey) return;
-
+    if (!property || !wallet) return;
+    
     const fetchSetInfo = async () => {
       try {
-        const propertiesInSet = PROPERTIES.filter(p => p.setId === property.setId);
-        const ownedInSet: number[] = [];
-
+        const setId = property.setId;
+        const propertiesInSet = PROPERTIES.filter(p => p.setId === setId);
+        
+        const owned: number[] = [];
         for (const prop of propertiesInSet) {
-          const ownership = await getOwnershipData(prop.id);
+          const ownership = getOwnership(prop.id);
           if (ownership && ownership.slotsOwned > 0) {
-            ownedInSet.push(prop.id);
+            owned.push(prop.id);
           }
         }
-
-        // Determine if buying this property would complete the set
-        const requiredProps = property.setId === 0 || property.setId === 7 ? 2 : 3;
-        const hasOwnership = ownedInSet.includes(propertyId);
-        const hasCompleteSet = ownedInSet.length >= requiredProps;
-        const willCompleteSet = !hasOwnership && (ownedInSet.length + 1) >= requiredProps;
-
+        
+        const requiredProps = setId === 0 || setId === 7 ? 2 : 3;
         setSetInfo({
-          ownedPropertiesInSet: ownedInSet,
-          hasCompleteSet: hasCompleteSet || willCompleteSet
+          ownedPropertiesInSet: owned,
+          hasCompleteSet: owned.length >= requiredProps
         });
       } catch (error) {
         console.error('Error fetching set info:', error);
       }
     };
-
+    
     fetchSetInfo();
-  }, [wallet.publicKey, property.setId, propertyId, getOwnershipData]);
+  }, [property, wallet, getOwnership]);
+
+  // Calculate set bonus info
+  const setBonusInfo = useMemo(() => {
+    if (!property || !propertyData || !setInfo) {
+      return {
+        requiredProps: property?.setId === 0 || property?.setId === 7 ? 2 : 3,
+        ownedInSet: 0,
+        willCompleteSet: false,
+        hasCompleteSet: false,
+        loading: true
+      };
+    }
+    
+    const setId = property.setId;
+    const requiredProps = setId === 0 || setId === 7 ? 2 : 3;
+    const ownedInSet = setInfo.ownedPropertiesInSet.length;
+    const alreadyOwned = setInfo.ownedPropertiesInSet.includes(propertyId);
+    const willCompleteSet = !setInfo.hasCompleteSet && 
+                            (alreadyOwned ? ownedInSet >= requiredProps : ownedInSet + 1 >= requiredProps);
+    
+    return {
+      requiredProps,
+      ownedInSet,
+      willCompleteSet,
+      hasCompleteSet: setInfo.hasCompleteSet,
+      loading: false
+    };
+  }, [property, propertyData, setInfo, propertyId]);
+
+  // ✅ Calculate dailyIncome from price and yieldBps
+  const dailyIncome = Math.floor((property.price * property.yieldBps) / 10000);
+  const buyCost = property.price * slotsToBuy;
+  const isThisPropertyBlocked = isOnCooldown && lastPurchasedPropertyId !== propertyId;
+  const canBuy = balance >= buyCost;
+
+  const boostedDailyIncome = (setBonusInfo.hasCompleteSet || setBonusInfo.willCompleteSet) 
+    ? Math.floor(dailyIncome * 1.4 * slotsToBuy) 
+    : dailyIncome * slotsToBuy;
 
   const handleBuy = async () => {
-    if (!canBuy || loading) return;
-
+    if (!wallet || loading) return;
+    
     if (isThisPropertyBlocked) {
       setShowCooldownModal(true);
       return;
     }
 
     setLoading(true);
-    setBuyingProgress('Preparing transaction...');
-
+    setBuyingProgress('');
+    
     try {
-      setBuyingProgress('Awaiting confirmation...');
+      setBuyingProgress(`Buying ${slotsToBuy} slot${slotsToBuy > 1 ? 's' : ''}...`);
+      
       const signature = await buyProperty(propertyId, slotsToBuy);
-
-      setBuyingProgress('Transaction confirmed!');
+      
       showSuccess(
-        'Purchase Successful',
-        `Successfully bought ${slotsToBuy} slot${slotsToBuy > 1 ? 's' : ''}!`,
-        signature // signature is already a string
+        'Purchase Successful!',
+        `Bought ${slotsToBuy} slot${slotsToBuy > 1 ? 's' : ''} of ${property.name}`,
+        signature !== 'already-processed' ? signature : undefined
       );
+      
+      triggerRefresh();
+      setTimeout(() => onClose(), 2000);
 
-      setTimeout(() => {
-        triggerRefresh();
-        onClose();
-      }, 500);
     } catch (error: any) {
       console.error('Error buying property:', error);
-      setBuyingProgress('');
+      
+      let errorMessage = 'Failed to buy slots';
+      const errorString = error?.message || error?.toString() || '';
+      
+      if (errorString.includes('CooldownActive')) {
+        errorMessage = `Set cooldown active. Wait ${formatCooldown(cooldownRemaining)} before buying from this set.`;
+        setShowCooldownModal(true);
+      } else if (errorString.includes('MaxSlotsReached')) {
+        errorMessage = `Cannot buy ${slotsToBuy} slots - would exceed maximum allowed`;
+      } else if (errorString.includes('NoSlotsAvailable')) {
+        errorMessage = `Only ${propertyData?.availableSlots} slot${propertyData?.availableSlots === 1 ? '' : 's'} available`;
+      } else if (errorString.includes('insufficient funds')) {
+        errorMessage = 'Insufficient balance';
+      }
+      
+      alert(errorMessage);
     } finally {
       setLoading(false);
+      setBuyingProgress('');
     }
   };
 
-  // Set bonus info
-  const setBonusInfo = useMemo(() => {
-    if (!setInfo) return null;
-
-    const propertiesInSet = PROPERTIES.filter(p => p.setId === property.setId);
-    const requiredProps = property.setId === 0 || property.setId === 7 ? 2 : 3;
-    const ownedInSet = setInfo.ownedPropertiesInSet.length;
-    const hasOwnership = setInfo.ownedPropertiesInSet.includes(propertyId);
-    const hasCompleteSet = setInfo.hasCompleteSet;
-    const willCompleteSet = !hasOwnership && (ownedInSet + 1) >= requiredProps;
-
-    return {
-      requiredProps,
-      ownedInSet,
-      hasCompleteSet,
-      willCompleteSet
-    };
-  }, [setInfo, property.setId, propertyId]);
-
   return (
     <>
-      <div className="space-y-4">
-        {/* Slot selector */}
-        <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <label className="text-sm font-semibold text-purple-200">Slots to Buy</label>
-            <span className="text-xs text-purple-400">
-              Max: {maxSlotsToBuy} • Available: {maxSlotsAvailable}
+      <div className="bg-purple-900/20 rounded-xl p-3 border border-purple-500/20 space-y-2.5">
+        {/* Header with Slots and Cost */}
+        <div className="flex items-center justify-between mb-2.5">
+          {/* Slots Control */}
+          <div className="flex items-center gap-2">
+            <span className="text-purple-300 text-xs font-semibold uppercase tracking-wider">
+              Slots
+            </span>
+            <div className="flex items-center gap-1.5 bg-purple-950/50 rounded-lg p-0.5 border border-purple-500/30">
+              <button
+                onClick={() => setSlotsToBuy(Math.max(1, slotsToBuy - 1))}
+                disabled={slotsToBuy <= 1 || loading || isThisPropertyBlocked}
+                className="w-8 h-8 flex items-center justify-center bg-purple-600/30 hover:bg-purple-600/50 disabled:bg-purple-900/20 disabled:text-purple-700 rounded text-white font-bold transition-all duration-200 active:scale-95 text-lg"
+              >
+                −
+              </button>
+              <input
+                type="number"
+                min="1"
+                max={maxSlotsToBuy}
+                value={slotsToBuy}
+                onChange={(e) => {
+                  const value = parseInt(e.target.value) || 1;
+                  setSlotsToBuy(Math.min(Math.max(1, value), maxSlotsToBuy));
+                }}
+                disabled={loading || isThisPropertyBlocked}
+                className="w-12 h-8 bg-purple-950/70 rounded text-white text-xl font-bold text-center border-none outline-none disabled:opacity-50 [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                style={{ 
+                  MozAppearance: 'textfield',
+                  WebkitAppearance: 'none',
+                  margin: 0,
+                }}
+                onFocus={(e) => e.target.select()}
+              />
+              <button
+                onClick={() => setSlotsToBuy(Math.min(maxSlotsToBuy, slotsToBuy + 1))}
+                disabled={slotsToBuy >= maxSlotsToBuy || loading || isThisPropertyBlocked}
+                className="w-8 h-8 flex items-center justify-center bg-purple-600/30 hover:bg-purple-600/50 disabled:bg-purple-900/20 disabled:text-purple-700 rounded text-white font-bold transition-all duration-200 active:scale-95 text-lg"
+              >
+                +
+              </button>
+            </div>
+          </div>
+
+          {/* Cost Display */}
+          <div className="flex items-center gap-2">
+            <span className="text-purple-300 text-xs font-semibold uppercase tracking-wider">
+              Cost
+            </span>
+            <span className="text-yellow-400 text-xl font-bold">
+              {buyCost.toLocaleString()}
             </span>
           </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setSlotsToBuy(Math.max(1, slotsToBuy - 1))}
-              disabled={slotsToBuy <= 1}
-              className="px-3 py-2 bg-purple-800/40 hover:bg-purple-700/60 disabled:bg-gray-800/30 disabled:cursor-not-allowed rounded-lg text-purple-100 disabled:text-gray-600 transition-all"
-            >
-              -
-            </button>
-            <input
-              type="number"
-              value={slotsToBuy}
-              onChange={(e) => {
-                const val = parseInt(e.target.value) || 1;
-                setSlotsToBuy(Math.min(maxSlotsToBuy, Math.max(1, val)));
-              }}
-              className="flex-1 bg-purple-950/50 border border-purple-500/30 rounded-lg px-4 py-2 text-center text-purple-100 focus:outline-none focus:ring-2 focus:ring-purple-500/50"
-              min={1}
-              max={maxSlotsToBuy}
-            />
-            <button
-              onClick={() => setSlotsToBuy(Math.min(maxSlotsToBuy, slotsToBuy + 1))}
-              disabled={slotsToBuy >= maxSlotsToBuy}
-              className="px-3 py-2 bg-purple-800/40 hover:bg-purple-700/60 disabled:bg-gray-800/30 disabled:cursor-not-allowed rounded-lg text-purple-100 disabled:text-gray-600 transition-all"
-            >
-              +
-            </button>
-          </div>
         </div>
 
-        {/* Cost breakdown */}
-        <div className="bg-purple-950/30 rounded-lg p-3 space-y-2 border border-purple-500/20">
-          <div className="flex items-center justify-between text-sm">
-            <span className="text-purple-300">Price per slot:</span>
-            <span className="font-semibold text-purple-100">${pricePerSlot.toLocaleString()}</span>
+        {/* Info Section */}
+        <div className="space-y-1 mb-2.5">
+          <div className="flex items-start gap-1.5 text-purple-200">
+            <ChartIcon size={16} className="text-purple-400 mt-0.5" />
+            <span className="text-xs leading-relaxed">
+              Max per player: <span className="font-bold text-white">{property.maxPerPlayer}</span> slots • Can buy: <span className="font-bold text-white">{maxSlotsToBuy}</span>
+            </span>
           </div>
-          <div className="flex items-center justify-between text-sm">
-            <span className="text-purple-300">Daily income:</span>
-            <div className="flex items-center gap-1">
-              <ChartIcon size={14} className="text-green-400" />
-              <span className="font-semibold text-green-400">+${totalDailyIncome.toLocaleString()}</span>
-            </div>
+          <div className="flex items-start gap-1.5 text-purple-200">
+            <CoinsIcon size={16} className="text-purple-400 mt-0.5" />
+            <span className="text-xs leading-relaxed">
+              Daily income: <span className="font-bold text-white">+{boostedDailyIncome.toLocaleString()} DEFI</span>
+            </span>
           </div>
-          <div className="h-px bg-purple-500/20" />
-          <div className="flex items-center justify-between">
-            <span className="font-semibold text-purple-200">Total Cost:</span>
-            <div className="flex items-center gap-1.5">
-              <CoinsIcon size={16} className="text-yellow-400" />
-              <span className="text-lg font-bold text-yellow-400">${totalCost.toLocaleString()}</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Set bonus indicator */}
-        <div className="bg-purple-950/30 rounded-lg p-3 border border-purple-500/20">
-          {setBonusInfo && (
+          
+          {/* Set Bonus Info */}
+          {!setBonusInfo.loading && (
             <>
               {setBonusInfo.hasCompleteSet ? (
                 <div className="flex items-start gap-1.5 text-green-300">

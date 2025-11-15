@@ -57,8 +57,8 @@ export const useStealActions = (
       // This gets us ALL owners with their steal_protection_expiry data!
       console.log('🔍 Fetching property owners from backend API...');
       
-      const API_BASE_URL = process.env.NEXT_PUBLIC_PROFILE_API_URL || 'http://localhost:3005';
-      const response = await fetch(`${API_BASE_URL}/api/ownership`);
+      const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3005';
+      const response = await fetch(`${API_BASE_URL}/api/properties/${propertyId}/owners`);
       
       if (!response.ok) {
         throw new Error('Failed to fetch ownership data from backend');

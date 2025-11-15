@@ -5,7 +5,7 @@
 // ============================================
 
 const { Connection, PublicKey } = require('@solana/web3.js');
-const { initDatabase, getDatabase, closeDatabase } = require('./src/config/database');
+const { initDatabase, getDatabase, closeDatabase } = require('../config/database');
 require('dotenv').config();
 
 const RPC_URL = process.env.RPC_URL;

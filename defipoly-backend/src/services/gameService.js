@@ -149,15 +149,16 @@ async function updatePlayerStats(walletAddress, actionType, amount = 0, slots = 
             params = [amount || 0, Math.floor(Date.now() / 1000), walletAddress];
             break;
 
-          case 'claim':
-            updateQuery = `UPDATE player_stats 
-                           SET total_actions = total_actions + 1,
-                               rewards_claimed = rewards_claimed + 1,
-                               total_earned = total_earned + ?,
-                               last_action_time = ?
-                           WHERE wallet_address = ?`;
-            params = [amount || 0, Math.floor(Date.now() / 1000), walletAddress];
-            break;
+            case 'claim':
+              updateQuery = `UPDATE player_stats 
+                             SET total_actions = total_actions + 1,
+                                 rewards_claimed = rewards_claimed + 1,
+                                 total_earned = total_earned + ?,
+                                 last_claim_timestamp = ?,
+                                 last_action_time = ?
+                             WHERE wallet_address = ?`;
+              params = [amount || 0, Math.floor(Date.now() / 1000), Math.floor(Date.now() / 1000), walletAddress];
+              break;
 
           case 'shield':
             updateQuery = `UPDATE player_stats 
@@ -167,10 +168,6 @@ async function updatePlayerStats(walletAddress, actionType, amount = 0, slots = 
                                last_action_time = ?
                            WHERE wallet_address = ?`;
             params = [amount || 0, Math.floor(Date.now() / 1000), walletAddress];
-            break;
-
-          case 'claim':
-            updates.last_claim_timestamp = Math.floor(Date.now() / 1000);
             break;
 
           default:

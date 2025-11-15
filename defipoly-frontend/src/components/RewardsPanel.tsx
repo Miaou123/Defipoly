@@ -28,6 +28,9 @@ export function RewardsPanel() {
     claimingRef.current = true;
     setClaiming(true);
     
+    // ✅ Save the amount BEFORE claiming
+    const claimedAmount = unclaimedRewards;
+    
     try {
       const signature = await claimRewards();
       
@@ -41,21 +44,22 @@ export function RewardsPanel() {
               commitment: 'confirmed',
               maxSupportedTransactionVersion: 0
             });
-
+  
             if (tx?.meta?.logMessages) {
               const coder = new BorshCoder(idl as any);
               const eventParser = new EventParser(PROGRAM_ID, coder);
               const events = eventParser.parseLogs(tx.meta.logMessages);
               
-              let claimedAmount = Math.floor(unclaimedRewards * 1e9);
+              // ✅ Use the saved amount OR parse from event
+              let actualClaimedAmount = claimedAmount;
               
               for (const event of events) {
                 if (event.name === 'RewardsClaimedEvent' || event.name === 'rewardsClaimedEvent') {
-                  claimedAmount = Number(event.data.amount);
+                  actualClaimedAmount = Number(event.data.amount);
                   break;
                 }
               }
-
+  
               const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3101';
               await fetch(`${API_BASE_URL}/api/actions`, {
                 method: 'POST',
@@ -64,7 +68,7 @@ export function RewardsPanel() {
                   txSignature: signature,
                   actionType: 'claim',
                   playerAddress: publicKey.toString(),
-                  amount: claimedAmount,
+                  amount: actualClaimedAmount, // ✅ Now has the actual amount
                   blockTime: tx.blockTime || Math.floor(Date.now() / 1000),
                 }),
               });
@@ -74,29 +78,27 @@ export function RewardsPanel() {
           }
         })();
         
-        // Show success immediately
+        // Show success immediately with amount
         showSuccess(
           'Rewards Claimed!', 
-          `Successfully claimed ${unclaimedRewards.toLocaleString()} DEFI!`,
+          `Successfully claimed ${claimedAmount.toLocaleString()} DEFI!`,
           signature !== 'already-processed' ? signature : undefined
         );
       }
     } catch (error) {
       console.error('Error claiming rewards:', error);
       
-      // Check if this is the "already processed" error
       const errorMessage = String(error instanceof Error ? error.message : error);
       if (errorMessage.includes('already been processed') || 
           errorMessage.includes('AlreadyProcessed')) {
         showSuccess(
           'Rewards Claimed!', 
-          `Successfully claimed ${unclaimedRewards.toLocaleString()} DEFI!`
+          `Successfully claimed ${claimedAmount.toLocaleString()} DEFI!`
         );
       } else {
         showError('Claim Failed', 'Failed to claim rewards. Please try again.');
       }
     } finally {
-      // Add delay before resetting to prevent rapid re-clicks
       setTimeout(() => {
         setClaiming(false);
         claimingRef.current = false;

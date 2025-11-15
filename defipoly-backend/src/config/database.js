@@ -29,7 +29,6 @@ function createTables() {
       if (completed === totalTables && !hasError) {
         // Create indexes and run migrations after all tables are created
         createIndexes()
-          .then(() => runMigrations())
           .then(() => resolve())
           .catch(reject);
       }

@@ -4,11 +4,14 @@ const {
   getPropertyStats, 
   getAllPropertiesStats,
   getPropertyState,
-  getAllPropertiesState
+  getAllPropertiesState,
+  getPropertyOwners
 } = require('../controllers/propertyController');
 
 // GET /api/properties/:propertyId/stats - Ownership stats
 router.get('/:propertyId/stats', getPropertyStats);
+
+router.get('/:propertyId/owners', getPropertyOwners);
 
 // GET /api/properties/stats - All properties ownership stats
 router.get('/stats', getAllPropertiesStats);

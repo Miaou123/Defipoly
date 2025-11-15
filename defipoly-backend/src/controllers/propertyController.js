@@ -101,6 +101,24 @@ const getPropertyState = (req, res) => {
   );
 };
 
+const getPropertyOwners = (req, res) => {
+  const { propertyId } = req.params;
+  const db = getDatabase();
+
+  db.all(
+    `SELECT * FROM property_ownership 
+     WHERE property_id = ? AND slots_owned > 0
+     ORDER BY slots_owned DESC`,
+    [propertyId],
+    (err, rows) => {
+      if (err) {
+        return res.status(500).json({ error: 'Database error' });
+      }
+      res.json({ owners: rows });
+    }
+  );
+};
+
 /**
  * NEW: Get all properties state
  */
@@ -138,5 +156,6 @@ module.exports = {
   getPropertyStats,
   getAllPropertiesStats,
   getPropertyState,
-  getAllPropertiesState
+  getAllPropertiesState,
+  getPropertyOwners
 };
