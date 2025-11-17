@@ -3,6 +3,7 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { usePropertyRefresh } from './PropertyRefreshContext';
+import { useWebSocket } from './WebSocketContext';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3101';
 
@@ -33,6 +34,7 @@ const StealCooldownContext = createContext<StealCooldownContextType>({
 export function StealCooldownProvider({ children }: { children: ReactNode }) {
   const { publicKey } = useWallet();
   const { refreshKey } = usePropertyRefresh();
+  const { socket, connected } = useWebSocket();
   const [cooldowns, setCooldowns] = useState<StealCooldownMap>({});
   const [isLoading, setIsLoading] = useState(false);
 
@@ -83,6 +85,27 @@ export function StealCooldownProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     fetchAllCooldowns();
   }, [publicKey, refreshKey]);
+
+  // ✅ NEW: Listen to WebSocket events and auto-refresh steal cooldowns
+  useEffect(() => {
+    if (!socket || !connected || !publicKey) return;
+
+    const handleStealCooldownUpdate = () => {
+      console.log('🔄 [StealCooldown] WebSocket event detected, refetching steal cooldowns...');
+      fetchAllCooldowns();
+    };
+
+    // Listen to steal-related events
+    socket.on('steal-attempted', handleStealCooldownUpdate);
+    socket.on('steal-failed', handleStealCooldownUpdate);
+    socket.on('property-stolen', handleStealCooldownUpdate);
+
+    return () => {
+      socket.off('steal-attempted', handleStealCooldownUpdate);
+      socket.off('steal-failed', handleStealCooldownUpdate);
+      socket.off('property-stolen', handleStealCooldownUpdate);
+    };
+  }, [socket, connected, publicKey]);
 
   // Update countdown every second (client-side only, no API calls)
   useEffect(() => {

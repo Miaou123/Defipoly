@@ -1,11 +1,12 @@
 // ============================================
 // FILE: src/hooks/useCooldowns.ts
 // Hook for fetching cooldown data from backend API
-// Replaces blockchain deserialization and computation
+// ✅ UPDATED: Now auto-refreshes on WebSocket events
 // ============================================
 
 import { useState, useEffect, useCallback } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
+import { useWebSocket } from '@/contexts/WebSocketContext';
 import { 
   fetchAllSetCooldowns, 
   fetchSetCooldown,
@@ -31,6 +32,7 @@ interface UseCooldownsReturn {
 
 export function useCooldowns(): UseCooldownsReturn {
   const { publicKey } = useWallet();
+  const { socket, connected } = useWebSocket();
   const [setCooldowns, setSetCooldowns] = useState<ApiPlayerSetCooldown[]>([]);
   const [stealCooldowns, setStealCooldowns] = useState<ApiPlayerStealCooldown[]>([]);
   const [loading, setLoading] = useState(false);
@@ -68,6 +70,29 @@ export function useCooldowns(): UseCooldownsReturn {
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  // ✅ NEW: Listen to WebSocket events and auto-refresh cooldowns
+  useEffect(() => {
+    if (!socket || !connected || !publicKey) return;
+
+    const handleCooldownUpdate = () => {
+      console.log('🔄 [useCooldowns] WebSocket event detected, refetching cooldowns...');
+      fetchData();
+    };
+
+    // Listen to property events that affect cooldowns
+    socket.on('property-bought', handleCooldownUpdate);
+    socket.on('property-stolen', handleCooldownUpdate);
+    socket.on('steal-attempted', handleCooldownUpdate);
+    socket.on('steal-failed', handleCooldownUpdate);
+
+    return () => {
+      socket.off('property-bought', handleCooldownUpdate);
+      socket.off('property-stolen', handleCooldownUpdate);
+      socket.off('steal-attempted', handleCooldownUpdate);
+      socket.off('steal-failed', handleCooldownUpdate);
+    };
+  }, [socket, connected, publicKey, fetchData]);
 
   const getSetCooldown = useCallback((setId: number): ApiPlayerSetCooldown | null => {
     if (!Array.isArray(setCooldowns)) return null;
