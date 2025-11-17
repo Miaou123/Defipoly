@@ -216,11 +216,11 @@ export function PropertyModal({ propertyId, onClose }: PropertyModalProps) {
           </div>
 
           {/* Content - COMPACT */}
-          <div className="p-4 space-y-3 max-h-[70vh] overflow-y-auto">
+          <div className="p-4 space-y-3 flex-1 min-h-0 flex flex-col">
             {/* Property Card + Details - SMALLER */}
             <div className="grid grid-cols-[210px_1fr] gap-4">
               {/* Left: Property Card */}
-              <div className="w-[200px] h-[300px]">
+              <div className="w-[200px] h-[250px]">
                 <PropertyCard 
                   propertyId={propertyId} 
                   onSelect={() => {}} 

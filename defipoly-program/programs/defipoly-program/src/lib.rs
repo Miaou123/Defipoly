@@ -16,6 +16,33 @@ const MARKETING_WALLET: &str = "FoPKSQ5HDSVyZgaQobX64YEBVQ2iiKMZp8VHWtd6jLQE";
 const MAX_PROPERTIES_PER_CLAIM: u8 = 22;
 const MIN_CLAIM_INTERVAL_MINUTES: i64 = 1;
 
+    // ========== HELPER: UPDATE PENDING REWARDS ==========
+
+    fn update_pending_rewards(player: &mut PlayerAccount, clock_timestamp: i64) -> Result<()> {
+        let time_elapsed = clock_timestamp - player.last_claim_timestamp;
+        
+        if time_elapsed > 0 && player.total_base_daily_income > 0 {
+            let minutes_elapsed = time_elapsed / 60;
+            let income_per_minute = player.total_base_daily_income / 1440; // 1440 minutes per day
+            
+            let new_rewards = (income_per_minute as u128)
+                .checked_mul(minutes_elapsed as u128)
+                .and_then(|r| u64::try_from(r).ok())
+                .ok_or(ErrorCode::Overflow)?;
+            
+            player.pending_rewards = player.pending_rewards
+                .checked_add(new_rewards)
+                .ok_or(ErrorCode::Overflow)?;
+                
+            msg!("💰 Updated pending rewards: +{} (total: {})", new_rewards, player.pending_rewards);
+        }
+        
+        // Always update last_claim_timestamp to prevent double-counting
+        player.last_claim_timestamp = clock_timestamp;
+        
+        Ok(())
+    }
+
 #[program]
 pub mod defipoly_program {
     use super::*;
@@ -92,6 +119,7 @@ pub mod defipoly_program {
         player.total_steals_attempted = 0;
         player.total_steals_successful = 0;
         player.bump = ctx.bumps.player_account;
+        player.pending_rewards = 0;
         
         msg!("Player initialized: {}", player.owner);
         Ok(())
@@ -111,6 +139,8 @@ pub mod defipoly_program {
         let set_ownership = &mut ctx.accounts.set_ownership;
         let set_stats = &mut ctx.accounts.set_stats;
         let clock = Clock::get()?;
+
+        update_pending_rewards(player, clock.unix_timestamp)?;
     
         // Validation
         require!(!game_config.game_paused, ErrorCode::GamePaused);
@@ -183,7 +213,7 @@ pub mod defipoly_program {
         let total_daily_income_increase = daily_income_per_slot
             .checked_mul(slots as u64)
             .ok_or(ErrorCode::Overflow)?;
-
+    
         player.total_base_daily_income = player.total_base_daily_income
             .checked_add(total_daily_income_increase)
             .ok_or(ErrorCode::Overflow)?;
@@ -489,6 +519,9 @@ pub fn steal_property_instant(
     player.total_steals_attempted += 1;
 
     if success {
+
+        update_pending_rewards(player, clock.unix_timestamp)?;
+        update_pending_rewards(&mut target_account, clock.unix_timestamp)?;
         // Transfer slot from target to attacker
         target_ownership.slots_owned -= 1;
 
@@ -570,119 +603,22 @@ pub fn steal_property_instant(
 
     pub fn claim_rewards<'info>(
         ctx: Context<'_, '_, '_, 'info, ClaimRewards<'info>>,
-        num_properties: u8,
-    ) -> Result<()> {
+    ) -> Result<()> {  // ✅ REMOVED num_properties parameter
         let game_config = &ctx.accounts.game_config;
         let player = &mut ctx.accounts.player_account;
         let clock = Clock::get()?;
     
         require!(!game_config.game_paused, ErrorCode::GamePaused);
-        require!(
-            num_properties > 0 && num_properties <= game_config.max_properties_per_claim,
-            ErrorCode::TooManyProperties
-        );
-    
+        
         require!(
             (clock.unix_timestamp - player.last_claim_timestamp) >= game_config.min_claim_interval_minutes * 60,
             ErrorCode::ClaimTooSoon
         );
-    
-        let remaining_accounts = ctx.remaining_accounts;
-        let num_props = num_properties as usize;
-        require!(remaining_accounts.len() >= num_props * 2, ErrorCode::InvalidAccountCount);
-    
-        struct OwnershipInfo {
-            property_id: u8,
-            set_id: u8,
-            slots_owned: u16,
-            daily_income_per_slot: u64,
-            purchase_timestamp: i64,
-        }
         
-        let mut ownerships: Vec<OwnershipInfo> = Vec::with_capacity(num_props);
+        // ✅ ACCUMULATE ANY REMAINING REWARDS
+        update_pending_rewards(player, clock.unix_timestamp)?;
         
-        for i in 0..num_props {
-            let ownership_account = &remaining_accounts[i];
-            let ownership_data = ownership_account.try_borrow_data()?;
-            let ownership = PropertyOwnership::try_deserialize(&mut &ownership_data[..])?;
-            
-            require!(ownership.player == player.owner, ErrorCode::Unauthorized);
-            require!(ownership.slots_owned > 0, ErrorCode::DoesNotOwnProperty);
-            
-            let property_account = &remaining_accounts[num_props + i];
-            let property_data = property_account.try_borrow_data()?;
-            let property = Property::try_deserialize(&mut &property_data[..])?;
-            
-            require!(property.property_id == ownership.property_id, ErrorCode::PropertyMismatch);
-            
-            let daily_income_per_slot = (property.price * property.yield_percent_bps as u64) / 10000;
-            
-            ownerships.push(OwnershipInfo {
-                property_id: property.property_id,
-                set_id: property.set_id,
-                slots_owned: ownership.slots_owned,
-                daily_income_per_slot,
-                purchase_timestamp: ownership.purchase_timestamp,
-            });
-        }
-        
-        let mut set_min_slots: [u16; 8] = [u16::MAX; 8];
-        let mut properties_per_set: [u8; 8] = [0; 8];
-        
-        for ownership in &ownerships {
-            properties_per_set[ownership.set_id as usize] += 1;
-        }
-        
-        for ownership in &ownerships {
-            let set_idx = ownership.set_id as usize;
-            let required_properties = Property::get_properties_in_set(ownership.set_id);
-            
-            if properties_per_set[set_idx] >= required_properties {
-                if ownership.slots_owned < set_min_slots[set_idx] {
-                    set_min_slots[set_idx] = ownership.slots_owned;
-                }
-            }
-        }
-        
-        let mut total_rewards: u64 = 0;
-        let mut total_base_slots: u32 = 0;
-        let mut total_bonus_slots: u32 = 0;
-        
-        for ownership in &ownerships {
-            // Use the later of purchase time or last claim time
-            let time_start = std::cmp::max(
-                ownership.purchase_timestamp,
-                player.last_claim_timestamp
-            );
-            let minutes_elapsed = (clock.unix_timestamp - time_start) / 60;
-            
-            // Skip if no time has elapsed for this property
-            if minutes_elapsed <= 0 {
-                continue;
-            }
-            
-            let set_idx = ownership.set_id as usize;
-            let income_per_minute = ownership.daily_income_per_slot / 1440;
-            let min_slots_in_set = set_min_slots[set_idx];
-            
-            if min_slots_in_set != u16::MAX && min_slots_in_set > 0 {
-                let bonus_slots = min_slots_in_set;
-                let base_slots = ownership.slots_owned - bonus_slots;
-                
-                let base_rewards = base_slots as u64 * income_per_minute * minutes_elapsed as u64;
-                let set_bonus_bps = Property::get_set_bonus_bps(ownership.set_id);
-                let bonus_multiplier_bps = 10000 + set_bonus_bps;
-                let bonus_rewards = (bonus_slots as u64 * income_per_minute * minutes_elapsed as u64 * bonus_multiplier_bps as u64) / 10000;
-                
-                total_rewards += base_rewards + bonus_rewards;
-                total_base_slots += base_slots as u32;
-                total_bonus_slots += bonus_slots as u32;
-            } else {
-                let rewards = ownership.slots_owned as u64 * income_per_minute * minutes_elapsed as u64;
-                total_rewards += rewards;
-                total_base_slots += ownership.slots_owned as u32;
-            }
-        }
+        let total_rewards = player.pending_rewards;
         
         require!(total_rewards > 0, ErrorCode::NoRewardsToClaim);
         require!(
@@ -690,8 +626,7 @@ pub fn steal_property_instant(
             ErrorCode::InsufficientRewardPool
         );
         
-        msg!("💰 Claiming from {} properties ({} base + {} bonus slots)", 
-             num_properties, total_base_slots, total_bonus_slots);
+        msg!("💰 Claiming {} tokens from pending rewards", total_rewards);
         
         let game_config_key = game_config.key();
         let seeds = &[
@@ -700,7 +635,7 @@ pub fn steal_property_instant(
             &[game_config.reward_pool_vault_bump],
         ];
         let signer_seeds = &[&seeds[..]];
-
+    
         let transfer_ctx = CpiContext::new_with_signer(
             ctx.accounts.token_program.to_account_info(),
             Transfer {
@@ -711,16 +646,17 @@ pub fn steal_property_instant(
             signer_seeds,
         );
         token::transfer(transfer_ctx, total_rewards)?;
-
-        player.last_claim_timestamp = clock.unix_timestamp;
+    
+        // ✅ RESET PENDING REWARDS
+        player.pending_rewards = 0;
         player.total_rewards_claimed += total_rewards;
-
+    
         emit!(RewardsClaimedEvent {
             player: player.owner,
             amount: total_rewards,
-            seconds_elapsed: (clock.unix_timestamp - player.last_claim_timestamp),
+            seconds_elapsed: 0,  // Not relevant anymore
         });
-
+    
         msg!("✅ Rewards claimed successfully!");
         Ok(())
     }
@@ -736,6 +672,8 @@ pub fn steal_property_instant(
         let ownership = &mut ctx.accounts.ownership;
         let player = &mut ctx.accounts.player_account;
         let clock = Clock::get()?;
+
+        update_pending_rewards(player, clock.unix_timestamp)?;
 
         require!(!game_config.game_paused, ErrorCode::GamePaused);
         require!(ownership.slots_owned >= slots, ErrorCode::InsufficientSlots);
@@ -798,7 +736,7 @@ pub fn steal_property_instant(
         let total_daily_income_decrease = daily_income_per_slot
             .checked_mul(slots as u64)
             .ok_or(ErrorCode::Overflow)?;
-
+    
         player.total_base_daily_income = player.total_base_daily_income
             .checked_sub(total_daily_income_decrease)
             .ok_or(ErrorCode::Overflow)?;
@@ -1906,12 +1844,13 @@ pub struct PlayerAccount {
     pub total_steals_attempted: u32,
     pub total_steals_successful: u32,
     pub bump: u8,
+    pub pending_rewards: u64,
     
-    pub padding: [u8; 64],  // Reserved for future features
+    pub padding: [u8; 56],
 }
 
 impl PlayerAccount {
-    pub const SIZE: usize = 69 + 64;  // With padding
+    pub const SIZE: usize = 77 + 56; 
 }
 
 #[account]

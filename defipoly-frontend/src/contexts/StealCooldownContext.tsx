@@ -55,15 +55,23 @@ export function StealCooldownProvider({ children }: { children: ReactNode }) {
 
       const data = await response.json();
       
-      // Convert array to map for easy lookup
-      const cooldownMap: StealCooldownMap = {};
-      if (data.cooldowns && Array.isArray(data.cooldowns)) {
-        data.cooldowns.forEach((cooldown: StealCooldownData) => {
-          cooldownMap[cooldown.propertyId] = cooldown;
-        });
+      // ✅ FIX: Backend returns { cooldowns: { 11: {...}, 12: {...} } } as an object
+      // Convert to map directly - it's already in the right format!
+      if (data.cooldowns) {
+        if (typeof data.cooldowns === 'object' && !Array.isArray(data.cooldowns)) {
+          // Backend returns object keyed by propertyId - use it directly
+          setCooldowns(data.cooldowns);
+        } else if (Array.isArray(data.cooldowns)) {
+          // If it's an array, convert to map
+          const cooldownMap: StealCooldownMap = {};
+          data.cooldowns.forEach((cooldown: StealCooldownData) => {
+            cooldownMap[cooldown.propertyId] = cooldown;
+          });
+          setCooldowns(cooldownMap);
+        }
+      } else {
+        setCooldowns({});
       }
-      
-      setCooldowns(cooldownMap);
     } catch (error) {
       console.error('Error fetching steal cooldowns:', error);
     } finally {

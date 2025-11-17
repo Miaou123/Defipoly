@@ -81,13 +81,19 @@ export function PropertyCard({ propertyId, onSelect, spectatorMode = false, spec
   const cooldownData = getSetCooldown(setId);
   const lastPurchasedPropertyId = cooldownData?.lastPurchasedPropertyId ?? null;
   
-  // Format cooldown time
-  const formatCooldown = (seconds: number) => {
-    const hours = Math.floor(seconds / 3600);
-    const mins = Math.floor((seconds % 3600) / 60);
-    if (hours > 0) return `${hours}h ${mins}m`;
-    return `${mins}m`;
-  };
+
+  // 🔍 DEBUG LOGGING
+console.log(`PropertyCard ${propertyId} (${property.name}) debug:`, {
+  setId,
+  spectatorMode,
+  isOnCooldown,
+  cooldownRemaining,
+  lastPurchasedPropertyId,
+  isThisPropertyBlocked: isOnCooldown && lastPurchasedPropertyId !== propertyId,
+  isOnStealCooldown,
+  stealCooldownRemaining,
+  shieldActive,
+});
 
   const isThisPropertyBlocked = isOnCooldown && lastPurchasedPropertyId !== propertyId;
 
@@ -397,9 +403,7 @@ export function PropertyCard({ propertyId, onSelect, spectatorMode = false, spec
                   className="relative group"
                   title={cooldown.tooltip}
                 >
-                  <span className="text-[8px]">
                     {cooldown.icon}
-                  </span>
                   {/* Tooltip */}
                   <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-2 py-1 bg-gray-900 text-white text-[10px] rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 border border-purple-500/30">
                     {cooldown.tooltip}

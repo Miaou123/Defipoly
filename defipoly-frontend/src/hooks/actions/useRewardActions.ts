@@ -1,5 +1,6 @@
 // ============================================
-// FIXED useRewardActions.ts
+// FIXED useRewardActions.ts - O(1) CLAIMS
+// No more property iteration - uses pending_rewards
 // Webhook now handles all storage automatically
 // ============================================
 
@@ -9,11 +10,7 @@ import { Program } from '@coral-xyz/anchor';
 import { Connection } from '@solana/web3.js';
 import { EventParser } from '@coral-xyz/anchor';
 import { 
-  getPropertyPDA,
   getPlayerPDA,
-  getOwnershipPDA,
-  fetchPlayerData,
-  fetchOwnershipData
 } from '@/utils/program';
 import { GAME_CONFIG, REWARD_POOL, TOKEN_MINT } from '@/utils/constants';
 
@@ -38,52 +35,12 @@ export const useRewardActions = (
   
       const [playerPDA] = getPlayerPDA(wallet.publicKey);
       
+      console.log('🎯 Claiming rewards (O(1) - no properties needed)');
       console.log('🔑 Player PDA:', playerPDA.toString());
-      console.log('👤 Player PublicKey:', wallet.publicKey.toString());
   
-      const playerData = await fetchPlayerData(program, wallet.publicKey);
-      if (!playerData || playerData.propertiesOwnedCount === 0) {
-        throw new Error('No properties to claim rewards from');
-      }
-  
-      // Separate arrays for ownerships and properties
-      const ownershipAccounts: any[] = [];
-      const propertyAccounts: any[] = [];
-  
-      for (let propertyId = 0; propertyId < 22; propertyId++) {
-        const [ownershipPDA] = getOwnershipPDA(wallet.publicKey, propertyId);
-        try {
-          const ownershipData = await fetchOwnershipData(program, wallet.publicKey, propertyId);
-          if (ownershipData?.slotsOwned && ownershipData.slotsOwned > 0) {
-            const [propertyPDA] = getPropertyPDA(propertyId);
-            
-            // Add to separate arrays
-            ownershipAccounts.push({
-              pubkey: ownershipPDA,
-              isWritable: false,
-              isSigner: false,
-            });
-            propertyAccounts.push({
-              pubkey: propertyPDA,
-              isWritable: false,
-              isSigner: false,
-            });
-          }
-        } catch (e) {
-          continue;
-        }
-      }
-  
-      // Combine arrays - all ownerships first, then all properties
-      const remainingAccounts = [...ownershipAccounts, ...propertyAccounts];
-      const numPropertiesOwned = ownershipAccounts.length;
-  
-      console.log(`📊 Found ${numPropertiesOwned} properties to claim from`);
-      console.log(`📦 Remaining accounts order: ${numPropertiesOwned} ownerships + ${numPropertiesOwned} properties`);
-  
-      // Pass num_properties parameter
+      // ✅ NO MORE PROPERTY ITERATION - O(1) CLAIM
       const tx = await program.methods
-        .claimRewards(numPropertiesOwned)
+        .claimRewards() // No parameters needed!
         .accountsPartial({
           playerAccount: playerPDA,
           player: wallet.publicKey,
@@ -92,7 +49,7 @@ export const useRewardActions = (
           gameConfig: GAME_CONFIG,
           tokenProgram: TOKEN_PROGRAM_ID,
         })
-        .remainingAccounts(remainingAccounts)
+        // ✅ No remainingAccounts needed!
         .rpc();
   
       console.log('✅ Rewards claimed successfully:', tx);

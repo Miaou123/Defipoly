@@ -1,7 +1,7 @@
 // ============================================
 // FILE: src/services/api.ts
 // Backend API service layer
-// ✅ UPDATED: Added ApiPlayerStats interface
+// ✅ FIXED: Object-to-array conversion for cooldown endpoints
 // ============================================
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3101';
@@ -47,7 +47,6 @@ export interface ApiPropertyState {
   last_updated: number;
 }
 
-// ✅ NEW: Player stats interface
 export interface ApiPlayerStats {
   walletAddress: string;
   totalActions: number;
@@ -63,7 +62,7 @@ export interface ApiPlayerStats {
   dailyIncome: number;
   completedSets: number;
   lastActionTime?: number;
-  lastClaimTimestamp: number;  // ← This is the key field we need!
+  lastClaimTimestamp: number;
   updatedAt: number;
 }
 
@@ -101,7 +100,14 @@ export async function fetchAllSetCooldowns(wallet: string): Promise<ApiPlayerSet
     throw new Error(`Failed to fetch all set cooldowns: ${response.statusText}`);
   }
   const data = await response.json();
-  return data.cooldowns || [];
+  
+  // ✅ FIX: Backend returns { cooldowns: { 0: {...}, 1: {...}, ... } } as an object
+  // Convert to array for frontend hooks
+  if (data.cooldowns && typeof data.cooldowns === 'object') {
+    return Object.values(data.cooldowns);
+  }
+  
+  return [];
 }
 
 export async function fetchStealCooldown(wallet: string, propertyId: number): Promise<ApiPlayerStealCooldown | null> {
@@ -120,24 +126,30 @@ export async function fetchAllStealCooldowns(wallet: string): Promise<ApiPlayerS
     throw new Error(`Failed to fetch all steal cooldowns: ${response.statusText}`);
   }
   const data = await response.json();
-  return data.cooldowns || [];
+  
+  // ✅ FIX: Backend returns { cooldowns: { 11: {...}, 12: {...}, ... } } as an object
+  // Convert to array for frontend hooks
+  if (data.cooldowns && typeof data.cooldowns === 'object') {
+    return Object.values(data.cooldowns);
+  }
+  
+  return [];
 }
 
 // ========== PROPERTY STATE ENDPOINTS ==========
 
 export async function fetchPropertyState(propertyId: number): Promise<ApiPropertyState | null> {
-    const response = await fetch(`${API_BASE_URL}/api/properties/${propertyId}/state`);
-    // ✅ Changed from /state/:id to /:id/state
-    if (!response.ok) {
-      throw new Error(`Failed to fetch property state: ${response.statusText}`);
-    }
-    const data = await response.json();
-    return {
-      property_id: data.propertyId,
-      available_slots: data.availableSlots,
-      last_updated: data.lastSynced
-    };
+  const response = await fetch(`${API_BASE_URL}/api/properties/${propertyId}/state`);
+  if (!response.ok) {
+    throw new Error(`Failed to fetch property state: ${response.statusText}`);
   }
+  const data = await response.json();
+  return {
+    property_id: data.propertyId,
+    available_slots: data.availableSlots,
+    last_updated: data.lastSynced
+  };
+}
 
 export async function fetchAllPropertyStates(): Promise<ApiPropertyState[]> {
   const response = await fetch(`${API_BASE_URL}/api/properties/state`);

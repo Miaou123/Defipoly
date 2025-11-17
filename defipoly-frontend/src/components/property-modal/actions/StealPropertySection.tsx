@@ -1,6 +1,6 @@
 // ============================================
 // FINAL CORRECTED StealPropertySection.tsx
-// Uses cooldownHours (the actual field in PROPERTIES constant)
+// Cooldown now displayed in button like BuyPropertySection
 // ============================================
 
 import { useState, useEffect } from 'react';
@@ -136,16 +136,6 @@ export function StealPropertySection({
 
   return (
     <div className="bg-gradient-to-br from-purple-900/40 to-indigo-900/40 rounded-xl p-4 border border-purple-500/30">
-      <div className="flex items-center justify-between mb-3">
-        <h3 className="text-lg font-bold text-purple-200">Steal</h3>
-        {isOnStealCooldown && stealCooldownRemaining > 0 && (
-          <div className="flex items-center gap-1.5 text-yellow-400 text-xs bg-yellow-400/10 px-2 py-1 rounded-md border border-yellow-400/20">
-            <Clock className="w-3.5 h-3.5" />
-            <span className="font-semibold">{formatCooldown(stealCooldownRemaining)}</span>
-          </div>
-        )}
-      </div>
-
       {/* Cost & Success Rate Display */}
       <div className="grid grid-cols-2 gap-3 mb-3 bg-black/20 rounded-lg p-2.5 border border-purple-500/20">
         {/* Cost Display */}
@@ -204,7 +194,6 @@ export function StealPropertySection({
         <div className="flex items-start gap-1.5 text-purple-200">
           <LightningIcon size={16} className="text-yellow-400 mt-0.5" />
           <span className="text-xs leading-relaxed">
-            {/* ✅ FIXED: Uses cooldown field which exists in PROPERTIES constant */}
             Your cooldown: {(property.cooldown || 24) / 2}h between steal attempts
           </span>
         </div>
@@ -222,19 +211,26 @@ export function StealPropertySection({
         onClick={handleSteal}
         disabled={loading || !canSteal || (availableTargets !== null && availableTargets === 0)}
         className={`w-full py-2.5 rounded-lg font-semibold text-sm transition-all ${
-          loading || !canSteal || (availableTargets !== null && availableTargets === 0)
+          isOnStealCooldown
+            ? 'bg-orange-600/40 hover:bg-orange-600/60 border border-orange-500/50 text-orange-100 cursor-pointer'
+            : loading || !canSteal || (availableTargets !== null && availableTargets === 0)
             ? 'bg-gray-800/30 cursor-not-allowed text-gray-500 border border-gray-700/30'
             : 'bg-red-600/40 hover:bg-red-600/60 border border-red-500/50 text-red-100 hover:border-red-400/70 shadow-lg shadow-red-500/20'
         }`}
       >
         {loading ? (
           <><DiceIcon size={16} className="inline-block mr-1 animate-pulse" />Rolling the dice...</>
+        ) : isOnStealCooldown ? (
+          <>
+            <Clock className="inline w-3.5 h-3.5 mr-1" />
+            On Cooldown ({formatCooldown(stealCooldownRemaining)})
+          </>
         ) : (
           <><DiceIcon size={16} className="inline-block mr-1" />Attempt Random Steal</>
         )}
       </button>
 
-      {!canSteal && balance < stealCost && (
+      {!canSteal && balance < stealCost && !isOnStealCooldown && (
         <div className="text-center text-xs text-red-300 mt-2">
           <WarningIcon size={16} className="inline-block mr-1" />Need {stealCost.toLocaleString()} DEFI
         </div>
