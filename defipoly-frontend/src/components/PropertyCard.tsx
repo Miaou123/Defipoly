@@ -5,7 +5,7 @@ import { useWallet } from '@solana/wallet-adapter-react';
 import { usePropertyRefresh } from '@/contexts/PropertyRefreshContext';
 import { useCooldowns } from '@/hooks/useCooldowns';
 import { useStealCooldownFromContext } from '@/contexts/StealCooldownContext';
-import { ShieldIcon, CoinsIcon, FlameIcon, PropertyMarkerIcon } from './icons/UIIcons';
+import { ShieldIcon, HourglassIcon, TargetIcon } from './icons/UIIcons';
 import { LocationPin, BUILDING_SVGS } from './icons/GameAssets';
 
 import { PROPERTIES } from '@/utils/constants';
@@ -95,13 +95,25 @@ export function PropertyCard({ propertyId, onSelect, spectatorMode = false, spec
   const activeCooldowns = [];
   if (!spectatorMode) {
     if (shieldActive) {
-      activeCooldowns.push({ icon: <ShieldIcon size={12} className="text-cyan-400" />, label: 'Shield' });
+      activeCooldowns.push({ 
+        icon: <ShieldIcon size={12} className="text-cyan-400" />, 
+        label: 'Shield Active',
+        tooltip: 'Property is protected from steals'
+      });
     }
     if (isThisPropertyBlocked) {
-      activeCooldowns.push({ icon: <CoinsIcon size={12} className="text-yellow-400" /> });
+      activeCooldowns.push({ 
+        icon: <HourglassIcon size={12} className="text-yellow-400" />,
+        label: 'Set Cooldown',
+        tooltip: 'Cannot buy from this set yet'
+      });
     }
     if (isOnStealCooldown) {
-      activeCooldowns.push({ icon: <FlameIcon size={12} className="text-orange-400" /> });
+      activeCooldowns.push({ 
+        icon: <TargetIcon size={12} className="text-orange-400" />,
+        label: 'Steal Cooldown',
+        tooltip: 'Cannot steal from this property yet'
+      });
     }
   }
 
@@ -380,9 +392,19 @@ export function PropertyCard({ propertyId, onSelect, spectatorMode = false, spec
           {activeCooldowns.length > 0 && (
             <div className="flex gap-1">
               {activeCooldowns.map((cooldown, index) => (
-                <span key={index} className="text-[8px]">
-                  {cooldown.icon}
-                </span>
+                <div 
+                  key={index} 
+                  className="relative group"
+                  title={cooldown.tooltip}
+                >
+                  <span className="text-[8px]">
+                    {cooldown.icon}
+                  </span>
+                  {/* Tooltip */}
+                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-2 py-1 bg-gray-900 text-white text-[10px] rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 border border-purple-500/30">
+                    {cooldown.tooltip}
+                  </div>
+                </div>
               ))}
             </div>
           )}

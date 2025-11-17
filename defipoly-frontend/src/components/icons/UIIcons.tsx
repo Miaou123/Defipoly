@@ -543,6 +543,41 @@ export const getActionIcon = (actionType: string): React.ReactNode => {
   return ACTION_ICONS[actionType] || <span className="text-gray-400">•</span>;
 };
 
+// Hourglass icon for buy cooldown (set purchase restriction)
+export const HourglassIcon: React.FC<IconProps> = ({ className = '', size = 24 }) => (
+  <svg 
+    width={size} 
+    height={size} 
+    viewBox="0 0 24 24" 
+    fill="none" 
+    xmlns="http://www.w3.org/2000/svg"
+    className={className}
+  >
+    {/* Hourglass frame */}
+    <path 
+      d="M7 2h10M7 22h10M17 2v4a5 5 0 0 1-5 5 5 5 0 0 1-5-5V2M17 22v-4a5 5 0 0 0-5-5 5 5 0 0 0-5 5v4" 
+      stroke="currentColor" 
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+    {/* Sand top */}
+    <path 
+      d="M9 4h6v1a3 3 0 0 1-3 3 3 3 0 0 1-3-3V4z" 
+      fill="currentColor"
+      opacity="0.6"
+    />
+    {/* Sand bottom */}
+    <path 
+      d="M9 20h6v-1a3 3 0 0 0-3-3 3 3 0 0 0-3 3v1z" 
+      fill="currentColor"
+      opacity="0.3"
+    />
+    {/* Falling sand */}
+    <circle cx="12" cy="12" r="1" fill="currentColor"/>
+  </svg>
+);
+
 // Sword/Combat icon for battle-related features
 export const SwordIcon: React.FC<IconProps> = ({ className = '', size = 24 }) => (
   <svg 

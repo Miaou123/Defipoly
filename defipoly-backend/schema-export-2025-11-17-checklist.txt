@@ -1,0 +1,96 @@
+DEFIPOLY DATABASE SCHEMA CHECKLIST
+Generated: 2025-11-17T19:06:07.015Z
+
+Use this checklist to verify your production database has all required fields.
+
+
+▢ Table: game_actions
+  ▢ id: INTEGER (PRIMARY KEY)
+  ▢ tx_signature: TEXT NOT NULL
+  ▢ action_type: TEXT NOT NULL
+  ▢ player_address: TEXT NOT NULL
+  ▢ property_id: INTEGER
+  ▢ target_address: TEXT
+  ▢ amount: INTEGER
+  ▢ slots: INTEGER
+  ▢ success: BOOLEAN
+  ▢ metadata: TEXT
+  ▢ block_time: INTEGER NOT NULL
+  ▢ created_at: INTEGER DEFAULT strftime('%s', 'now')
+
+▢ Table: profiles
+  ▢ wallet_address: TEXT (PRIMARY KEY)
+  ▢ username: TEXT
+  ▢ profile_picture: TEXT
+  ▢ board_theme: TEXT DEFAULT 'dark'
+  ▢ property_card_theme: TEXT DEFAULT 'dark'
+  ▢ custom_board_background: TEXT
+  ▢ custom_property_card_background: TEXT
+  ▢ corner_square_style: TEXT DEFAULT 'property'
+  ▢ updated_at: INTEGER DEFAULT strftime('%s', 'now')
+
+▢ Table: properties_state
+  ▢ property_id: INTEGER (PRIMARY KEY)
+  ▢ available_slots: INTEGER NOT NULL
+  ▢ max_slots_per_property: INTEGER NOT NULL
+  ▢ last_synced: INTEGER DEFAULT strftime('%s', 'now')
+
+▢ Table: property_ownership
+  ▢ id: INTEGER (PRIMARY KEY)
+  ▢ wallet_address: TEXT NOT NULL
+  ▢ property_id: INTEGER NOT NULL
+  ▢ slots_owned: INTEGER DEFAULT 0
+  ▢ slots_shielded: INTEGER DEFAULT 0
+  ▢ shield_expiry: INTEGER DEFAULT 0
+  ▢ purchase_timestamp: INTEGER DEFAULT 0
+  ▢ shield_cooldown_duration: INTEGER DEFAULT 0
+  ▢ steal_protection_expiry: INTEGER DEFAULT 0
+  ▢ bump: INTEGER DEFAULT 0
+  ▢ last_updated: INTEGER DEFAULT strftime('%s', 'now')
+
+▢ Table: sqlite_sequence
+  ▢ name: 
+  ▢ seq: 
+
+▢ Table: player_stats
+  ▢ wallet_address: TEXT (PRIMARY KEY)
+  ▢ total_actions: INTEGER DEFAULT 0
+  ▢ properties_bought: INTEGER DEFAULT 0
+  ▢ properties_sold: INTEGER DEFAULT 0
+  ▢ successful_steals: INTEGER DEFAULT 0
+  ▢ failed_steals: INTEGER DEFAULT 0
+  ▢ rewards_claimed: INTEGER DEFAULT 0
+  ▢ shields_activated: INTEGER DEFAULT 0
+  ▢ total_spent: INTEGER DEFAULT 0
+  ▢ total_earned: INTEGER DEFAULT 0
+  ▢ total_slots_owned: INTEGER DEFAULT 0
+  ▢ daily_income: INTEGER DEFAULT 0
+  ▢ leaderboard_score: INTEGER DEFAULT 0
+  ▢ roi_ratio: REAL DEFAULT 0
+  ▢ steal_win_rate: REAL DEFAULT 0
+  ▢ defense_rating: REAL DEFAULT 0
+  ▢ complete_sets: INTEGER DEFAULT 0
+  ▢ times_stolen: INTEGER DEFAULT 0
+  ▢ last_action_time: INTEGER
+  ▢ updated_at: INTEGER DEFAULT strftime('%s', 'now')
+  ▢ last_claim_timestamp: INTEGER DEFAULT 0
+  ▢ total_slots_purchased: INTEGER DEFAULT 0
+
+▢ Table: player_steal_cooldowns
+  ▢ id: INTEGER (PRIMARY KEY)
+  ▢ wallet_address: TEXT NOT NULL
+  ▢ property_id: INTEGER NOT NULL
+  ▢ last_steal_attempt_timestamp: INTEGER NOT NULL
+  ▢ cooldown_duration: INTEGER NOT NULL
+  ▢ last_synced: INTEGER DEFAULT strftime('%s', 'now')
+
+▢ Table: player_set_cooldowns
+  ▢ id: INTEGER (PRIMARY KEY)
+  ▢ wallet_address: TEXT NOT NULL
+  ▢ set_id: INTEGER NOT NULL
+  ▢ last_purchase_timestamp: INTEGER NOT NULL
+  ▢ cooldown_duration: INTEGER NOT NULL
+  ▢ last_purchased_property_id: INTEGER
+  ▢ properties_owned_in_set: TEXT
+  ▢ properties_count: INTEGER DEFAULT 0
+  ▢ last_synced: INTEGER DEFAULT strftime('%s', 'now')

@@ -1,7 +1,7 @@
 // ============================================
 // FILE: src/services/gameService.js
-// Enhanced Game Service with FIXED Leaderboard Scoring
-// ✅ FIXED: Scores now scale properly (top score < 1M)
+// Enhanced Game Service with NEW Activity-Focused Leaderboard Scoring
+// ✅ NEW: Activity (50%) + Efficiency (30%) + Wealth (20%)
 // ============================================
 
 const { getDatabase } = require('../config/database');
@@ -9,29 +9,59 @@ const { updatePlayerCalculatedStats } = require('./playerStatsCalculator');
 
 /**
  * Calculate composite leaderboard score
- * ✅ FIXED: Properly scaled to keep top scores under 1 million
+ * ✅ NEW: Activity-focused scoring system
  * 
- * Scoring breakdown for a top player (~400K SOL earned, 60 properties, 10 steals):
- * - Wealth: ~120K points (30%)
- * - Activity: ~30K points (25%)  
- * - Combat: ~15K points (20%)
- * - Efficiency: ~50K points (15%)
- * - Defense: ~10K points (10%)
- * Total: ~225K points (well under 1M target)
+ * Scoring breakdown:
+ * - Activity: 50% weight - Rewards active, diverse gameplay
+ * - Efficiency: 30% weight - Rewards smart play over brute force
+ * - Wealth: 20% weight - Still matters, but not dominant
+ * 
+ * Buying 10 slots in 1 tx = same score as buying 1 slot in 10 tx
+ * This prevents transaction spam exploitation
  */
 function calculateLeaderboardScore(stats) {
+  // ========== 1. ACTIVITY POINTS (50% weight) ==========
+  // Rewards consistent, diverse gameplay based on VOLUME not transaction count
+  const activityPoints = 
+    (stats.total_slots_purchased * 10) +   // Total slots purchased (fair for all)
+    (stats.successful_steals * 25) +       // High-skill actions
+    (stats.complete_sets * 100) +          // Major achievements
+    (stats.shields_activated * 15) +       // Defensive strategy
+    (stats.rewards_claimed * 5) +          // Regular engagement
+    (stats.properties_sold * 5);           // Portfolio management
+
+  // ========== 2. EFFICIENCY SCORE (30% weight) ==========
+  // Rewards smart play over brute force
+  
+  // ROI calculation (profit efficiency)
+  const roi = stats.total_earned / Math.max(stats.total_spent, 1);
+  
+  // Steal success rate (combat skill)
+  const totalSteals = stats.successful_steals + stats.failed_steals;
+  const stealWinRate = totalSteals > 0 ? stats.successful_steals / totalSteals : 0;
+  
+  // Defense rating (how well you avoid getting stolen from)
+  const defenseRating = stats.total_slots_owned > 0 
+    ? 1 - (stats.times_stolen / stats.total_slots_owned)
+    : 0;
+  
+  const efficiencyScore = 
+    (roi * 500) +                         // Profit efficiency
+    (stealWinRate * 1000) +               // Combat skill
+    (Math.max(defenseRating, 0) * 500);   // Defense effectiveness
+
+  // ========== 3. WEALTH SCORE (20% weight) ==========
+  // Still matters, but scaled down with square root to reduce whale advantage
   const earnedSOL = stats.total_earned / 1e9;
-  
-  // Weighted activity score (prevents spam exploitation)
-  const activityScore = 
-    (stats.properties_bought * 1) +      // Basic action
-    (stats.successful_steals * 3) +      // Harder action  
-    (stats.complete_sets * 10) +         // Major achievement
-    (stats.shields_activated * 2);       // Defensive play
-  
-  const activityMultiplier = 1 + (activityScore / 50);
-  
-  return Math.floor(earnedSOL * activityMultiplier);
+  const wealthScore = Math.sqrt(earnedSOL) * 200;
+
+  // ========== FINAL SCORE ==========
+  const finalScore = 
+    (activityPoints * 50) +    // 50% weight
+    (efficiencyScore * 30) +   // 30% weight
+    (wealthScore * 20);        // 20% weight
+
+  return Math.floor(finalScore);
 }
 
 
@@ -106,99 +136,99 @@ async function updatePlayerStats(walletAddress, actionType, amount = 0, slots = 
           let updateQuery = '';
           let params = [];
 
-        switch (actionType) {
-          case 'buy':
-            updateQuery = `UPDATE player_stats 
-                           SET total_actions = total_actions + 1,
-                               properties_bought = properties_bought + 1,
-                               total_spent = total_spent + ?,
-                               total_slots_owned = total_slots_owned + ?,
-                               last_action_time = ?
-                           WHERE wallet_address = ?`;
-            params = [amount || 0, slots || 0, Math.floor(Date.now() / 1000), walletAddress];
-            break;
+          switch (actionType) {
+            case 'buy':
+              updateQuery = `UPDATE player_stats 
+                             SET total_actions = total_actions + 1,
+                                 properties_bought = properties_bought + 1,
+                                 total_slots_purchased = total_slots_purchased + ?,
+                                 total_spent = total_spent + ?,
+                                 total_slots_owned = total_slots_owned + ?,
+                                 last_action_time = ?
+                             WHERE wallet_address = ?`;
+              params = [slots || 0, amount || 0, slots || 0, Math.floor(Date.now() / 1000), walletAddress];
+              break;
 
-          case 'sell':
-            updateQuery = `UPDATE player_stats 
-                           SET total_actions = total_actions + 1,
-                               properties_sold = properties_sold + 1,
-                               total_earned = total_earned + ?,
-                               total_slots_owned = total_slots_owned - ?,
-                               last_action_time = ?
-                           WHERE wallet_address = ?`;
-            params = [amount || 0, slots || 0, Math.floor(Date.now() / 1000), walletAddress];
-            break;
+            case 'sell':
+              updateQuery = `UPDATE player_stats 
+                             SET total_actions = total_actions + 1,
+                                 properties_sold = properties_sold + 1,
+                                 total_earned = total_earned + ?,
+                                 total_slots_owned = total_slots_owned - ?,
+                                 last_action_time = ?
+                             WHERE wallet_address = ?`;
+              params = [amount || 0, slots || 0, Math.floor(Date.now() / 1000), walletAddress];
+              break;
 
-          case 'steal_success':
-            updateQuery = `UPDATE player_stats 
-                           SET total_actions = total_actions + 1,
-                               successful_steals = successful_steals + 1,
-                               total_slots_owned = total_slots_owned + ?,
-                               last_action_time = ?
-                           WHERE wallet_address = ?`;
-            params = [slots || 1, Math.floor(Date.now() / 1000), walletAddress];
-            break;
+            case 'steal_success':
+              updateQuery = `UPDATE player_stats 
+                             SET total_actions = total_actions + 1,
+                                 successful_steals = successful_steals + 1,
+                                 total_slots_owned = total_slots_owned + ?,
+                                 last_action_time = ?
+                             WHERE wallet_address = ?`;
+              params = [slots || 0, Math.floor(Date.now() / 1000), walletAddress];
+              break;
 
-          case 'steal_failed':
-            updateQuery = `UPDATE player_stats 
-                           SET total_actions = total_actions + 1,
-                               failed_steals = failed_steals + 1,
-                               total_spent = total_spent + ?,
-                               last_action_time = ?
-                           WHERE wallet_address = ?`;
-            params = [amount || 0, Math.floor(Date.now() / 1000), walletAddress];
-            break;
+            case 'steal_fail':
+              updateQuery = `UPDATE player_stats 
+                             SET total_actions = total_actions + 1,
+                                 failed_steals = failed_steals + 1,
+                                 total_spent = total_spent + ?,
+                                 last_action_time = ?
+                             WHERE wallet_address = ?`;
+              params = [amount || 0, Math.floor(Date.now() / 1000), walletAddress];
+              break;
 
-            case 'claim':
+            case 'shield':
+              updateQuery = `UPDATE player_stats 
+                             SET total_actions = total_actions + 1,
+                                 shields_activated = shields_activated + 1,
+                                 total_spent = total_spent + ?,
+                                 last_action_time = ?
+                             WHERE wallet_address = ?`;
+              params = [amount || 0, Math.floor(Date.now() / 1000), walletAddress];
+              break;
+
+            case 'claim_reward':
               updateQuery = `UPDATE player_stats 
                              SET total_actions = total_actions + 1,
                                  rewards_claimed = rewards_claimed + 1,
                                  total_earned = total_earned + ?,
-                                 last_claim_timestamp = ?,
                                  last_action_time = ?
                              WHERE wallet_address = ?`;
-              params = [amount || 0, Math.floor(Date.now() / 1000), Math.floor(Date.now() / 1000), walletAddress];
+              params = [amount || 0, Math.floor(Date.now() / 1000), walletAddress];
               break;
 
-          case 'shield':
-            updateQuery = `UPDATE player_stats 
-                           SET total_actions = total_actions + 1,
-                               shields_activated = shields_activated + 1,
-                               total_spent = total_spent + ?,
-                               last_action_time = ?
-                           WHERE wallet_address = ?`;
-            params = [amount || 0, Math.floor(Date.now() / 1000), walletAddress];
-            break;
+            default:
+              // Generic action counter
+              updateQuery = `UPDATE player_stats 
+                             SET total_actions = total_actions + 1,
+                                 last_action_time = ?
+                             WHERE wallet_address = ?`;
+              params = [Math.floor(Date.now() / 1000), walletAddress];
+          }
 
-          default:
-            // Generic action counter
-            updateQuery = `UPDATE player_stats 
-                           SET total_actions = total_actions + 1,
-                               last_action_time = ?
-                           WHERE wallet_address = ?`;
-            params = [Math.floor(Date.now() / 1000), walletAddress];
+          if (updateQuery) {
+            db.run(updateQuery, params, (err) => {
+              if (err) {
+                console.error(`Error updating player stats for ${actionType}:`, err);
+                return reject(err);
+              }
+
+              // ✅ Recalculate composite scores after updating stats
+              recalculatePlayerScore(walletAddress)
+                .then(() => {
+                  console.log(`✅ Updated stats and score for ${walletAddress}`);
+                  resolve();
+                })
+                .catch(reject);
+            });
+          } else {
+            resolve();
+          }
         }
-
-        if (updateQuery) {
-          db.run(updateQuery, params, (err) => {
-            if (err) {
-              console.error(`Error updating player stats for ${actionType}:`, err);
-              return reject(err);
-            }
-
-            // ✅ Recalculate composite scores after updating stats
-            recalculatePlayerScore(walletAddress)
-              .then(() => {
-                console.log(`✅ Updated stats and score for ${walletAddress}`);
-                resolve();
-              })
-              .catch(reject);
-          });
-        } else {
-          resolve();
-        }
-      }
-    );
+      );
     } catch (error) {
       console.error('Error in updatePlayerStats:', error);
       reject(error);

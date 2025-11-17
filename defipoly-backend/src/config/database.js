@@ -21,13 +21,12 @@ function initDatabase() {
 function createTables() {
   return new Promise((resolve, reject) => {
     let completed = 0;
-    const totalTables = 7; // Updated from 4 to 7
+    const totalTables = 7;
     let hasError = false;
 
     const checkCompletion = () => {
       completed++;
       if (completed === totalTables && !hasError) {
-        // Create indexes and run migrations after all tables are created
         createIndexes()
           .then(() => resolve())
           .catch(reject);
@@ -57,7 +56,7 @@ function createTables() {
       checkCompletion();
     });
 
-    // Property ownership table - NOW WITH ALL 9 FIELDS
+    // Property ownership table
     db.run(`
       CREATE TABLE IF NOT EXISTS property_ownership (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -109,13 +108,14 @@ function createTables() {
       checkCompletion();
     });
 
-    // Player stats table
+    // Player stats table - ✅ WITH total_slots_purchased
     db.run(`
       CREATE TABLE IF NOT EXISTS player_stats (
         wallet_address TEXT PRIMARY KEY,
         total_actions INTEGER DEFAULT 0,
         properties_bought INTEGER DEFAULT 0,
         properties_sold INTEGER DEFAULT 0,
+        total_slots_purchased INTEGER DEFAULT 0,
         successful_steals INTEGER DEFAULT 0,
         failed_steals INTEGER DEFAULT 0,
         rewards_claimed INTEGER DEFAULT 0,
@@ -144,7 +144,7 @@ function createTables() {
       checkCompletion();
     });
 
-    // Player Set Cooldowns table (NEW)
+    // Player Set Cooldowns table
     db.run(`
       CREATE TABLE IF NOT EXISTS player_set_cooldowns (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -168,7 +168,7 @@ function createTables() {
       checkCompletion();
     });
 
-    // Player Steal Cooldowns table (NEW)
+    // Player Steal Cooldowns table
     db.run(`
       CREATE TABLE IF NOT EXISTS player_steal_cooldowns (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -189,7 +189,7 @@ function createTables() {
       checkCompletion();
     });
 
-    // Properties State table (NEW)
+    // Properties State table
     db.run(`
       CREATE TABLE IF NOT EXISTS properties_state (
         property_id INTEGER PRIMARY KEY,
@@ -211,15 +211,12 @@ function createTables() {
 
 function createIndexes() {
   return new Promise((resolve) => {
-    // Existing indexes
     db.run(`CREATE INDEX IF NOT EXISTS idx_actions_player_time ON game_actions(player_address, block_time DESC)`);
     db.run(`CREATE INDEX IF NOT EXISTS idx_actions_type_time ON game_actions(action_type, block_time DESC)`);
     db.run(`CREATE INDEX IF NOT EXISTS idx_actions_property_time ON game_actions(property_id, block_time DESC)`);
     db.run(`CREATE INDEX IF NOT EXISTS idx_actions_player_type_property ON game_actions(player_address, action_type, property_id)`);
     db.run(`CREATE INDEX IF NOT EXISTS idx_ownership_wallet ON property_ownership(wallet_address)`);
     db.run(`CREATE INDEX IF NOT EXISTS idx_ownership_property ON property_ownership(property_id)`);
-    
-    // New indexes for cooldown tables
     db.run(`CREATE INDEX IF NOT EXISTS idx_set_cooldowns_wallet_set ON player_set_cooldowns(wallet_address, set_id)`);
     db.run(`CREATE INDEX IF NOT EXISTS idx_steal_cooldowns_wallet_property ON player_steal_cooldowns(wallet_address, property_id)`);
 
