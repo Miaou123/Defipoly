@@ -59,22 +59,6 @@ export function RewardsPanel() {
           // If we got the amount from blockchain, use it. Otherwise fall back to calculation
           const displayAmount = actualClaimedAmount > 0 ? actualClaimedAmount : unclaimedRewards;
   
-          // Backend logging (only if tx exists)
-          if (tx) {
-            const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3101';
-            await fetch(`${API_BASE_URL}/api/actions`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                txSignature: signature,
-                actionType: 'claim',
-                playerAddress: publicKey.toString(),
-                amount: actualClaimedAmount,
-                blockTime: tx.blockTime || Math.floor(Date.now() / 1000),
-              }),
-            });
-          }
-  
           // Show success with ACTUAL amount from blockchain
           showSuccess(
             'Rewards Claimed!', 

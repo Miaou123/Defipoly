@@ -249,14 +249,17 @@ const gameEvents = {
     emitToAll('recent-action', { type: 'reward', ...data });
   },
   
-  // ✅ NEW: Added missing functions
   rewardsClaimed: (data) => {
     console.log(`🎉 [SOCKET] Reward claimed event for ${data.wallet?.slice(0, 8)}...`);
-    emitToWallet(data.wallet, 'reward-claimed', data);  // Changed to singular
-    emitToAll('recent-action', { type: 'claim', ...data });
+    emitToWallet(data.wallet, 'reward-claimed', data);
+    emitToAll('recent-action', { 
+      type: 'claim',
+      actionType: 'claim',
+      playerAddress: data.wallet, 
+      ...data 
+    });
   },
-  
-  // ✅ NEW: Generic recent action event
+
   recentAction: (data) => {
     emitToAll('recent-action', data);
   },

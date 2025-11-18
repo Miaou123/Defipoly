@@ -104,21 +104,18 @@ console.log(`PropertyCard ${propertyId} (${property.name}) debug:`, {
       activeCooldowns.push({ 
         icon: <ShieldIcon size={12} className="text-cyan-400" />, 
         label: 'Shield Active',
-        tooltip: 'Property is protected from steals'
       });
     }
     if (isThisPropertyBlocked) {
       activeCooldowns.push({ 
         icon: <HourglassIcon size={12} className="text-yellow-400" />,
         label: 'Set Cooldown',
-        tooltip: 'Cannot buy from this set yet'
       });
     }
     if (isOnStealCooldown) {
       activeCooldowns.push({ 
         icon: <TargetIcon size={12} className="text-orange-400" />,
         label: 'Steal Cooldown',
-        tooltip: 'Cannot steal from this property yet'
       });
     }
   }
@@ -401,13 +398,8 @@ console.log(`PropertyCard ${propertyId} (${property.name}) debug:`, {
                 <div 
                   key={index} 
                   className="relative group"
-                  title={cooldown.tooltip}
                 >
                     {cooldown.icon}
-                  {/* Tooltip */}
-                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-2 py-1 bg-gray-900 text-white text-[10px] rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 border border-purple-500/30">
-                    {cooldown.tooltip}
-                  </div>
                 </div>
               ))}
             </div>

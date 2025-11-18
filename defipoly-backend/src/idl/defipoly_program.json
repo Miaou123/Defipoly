@@ -786,12 +786,7 @@
           "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
         }
       ],
-      "args": [
-        {
-          "name": "num_properties",
-          "type": "u8"
-        }
-      ]
+      "args": []
     },
     {
       "name": "close_player_account",
@@ -2415,11 +2410,15 @@
             "type": "u8"
           },
           {
+            "name": "pending_rewards",
+            "type": "u64"
+          },
+          {
             "name": "padding",
             "type": {
               "array": [
                 "u8",
-                64
+                56
               ]
             }
           }

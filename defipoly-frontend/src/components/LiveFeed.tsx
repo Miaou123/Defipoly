@@ -187,60 +187,40 @@ export function LiveFeed() {
     if (!socket || !connected) return;
 
     const handleRecentAction = async (data: any) => {
-      // Determine the actual type - if it's a steal, use success flag
-      let feedType = data.type;
-      if (data.type === 'steal') {
-        feedType = data.success ? 'steal_success' : 'steal_failed';
+      console.log('📥 [LiveFeed] Received WebSocket action:', data);
+      
+      // ✅ Use the same conversion function as initial load
+      const feedItem = actionToFeedItem(data);
+      
+      if (!feedItem) {
+        console.warn('⚠️ [LiveFeed] Could not convert action to feed item:', data);
+        return;
       }
       
-      const feedItem: FeedItem = {
-        type: feedType,
-        timestamp: data.timestamp || Date.now(),
-        txSignature: data.txSignature,
-        propertyId: data.propertyId,
-        slots: data.slots,
-        buyer: data.buyer,
-        seller: data.seller,
-        attacker: data.attacker,
-        victim: data.victim,
-        owner: data.owner,
-        wallet: data.wallet,
-        success: data.success,
-        playerAddress: data.buyer || data.seller || data.attacker || data.owner || data.wallet,
-        targetAddress: data.victim,
-      };
+      console.log('✅ [LiveFeed] Converted to feed item:', feedItem);
       
-      if (feedItem) {
-        // Check if this exact action already exists in the feed
-        setFeed(prev => {
-          const isDuplicate = prev.some(existingItem => 
-            existingItem.txSignature === feedItem.txSignature &&
-            existingItem.type === feedItem.type &&
-            existingItem.playerAddress === feedItem.playerAddress &&
-            existingItem.propertyId === feedItem.propertyId
-          );
-          
-          // If it's a duplicate, don't add it
-          if (isDuplicate) {
-            return prev;
-          }
-          
-          return [feedItem, ...prev].slice(0, 50);
-        });
+      // Check if this exact action already exists in the feed
+      setFeed(prev => {
+        const isDuplicate = prev.some(existingItem => 
+          existingItem.txSignature === feedItem.txSignature
+        );
         
-        // Fetch profiles for new addresses
-        const newAddresses = new Set<string>();
-        if (data.buyer) newAddresses.add(data.buyer);
-        if (data.seller) newAddresses.add(data.seller);
-        if (data.attacker) newAddresses.add(data.attacker);
-        if (data.victim) newAddresses.add(data.victim);
-        if (data.owner) newAddresses.add(data.owner);
-        if (data.wallet) newAddresses.add(data.wallet);
-        
-        if (newAddresses.size > 0) {
-          const profilesData = await getProfilesBatch(Array.from(newAddresses));
-          setProfiles(prev => ({ ...prev, ...profilesData }));
+        if (isDuplicate) {
+          console.log('ℹ️ [LiveFeed] Duplicate action, skipping');
+          return prev;
         }
+        
+        return [feedItem, ...prev].slice(0, 50);
+      });
+      
+      // Fetch profiles for new addresses
+      const newAddresses = new Set<string>();
+      if (feedItem.playerAddress) newAddresses.add(feedItem.playerAddress);
+      if (feedItem.targetAddress) newAddresses.add(feedItem.targetAddress);
+      
+      if (newAddresses.size > 0) {
+        const profilesData = await getProfilesBatch(Array.from(newAddresses));
+        setProfiles(prev => ({ ...prev, ...profilesData }));
       }
     };
 

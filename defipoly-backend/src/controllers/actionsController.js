@@ -47,47 +47,6 @@ const storeAction = async (req, res) => {
     const isNew = this.changes > 0;
     console.log(`✅ [STORE ACTION] Inserted/Ignored action. Changes: ${this.changes}, Last ID: ${this.lastID}`);
 
-    // ✅ ALWAYS emit WebSocket events (even for duplicates)
-    // because WSS stores transactions without emitting events
-    try {
-      console.log(`📤 [STORE ACTION] Emitting WebSocket event for ${action.actionType}`);
-      
-      switch (action.actionType) {
-        case 'claim':
-          gameEvents.rewardsClaimed({
-            wallet: action.playerAddress,
-            amount: action.amount,
-            txSignature: action.txSignature,
-            timestamp: action.blockTime
-          });
-          break;
-        
-        case 'buy':
-          gameEvents.propertyBought({
-            propertyId: action.propertyId,
-            buyer: action.playerAddress,
-            price: action.amount,
-            slots: action.slots,
-            txSignature: action.txSignature,
-            timestamp: action.blockTime
-          });
-          break;
-        
-        case 'sell':
-          gameEvents.propertySold({
-            propertyId: action.propertyId,
-            seller: action.playerAddress,
-            received: action.amount,
-            slots: action.slots,
-            txSignature: action.txSignature,
-            timestamp: action.blockTime
-          });
-          break;
-      }
-    } catch (socketError) {
-      console.error('❌ [STORE ACTION] WebSocket emit error:', socketError);
-    }
-
     // Only update stats if it's a new transaction
     if (isNew) {
       updatePlayerStats(
