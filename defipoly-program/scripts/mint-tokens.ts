@@ -15,7 +15,7 @@ dotenv.config({ path: path.join(__dirname, '../.env') });
 
 async function main() {
   // Configuration
-  const rpcUrl = process.env.ANCHOR_PROVIDER_URL || "https://api.devnet.solana.com";
+  const rpcUrl = process.env.RPC_URL || "https://api.devnet.solana.com";
   const walletPath = process.env.ANCHOR_WALLET || path.join(homedir(), ".config/solana/id.json");
   
   // Your wallet and token mint

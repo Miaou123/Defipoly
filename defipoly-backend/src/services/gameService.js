@@ -45,7 +45,8 @@ function calculateLeaderboardScore(stats) {
     (efficiencyScore * 0.3) +
     (wealthScore * 0.2);
 
-  return Math.round(totalScore);
+  // Multiply by 10 for more appealing score display
+  return Math.round(totalScore * 10);
 }
 
 /**
@@ -235,7 +236,7 @@ async function updatePlayerStats(walletAddress, actionType, amount = 0, slots = 
                      WHERE player_address = ? AND action_type IN ('sell', 'claim')
                    )
                  WHERE wallet_address = ?`,
-                [walletAddress, walletAddress, walletAddress, walletAddress, walletAddress, walletAddress, walletAddress, walletAddress, walletAddress, walletAddress, walletAddress, walletAddress],
+                [walletAddress, walletAddress, walletAddress, walletAddress, walletAddress, walletAddress, walletAddress, walletAddress, walletAddress, walletAddress, walletAddress],
                 (err) => {
                   if (err) {
                     console.error('Error updating total_actions:', err);

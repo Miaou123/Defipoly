@@ -1,10 +1,11 @@
 // ============================================
-// FIXED transactionProcessor.js
-// Handles both snake_case and camelCase event field names
+// UPDATED transactionProcessor.js
+// Now handles admin events and triggers blockchain sync
 // ============================================
 
 const { BorshCoder, EventParser } = require('@coral-xyz/anchor');
 const { PublicKey } = require('@solana/web3.js');
+// Note: blockchainSyncService imported inside eventToAction to avoid circular dependency
 
 // Load IDL - this is the source of truth for PROGRAM_ID
 const idl = require('../idl/defipoly_program.json');
@@ -12,10 +13,6 @@ const idl = require('../idl/defipoly_program.json');
 // Log IDL loading
 console.log('📚 [TRANSACTION PROCESSOR] IDL loaded successfully');
 console.log(`   - Program ID: ${idl.address}`);
-console.log(`   - Events defined: ${idl.events?.length || 0}`);
-if (idl.events && idl.events.length > 0) {
-  console.log('   - Event names:', idl.events.map(e => e.name).join(', '));
-}
 
 // PROGRAM_ID comes from IDL file only
 const PROGRAM_ID = new PublicKey(idl.address);
@@ -67,10 +64,6 @@ async function parseTransaction(tx) {
     
     if (eventsArray.length === 0) {
       console.warn('⚠️  [PARSE TX] No events parsed from logs');
-      console.log('📋 [PARSE TX] Full logs for debugging:');
-      logs.forEach((log, i) => {
-        console.log(`   ${i + 1}. ${log}`);
-      });
       return null;
     }
 
@@ -78,8 +71,9 @@ async function parseTransaction(tx) {
     const actions = [];
     for (const event of eventsArray) {
       console.log(`\n🎯 [PARSE TX] Processing event: ${event.name}`);
+      console.log(`   📦 Event data:`, JSON.stringify(event.data, null, 2));
       
-      const action = eventToAction(event, signature, blockTime);
+      const action = await eventToAction(event, signature, blockTime);
       if (action) {
         actions.push(action);
         console.log(`   ✅ Converted to action: ${action.actionType}`);
@@ -98,15 +92,13 @@ async function parseTransaction(tx) {
 }
 
 /**
- * Convert event to action data
+ * Convert event to action data and trigger blockchain sync for admin events
  * Handles both snake_case and camelCase field names
  */
-function eventToAction(event, signature, blockTime) {
+async function eventToAction(event, signature, blockTime) {
   try {
     const eventName = event.name;
     const eventData = event.data;
-
-    console.log(`   📦 Event data:`, JSON.stringify(eventData, null, 2));
 
     // Base action structure
     const action = {
@@ -204,15 +196,65 @@ function eventToAction(event, signature, blockTime) {
         };
       }
 
-      case 'AdminUpdateEvent':
+      // ========== ADMIN EVENTS - TRIGGER BLOCKCHAIN SYNC ==========
+      
       case 'AdminGrantEvent':
-      case 'AdminRevokeEvent':
-      case 'AdminPlayerAdjustEvent':
-      case 'AdminShieldGrantEvent':
+      case 'AdminRevokeEvent': {
+        console.log(`   🔄 Admin event detected: ${eventName} - triggering blockchain sync`);
+        
+        const playerAddress = toString(eventData.target_player ?? eventData.targetPlayer);
+        const propertyId = eventData.property_id ?? eventData.propertyId;
+        
+        // Trigger async blockchain sync (use setImmediate to avoid blocking)
+        setImmediate(async () => {
+          try {
+            // Require inside setImmediate to get fresh reference
+            const blockchainSync = require('./blockchainSyncService');
+            await blockchainSync.syncPropertyOwnership(playerAddress, propertyId);
+            await blockchainSync.syncPropertyState(propertyId);
+            console.log(`   ✅ Blockchain synced for player ${playerAddress.substring(0, 8)}... property ${propertyId}`);
+          } catch (err) {
+            console.error(`   ❌ Failed to sync after ${eventName}:`, err.message);
+          }
+        });
+        
+        // Don't store admin events as player actions
+        console.log(`   ℹ️  Blockchain sync queued for player ${playerAddress.substring(0, 8)}... property ${propertyId}`);
+        return null;
+      }
+
+      case 'AdminShieldGrantEvent': {
+        console.log(`   🔄 Admin shield event detected - triggering blockchain sync`);
+        
+        const playerAddress = toString(eventData.player);
+        const propertyId = eventData.property_id ?? eventData.propertyId;
+        
+        // Trigger async blockchain sync
+        setImmediate(async () => {
+          try {
+            const blockchainSync = require('./blockchainSyncService');
+            await blockchainSync.syncPropertyOwnership(playerAddress, propertyId);
+            console.log(`   ✅ Shield synced for player ${playerAddress.substring(0, 8)}... property ${propertyId}`);
+          } catch (err) {
+            console.error(`   ❌ Failed to sync after shield grant:`, err.message);
+          }
+        });
+        
+        console.log(`   ℹ️  Shield sync queued for player ${playerAddress.substring(0, 8)}... property ${propertyId}`);
+        return null;
+      }
+
+      case 'AdminPlayerAdjustEvent': {
+        console.log(`   🔄 Admin balance adjustment detected - no sync needed`);
+        // Balance adjustments don't affect ownerships, just log
+        return null;
+      }
+
+      case 'AdminUpdateEvent':
       case 'AdminWithdrawEvent':
       case 'AdminAuthorityTransferEvent': {
-        // Admin events - just log them, don't store as player actions
-        console.log(`   ℹ️  Admin event: ${eventName} - skipping storage`);
+        // These don't affect player/property state, just log
+        console.log(`   ℹ️  Admin event: ${eventName} - no sync required`);
         return null;
       }
 

@@ -1,9 +1,5 @@
 // Defipoly Solana Program - v7 Optimized (No External Dependencies)
 // Anchor 0.31.1
-// Secure commit-reveal randomness using slot hashes
-// UPDATED: Random steal only (no targeted steal)
-// ADMIN FUNCTIONS ADDED: Complete game master control system
-// REFACTORED: Payment distribution extracted to helper function for stack optimization
 
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, Token, TokenAccount, Transfer, Mint};
@@ -1058,35 +1054,6 @@ pub fn steal_property_instant(
         
         msg!("🔓 Admin cleared steal cooldown for player {} on property {}", 
              cooldown.player, cooldown.property_id);
-        Ok(())
-    }
-
-    pub fn admin_adjust_rewards(
-        ctx: Context<AdminAdjustPlayer>,
-        adjustment: i64,
-    ) -> Result<()> {
-        let player = &mut ctx.accounts.player_account;
-        
-        if adjustment >= 0 {
-            player.total_rewards_claimed = player.total_rewards_claimed
-                .checked_add(adjustment as u64)
-                .ok_or(ErrorCode::Overflow)?;
-        } else {
-            let decrease = (-adjustment) as u64;
-            player.total_rewards_claimed = player.total_rewards_claimed
-                .checked_sub(decrease)
-                .ok_or(ErrorCode::Overflow)?;
-        }
-        
-        emit!(AdminPlayerAdjustEvent {
-            admin: ctx.accounts.authority.key(),
-            player: player.owner,
-            adjustment_type: "rewards".to_string(),
-            value: adjustment,
-        });
-        
-        msg!("💰 Admin adjusted rewards for {} by {}", 
-             player.owner, adjustment);
         Ok(())
     }
 

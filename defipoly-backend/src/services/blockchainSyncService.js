@@ -517,31 +517,12 @@ async function syncPropertyState(propertyId) {
   }
 }
 
-/**
- * Sync all properties state (for initial load or periodic refresh)
- */
-async function syncAllPropertiesState() {
-  console.log('🔄 Syncing all properties state...');
-  const results = [];
-  
-  for (let propertyId = 0; propertyId < 22; propertyId++) {
-    const success = await syncPropertyState(propertyId);
-    results.push({ propertyId, success });
-  }
-  
-  const successCount = results.filter(r => r.success).length;
-  console.log(`✅ Synced ${successCount}/22 properties`);
-  return results;
-}
 
 module.exports = {
   syncPropertyOwnership,
   syncPlayerSetCooldown,
   syncPlayerStealCooldown,
   syncPropertyState,
-  syncAllPropertiesState,
-  
-  // Export for testing/debugging
   deserializeOwnership,
   deserializeSetCooldown,
   deserializeStealCooldown,

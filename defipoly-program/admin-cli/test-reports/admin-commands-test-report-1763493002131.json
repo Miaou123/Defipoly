@@ -1,0 +1,76 @@
+{
+  "timestamp": "2025-11-18T19:09:51.003Z",
+  "backupFile": "game-config-backup-1763492994327.json",
+  "totalTests": 11,
+  "passed": 9,
+  "failed": 2,
+  "results": [
+    {
+      "command": "Update Property Price",
+      "success": true,
+      "duration": 1121
+    },
+    {
+      "command": "Update Property Max Slots",
+      "success": true,
+      "duration": 699
+    },
+    {
+      "command": "Update Property Yield",
+      "success": true,
+      "duration": 718
+    },
+    {
+      "command": "Update Shield Cost",
+      "success": true,
+      "duration": 685
+    },
+    {
+      "command": "Pause Game",
+      "success": true,
+      "duration": 904
+    },
+    {
+      "command": "Unpause Game",
+      "success": true,
+      "duration": 702
+    },
+    {
+      "command": "Update Phase",
+      "success": true,
+      "duration": 901
+    },
+    {
+      "command": "Update Steal Chances",
+      "success": true,
+      "duration": 806
+    },
+    {
+      "command": "Update Global Rates",
+      "success": true,
+      "duration": 699
+    },
+    {
+      "command": "Clear Purchase Cooldown",
+      "success": false,
+      "error": "AnchorError caused by account: set_cooldown. Error Code: AccountNotInitialized. Error Number: 3012. Error Message: The program expected this account to be already initialized.",
+      "duration": 291
+    },
+    {
+      "command": "Clear Steal Cooldown",
+      "success": false,
+      "error": "AnchorError caused by account: steal_cooldown. Error Code: AccountNotInitialized. Error Number: 3012. Error Message: The program expected this account to be already initialized.",
+      "duration": 277
+    }
+  ],
+  "summary": {
+    "successRate": "81.8%",
+    "totalDuration": 7803,
+    "averageDuration": 709
+  },
+  "recommendations": [
+    "2 commands failed - check error messages for details",
+    "Cooldown command failures likely due to non-existent player accounts - this is expected",
+    "Game state command failures may indicate authority permission issues"
+  ]
+}

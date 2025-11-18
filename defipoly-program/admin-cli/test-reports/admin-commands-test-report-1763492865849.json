@@ -1,0 +1,79 @@
+{
+  "timestamp": "2025-11-18T19:07:36.924Z",
+  "backupFile": "game-config-backup-1763492860112.json",
+  "totalTests": 11,
+  "passed": 7,
+  "failed": 4,
+  "results": [
+    {
+      "command": "Update Property Price",
+      "success": false,
+      "error": "anchor.BN is not a constructor",
+      "duration": 0
+    },
+    {
+      "command": "Update Property Max Slots",
+      "success": true,
+      "duration": 819
+    },
+    {
+      "command": "Update Property Yield",
+      "success": true,
+      "duration": 844
+    },
+    {
+      "command": "Update Shield Cost",
+      "success": true,
+      "duration": 802
+    },
+    {
+      "command": "Pause Game",
+      "success": true,
+      "duration": 800
+    },
+    {
+      "command": "Unpause Game",
+      "success": true,
+      "duration": 802
+    },
+    {
+      "command": "Update Phase",
+      "success": true,
+      "duration": 700
+    },
+    {
+      "command": "Update Steal Chances",
+      "success": true,
+      "duration": 709
+    },
+    {
+      "command": "Update Global Rates",
+      "success": false,
+      "error": "anchor.BN is not a constructor",
+      "duration": 2
+    },
+    {
+      "command": "Clear Purchase Cooldown",
+      "success": false,
+      "error": "AnchorError caused by account: set_cooldown. Error Code: AccountNotInitialized. Error Number: 3012. Error Message: The program expected this account to be already initialized.",
+      "duration": 133
+    },
+    {
+      "command": "Clear Steal Cooldown",
+      "success": false,
+      "error": "AnchorError caused by account: steal_cooldown. Error Code: AccountNotInitialized. Error Number: 3012. Error Message: The program expected this account to be already initialized.",
+      "duration": 122
+    }
+  ],
+  "summary": {
+    "successRate": "63.6%",
+    "totalDuration": 5733,
+    "averageDuration": 521
+  },
+  "recommendations": [
+    "4 commands failed - check error messages for details",
+    "Cooldown command failures likely due to non-existent player accounts - this is expected",
+    "Property command failures may indicate permission or account state issues",
+    "Game state command failures may indicate authority permission issues"
+  ]
+}

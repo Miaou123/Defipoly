@@ -5,14 +5,16 @@
     "deploy": "anchor deploy",
     "deploy:full": "tsx scripts/new-deploy.ts",
     "deploy:existing": "npm run build && npm run deploy && npm run initialize && npm run generate:constants",
-    "initialize":  "tsx scripts/initialize-game.ts",
+    "initialize": "tsx scripts/initialize-game.ts",
     "generate:constants": "tsx scripts/generate-constants.ts",
     "test": "anchor test"
   },
   "dependencies": {
     "@coral-xyz/anchor": "^0.31.1",
     "@solana/spl-token": "^0.4.14",
-    "dotenv": "^17.2.3"
+    "@types/inquirer": "^9.0.9",
+    "dotenv": "^17.2.3",
+    "inquirer": "^13.0.1"
   },
   "devDependencies": {
     "@types/bn.js": "^5.1.0",

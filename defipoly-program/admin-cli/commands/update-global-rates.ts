@@ -1,0 +1,57 @@
+import * as anchor from "@coral-xyz/anchor";
+import BN from "bn.js";
+import type { ProgramContext, AdminCommand } from '../types.js';
+import { getGameConfigPDA } from '../utils/pda.js';
+
+export class UpdateGlobalRatesCommand implements AdminCommand {
+  async execute(ctx: ProgramContext, options: {
+    stealCostBps?: number;
+    setBonusBps?: number;
+    maxPropertiesClaim?: number;
+    minClaimInterval?: number;
+  }): Promise<void> {
+    console.log('\n🌍 ADMIN: Update Global Rates');
+    console.log('='.repeat(70));
+    
+    const { program, authority } = ctx;
+    const programId = program.programId;
+    const gameConfig = getGameConfigPDA(programId);
+
+    console.log('Updating the following rates:');
+    if (options.stealCostBps !== undefined) {
+      console.log(`Steal Cost: ${options.stealCostBps} bps (${options.stealCostBps / 100}%)`);
+    }
+    if (options.setBonusBps !== undefined) {
+      console.log(`Set Bonus: ${options.setBonusBps} bps (${options.setBonusBps / 100}%)`);
+    }
+    if (options.maxPropertiesClaim !== undefined) {
+      console.log(`Max Properties per Claim: ${options.maxPropertiesClaim}`);
+    }
+    if (options.minClaimInterval !== undefined) {
+      console.log(`Min Claim Interval: ${options.minClaimInterval} minutes`);
+    }
+    console.log(`\nSending transaction...`);
+
+    try {
+      const tx = await program.methods
+        .adminUpdateGlobalRates(
+          options.stealCostBps || null,
+          options.setBonusBps || null,
+          options.maxPropertiesClaim || null,
+          options.minClaimInterval !== undefined ? new BN(options.minClaimInterval) : null
+        )
+        .accounts({
+          gameConfig: gameConfig,
+          authority: authority.publicKey,
+        })
+        .signers([authority])
+        .rpc();
+
+      console.log(`✅ Global rates updated successfully!`);
+      console.log(`Transaction: ${tx}`);
+    } catch (error: any) {
+      console.error(`❌ Error:`, error.message || error);
+      throw error;
+    }
+  }
+}
