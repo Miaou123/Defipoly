@@ -6,7 +6,6 @@
 import { useState, useEffect } from 'react';
 import { useDefipoly } from '@/hooks/useDefipoly';
 import { useNotification } from '@/contexts/NotificationContext';
-import { usePropertyRefresh } from '@/contexts/PropertyRefreshContext';
 import { PROPERTIES } from '@/utils/constants';
 import { Clock, Shield } from 'lucide-react';
 import { ShieldIcon, TimerIcon, WarningIcon } from '@/components/icons/UIIcons';
@@ -33,7 +32,6 @@ export function ShieldPropertySection({
 }: ShieldPropertySectionProps) {
   const { activateShield } = useDefipoly();
   const { showSuccess, showError } = useNotification();
-  const { triggerRefresh } = usePropertyRefresh();
   
   const [selectedHours, setSelectedHours] = useState(24);
   const [timeRemaining, setTimeRemaining] = useState('');
@@ -76,7 +74,6 @@ export function ShieldPropertySection({
         const remaining = Math.max(0, shieldExpiryTimestamp - currentTime);
         if (remaining <= 0) {
           setTimeRemaining('');
-          triggerRefresh();
         } else {
           setTimeRemaining(formatTime(remaining));
         }
@@ -84,7 +81,6 @@ export function ShieldPropertySection({
         const remaining = Math.max(0, cooldownEndTime - currentTime);
         if (remaining <= 0) {
           setTimeRemaining('');
-          triggerRefresh();
         } else {
           setTimeRemaining(formatTime(remaining));
         }
@@ -92,7 +88,7 @@ export function ShieldPropertySection({
     }, 1000);
     
     return () => clearInterval(interval);
-  }, [isShieldActive, isInCooldown, shieldExpiryTimestamp, cooldownEndTime, triggerRefresh]);
+  }, [isShieldActive, isInCooldown, shieldExpiryTimestamp, cooldownEndTime]);
 
   const handleShield = async () => {
     if (loading || isShieldActive || isInCooldown) return;
@@ -107,7 +103,6 @@ export function ShieldPropertySection({
           `${totalSlots} slot${totalSlots > 1 ? 's' : ''} protected for ${selectedHours}h`,
           signature !== 'already-processed' ? signature : undefined
         );
-        triggerRefresh();
         setTimeout(() => onClose(), 2000);
       }
     } catch (error: any) {

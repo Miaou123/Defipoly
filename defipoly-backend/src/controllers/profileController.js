@@ -40,28 +40,59 @@ const updateProfile = (req, res) => {
     return res.status(400).json({ error: 'Wallet address required' });
   }
   
-  const updatedAt = Date.now();
-  
-  db.run(
-    `INSERT INTO profiles (wallet_address, username, profile_picture, corner_square_style, board_theme, property_card_theme, custom_board_background, custom_property_card_background, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-     ON CONFLICT(wallet_address) 
-     DO UPDATE SET 
-       username = ?,
-       profile_picture = ?,
-       corner_square_style = ?,
-       board_theme = ?,
-       property_card_theme = ?,
-       custom_board_background = ?,
-       custom_property_card_background = ?,
-       updated_at = ?`,
-    [wallet, username, profilePicture, cornerSquareStyle || 'property', boardTheme || 'dark', propertyCardTheme || 'dark', customBoardBackground, customPropertyCardBackground, updatedAt, username, profilePicture, cornerSquareStyle || 'property', boardTheme || 'dark', propertyCardTheme || 'dark', customBoardBackground, customPropertyCardBackground, updatedAt],
-    (err) => {
+  // CRITICAL FIX: Get existing profile first, then merge with new values
+  db.get(
+    'SELECT * FROM profiles WHERE wallet_address = ?',
+    [wallet],
+    (err, existingProfile) => {
       if (err) {
         console.error('Database error:', err);
         return res.status(500).json({ error: 'Database error' });
       }
-      res.json({ success: true });
+      
+      const updatedAt = Date.now();
+      
+      // Merge: use new value if provided, otherwise keep existing value
+      const finalUsername = username !== undefined ? username : (existingProfile?.username || null);
+      const finalProfilePicture = profilePicture !== undefined ? profilePicture : (existingProfile?.profile_picture || null);
+      const finalCornerSquareStyle = cornerSquareStyle !== undefined ? cornerSquareStyle : (existingProfile?.corner_square_style || 'property');
+      const finalBoardTheme = boardTheme !== undefined ? boardTheme : (existingProfile?.board_theme || 'dark');
+      const finalPropertyCardTheme = propertyCardTheme !== undefined ? propertyCardTheme : (existingProfile?.property_card_theme || 'dark');
+      const finalCustomBoardBackground = customBoardBackground !== undefined ? customBoardBackground : (existingProfile?.custom_board_background || null);
+      const finalCustomPropertyCardBackground = customPropertyCardBackground !== undefined ? customPropertyCardBackground : (existingProfile?.custom_property_card_background || null);
+      
+      db.run(
+        `INSERT INTO profiles (wallet_address, username, profile_picture, corner_square_style, board_theme, property_card_theme, custom_board_background, custom_property_card_background, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+         ON CONFLICT(wallet_address) 
+         DO UPDATE SET 
+           username = ?,
+           profile_picture = ?,
+           corner_square_style = ?,
+           board_theme = ?,
+           property_card_theme = ?,
+           custom_board_background = ?,
+           custom_property_card_background = ?,
+           updated_at = ?`,
+        [
+          wallet, finalUsername, finalProfilePicture, finalCornerSquareStyle, finalBoardTheme, finalPropertyCardTheme, finalCustomBoardBackground, finalCustomPropertyCardBackground, updatedAt,
+          finalUsername, finalProfilePicture, finalCornerSquareStyle, finalBoardTheme, finalPropertyCardTheme, finalCustomBoardBackground, finalCustomPropertyCardBackground, updatedAt
+        ],
+        (err) => {
+          if (err) {
+            console.error('Database error:', err);
+            return res.status(500).json({ error: 'Database error' });
+          }
+          
+          console.log('Profile updated:', {
+            wallet,
+            username: finalUsername,
+            profilePicture: finalProfilePicture ? 'YES' : 'NO',
+          });
+          
+          res.json({ success: true });
+        }
+      );
     }
   );
 };
@@ -136,40 +167,52 @@ const updateThemePreferences = (req, res) => {
     return res.status(400).json({ error: 'Wallet address required' });
   }
   
-  const updatedAt = Date.now();
-  
-  db.run(
-    `INSERT INTO profiles (wallet_address, board_theme, property_card_theme, custom_board_background, custom_property_card_background, corner_square_style, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?)
-     ON CONFLICT(wallet_address) 
-     DO UPDATE SET 
-       board_theme = ?,
-       property_card_theme = ?,
-       custom_board_background = ?,
-       custom_property_card_background = ?,
-       corner_square_style = ?,
-       updated_at = ?`,
-    [
-      wallet, 
-      boardTheme || 'dark', 
-      propertyCardTheme || 'dark', 
-      customBoardBackground, 
-      customPropertyCardBackground, 
-      cornerSquareStyle || 'property', 
-      updatedAt,
-      boardTheme || 'dark', 
-      propertyCardTheme || 'dark', 
-      customBoardBackground, 
-      customPropertyCardBackground, 
-      cornerSquareStyle || 'property', 
-      updatedAt
-    ],
-    (err) => {
+  // CRITICAL FIX: Get existing profile first, then merge
+  db.get(
+    'SELECT * FROM profiles WHERE wallet_address = ?',
+    [wallet],
+    (err, existingProfile) => {
       if (err) {
         console.error('Database error:', err);
         return res.status(500).json({ error: 'Database error' });
       }
-      res.json({ success: true });
+      
+      const updatedAt = Date.now();
+      
+      // Preserve username and profilePicture
+      const finalUsername = existingProfile?.username || null;
+      const finalProfilePicture = existingProfile?.profile_picture || null;
+      const finalBoardTheme = boardTheme !== undefined ? boardTheme : (existingProfile?.board_theme || 'dark');
+      const finalPropertyCardTheme = propertyCardTheme !== undefined ? propertyCardTheme : (existingProfile?.property_card_theme || 'dark');
+      const finalCustomBoardBackground = customBoardBackground !== undefined ? customBoardBackground : (existingProfile?.custom_board_background || null);
+      const finalCustomPropertyCardBackground = customPropertyCardBackground !== undefined ? customPropertyCardBackground : (existingProfile?.custom_property_card_background || null);
+      const finalCornerSquareStyle = cornerSquareStyle !== undefined ? cornerSquareStyle : (existingProfile?.corner_square_style || 'property');
+      
+      db.run(
+        `INSERT INTO profiles (wallet_address, username, profile_picture, board_theme, property_card_theme, custom_board_background, custom_property_card_background, corner_square_style, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+         ON CONFLICT(wallet_address) 
+         DO UPDATE SET 
+           username = ?,
+           profile_picture = ?,
+           board_theme = ?,
+           property_card_theme = ?,
+           custom_board_background = ?,
+           custom_property_card_background = ?,
+           corner_square_style = ?,
+           updated_at = ?`,
+        [
+          wallet, finalUsername, finalProfilePicture, finalBoardTheme, finalPropertyCardTheme, finalCustomBoardBackground, finalCustomPropertyCardBackground, finalCornerSquareStyle, updatedAt,
+          finalUsername, finalProfilePicture, finalBoardTheme, finalPropertyCardTheme, finalCustomBoardBackground, finalCustomPropertyCardBackground, finalCornerSquareStyle, updatedAt
+        ],
+        (err) => {
+          if (err) {
+            console.error('Database error:', err);
+            return res.status(500).json({ error: 'Database error' });
+          }
+          res.json({ success: true });
+        }
+      );
     }
   );
 };

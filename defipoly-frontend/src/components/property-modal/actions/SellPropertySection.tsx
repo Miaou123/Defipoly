@@ -8,7 +8,6 @@ import { useState, useEffect } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { useDefipoly } from '@/hooks/useDefipoly';
 import { useNotification } from '@/contexts/NotificationContext';
-import { usePropertyRefresh } from '@/contexts/PropertyRefreshContext';
 import { PROPERTIES } from '@/utils/constants';
 import { ChartIcon } from '@/components/icons/UIIcons';
 import { UnownedOverlay } from '../UnownedOverlay';
@@ -35,7 +34,6 @@ export function SellPropertySection({
 }: SellPropertySectionProps) {
   const { sellProperty } = useDefipoly();
   const { showSuccess, showError } = useNotification();
-  const { triggerRefresh } = usePropertyRefresh();
   const { getOwnership } = useGameState();
   const { publicKey } = useWallet();
   
@@ -121,7 +119,6 @@ export function SellPropertySection({
           `Sold ${slotsToSell} slot${slotsToSell > 1 ? 's' : ''} successfully!`,
           signature !== 'already-processed' ? signature : undefined
         );
-        triggerRefresh();
         setTimeout(() => onClose(), 2000);
       }
     } catch (error: any) {

@@ -5,6 +5,7 @@ import { useWallet } from '@solana/wallet-adapter-react';
 import { PublicKey } from '@solana/web3.js';
 import BN from 'bn.js';
 import { useWebSocket } from './WebSocketContext';
+import { PROPERTIES } from '@/utils/constants';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3101';
 
@@ -28,6 +29,9 @@ export interface SetCooldown {
   cooldownDuration: number;
   isOnCooldown: boolean;
   cooldownRemaining: number;
+  lastPurchasedPropertyId: number | null;  // ✅ ADDED
+  propertiesOwnedInSet: number[];          // ✅ ADDED
+  propertiesCount: number;                  // ✅ ADDED
 }
 
 export interface StealCooldown {
@@ -97,6 +101,9 @@ interface GameStateContextValue extends GameState {
   isStealOnCooldown: (propertyId: number) => boolean;
   getSetCooldownRemaining: (setId: number) => number;
   getStealCooldownRemaining: (propertyId: number) => number;
+  
+  // ✅ NEW: Per-property cooldown helper
+  isPropertyOnCooldown: (propertyId: number) => boolean;
 }
 
 const GameStateContext = createContext<GameStateContextValue | null>(null);
@@ -257,15 +264,12 @@ export function GameStateProvider({ children }: { children: React.ReactNode }) {
         },
       }));
 
-      // Refresh full state from server to ensure consistency
-      await fetchGameState();
-
       return true;
     } catch (error) {
       console.error('Error updating profile:', error);
       return false;
     }
-  }, [publicKey, fetchGameState]);
+  }, [publicKey]);
 
   // ========== INITIAL LOAD ==========
   useEffect(() => {
@@ -342,6 +346,25 @@ export function GameStateProvider({ children }: { children: React.ReactNode }) {
     return cooldown?.cooldownRemaining || 0;
   }, [getStealCooldown]);
 
+  // ✅ NEW: Per-property cooldown helper
+  const isPropertyOnCooldown = useCallback((propertyId: number): boolean => {
+    // Find which set this property belongs to
+    const property = PROPERTIES.find(p => p.id === propertyId);
+    if (!property) return false;
+    
+    const setId = property.setId;
+    const setCooldown = getSetCooldown(setId);
+    
+    if (!setCooldown || !setCooldown.isOnCooldown) {
+      return false; // No cooldown active
+    }
+    
+    // If cooldown is active, check if this property was the last one purchased
+    // If yes → NOT on cooldown (can buy more of same property)
+    // If no → ON cooldown (must wait before buying different property in set)
+    return setCooldown.lastPurchasedPropertyId !== propertyId;
+  }, [getSetCooldown]);
+
   return (
     <GameStateContext.Provider
       value={{
@@ -358,6 +381,7 @@ export function GameStateProvider({ children }: { children: React.ReactNode }) {
         isStealOnCooldown,
         getSetCooldownRemaining,
         getStealCooldownRemaining,
+        isPropertyOnCooldown,  // ✅ ADDED
       }}
     >
       {children}

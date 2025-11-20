@@ -6,8 +6,7 @@
 import { useState, useEffect } from 'react';
 import { useDefipoly } from '@/hooks/useDefipoly';
 import { useNotification } from '@/contexts/NotificationContext';
-import { usePropertyRefresh } from '@/contexts/PropertyRefreshContext';
-import { useStealCooldownFromContext } from '@/contexts/StealCooldownContext';
+import { useGameState } from '@/contexts/GameStateContext';
 import { PROPERTIES } from '@/utils/constants';
 import { fetchPropertyStats } from '@/utils/propertyStats';
 import { Clock } from 'lucide-react';
@@ -34,11 +33,13 @@ export function StealPropertySection({
 }: StealPropertySectionProps) {
   const { stealPropertyInstant } = useDefipoly();
   const { showSuccess, showError } = useNotification();
-  const { triggerRefresh } = usePropertyRefresh();
-  const { isOnStealCooldown, stealCooldownRemaining, refetchStealCooldown } = useStealCooldownFromContext(propertyId);
+  const { isStealOnCooldown, getStealCooldownRemaining } = useGameState();
   
   const [availableTargets, setAvailableTargets] = useState<number | null>(null);
   const [protectedOwners, setProtectedOwners] = useState<number>(0);
+
+  const isOnStealCooldown = isStealOnCooldown(propertyId);
+  const stealCooldownRemaining = getStealCooldownRemaining(propertyId);
 
   const stealCost = property.price * 0.5;
   const canSteal = balance >= stealCost && !isOnStealCooldown;
@@ -76,8 +77,6 @@ export function StealPropertySection({
       const result = await stealPropertyInstant(propertyId);
       
       if (result) {
-        await refetchStealCooldown();
-        
         if (result.success) {
           const targetDisplay = result.targetAddress 
             ? `${result.targetAddress.slice(0, 4)}...${result.targetAddress.slice(-4)}`
@@ -99,7 +98,6 @@ export function StealPropertySection({
           );
         }
         
-        triggerRefresh();
         setTimeout(() => {
           setAvailableTargets(null); // Refresh stats
         }, 2000);
@@ -108,10 +106,6 @@ export function StealPropertySection({
       console.error('Steal error:', error);
       
       const errorMsg = error?.message || error?.toString() || 'Unknown error';
-      
-      // Always refresh cooldown state after any steal attempt (success or failure)
-      // because the blockchain might have applied a cooldown even if the transaction failed
-      await refetchStealCooldown();
       
       if (errorMsg.includes('No eligible targets')) {
         showError(
@@ -126,9 +120,6 @@ export function StealPropertySection({
       } else {
         showError('Steal Failed', errorMsg);
       }
-      
-      // Also trigger refresh for other components
-      triggerRefresh();
     } finally {
       setLoading(false);
     }

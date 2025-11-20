@@ -9,7 +9,6 @@ import { useState } from 'react';
 import { Shield, X, AlertCircle, CheckCircle, Loader, Trophy, Clock } from 'lucide-react';
 import { useDefipoly } from '@/hooks/useDefipoly';
 import { useNotification } from '../contexts/NotificationContext';
-import { usePropertyRefresh } from '../contexts/PropertyRefreshContext';
 import { PROPERTIES } from '@/utils/constants';
 
 interface OwnedProperty {
@@ -38,7 +37,6 @@ interface PropertyShieldStatus {
 export function ShieldAllModal({ ownedProperties, balance, onClose }: ShieldAllModalProps) {
   const { activateShield } = useDefipoly();
   const { showSuccess, showError } = useNotification();
-  const { triggerRefresh } = usePropertyRefresh();
   
   const [shielding, setShielding] = useState(false);
   const [propertyStatuses, setPropertyStatuses] = useState<PropertyShieldStatus[]>(
@@ -137,8 +135,7 @@ export function ShieldAllModal({ ownedProperties, balance, onClose }: ShieldAllM
           message,
           successes[0] !== 'already-processed' ? successes[0] : undefined
         );
-        
-        triggerRefresh();
+      
         setTimeout(() => onClose(), 2000);
       }
     } catch (error: any) {

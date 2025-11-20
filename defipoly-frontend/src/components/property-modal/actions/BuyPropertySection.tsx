@@ -10,7 +10,6 @@ import { useState, useEffect, useMemo } from 'react';
 import { Clock } from 'lucide-react';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { useDefipoly } from '@/hooks/useDefipoly';
-import { usePropertyRefresh } from '@/contexts/PropertyRefreshContext';
 import { useNotification } from '@/contexts/NotificationContext';
 import { PROPERTIES } from '@/utils/constants';
 import { CooldownExplanationModal } from '@/components/CooldownExplanationModal';
@@ -38,11 +37,10 @@ export function BuyPropertySection({
 }: BuyPropertySectionProps) {
   const wallet = useWallet();
   const { buyProperty } = useDefipoly();
-  const { triggerRefresh } = usePropertyRefresh();
   const { showSuccess } = useNotification();
   const { 
     getOwnership, 
-    isSetOnCooldown, 
+    isPropertyOnCooldown,   
     getSetCooldownRemaining, 
     getSetCooldown 
   } = useGameState(); 
@@ -57,7 +55,7 @@ export function BuyPropertySection({
 
   
   const setId = property.setId;
-  const isOnCooldown = isSetOnCooldown(setId);
+  const isOnCooldown = isPropertyOnCooldown(setId);
   const cooldownRemaining = getSetCooldownRemaining(setId);
   const cooldownData = getSetCooldown(setId);
   const lastPurchasedPropertyId = cooldownData?.lastPurchasedPropertyId ?? null;
@@ -190,7 +188,6 @@ export function BuyPropertySection({
         signature !== 'already-processed' ? signature : undefined
       );
       
-      triggerRefresh();
       setTimeout(() => onClose(), 2000);
 
     } catch (error: any) {
