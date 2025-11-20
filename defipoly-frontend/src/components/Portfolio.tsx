@@ -12,7 +12,7 @@ import { useTokenBalance } from '@/hooks/useTokenBalance';
 import { BuildingIcon } from './icons/UIIcons';
 import { useRewards } from '@/hooks/useRewards';
 // ✅ Import the new API-based hook
-import { useOwnership } from '@/hooks/useOwnership';
+import { useOwnership } from '@/contexts/OwnershipContext';
 
 interface OwnedProperty extends PropertyOwnership {
   propertyInfo: typeof PROPERTIES[0];

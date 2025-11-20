@@ -13,7 +13,8 @@ import { PROPERTIES } from '@/utils/constants';
 import { ChartIcon } from '@/components/icons/UIIcons';
 import { UnownedOverlay } from '../UnownedOverlay';
 import { getSellValueInfo } from '@/utils/sellValue';
-import { useOwnership } from '@/hooks/useOwnership';
+import { useOwnership } from '@/contexts/OwnershipContext';
+
 
 interface SellPropertySectionProps {
   propertyId: number;

@@ -6,6 +6,8 @@ import { PropertyRefreshProvider } from '@/contexts/PropertyRefreshContext';
 import { StealCooldownProvider } from '@/contexts/StealCooldownContext';
 import { ThemeProvider } from '@/contexts/ThemeContext';
 import { WebSocketProvider } from '@/contexts/WebSocketContext';
+import { OwnershipProvider } from '@/contexts/OwnershipContext';
+import { CooldownProvider } from '@/contexts/CooldownContext';
 
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
@@ -13,11 +15,15 @@ export function Providers({ children }: { children: React.ReactNode }) {
       <NotificationProvider>
         <ThemeProvider>
           <WebSocketProvider>
-            <PropertyRefreshProvider>
-              <StealCooldownProvider>
-              {children}
-              </StealCooldownProvider>
-            </PropertyRefreshProvider>
+            <OwnershipProvider>
+              <CooldownProvider>
+                <PropertyRefreshProvider>
+                  <StealCooldownProvider>
+                    {children}
+                  </StealCooldownProvider>
+                </PropertyRefreshProvider>
+              </CooldownProvider>
+            </OwnershipProvider>
           </WebSocketProvider>
         </ThemeProvider>
       </NotificationProvider>

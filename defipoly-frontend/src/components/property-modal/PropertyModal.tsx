@@ -23,7 +23,7 @@ import {
   StealPropertyExplanationModal
 } from '../MechanicsExplanationModals';
 // ✅ NEW: Import API hooks
-import { useOwnership } from '@/hooks/useOwnership';
+import { useOwnership } from '@/contexts/OwnershipContext';
 import { fetchPropertyState } from '@/services/api';
 
 interface PropertyModalProps {

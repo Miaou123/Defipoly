@@ -1,22 +1,16 @@
-// ============================================
-// FILE: src/hooks/useCooldowns.ts
-// Hook for fetching cooldown data from backend API
-// ✅ UPDATED: Now auto-refreshes on WebSocket events
-// ============================================
+'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { useWebSocket } from '@/contexts/WebSocketContext';
 import { 
   fetchAllSetCooldowns, 
-  fetchSetCooldown,
   fetchAllStealCooldowns,
-  fetchStealCooldown,
   type ApiPlayerSetCooldown,
   type ApiPlayerStealCooldown
 } from '@/services/api';
 
-interface UseCooldownsReturn {
+interface CooldownContextValue {
   setCooldowns: ApiPlayerSetCooldown[];
   stealCooldowns: ApiPlayerStealCooldown[];
   loading: boolean;
@@ -26,11 +20,13 @@ interface UseCooldownsReturn {
   getStealCooldown: (propertyId: number) => ApiPlayerStealCooldown | null;
   isSetOnCooldown: (setId: number) => boolean;
   isStealOnCooldown: (propertyId: number) => boolean;
-  getSetCooldownRemaining: (setId: number) => number; // seconds remaining
-  getStealCooldownRemaining: (propertyId: number) => number; // seconds remaining
+  getSetCooldownRemaining: (setId: number) => number;
+  getStealCooldownRemaining: (propertyId: number) => number;
 }
 
-export function useCooldowns(): UseCooldownsReturn {
+const CooldownContext = createContext<CooldownContextValue | null>(null);
+
+export function CooldownProvider({ children }: { children: React.ReactNode }) {
   const { publicKey } = useWallet();
   const { socket, connected } = useWebSocket();
   const [setCooldowns, setSetCooldowns] = useState<ApiPlayerSetCooldown[]>([]);
@@ -71,16 +67,14 @@ export function useCooldowns(): UseCooldownsReturn {
     fetchData();
   }, [fetchData]);
 
-  // ✅ NEW: Listen to WebSocket events and auto-refresh cooldowns
+  // WebSocket auto-refresh
   useEffect(() => {
     if (!socket || !connected || !publicKey) return;
 
     const handleCooldownUpdate = () => {
-      console.log('🔄 [useCooldowns] WebSocket event detected, refetching cooldowns...');
       fetchData();
     };
 
-    // Listen to property events that affect cooldowns
     socket.on('property-bought', handleCooldownUpdate);
     socket.on('property-stolen', handleCooldownUpdate);
     socket.on('steal-attempted', handleCooldownUpdate);
@@ -95,12 +89,10 @@ export function useCooldowns(): UseCooldownsReturn {
   }, [socket, connected, publicKey, fetchData]);
 
   const getSetCooldown = useCallback((setId: number): ApiPlayerSetCooldown | null => {
-    if (!Array.isArray(setCooldowns)) return null;
     return setCooldowns.find(c => c.setId === setId) || null;
   }, [setCooldowns]);
 
   const getStealCooldown = useCallback((propertyId: number): ApiPlayerStealCooldown | null => {
-    if (!Array.isArray(stealCooldowns)) return null;
     return stealCooldowns.find(c => c.propertyId === propertyId) || null;
   }, [stealCooldowns]);
 
@@ -124,27 +116,29 @@ export function useCooldowns(): UseCooldownsReturn {
     return cooldown?.cooldownRemaining || 0;
   }, [getStealCooldown]);
 
-  return {
-    setCooldowns,
-    stealCooldowns,
-    loading,
-    error,
-    refresh: fetchData,
-    getSetCooldown,
-    getStealCooldown,
-    isSetOnCooldown,
-    isStealOnCooldown,
-    getSetCooldownRemaining,
-    getStealCooldownRemaining,
-  };
+  return (
+    <CooldownContext.Provider value={{
+      setCooldowns,
+      stealCooldowns,
+      loading,
+      error,
+      refresh: fetchData,
+      getSetCooldown,
+      getStealCooldown,
+      isSetOnCooldown,
+      isStealOnCooldown,
+      getSetCooldownRemaining,
+      getStealCooldownRemaining,
+    }}>
+      {children}
+    </CooldownContext.Provider>
+  );
 }
 
-// ========== Individual fetchers for specific use cases ==========
-
-export async function fetchSetCooldownData(wallet: string, setId: number) {
-  return await fetchSetCooldown(wallet, setId);
-}
-
-export async function fetchStealCooldownData(wallet: string, propertyId: number) {
-  return await fetchStealCooldown(wallet, propertyId);
+export function useCooldowns() {
+  const context = useContext(CooldownContext);
+  if (!context) {
+    throw new Error('useCooldowns must be used within CooldownProvider');
+  }
+  return context;
 }

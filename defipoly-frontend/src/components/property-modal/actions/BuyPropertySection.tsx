@@ -11,12 +11,12 @@ import { Clock } from 'lucide-react';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { useDefipoly } from '@/hooks/useDefipoly';
 import { usePropertyRefresh } from '@/contexts/PropertyRefreshContext';
-import { useCooldowns } from '@/hooks/useCooldowns'; // ✅ API-based hook
+import { useCooldowns } from '@/contexts/CooldownContext';
 import { useNotification } from '@/contexts/NotificationContext';
 import { PROPERTIES } from '@/utils/constants';
 import { CooldownExplanationModal } from '@/components/CooldownExplanationModal';
 import { ChartIcon, CoinsIcon, CheckIcon, TargetIcon } from '@/components/icons/UIIcons';
-import { useOwnership } from '@/hooks/useOwnership';
+import { useOwnership } from '@/contexts/OwnershipContext';
 
 interface BuyPropertySectionProps {
   propertyId: number;

@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { usePropertyRefresh } from '@/contexts/PropertyRefreshContext';
-import { useCooldowns } from '@/hooks/useCooldowns';
+import { useCooldowns } from '@/contexts/CooldownContext';
 import { useStealCooldownFromContext } from '@/contexts/StealCooldownContext';
 import { ShieldIcon, HourglassIcon, TargetIcon } from './icons/UIIcons';
 import { LocationPin, BUILDING_SVGS } from './icons/GameAssets';

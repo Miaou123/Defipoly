@@ -7,7 +7,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { useWallet, useConnection } from '@solana/wallet-adapter-react';
 import { useWebSocket } from '@/contexts/WebSocketContext';
-import { useOwnership } from './useOwnership'; // ✅ API-based hook
+import { useOwnership } from '@/contexts/OwnershipContext';
 import { fetchPlayerData } from '@/utils/program'; // ✅ RPC call for PlayerAccount
 import { PROPERTIES } from '@/utils/constants';
 import { isSetComplete, getMinSlots } from '@/utils/gameHelpers';

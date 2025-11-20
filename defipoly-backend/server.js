@@ -14,6 +14,7 @@ const WSSListener = require('./src/services/wssListener');
 const GapDetector = require('./src/services/gapDetector');
 const { router: wssMonitoringRouter, initMonitoring } = require('./src/routes/wssMonitoring');
 const { initSocketIO, getIO } = require('./src/services/socketService');
+const APICallCounter = require('./src/middleware/apiCallCounter');
 
 // Load environment variables
 require('dotenv').config();
@@ -24,6 +25,9 @@ const idl = require('./src/idl/defipoly_program.json');
 const app = express();
 const httpServer = createServer(app);
 const PORT = process.env.PORT || 3101;
+
+const apiCounter = new APICallCounter(50); 
+app.use(apiCounter.middleware());
 
 // Middleware
 app.use(cors({
@@ -143,6 +147,9 @@ async function startServer() {
     // Initialize Socket.IO
     const io = initSocketIO(httpServer);
     console.log('🔌 Socket.IO server initialized');
+    
+    // Initialize WSS monitoring
+    initMonitoring();
 
     // Initialize WSS if enabled
     if (process.env.ENABLE_WSS !== 'false') {
