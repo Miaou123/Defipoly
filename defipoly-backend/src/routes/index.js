@@ -10,6 +10,7 @@ const leaderboardController = require('../controllers/leaderboardController');
 const gameRouter = require('./game');
 const propertiesRouter = require('./properties');
 const stealCooldownRouter = require('./stealCooldown');
+const gameStateRouter = require('./gameState');
 
 // Mount routes (removed webhooks)
 router.use('/profile', profilesRouter);
@@ -20,6 +21,7 @@ router.use('/stats', statsRouter);
 router.use('/game', gameRouter);
 router.use('/properties', propertiesRouter);
 router.use('/steal-cooldown', stealCooldownRouter);
+router.use('/game-state', gameStateRouter);
 
 // Special routes that need custom paths
 const { getPlayerOwnership } = require('../controllers/statsController');

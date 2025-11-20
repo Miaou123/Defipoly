@@ -23,7 +23,7 @@ import {
   StealPropertyExplanationModal
 } from '../MechanicsExplanationModals';
 // ✅ NEW: Import API hooks
-import { useOwnership } from '@/contexts/OwnershipContext';
+import { useGameState } from '@/contexts/GameStateContext';
 import { fetchPropertyState } from '@/services/api';
 
 interface PropertyModalProps {
@@ -41,7 +41,7 @@ export function PropertyModal({ propertyId, onClose }: PropertyModalProps) {
   const { balance } = useTokenBalance();
   
   // ✅ NEW: Use API hooks instead of RPC
-  const { getOwnership } = useOwnership();
+  const { getOwnership } = useGameState();
   
   const [loading, setLoading] = useState(false);
   const [propertyData, setPropertyData] = useState<any>(null);

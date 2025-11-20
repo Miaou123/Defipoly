@@ -13,7 +13,7 @@ import { PROPERTIES } from '@/utils/constants';
 import { ChartIcon } from '@/components/icons/UIIcons';
 import { UnownedOverlay } from '../UnownedOverlay';
 import { getSellValueInfo } from '@/utils/sellValue';
-import { useOwnership } from '@/contexts/OwnershipContext';
+import { useGameState } from '@/contexts/GameStateContext';
 
 
 interface SellPropertySectionProps {
@@ -36,7 +36,7 @@ export function SellPropertySection({
   const { sellProperty } = useDefipoly();
   const { showSuccess, showError } = useNotification();
   const { triggerRefresh } = usePropertyRefresh();
-  const { getOwnership } = useOwnership(); // ✅ API-based ownership hook
+  const { getOwnership } = useGameState();
   const { publicKey } = useWallet();
   
   const [slotsToSell, setSlotsToSell] = useState(1);

@@ -7,11 +7,13 @@ import { RewardsPanel } from './RewardsPanel';
 import { CornerSquare } from './BoardHelpers';
 import { getBoardTheme, getPropertyCardTheme } from '@/utils/themes';
 import { useTheme } from '@/contexts/ThemeContext';
+import { useGameState } from '@/contexts/GameStateContext';
 
 interface BoardProps {
   onSelectProperty: (propertyId: number) => void;
   spectatorMode?: boolean;
   spectatorWallet?: string;
+  // Props below ONLY used in spectator mode
   boardTheme?: string;
   propertyCardTheme?: string;
   profilePicture?: string | null;
@@ -20,30 +22,65 @@ interface BoardProps {
   customPropertyCardBackground?: string | null;
 }
 
-export function Board({ onSelectProperty, spectatorMode = false, spectatorWallet, boardTheme, propertyCardTheme, profilePicture, cornerSquareStyle = 'property', customBoardBackground, customPropertyCardBackground }: BoardProps) {
+export function Board({ 
+  onSelectProperty, 
+  spectatorMode = false, 
+  spectatorWallet,
+  // Spectator mode props
+  boardTheme: spectatorBoardTheme,
+  propertyCardTheme: spectatorPropertyTheme,
+  profilePicture: spectatorProfilePic,
+  cornerSquareStyle: spectatorCornerStyle,
+  customBoardBackground: spectatorCustomBoard,
+  customPropertyCardBackground: spectatorCustomCard,
+}: BoardProps) {
   const themeContext = useTheme();
   const [showRewardsPanel, setShowRewardsPanel] = useState(true);
   
-  // Debug logging for spectator mode
-  if (spectatorMode) {
-    console.log('🎮 [BOARD] Spectator mode props:', {
-      spectatorWallet,
-      boardTheme,
-      propertyCardTheme,
-      profilePicture,
-      cornerSquareStyle,
-      customBoardBackground,
-      customPropertyCardBackground
-    });
-  }
+  // Get game state (includes profile for main mode)
+  const gameState = useGameState();
   
-  // Use theme from context if not explicitly provided (for spectator mode compatibility)
-  const currentBoardTheme = boardTheme ? getBoardTheme(boardTheme) : { boardBackground: themeContext.getBoardThemeStyles() };
+  // ========== SMART THEME SELECTION ==========
+  // In main mode: use GameState profile
+  // In spectator mode: use props passed from parent
   
-  // In spectator mode, use the provided theme or default, NEVER the context theme
-  const currentPropertyCardTheme = spectatorMode 
-    ? getPropertyCardTheme(propertyCardTheme || 'default')
-    : getPropertyCardTheme(propertyCardTheme || themeContext.propertyCardTheme);
+  const boardTheme = spectatorMode 
+    ? spectatorBoardTheme 
+    : gameState.profile.boardTheme;
+    
+  const propertyCardTheme = spectatorMode 
+    ? spectatorPropertyTheme 
+    : gameState.profile.propertyCardTheme;
+    
+  const customBoardBackground = spectatorMode 
+    ? spectatorCustomBoard 
+    : gameState.profile.customBoardBackground;
+    
+  const customPropertyCardBackground = spectatorMode 
+    ? spectatorCustomCard 
+    : gameState.profile.customPropertyCardBackground;
+    
+  const profilePicture = spectatorMode 
+    ? spectatorProfilePic 
+    : gameState.profile.profilePicture;
+    
+  const cornerSquareStyle = spectatorMode 
+    ? spectatorCornerStyle || 'property'
+    : gameState.profile.cornerSquareStyle;
+  
+  // ========== GET THEME OBJECTS ==========
+  const currentBoardTheme = getBoardTheme(boardTheme || 'dark');
+  const currentPropertyCardTheme = getPropertyCardTheme(propertyCardTheme || 'dark');
+  
+  // Debug logging
+  console.log('🎨 [BOARD] Theme config:', {
+    mode: spectatorMode ? 'SPECTATOR' : 'MAIN',
+    boardTheme,
+    propertyCardTheme,
+    customBoardBackground,
+    customPropertyCardBackground,
+    source: spectatorMode ? 'props' : 'gameState'
+  });
   return (
     <div className="flex items-center justify-center w-full h-full relative">
       <div 

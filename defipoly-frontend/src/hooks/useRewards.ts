@@ -7,7 +7,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { useWallet, useConnection } from '@solana/wallet-adapter-react';
 import { useWebSocket } from '@/contexts/WebSocketContext';
-import { useOwnership } from '@/contexts/OwnershipContext';
+import { useGameState } from '@/contexts/GameStateContext';
 import { fetchPlayerData } from '@/utils/program'; // ✅ RPC call for PlayerAccount
 import { PROPERTIES } from '@/utils/constants';
 import { isSetComplete, getMinSlots } from '@/utils/gameHelpers';
@@ -26,8 +26,7 @@ export function useRewards() {
   const { socket, connected } = useWebSocket();
   const { program } = useDefipoly();
   
-  // ✅ Use API-based ownership hook
-  const { ownerships: apiOwnerships, loading: ownershipLoading } = useOwnership();
+  const { ownerships: apiOwnerships, loading: ownershipLoading } = useGameState();
   
   const [ownerships, setOwnerships] = useState<any[]>([]);
   const [lastClaimTime, setLastClaimTime] = useState<number>(0);

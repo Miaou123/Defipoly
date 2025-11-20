@@ -11,12 +11,11 @@ import { Clock } from 'lucide-react';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { useDefipoly } from '@/hooks/useDefipoly';
 import { usePropertyRefresh } from '@/contexts/PropertyRefreshContext';
-import { useCooldowns } from '@/contexts/CooldownContext';
 import { useNotification } from '@/contexts/NotificationContext';
 import { PROPERTIES } from '@/utils/constants';
 import { CooldownExplanationModal } from '@/components/CooldownExplanationModal';
 import { ChartIcon, CoinsIcon, CheckIcon, TargetIcon } from '@/components/icons/UIIcons';
-import { useOwnership } from '@/contexts/OwnershipContext';
+import { useGameState } from '@/contexts/GameStateContext';
 
 interface BuyPropertySectionProps {
   propertyId: number;
@@ -41,7 +40,12 @@ export function BuyPropertySection({
   const { buyProperty } = useDefipoly();
   const { triggerRefresh } = usePropertyRefresh();
   const { showSuccess } = useNotification();
-  const { getOwnership } = useOwnership(); 
+  const { 
+    getOwnership, 
+    isSetOnCooldown, 
+    getSetCooldownRemaining, 
+    getSetCooldown 
+  } = useGameState(); 
 
   const [slotsToBuy, setSlotsToBuy] = useState(1);
   const [buyingProgress, setBuyingProgress] = useState('');
@@ -51,12 +55,6 @@ export function BuyPropertySection({
   } | null>(null);
   const [showCooldownModal, setShowCooldownModal] = useState(false);
 
-  // ✅ API-based cooldowns hook
-  const { 
-    isSetOnCooldown, 
-    getSetCooldownRemaining,
-    getSetCooldown 
-  } = useCooldowns();
   
   const setId = property.setId;
   const isOnCooldown = isSetOnCooldown(setId);

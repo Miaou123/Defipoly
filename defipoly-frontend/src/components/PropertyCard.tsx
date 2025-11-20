@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { usePropertyRefresh } from '@/contexts/PropertyRefreshContext';
-import { useCooldowns } from '@/contexts/CooldownContext';
+import { useGameState } from '@/contexts/GameStateContext';
 import { useStealCooldownFromContext } from '@/contexts/StealCooldownContext';
 import { ShieldIcon, HourglassIcon, TargetIcon } from './icons/UIIcons';
 import { LocationPin, BUILDING_SVGS } from './icons/GameAssets';
@@ -12,8 +12,6 @@ import { PROPERTIES } from '@/utils/constants';
 import { PropertyCardTheme } from '@/utils/themes';
 import { useTheme } from '@/contexts/ThemeContext';
 
-// ✅ NEW: Import API service for ownership data
-import { fetchOwnershipData } from '@/services/api';
 
 // Helper function for formatting numbers without hydration issues
 const formatNumber = (num: number): string => {
@@ -65,12 +63,17 @@ export function PropertyCard({ propertyId, onSelect, spectatorMode = false, spec
   const property = PROPERTIES.find(p => p.id === propertyId);
   if (!property) return null;
 
-  // ✅ NEW: Use API-based cooldowns hook
+  // Get game state from context
+  const gameState = useGameState();
+  const ownerships = gameState.ownerships;
+  const ownership = ownerships.find(o => o.propertyId === propertyId);
+
+  // Get cooldown helpers from game state
   const { 
     isSetOnCooldown, 
     getSetCooldownRemaining,
     getSetCooldown 
-  } = useCooldowns();
+  } = gameState;
   
   const { isOnStealCooldown, stealCooldownRemaining } = useStealCooldownFromContext(propertyId);
   
@@ -120,59 +123,43 @@ console.log(`PropertyCard ${propertyId} (${property.name}) debug:`, {
     }
   }
 
-  // ✅ NEW: Fetch ownership data from API instead of RPC
+  // Calculate building level
   useEffect(() => {
-    const walletToFetch = spectatorMode ? spectatorWallet : publicKey?.toString();
-    
-    if (!walletToFetch) {
+    if (!ownership || ownership.slotsOwned === 0) {
       setBuildingLevel(0);
       setShieldActive(false);
+      return;
+    }
+
+    // Calculate building level based on slots owned
+    const maxPerPlayer = property.maxPerPlayer || 10;
+    const progressRatio = ownership.slotsOwned / maxPerPlayer;
+    const level = Math.ceil(progressRatio * 5);
+    setBuildingLevel(Math.min(level, 5));
+
+    // Check if shield is active
+    const now = Math.floor(Date.now() / 1000);
+    const isShielded = ownership.slotsShielded > 0 && ownership.shieldExpiry.toNumber() > now;
+    setShieldActive(isShielded);
+
+  }, [ownership, property.maxPerPlayer, propertyId]);
+
+  // Check for complete set
+  useEffect(() => {
+    if (!ownership || ownership.slotsOwned === 0) {
       setHasCompleteSet(false);
       return;
     }
 
-    const fetchOwnership = async () => {
-      try {
-        // ✅ Use API service instead of direct fetch
-        const ownerships = await fetchOwnershipData(walletToFetch);
-        const ownership = ownerships.find((o) => o.propertyId === propertyId);
-        
-        if (ownership && ownership.slotsOwned > 0) {
-          // Calculate building level based on slots owned
-          const maxPerPlayer = property.maxPerPlayer || 10;
-          const progressRatio = ownership.slotsOwned / maxPerPlayer;
-          const level = Math.ceil(progressRatio * 5);
-          setBuildingLevel(Math.min(level, 5)); // Cap at 5
-          
-          // Check if shield is active
-          const now = Math.floor(Date.now() / 1000);
-          const isShielded = ownership.slotsShielded > 0 && ownership.shieldExpiry > now;
-          setShieldActive(isShielded);
-          
-          // Check for complete set
-          const propertiesInSet = PROPERTIES.filter(p => p.setId === property.setId);
-          const requiredProps = property.setId === 0 || property.setId === 7 ? 2 : 3;
-          
-          const ownedInSet = ownerships.filter((o) => 
-            propertiesInSet.some(p => p.id === o.propertyId) && o.slotsOwned > 0
-          ).length;
-          
-          setHasCompleteSet(ownedInSet >= requiredProps);
-        } else {
-          setBuildingLevel(0);
-          setShieldActive(false);
-          setHasCompleteSet(false);
-        }
-      } catch (error) {
-        console.warn(`Failed to fetch property ${propertyId}:`, error);
-        setBuildingLevel(0);
-        setShieldActive(false);
-        setHasCompleteSet(false);
-      }
-    };
+    const propertiesInSet = PROPERTIES.filter(p => p.setId === property.setId);
+    const requiredProps = property.setId === 0 || property.setId === 7 ? 2 : 3;
 
-    fetchOwnership();
-  }, [connected, publicKey, propertyId, refreshKey, property.setId, property.maxPerPlayer, spectatorMode, spectatorWallet]);
+    const ownedInSet = ownerships.filter(o => 
+      propertiesInSet.some(p => p.id === o.propertyId) && o.slotsOwned > 0
+    ).length;
+
+    setHasCompleteSet(ownedInSet >= requiredProps);
+  }, [ownerships, property.setId, ownership, propertyId]);
 
   // Extract color from Tailwind classes
   const getColorHex = (colorClass: string) => {

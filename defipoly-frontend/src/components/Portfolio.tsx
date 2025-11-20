@@ -11,8 +11,7 @@ import { ShieldAllModal } from './ShieldAllModal';
 import { useTokenBalance } from '@/hooks/useTokenBalance';
 import { BuildingIcon } from './icons/UIIcons';
 import { useRewards } from '@/hooks/useRewards';
-// ✅ Import the new API-based hook
-import { useOwnership } from '@/contexts/OwnershipContext';
+import { useGameState } from '@/contexts/GameStateContext';
 
 interface OwnedProperty extends PropertyOwnership {
   propertyInfo: typeof PROPERTIES[0];
@@ -33,8 +32,7 @@ export function Portfolio({ onSelectProperty }: PortfolioProps) {
   const { balance, loading: balanceLoading } = useTokenBalance();
   const { dailyIncome: rewardsDailyIncome } = useRewards(); // Use dailyIncome from useRewards hook
   
-  // ✅ NEW: Use API-based ownership hook instead of RPC calls
-  const { ownerships, loading } = useOwnership();
+  const { ownerships, loading } = useGameState();
   
   const [ownedProperties, setOwnedProperties] = useState<OwnedProperty[]>([]);
   const [currentTime, setCurrentTime] = useState(Date.now());
