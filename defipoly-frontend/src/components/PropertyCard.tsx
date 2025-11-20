@@ -10,7 +10,6 @@ import { LocationPin, BUILDING_SVGS } from './icons/GameAssets';
 
 import { PROPERTIES } from '@/utils/constants';
 import { PropertyCardTheme } from '@/utils/themes';
-import { useTheme } from '@/contexts/ThemeContext';
 
 
 // Helper function for formatting numbers without hydration issues
@@ -32,7 +31,6 @@ interface PropertyCardProps {
 export function PropertyCard({ propertyId, onSelect, spectatorMode = false, spectatorWallet, theme, customPropertyCardBackground, modalView = false }: PropertyCardProps) {
   const { connected, publicKey } = useWallet();
   const { refreshKey } = usePropertyRefresh();
-  const themeContext = useTheme();
   
   // Default theme if none provided - dark mode
   const cardTheme = theme || {
@@ -44,18 +42,6 @@ export function PropertyCard({ propertyId, onSelect, spectatorMode = false, spec
     accent: 'text-gray-300'
   };
 
-  // Ensure theme context is available
-  if (!themeContext) {
-    return (
-      <button
-        onClick={() => onSelect(propertyId)}
-        className="w-full h-full relative overflow-hidden cursor-pointer bg-gray-700/60 border border-gray-500"
-      >
-        Loading...
-      </button>
-    );
-  }
-  
   const [buildingLevel, setBuildingLevel] = useState(0);
   const [shieldActive, setShieldActive] = useState(false);
   const [hasCompleteSet, setHasCompleteSet] = useState(false);
@@ -93,7 +79,6 @@ export function PropertyCard({ propertyId, onSelect, spectatorMode = false, spec
   const isOnCooldown = finalIsSetOnCooldown(setId);
   const cooldownRemaining = finalGetSetCooldownRemaining(setId);
   const cooldownData = finalGetSetCooldown(setId);
-  const lastPurchasedPropertyId = cooldownData?.lastPurchasedPropertyId ?? null;
   
   // Fetch spectator ownership data
   useEffect(() => {
@@ -134,14 +119,13 @@ console.log(`PropertyCard ${propertyId} (${property.name}) debug:`, {
   spectatorMode,
   isOnCooldown,
   cooldownRemaining,
-  lastPurchasedPropertyId,
-  isThisPropertyBlocked: isOnCooldown && lastPurchasedPropertyId !== propertyId,
+  isThisPropertyBlocked: isOnCooldown,
   isOnStealCooldown,
   stealCooldownRemaining,
   shieldActive,
 });
 
-  const isThisPropertyBlocked = isOnCooldown && lastPurchasedPropertyId !== propertyId;
+  const isThisPropertyBlocked = isOnCooldown;
 
   // Determine which cooldowns are active (only show in normal mode, not spectator mode)
   const activeCooldowns = [];
@@ -236,9 +220,8 @@ console.log(`PropertyCard ${propertyId} (${property.name}) debug:`, {
       }
     } else {
       // In normal mode, check for custom background from props first, then from context
-      const customBackground = customPropertyCardBackground || (cardTheme.id === 'custom' && themeContext.customPropertyCardBackground);
-      if (customBackground) {
-        return `url(${customBackground}) center/cover`;
+      if (customPropertyCardBackground) {
+        return `url(${customPropertyCardBackground}) center/cover`;
       }
     }
     
@@ -260,7 +243,7 @@ console.log(`PropertyCard ${propertyId} (${property.name}) debug:`, {
       // In spectator mode, only check props, never theme context
       const isCustomBg = spectatorMode 
         ? customPropertyCardBackground !== null && customPropertyCardBackground !== undefined
-        : (customPropertyCardBackground || (themeContext.propertyCardTheme === 'custom' && themeContext.customPropertyCardBackground));
+        : (customPropertyCardBackground !== null && customPropertyCardBackground !== undefined);
       
       const styles: React.CSSProperties = {
         transition: 'all 0.3s ease',
@@ -269,9 +252,7 @@ console.log(`PropertyCard ${propertyId} (${property.name}) debug:`, {
       // Use either background shorthand OR individual properties, never mix
       if (isCustomBg) {
         // In spectator mode, only use the provided custom background
-        const backgroundImage = spectatorMode 
-          ? customPropertyCardBackground 
-          : (customPropertyCardBackground || themeContext.customPropertyCardBackground);
+        const backgroundImage = customPropertyCardBackground;
         styles.background = `url(${backgroundImage}) center/cover no-repeat`;
       } else {
         styles.background = getCardBackground();

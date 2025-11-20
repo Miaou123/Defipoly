@@ -1,7 +1,5 @@
 'use client';
 
-import { useTheme } from '@/contexts/ThemeContext';
-
 interface CornerSquareProps {
   icon: string;
   label: string;
@@ -12,7 +10,6 @@ interface CornerSquareProps {
 }
 
 export function CornerSquare({ icon, label, bgColor, profilePicture, cornerSquareStyle = 'property', customPropertyCardBackground }: CornerSquareProps) {
-  const themeContext = useTheme();
   
   // Debug logging for corner squares
   console.log('🏠 [CORNER] CornerSquare props:', {
@@ -20,12 +17,12 @@ export function CornerSquare({ icon, label, bgColor, profilePicture, cornerSquar
     profilePicture,
     hasProfilePic: !!profilePicture,
     customPropertyCardBackground,
-    themeContextCustomPropertyCardBackground: themeContext.customPropertyCardBackground
+    themeContextCustomPropertyCardBackground: customPropertyCardBackground
   });
 
   // Helper to check if custom background is a solid color (not an image URL)
   const isCustomBackgroundSolidColor = () => {
-    const customBg = customPropertyCardBackground || themeContext.customPropertyCardBackground;
+    const customBg = customPropertyCardBackground;
     
     console.log('🎨 [CORNER] Checking if solid color:', {
       customBg,
@@ -60,7 +57,7 @@ export function CornerSquare({ icon, label, bgColor, profilePicture, cornerSquar
   };
 
   // Check if we have a custom background (solid color or image)
-  const hasCustomBackground = !!(customPropertyCardBackground || themeContext.customPropertyCardBackground);
+  const hasCustomBackground = !!customPropertyCardBackground;
   const isCustomSolidColor = hasCustomBackground && isCustomBackgroundSolidColor();
 
   console.log('🏠 [CORNER] Final decision:', {
@@ -73,7 +70,7 @@ export function CornerSquare({ icon, label, bgColor, profilePicture, cornerSquar
 
   // Get background - either custom or default dark
   const getBackground = () => {
-    const customBg = customPropertyCardBackground || themeContext.customPropertyCardBackground;
+    const customBg = customPropertyCardBackground;
     if (customBg) {
       // Custom background - either solid color or image URL
       if (isCustomSolidColor) {

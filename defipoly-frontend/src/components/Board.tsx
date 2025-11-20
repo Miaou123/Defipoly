@@ -6,7 +6,6 @@ import { PropertyCard } from './PropertyCard';
 import { RewardsPanel } from './RewardsPanel';
 import { CornerSquare } from './BoardHelpers';
 import { getBoardTheme, getPropertyCardTheme } from '@/utils/themes';
-import { useTheme } from '@/contexts/ThemeContext';
 import { useGameState } from '@/contexts/GameStateContext';
 
 interface BoardProps {
@@ -34,7 +33,6 @@ export function Board({
   customBoardBackground: spectatorCustomBoard,
   customPropertyCardBackground: spectatorCustomCard,
 }: BoardProps) {
-  const themeContext = useTheme();
   const [showRewardsPanel, setShowRewardsPanel] = useState(true);
   
   // Get game state (includes profile for main mode)
@@ -118,31 +116,15 @@ export function Board({
           <div 
             className="col-start-2 col-span-5 row-start-2 row-span-5 flex flex-col items-center justify-center shadow-inner relative overflow-hidden"
             style={(() => {
-              // In spectator mode, ONLY use props - ignore ThemeContext
-              const hasCustomBackground = spectatorMode 
-                ? customBoardBackground
-                : (customBoardBackground || themeContext?.customBoardBackground);
-                
-              const backgroundImage = spectatorMode 
-                ? customBoardBackground 
-                : (customBoardBackground || themeContext?.getBoardThemeStyles());
+              const hasCustomBackground = !!customBoardBackground;
+              const backgroundImage = customBoardBackground;
               
-              if (spectatorMode) {
-                console.log('🎨 [BOARD] Background logic (SPECTATOR MODE):', {
-                  customBoardBackground,
-                  hasCustomBackground,
-                  backgroundImage,
-                  themeContextIgnored: true
-                });
-              } else {
-                console.log('🎨 [BOARD] Background logic (MAIN GAME):', {
-                  customBoardBackground,
-                  themeContextCustom: themeContext?.customBoardBackground,
-                  hasCustomBackground,
-                  backgroundImage,
-                  themeContextStyles: themeContext?.getBoardThemeStyles()
-                });
-              }
+              console.log('🎨 [BOARD] Background logic:', {
+                mode: spectatorMode ? 'SPECTATOR' : 'MAIN',
+                customBoardBackground,
+                hasCustomBackground,
+                backgroundImage,
+              });
               
               const styles: React.CSSProperties = {
                 boxShadow: hasCustomBackground 

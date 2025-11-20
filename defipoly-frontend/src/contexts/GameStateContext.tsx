@@ -1,10 +1,10 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
-import { useWebSocket } from './WebSocketContext';
 import { PublicKey } from '@solana/web3.js';
 import BN from 'bn.js';
+import { useWebSocket } from './WebSocketContext';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3101';
 
@@ -24,20 +24,17 @@ export interface PropertyOwnership {
 
 export interface SetCooldown {
   setId: number;
-  isOnCooldown: boolean;
   lastPurchaseTimestamp: number;
   cooldownDuration: number;
+  isOnCooldown: boolean;
   cooldownRemaining: number;
-  lastPurchasedPropertyId: number | null;
-  propertiesOwnedInSet: number[];
-  propertiesCount: number;
 }
 
 export interface StealCooldown {
   propertyId: number;
-  isOnCooldown: boolean;
   lastStealAttemptTimestamp: number;
   cooldownDuration: number;
+  isOnCooldown: boolean;
   cooldownRemaining: number;
 }
 
@@ -86,6 +83,9 @@ interface GameStateContextValue extends GameState {
   error: string | null;
   refresh: () => Promise<void>;
   
+  // Profile update functions
+  updateProfile: (updates: Partial<ProfileData>) => Promise<boolean>;
+  
   // Ownership helpers
   getOwnership: (propertyId: number) => PropertyOwnership | null;
   hasOwnership: (propertyId: number) => boolean;
@@ -100,6 +100,8 @@ interface GameStateContextValue extends GameState {
 }
 
 const GameStateContext = createContext<GameStateContextValue | null>(null);
+
+// ========== PROVIDER ==========
 
 export function GameStateProvider({ children }: { children: React.ReactNode }) {
   const { publicKey } = useWallet();
@@ -217,7 +219,7 @@ export function GameStateProvider({ children }: { children: React.ReactNode }) {
         ownerships: ownerships.length,
         setCooldowns: data.cooldowns.sets.length,
         stealCooldowns: data.cooldowns.steals.length,
-        profile: data.profile.username || 'No username',
+        profile: data.profile,
       });
 
     } catch (err) {
@@ -227,6 +229,43 @@ export function GameStateProvider({ children }: { children: React.ReactNode }) {
       setLoading(false);
     }
   }, [publicKey]);
+
+  // ========== UPDATE PROFILE ==========
+  const updateProfile = useCallback(async (updates: Partial<ProfileData>): Promise<boolean> => {
+    if (!publicKey) return false;
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/profile`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          wallet: publicKey.toString(),
+          ...updates,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update profile');
+      }
+
+      // Update local state immediately for better UX
+      setGameState(prev => ({
+        ...prev,
+        profile: {
+          ...prev.profile,
+          ...updates,
+        },
+      }));
+
+      // Refresh full state from server to ensure consistency
+      await fetchGameState();
+
+      return true;
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      return false;
+    }
+  }, [publicKey, fetchGameState]);
 
   // ========== INITIAL LOAD ==========
   useEffect(() => {
@@ -263,17 +302,6 @@ export function GameStateProvider({ children }: { children: React.ReactNode }) {
       socket.off('profile-updated', handleGameStateUpdate);
     };
   }, [socket, connected, publicKey, fetchGameState]);
-
-  // ========== PROFILE UPDATE LISTENER ==========
-  useEffect(() => {
-    const handleProfileUpdate = () => {
-      console.log('🎨 [GAMESTATE] Profile updated, refreshing game state...');
-      fetchGameState();
-    };
-
-    window.addEventListener('profileUpdated', handleProfileUpdate);
-    return () => window.removeEventListener('profileUpdated', handleProfileUpdate);
-  }, [fetchGameState]);
 
   // ========== HELPER FUNCTIONS ==========
   
@@ -321,6 +349,7 @@ export function GameStateProvider({ children }: { children: React.ReactNode }) {
         loading,
         error,
         refresh: fetchGameState,
+        updateProfile,
         getOwnership,
         hasOwnership,
         getSetCooldown,
