@@ -16,12 +16,61 @@ const {
 } = require('../services/blockchainSyncService');
 const { PROPERTIES } = require('../config/constants');
 
+/**
+ * Store processed transaction record for gap detection
+ */
+async function storeProcessedTransaction(tx) {
+  const db = getDatabase();
+  
+  const signature = tx.transaction?.signatures?.[0];
+  if (!signature) return;
+  
+  const blockTime = tx.blockTime;
+  const eventCount = tx.meta?.logMessages?.length || 0;
+  
+  // Determine transaction type (admin or game action)
+  const logs = tx.meta?.logMessages || [];
+  const isAdminTx = logs.some(log => 
+    log.includes('AdminGrant') || 
+    log.includes('AdminRevoke') || 
+    log.includes('AdminShield') || 
+    log.includes('AdminPlayer') ||
+    log.includes('AdminUpdate') ||
+    log.includes('AdminWithdraw') ||
+    log.includes('AdminAuthority')
+  );
+  
+  return new Promise((resolve, reject) => {
+    db.run(
+      `INSERT INTO processed_transactions 
+       (tx_signature, block_time, event_count, transaction_type)
+       VALUES (?, ?, ?, ?)
+       ON CONFLICT(tx_signature) DO NOTHING`,
+      [signature, blockTime, eventCount, isAdminTx ? 'admin' : 'game'],
+      function(err) {
+        if (err) {
+          console.error('      ❌ [PROCESSED_TX] Database error:', err);
+          reject(err);
+        } else {
+          if (this.changes > 0) {
+            console.log(`      ✅ [PROCESSED_TX] Stored: ${signature.substring(0, 20)}... (${isAdminTx ? 'admin' : 'game'})`);
+          }
+          resolve(this.changes);
+        }
+      }
+    );
+  });
+}
+
 async function processWebhook(payload) {
   const transactions = Array.isArray(payload) ? payload : [payload];
   
   for (const tx of transactions) {
     try {
       if (tx.meta?.err !== null) continue;
+      
+      // Always store processed transaction first (for gap detection)
+      await storeProcessedTransaction(tx);
       
       // ✅ FIXED: parseTransaction returns an ARRAY of actions
       const actions = await parseTransaction(tx);
@@ -288,4 +337,4 @@ async function storeTransactionData(data) {
   });
 }
 
-module.exports = { processWebhook };
+module.exports = { processWebhook, storeProcessedTransaction };

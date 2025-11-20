@@ -5,7 +5,7 @@
 // ============================================
 
 const { Connection, PublicKey } = require('@solana/web3.js');
-const { processWebhook } = require('../controllers/webhookController');
+const { processWebhook, storeProcessedTransaction } = require('../controllers/webhookController');
 const { getDatabase } = require('../config/database');
 
 class GapDetector {
@@ -136,19 +136,35 @@ class GapDetector {
   }
 
   /**
-   * Check if transaction exists in database
+   * Check if transaction exists in database (checks both game_actions and processed_transactions)
    */
   async transactionExists(signature) {
     return new Promise((resolve, reject) => {
       const db = getDatabase();
+      
+      // Check processed_transactions table first (includes ALL transactions)
       db.get(
-        'SELECT tx_signature FROM game_actions WHERE tx_signature = ?',
+        'SELECT tx_signature FROM processed_transactions WHERE tx_signature = ?',
         [signature],
         (err, row) => {
           if (err) {
             reject(err);
+          } else if (row) {
+            // Found in processed_transactions
+            resolve(true);
           } else {
-            resolve(!!row);
+            // Fallback: check game_actions table for backwards compatibility
+            db.get(
+              'SELECT tx_signature FROM game_actions WHERE tx_signature = ?',
+              [signature],
+              (err2, row2) => {
+                if (err2) {
+                  reject(err2);
+                } else {
+                  resolve(!!row2);
+                }
+              }
+            );
           }
         }
       );
@@ -190,6 +206,9 @@ class GapDetector {
           slot: transaction.slot
         }];
 
+        // Store processed transaction record first
+        await storeProcessedTransaction(webhookData[0]);
+        
         // Process transaction
         await processWebhook(webhookData);
         backfilled++;

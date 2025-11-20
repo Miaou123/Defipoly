@@ -23,30 +23,50 @@ export function useRewards() {
   
   const [unclaimedRewards, setUnclaimedRewards] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [initialFetchDone, setInitialFetchDone] = useState(false);
   const lastFetchTime = useRef<number>(0);
   const incomePerSecondRef = useRef<number>(0);
 
-  // ✅ Fetch pending_rewards from blockchain only (use backend for daily income)
+  // ✅ Calculate actual pending rewards (blockchain + time-based calculation)
   const fetchBlockchainRewards = async () => {
-    if (!publicKey || !program) return null;
+    if (!publicKey || !program) {
+      console.log('❌ Cannot fetch blockchain - no publicKey or program');
+      return null;
+    }
 
     try {
-      console.log('⛓️ Fetching pending_rewards from blockchain...');
       const playerData = await fetchPlayerData(program, publicKey);
       
       if (!playerData) {
-        console.log('⛓️ No player account found on blockchain');
         return 0;
       }
 
-      const blockchainRewards = (playerData.pendingRewards?.toNumber() || 0) / 1e9; // Convert from lamports to DEFI (9 decimals)
+      // Get blockchain stored pending rewards (already calculated)
+      const storedRewards = (playerData.pendingRewards?.toNumber() || 0) / 1e9;
       
-      console.log('⛓️ Blockchain pending_rewards (raw):', playerData.pendingRewards?.toNumber() || 0);
-      console.log('⛓️ Blockchain pending_rewards (DEFI):', blockchainRewards);
+      // Get player income and last claim info
+      const totalBaseDailyIncome = (playerData.totalBaseDailyIncome?.toNumber() || 0) / 1e9;
+      const lastClaimTimestamp = playerData.lastClaimTimestamp?.toNumber() || 0;
       
-      return blockchainRewards;
+      // Calculate time-based rewards since last update
+      const currentTimestamp = Math.floor(Date.now() / 1000);
+      const timeElapsed = currentTimestamp - lastClaimTimestamp;
+      
+      
+      if (timeElapsed > 0 && totalBaseDailyIncome > 0) {
+        const minutesElapsed = timeElapsed / 60;
+        const incomePerMinute = totalBaseDailyIncome / 1440; // 1440 minutes per day
+        const timeBasedRewards = incomePerMinute * minutesElapsed;
+        
+        const totalRewards = storedRewards + timeBasedRewards;
+        
+        
+        return totalRewards;
+      } else {
+        return storedRewards;
+      }
     } catch (error) {
-      console.error('❌ Error fetching from blockchain:', error);
+      console.error('❌ BLOCKCHAIN FETCH FAILED:', error);
       return null;
     }
   };
@@ -70,6 +90,9 @@ export function useRewards() {
       if (blockchainRewards !== null) {
         setUnclaimedRewards(blockchainRewards);
         lastFetchTime.current = now;
+        if (!initialFetchDone) {
+          setInitialFetchDone(true);
+        }
       }
       setLoading(false);
     };
@@ -90,7 +113,6 @@ export function useRewards() {
   useEffect(() => {
     if (stats.dailyIncome > 0) {
       incomePerSecondRef.current = stats.dailyIncome / 86400;
-      console.log('📊 Backend daily income updated:', stats.dailyIncome, 'per second:', incomePerSecondRef.current);
     } else {
       incomePerSecondRef.current = 0;
     }
@@ -98,7 +120,8 @@ export function useRewards() {
 
   // ✅ Smooth UI counting (increment by income per second)
   useEffect(() => {
-    if (incomePerSecondRef.current <= 0) {
+    // Only start counting if we have both income rate AND initial blockchain data
+    if (incomePerSecondRef.current <= 0 || !initialFetchDone) {
       return;
     }
 
@@ -107,7 +130,7 @@ export function useRewards() {
     }, 1000);
 
     return () => clearInterval(interval);
-  }, []);
+  }, [stats.dailyIncome, initialFetchDone]); // Restart when dailyIncome changes OR after initial blockchain fetch
 
   // ✅ WebSocket listeners for real-time updates
   useEffect(() => {
@@ -129,12 +152,9 @@ export function useRewards() {
 
     const handleRewardClaimed = async (data: any) => {
       if (data.wallet === publicKey.toString()) {
-        console.log('💰 Rewards claimed via WebSocket:', data);
-        
         // Reset unclaimed rewards to 0
         setUnclaimedRewards(0);
         lastFetchTime.current = Date.now();
-        // Note: dailyIncome stays the same, managed by GameState
       }
     };
 

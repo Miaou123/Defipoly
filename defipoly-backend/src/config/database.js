@@ -21,7 +21,7 @@ function initDatabase() {
 function createTables() {
   return new Promise((resolve, reject) => {
     let completed = 0;
-    const totalTables = 7;
+    const totalTables = 8;
     let hasError = false;
 
     const checkCompletion = () => {
@@ -206,6 +206,26 @@ function createTables() {
       console.log('✅ Properties state table ready');
       checkCompletion();
     });
+
+    // Processed Transactions table - tracks ALL processed transactions
+    db.run(`
+      CREATE TABLE IF NOT EXISTS processed_transactions (
+        tx_signature TEXT PRIMARY KEY,
+        block_time INTEGER NOT NULL,
+        event_count INTEGER DEFAULT 0,
+        action_count INTEGER DEFAULT 0,
+        transaction_type TEXT,
+        processed_at INTEGER DEFAULT (strftime('%s', 'now'))
+      )
+    `, (err) => {
+      if (err) {
+        console.error('Error creating processed_transactions table:', err);
+        hasError = true;
+        return reject(err);
+      }
+      console.log('✅ Processed transactions table ready');
+      checkCompletion();
+    });
   });
 }
 
@@ -219,6 +239,8 @@ function createIndexes() {
     db.run(`CREATE INDEX IF NOT EXISTS idx_ownership_property ON property_ownership(property_id)`);
     db.run(`CREATE INDEX IF NOT EXISTS idx_set_cooldowns_wallet_set ON player_set_cooldowns(wallet_address, set_id)`);
     db.run(`CREATE INDEX IF NOT EXISTS idx_steal_cooldowns_wallet_property ON player_steal_cooldowns(wallet_address, property_id)`);
+    db.run(`CREATE INDEX IF NOT EXISTS idx_processed_tx_time ON processed_transactions(block_time DESC)`);
+    db.run(`CREATE INDEX IF NOT EXISTS idx_processed_tx_type ON processed_transactions(transaction_type, block_time DESC)`);
 
     console.log('✅ Database indexes created');
     resolve();
