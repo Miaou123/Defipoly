@@ -1,22 +1,15 @@
 // ============================================
 // FILE: useRewards.ts
-// ✅ HYBRID VERSION: Blockchain for last_claim_timestamp, API for ownership
-// Fetches last_claim_timestamp from blockchain on load + every 15 min
+// ✅ SIMPLIFIED VERSION: Uses blockchain pending_rewards directly
+// Fetches pending_rewards from blockchain + smooth UI counting
 // ============================================
 
 import { useEffect, useState, useRef } from 'react';
 import { useWallet, useConnection } from '@solana/wallet-adapter-react';
 import { useWebSocket } from '@/contexts/WebSocketContext';
 import { useGameState } from '@/contexts/GameStateContext';
-import { fetchPlayerData } from '@/utils/program'; // ✅ RPC call for PlayerAccount
-import { PROPERTIES } from '@/utils/constants';
-import { isSetComplete, getMinSlots } from '@/utils/gameHelpers';
+import { fetchPlayerData } from '@/utils/program';
 import { useDefipoly } from './useDefipoly';
-
-// Helper function to calculate daily income from price and yieldBps
-const calculateDailyIncome = (price: number, yieldBps: number): number => {
-  return Math.floor((price * yieldBps) / 10000);
-};
 
 const REFRESH_INTERVAL = 15 * 60 * 1000; // 15 minutes in milliseconds
 
@@ -26,163 +19,97 @@ export function useRewards() {
   const { socket, connected } = useWebSocket();
   const { program } = useDefipoly();
   
-  const { ownerships: apiOwnerships, loading: ownershipLoading } = useGameState();
+  const { ownerships: apiOwnerships, loading: ownershipLoading, stats } = useGameState();
   
-  const [ownerships, setOwnerships] = useState<any[]>([]);
-  const [lastClaimTime, setLastClaimTime] = useState<number>(0);
-  const [dailyIncome, setDailyIncome] = useState(0);
   const [unclaimedRewards, setUnclaimedRewards] = useState(0);
   const [loading, setLoading] = useState(false);
   const lastFetchTime = useRef<number>(0);
+  const incomePerSecondRef = useRef<number>(0);
 
-  // ✅ NEW: Fetch last_claim_timestamp from BLOCKCHAIN
-  const fetchLastClaimFromBlockchain = async () => {
+  // ✅ Fetch pending_rewards from blockchain only (use backend for daily income)
+  const fetchBlockchainRewards = async () => {
     if (!publicKey || !program) return null;
 
     try {
-      console.log('⛓️ Fetching last_claim_timestamp from blockchain...');
+      console.log('⛓️ Fetching pending_rewards from blockchain...');
       const playerData = await fetchPlayerData(program, publicKey);
       
       if (!playerData) {
         console.log('⛓️ No player account found on blockchain');
-        return null;
+        return 0;
       }
 
-      const lastClaim = playerData.lastClaimTimestamp?.toNumber() || 0;
-      console.log('⛓️ Blockchain last_claim_timestamp:', lastClaim, new Date(lastClaim * 1000).toISOString());
+      const blockchainRewards = (playerData.pendingRewards?.toNumber() || 0) / 1e9; // Convert from lamports to DEFI (9 decimals)
       
-      return lastClaim;
+      console.log('⛓️ Blockchain pending_rewards (raw):', playerData.pendingRewards?.toNumber() || 0);
+      console.log('⛓️ Blockchain pending_rewards (DEFI):', blockchainRewards);
+      
+      return blockchainRewards;
     } catch (error) {
       console.error('❌ Error fetching from blockchain:', error);
       return null;
     }
   };
 
-  // ✅ Fetch last claim time from blockchain on mount and every 15 min
+  // ✅ Fetch pending rewards from blockchain on mount and every 15 min
   useEffect(() => {
     if (!publicKey || !program) return;
 
-    const fetchAndCache = async () => {
+    const fetchAndUpdate = async () => {
       const now = Date.now();
       
-      // Skip if we fetched less than 15 minutes ago
+      // Skip if we fetched less than 15 minutes ago (unless it's the first fetch)
       if (lastFetchTime.current && (now - lastFetchTime.current) < REFRESH_INTERVAL) {
         console.log('⏭️ Skipping blockchain fetch (cached)');
         return;
       }
 
-      const blockchainLastClaim = await fetchLastClaimFromBlockchain();
+      setLoading(true);
+      const blockchainRewards = await fetchBlockchainRewards();
       
-      if (blockchainLastClaim !== null) {
-        setLastClaimTime(blockchainLastClaim);
-        lastFetchTime.current = now;
-      } else {
-        // Fallback: use current time if no blockchain data
-        setLastClaimTime(Math.floor(Date.now() / 1000));
+      if (blockchainRewards !== null) {
+        setUnclaimedRewards(blockchainRewards);
         lastFetchTime.current = now;
       }
+      setLoading(false);
     };
 
     // Fetch immediately on mount
-    fetchAndCache();
+    fetchAndUpdate();
 
     // Set up 15-minute interval refresh
     const intervalId = setInterval(() => {
-      console.log('🔄 15-minute refresh: Fetching from blockchain...');
-      fetchAndCache();
+      console.log('🔄 15-minute refresh: Fetching pending rewards from blockchain...');
+      fetchAndUpdate();
     }, REFRESH_INTERVAL);
 
     return () => clearInterval(intervalId);
   }, [publicKey, program]);
 
-  // ✅ Process ownerships when apiOwnerships loads
+  // ✅ Update income per second when backend stats change
   useEffect(() => {
-    if (!publicKey) return;
-    
-    // Wait for apiOwnerships to load
-    if (ownershipLoading) {
-      console.log('⏳ Waiting for ownerships to load...');
+    if (stats.dailyIncome > 0) {
+      incomePerSecondRef.current = stats.dailyIncome / 86400;
+      console.log('📊 Backend daily income updated:', stats.dailyIncome, 'per second:', incomePerSecondRef.current);
+    } else {
+      incomePerSecondRef.current = 0;
+    }
+  }, [stats.dailyIncome]);
+
+  // ✅ Smooth UI counting (increment by income per second)
+  useEffect(() => {
+    if (incomePerSecondRef.current <= 0) {
       return;
     }
-    
-    if (apiOwnerships.length === 0) {
-      console.log('⚠️ No ownerships yet');
-      setOwnerships([]);
-      setDailyIncome(0);
-      return;
-    }
 
-    setLoading(true);
-    
-    try {
-      // Convert ownerships from API
-      const rewardsData = apiOwnerships
-        .filter(ownership => ownership.slotsOwned > 0)
-        .map(ownership => {
-          const property = PROPERTIES.find(p => p.id === ownership.propertyId);
-          if (!property) return null;
+    const interval = setInterval(() => {
+      setUnclaimedRewards(prev => prev + incomePerSecondRef.current);
+    }, 1000);
 
-          return {
-            propertyId: ownership.propertyId,
-            slotsOwned: ownership.slotsOwned,
-            purchaseTimestamp: ownership.purchaseTimestamp.toNumber(),
-            dailyIncomePerSlot: calculateDailyIncome(property.price, property.yieldBps),
-          };
-        })
-        .filter((o): o is NonNullable<typeof o> => o !== null);
+    return () => clearInterval(interval);
+  }, []);
 
-      setOwnerships(rewardsData);
-
-      console.log('🔍 DEBUG - Ownerships array length:', rewardsData.length);
-      console.log('🔍 DEBUG - First ownership:', rewardsData[0]);
-
-      // Calculate daily income with set bonuses
-      const ownedPropertyIds = rewardsData.map(o => o.propertyId);
-      let totalDaily = 0;
-      
-      // Group by setId to calculate bonuses
-      const ownershipsBySet = rewardsData.reduce((acc, ownership) => {
-        const property = PROPERTIES.find(p => p.id === ownership.propertyId);
-        if (!property) return acc;
-        
-        if (!acc[property.setId]) {
-          acc[property.setId] = [];
-        }
-        acc[property.setId].push({ ownership, property });
-        return acc;
-      }, {} as Record<number, Array<{ ownership: any; property: typeof PROPERTIES[0] }>>);
-      
-      // Calculate income with set bonuses
-      for (const [setIdStr, setOwnerships] of Object.entries(ownershipsBySet)) {
-        const setId = Number(setIdStr);
-        const hasCompleteSet = isSetComplete(setId, ownedPropertyIds);
-        const minSlots = getMinSlots(setId);
-        
-        for (const { ownership } of setOwnerships) {
-          const baseIncome = ownership.dailyIncomePerSlot * ownership.slotsOwned;
-          
-          if (hasCompleteSet && minSlots > 0) {
-            // Calculate bonus (40% on minimum slots)
-            const bonusedSlots = Math.min(ownership.slotsOwned, minSlots);
-            const regularSlots = ownership.slotsOwned - bonusedSlots;
-            const bonusIncome = Math.floor(ownership.dailyIncomePerSlot * 1.4 * bonusedSlots);
-            const regularIncome = ownership.dailyIncomePerSlot * regularSlots;
-            totalDaily += (bonusIncome + regularIncome);
-          } else {
-            totalDaily += baseIncome;
-          }
-        }
-      }
-      
-      setDailyIncome(totalDaily);
-    } catch (error) {
-      console.error('Error processing rewards data:', error);
-    } finally {
-      setLoading(false);
-    }
-  }, [publicKey, apiOwnerships, ownershipLoading]);
-
-  // ✅ WebSocket listeners
+  // ✅ WebSocket listeners for real-time updates
   useEffect(() => {
     if (!socket || !connected || !publicKey) return;
 
@@ -190,79 +117,24 @@ export function useRewards() {
       if (data.wallet === publicKey.toString()) {
         console.log('🏠 Ownership changed via WebSocket:', data);
         
-        try {
-          // Refresh last claim from blockchain
-          const blockchainLastClaim = await fetchLastClaimFromBlockchain();
-          if (blockchainLastClaim !== null) {
-            setLastClaimTime(blockchainLastClaim);
-          }
-
-          // ✅ Use apiOwnerships from hook (already updated by useOwnership!)
-          const rewardsData = apiOwnerships
-            .filter(ownership => ownership.slotsOwned > 0)
-            .map(ownership => {
-              const property = PROPERTIES.find(p => p.id === ownership.propertyId);
-              if (!property) return null;
-
-              return {
-                propertyId: ownership.propertyId,
-                slotsOwned: ownership.slotsOwned,
-                purchaseTimestamp: ownership.purchaseTimestamp.toNumber(),
-                dailyIncomePerSlot: calculateDailyIncome(property.price, property.yieldBps),
-              };
-            })
-            .filter((o): o is NonNullable<typeof o> => o !== null);
-          
-          setOwnerships(rewardsData);
-          
-          // Recalculate daily income with set bonuses
-          const ownedPropertyIds = rewardsData.map(o => o.propertyId);
-          let totalDaily = 0;
-          
-          const ownershipsBySet = rewardsData.reduce((acc, ownership) => {
-            const property = PROPERTIES.find(p => p.id === ownership.propertyId);
-            if (!property) return acc;
-            
-            if (!acc[property.setId]) {
-              acc[property.setId] = [];
-            }
-            acc[property.setId].push({ ownership, property });
-            return acc;
-          }, {} as Record<number, Array<{ ownership: any; property: typeof PROPERTIES[0] }>>);
-          
-          for (const [setIdStr, setOwnerships] of Object.entries(ownershipsBySet)) {
-            const setId = Number(setIdStr);
-            const hasCompleteSet = isSetComplete(setId, ownedPropertyIds);
-            const minSlots = getMinSlots(setId);
-            
-            for (const { ownership } of setOwnerships) {
-              const baseIncome = ownership.dailyIncomePerSlot * ownership.slotsOwned;
-              
-              if (hasCompleteSet && minSlots > 0) {
-                const bonusedSlots = Math.min(ownership.slotsOwned, minSlots);
-                const regularSlots = ownership.slotsOwned - bonusedSlots;
-                const bonusIncome = Math.floor(ownership.dailyIncomePerSlot * 1.4 * bonusedSlots);
-                const regularIncome = ownership.dailyIncomePerSlot * regularSlots;
-                totalDaily += (bonusIncome + regularIncome);
-              } else {
-                totalDaily += baseIncome;
-              }
-            }
-          }
-          
-          setDailyIncome(totalDaily);
-        } catch (error) {
-          console.error('Error updating rewards on ownership change:', error);
+        // Refresh pending rewards from blockchain immediately
+        const blockchainRewards = await fetchBlockchainRewards();
+        if (blockchainRewards !== null) {
+          setUnclaimedRewards(blockchainRewards);
+          lastFetchTime.current = Date.now();
         }
+        // Note: dailyIncome will be updated by GameState via the stats effect
       }
     };
 
     const handleRewardClaimed = async (data: any) => {
       if (data.wallet === publicKey.toString()) {
-        const now = Math.floor(Date.now() / 1000);
-        setLastClaimTime(now);
+        console.log('💰 Rewards claimed via WebSocket:', data);
+        
+        // Reset unclaimed rewards to 0
         setUnclaimedRewards(0);
         lastFetchTime.current = Date.now();
+        // Note: dailyIncome stays the same, managed by GameState
       }
     };
 
@@ -273,50 +145,12 @@ export function useRewards() {
       socket.off('ownership-changed', handleOwnershipChanged);
       socket.off('reward-claimed', handleRewardClaimed);
     };
-  }, [socket, connected, publicKey, apiOwnerships]);
-
-  // ✅ Client-side calculation (runs every second)
-  useEffect(() => {
-    if (ownerships.length === 0) {
-      setUnclaimedRewards(0);
-      return;
-    }
-
-    const calculateRewards = () => {
-      const now = Math.floor(Date.now() / 1000);
-      
-      // ✅ If never claimed (lastClaimTime === 0), use earliest purchase time
-      let effectiveLastClaim = lastClaimTime;
-      if (lastClaimTime === 0) {
-        const earliestPurchase = Math.min(...ownerships.map(o => o.purchaseTimestamp));
-        effectiveLastClaim = earliestPurchase;
-        console.log('🔍 Using earliest purchase as last claim:', earliestPurchase);
-      }
-      
-      const secondsSinceLastClaim = Math.max(0, now - effectiveLastClaim);
-      
-      let total = 0;
-      for (const ownership of ownerships) {
-        const ownershipAge = now - ownership.purchaseTimestamp;
-        const effectiveAge = Math.min(ownershipAge, secondsSinceLastClaim);
-        
-        const incomePerSecond = ownership.dailyIncomePerSlot / 86400;
-        const earned = incomePerSecond * effectiveAge * ownership.slotsOwned;
-        total += earned;
-      }
-      
-      setUnclaimedRewards(Math.floor(total));
-    };
-
-    calculateRewards();
-    const interval = setInterval(calculateRewards, 1000);
-    return () => clearInterval(interval);
-  }, [ownerships, lastClaimTime]);
+  }, [socket, connected, publicKey]);
 
   return {
-    ownerships,
-    dailyIncome,
-    unclaimedRewards,
+    ownerships: apiOwnerships, // Still return for compatibility
+    dailyIncome: stats.dailyIncome, // Use backend calculated daily income with set bonuses
+    unclaimedRewards: Math.floor(unclaimedRewards), // Display as whole DEFI tokens (already converted from lamports)
     loading: loading || ownershipLoading,
   };
 }

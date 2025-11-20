@@ -150,6 +150,11 @@ export function deserializePlayer(data: Buffer): PlayerAccount {
 
   // bump: u8
   const bump = data.readUInt8(offset);
+  offset += 1;
+
+  // pending_rewards: u64 (8 bytes)
+  const pendingRewards = new BN(data.slice(offset, offset + 8), 'le');
+  offset += 8;
 
   return {
     owner,
@@ -162,5 +167,6 @@ export function deserializePlayer(data: Buffer): PlayerAccount {
     totalStealsAttempted,
     totalStealsSuccessful,
     bump,
+    pendingRewards,
   };
 }

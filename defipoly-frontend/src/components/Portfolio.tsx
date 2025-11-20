@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
-import { PROPERTIES } from '@/utils/constants';
+import { PROPERTIES, getSetBonus } from '@/utils/constants';
 import { getSetName, isSetComplete, getMinSlots } from '@/utils/gameHelpers';
 import { useDefipoly } from '@/hooks/useDefipoly';
 import type { PropertyOwnership } from '@/types/accounts';
@@ -30,9 +30,9 @@ export function Portfolio({ onSelectProperty }: PortfolioProps) {
   const { publicKey, connected } = useWallet();
   const { program } = useDefipoly(); // Still need program for transactions
   const { balance, loading: balanceLoading } = useTokenBalance();
-  const { dailyIncome: rewardsDailyIncome } = useRewards(); // Use dailyIncome from useRewards hook
+  // Use backend calculated daily income with set bonuses from GameState
   
-  const { ownerships, loading } = useGameState();
+  const { ownerships, loading, stats } = useGameState();
   
   const [ownedProperties, setOwnedProperties] = useState<OwnedProperty[]>([]);
   const [currentTime, setCurrentTime] = useState(Date.now());
@@ -111,30 +111,37 @@ export function Portfolio({ onSelectProperty }: PortfolioProps) {
     return ownedProperties.map(p => p.propertyInfo.id);
   };
 
-  // Calculate income with set bonus
+  // Calculate income with variable set bonus
   const calculateIncome = (owned: OwnedProperty, minSlots: number, isComplete: boolean) => {
+    const dailyIncomePerSlot = calculateDailyIncome(owned.propertyInfo.price, owned.propertyInfo.yieldBps);
+    
     if (!isComplete || minSlots === 0) {
       return {
-        baseIncome: calculateDailyIncome(owned.propertyInfo.price, owned.propertyInfo.yieldBps) * owned.slotsOwned,
+        baseIncome: dailyIncomePerSlot * owned.slotsOwned,
         bonusIncome: 0,
-        totalIncome: calculateDailyIncome(owned.propertyInfo.price, owned.propertyInfo.yieldBps) * owned.slotsOwned,
+        totalIncome: dailyIncomePerSlot * owned.slotsOwned,
         bonusedSlots: 0,
-        regularSlots: owned.slotsOwned
+        regularSlots: owned.slotsOwned,
+        bonusPercent: 0
       };
     }
 
+    // Get the actual variable set bonus for this set
+    const setBonus = getSetBonus(owned.propertyInfo.setId);
+    const bonusMultiplier = setBonus ? (10000 + setBonus.bps) / 10000 : 1.4; // fallback to 40% if not found
+    
     const bonusedSlots = Math.min(owned.slotsOwned, minSlots);
     const regularSlots = owned.slotsOwned - bonusedSlots;
-    const dailyIncomePerSlot = calculateDailyIncome(owned.propertyInfo.price, owned.propertyInfo.yieldBps);
     const baseIncome = dailyIncomePerSlot * regularSlots;
-    const bonusIncome = Math.floor(dailyIncomePerSlot * 1.4 * bonusedSlots);
+    const bonusIncome = Math.floor(dailyIncomePerSlot * bonusMultiplier * bonusedSlots);
     
     return {
       baseIncome,
       bonusIncome,
       totalIncome: baseIncome + bonusIncome,
       bonusedSlots,
-      regularSlots
+      regularSlots,
+      bonusPercent: setBonus?.percent || 40
     };
   };
 
@@ -232,7 +239,7 @@ export function Portfolio({ onSelectProperty }: PortfolioProps) {
                 <div className="text-right">
                   <div className="text-[10px] text-purple-400 uppercase tracking-wide">Daily Rewards</div>
                   <div className="text-sm font-bold text-green-400">
-                    {rewardsDailyIncome > 0 ? rewardsDailyIncome.toLocaleString() : '0'}
+                    {stats.dailyIncome > 0 ? stats.dailyIncome.toLocaleString() : '0'}
                   </div>
                 </div>
               </div>
@@ -335,14 +342,18 @@ export function Portfolio({ onSelectProperty }: PortfolioProps) {
                   {isExpanded && (
                     <div className="px-3 pb-2">
                       {/* Set Bonus Info Banner */}
-                      {isComplete && (
-                        <div className="bg-green-900/30 rounded px-2 py-1.5 mb-2">
-                          <div className="text-[10px] text-green-300 font-bold uppercase tracking-wide flex items-center gap-1">
-                            <Award className="w-3 h-3" />
-                            Complete Set Bonus: +40%
+                      {isComplete && (() => {
+                        const setBonus = getSetBonus(setId);
+                        const bonusPercent = setBonus?.percent || 40;
+                        return (
+                          <div className="bg-green-900/30 rounded px-2 py-1.5 mb-2">
+                            <div className="text-[10px] text-green-300 font-bold uppercase tracking-wide flex items-center gap-1">
+                              <Award className="w-3 h-3" />
+                              Complete Set Bonus: +{bonusPercent}%
+                            </div>
                           </div>
-                        </div>
-                      )}
+                        );
+                      })()}
                       
                       {/* Properties List with Detailed Breakdown */}
                       <div className="space-y-1.5">
@@ -385,7 +396,7 @@ export function Portfolio({ onSelectProperty }: PortfolioProps) {
                                     <div className="flex items-center gap-1">
                                       <Zap className="w-3 h-3 text-green-400" />
                                       <span className="text-green-400 font-bold">{income.bonusedSlots}×</span>
-                                      <span className="text-green-300">{Math.floor(calculateDailyIncome(owned.propertyInfo.price, owned.propertyInfo.yieldBps) * 1.4)}</span>
+                                      <span className="text-green-300">{Math.floor(income.bonusIncome / income.bonusedSlots)}</span>
                                     </div>
                                     {income.regularSlots > 0 && (
                                       <>

@@ -48,6 +48,7 @@ export interface PlayerAccount {
   totalStealsAttempted: number;
   totalStealsSuccessful: number;
   bump: number;
+  pendingRewards: BN;
 }
 
 export interface PropertyOwnership {
