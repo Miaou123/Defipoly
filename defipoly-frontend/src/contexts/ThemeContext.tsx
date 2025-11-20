@@ -31,15 +31,20 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     if (!publicKey) return;
     
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3101'}/api/profile/themes/${publicKey.toString()}`);
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3101'}/api/profile/${publicKey.toString()}`);
       
       if (response.ok) {
-        const themes = await response.json();
-        if (themes.boardTheme) setBoardTheme(themes.boardTheme);
-        if (themes.propertyCardTheme) setPropertyCardTheme(themes.propertyCardTheme);
-        if (themes.customBoardBackground) setCustomBoardBackground(themes.customBoardBackground);
-        if (themes.customPropertyCardBackground) setCustomPropertyCardBackground(themes.customPropertyCardBackground);
-        console.log('Themes loaded from backend successfully');
+        const profile = await response.json();
+        setBoardTheme(profile.boardTheme || 'dark');
+        setPropertyCardTheme(profile.propertyCardTheme || 'dark');
+        setCustomBoardBackground(profile.customBoardBackground || null);
+        setCustomPropertyCardBackground(profile.customPropertyCardBackground || null);
+        console.log('🎨 [THEME] Loaded from backend:', {
+          boardTheme: profile.boardTheme,
+          propertyCardTheme: profile.propertyCardTheme,
+          customBoardBackground: profile.customBoardBackground,
+          customPropertyCardBackground: profile.customPropertyCardBackground
+        });
       }
     } catch (error) {
       console.error('Error fetching themes from backend:', error);
@@ -76,7 +81,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     if (!publicKey) return;
     
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3101'}/api/profile/themes`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3101'}/api/profile`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -88,7 +93,9 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       if (!response.ok) {
         console.error('Failed to save theme to backend:', response.statusText);
       } else {
-        console.log('Theme saved to backend successfully');
+        console.log('🎨 [THEME] Saved to backend:', themeData);
+        // Trigger game state refresh since customization is part of profile
+        window.dispatchEvent(new Event('profileUpdated'));
       }
     } catch (error) {
       console.error('Error saving theme to backend:', error);

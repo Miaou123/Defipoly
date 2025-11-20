@@ -38,14 +38,32 @@ export default function SpectatorPage() {
       if (!walletAddress) return;
       
       try {
-        // Fetch profile
-        const profiles = await getProfilesBatch([walletAddress]);
-        const profileData = profiles[walletAddress] || null;
-        console.log('🔍 [SPECTATOR] Fetched profile data for', walletAddress, ':', profileData);
-        console.log('🔍 [SPECTATOR] Custom backgrounds:', {
-          customBoardBackground: profileData?.customBoardBackground,
-          customPropertyCardBackground: profileData?.customPropertyCardBackground
-        });
+        // Fetch profile from backend API instead of localStorage
+        const profileResponse = await fetch(`${API_BASE_URL}/api/profile/${walletAddress}`);
+        let profileData = null;
+        
+        if (profileResponse.ok) {
+          profileData = await profileResponse.json();
+          console.log('🔍 [SPECTATOR] Fetched profile data from API for', walletAddress, ':', profileData);
+          console.log('🔍 [SPECTATOR] Custom backgrounds:', {
+            customBoardBackground: profileData?.customBoardBackground,
+            customPropertyCardBackground: profileData?.customPropertyCardBackground
+          });
+        } else {
+          console.warn('🔍 [SPECTATOR] Profile not found for', walletAddress);
+          // Create default profile structure
+          profileData = {
+            walletAddress,
+            username: null,
+            profilePicture: null,
+            cornerSquareStyle: 'property',
+            boardTheme: 'dark',
+            propertyCardTheme: 'dark',
+            customBoardBackground: null,
+            customPropertyCardBackground: null
+          };
+        }
+        
         setProfile(profileData);
 
         // Fetch stats

@@ -264,6 +264,17 @@ export function GameStateProvider({ children }: { children: React.ReactNode }) {
     };
   }, [socket, connected, publicKey, fetchGameState]);
 
+  // ========== PROFILE UPDATE LISTENER ==========
+  useEffect(() => {
+    const handleProfileUpdate = () => {
+      console.log('🎨 [GAMESTATE] Profile updated, refreshing game state...');
+      fetchGameState();
+    };
+
+    window.addEventListener('profileUpdated', handleProfileUpdate);
+    return () => window.removeEventListener('profileUpdated', handleProfileUpdate);
+  }, [fetchGameState]);
+
   // ========== HELPER FUNCTIONS ==========
   
   const getOwnership = useCallback((propertyId: number): PropertyOwnership | null => {

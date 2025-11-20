@@ -1,8 +1,12 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { getProfilesBatch, ProfileData } from '@/utils/profileStorage';
 import { TrophyIcon, HexagonBadge } from './icons/UIIcons';
+
+interface ProfileData {
+  username: string | null;
+  profilePicture: string | null;
+}
 
 interface LeaderboardEntry {
   rank: number;
@@ -49,11 +53,53 @@ export function Leaderboard() {
         console.log(`🏆 Found ${data.leaderboard.length} players`);
         setLeaderboardData(data);
         
-        // Fetch profiles for all wallet addresses
+        // Check if backend has a batch profiles endpoint, otherwise use localStorage
         const walletAddresses = data.leaderboard.map((entry) => entry.walletAddress);
         if (walletAddresses.length > 0) {
-          const profilesData = await getProfilesBatch(walletAddresses);
-          setProfiles(profilesData);
+          try {
+            // Try batch endpoint first
+            const batchResponse = await fetch(`${API_BASE_URL}/api/profiles/batch`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ wallets: walletAddresses })
+            });
+            
+            if (batchResponse.ok) {
+              const batchData = await batchResponse.json();
+              const profiles = batchData.profiles || {};
+              console.log('🏆 Fetched profiles via batch endpoint for', Object.keys(profiles).length, 'wallets');
+              
+              const profilesData: Record<string, ProfileData> = {};
+              for (const [wallet, profile] of Object.entries(profiles)) {
+                profilesData[wallet] = {
+                  username: (profile as any)?.username || null,
+                  profilePicture: (profile as any)?.profilePicture || null
+                };
+              }
+              setProfiles(profilesData);
+            } else {
+              // Fallback: just show wallet addresses without profiles
+              console.log('🏆 Batch endpoint not available, showing wallet addresses only');
+              const profilesData: Record<string, ProfileData> = {};
+              for (const wallet of walletAddresses) {
+                profilesData[wallet] = {
+                  username: null,
+                  profilePicture: null
+                };
+              }
+              setProfiles(profilesData);
+            }
+          } catch (error) {
+            console.warn('🏆 Failed to fetch profiles, showing wallet addresses only:', error);
+            const profilesData: Record<string, ProfileData> = {};
+            for (const wallet of walletAddresses) {
+              profilesData[wallet] = {
+                username: null,
+                profilePicture: null
+              };
+            }
+            setProfiles(profilesData);
+          }
         }
       } catch (error) {
         console.error('❌ Error fetching leaderboard:', error);

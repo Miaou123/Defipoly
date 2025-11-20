@@ -4,65 +4,21 @@ import { useWallet } from '@solana/wallet-adapter-react';
 import { useWalletModal } from '@solana/wallet-adapter-react-ui';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { getProfile } from '@/utils/profileStorage';
+import { useGameState } from '@/contexts/GameStateContext';
 
 export function ProfileWallet() {
   const { connected, publicKey, disconnect } = useWallet();
   const { setVisible } = useWalletModal();
   const router = useRouter();
   const [mounted, setMounted] = useState(false);
-  const [profileData, setProfileData] = useState<{ username: string | null; profilePicture: string | null }>({
-    username: null,
-    profilePicture: null,
-  });
-  const [loadingProfile, setLoadingProfile] = useState(false);
-
+  
+  // Use GameState instead of local storage
+  const gameState = useGameState();
+  
   // Prevent hydration mismatch
   useEffect(() => {
     setMounted(true);
   }, []);
-
-  // Load profile data
-  useEffect(() => {
-    if (publicKey && mounted) {
-      setLoadingProfile(true);
-      
-      getProfile(publicKey.toString())
-        .then(profile => {
-          setProfileData({
-            username: profile.username,
-            profilePicture: profile.profilePicture,
-          });
-        })
-        .catch(error => {
-          console.error('Error loading profile:', error);
-        })
-        .finally(() => {
-          setLoadingProfile(false);
-        });
-
-      // Listen for profile updates
-      const handleProfileUpdate = async () => {
-        try {
-          const updatedProfile = await getProfile(publicKey.toString());
-          setProfileData({
-            username: updatedProfile.username,
-            profilePicture: updatedProfile.profilePicture,
-          });
-        } catch (error) {
-          console.error('Error updating profile:', error);
-        }
-      };
-
-      window.addEventListener('storage', handleProfileUpdate);
-      window.addEventListener('profileUpdated', handleProfileUpdate);
-
-      return () => {
-        window.removeEventListener('storage', handleProfileUpdate);
-        window.removeEventListener('profileUpdated', handleProfileUpdate);
-      };
-    }
-  }, [publicKey, mounted]);
 
   const handleWalletClick = () => {
     if (connected) {
@@ -113,11 +69,11 @@ export function ProfileWallet() {
       >
         {/* Profile Picture */}
         <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center overflow-hidden flex-shrink-0">
-          {loadingProfile ? (
+          {gameState.loading ? (
             <span className="text-xs animate-pulse">⏳</span>
-          ) : profileData.profilePicture ? (
+          ) : gameState.profile.profilePicture ? (
             <img 
-              src={profileData.profilePicture} 
+              src={gameState.profile.profilePicture} 
               alt="Profile" 
               className="w-full h-full object-cover"
             />
@@ -130,10 +86,10 @@ export function ProfileWallet() {
         <div className="flex-1 min-w-0">
           <div className="text-xs text-purple-300">Profile</div>
           <div className="text-sm font-bold text-white truncate">
-            {loadingProfile ? (
+            {gameState.loading ? (
               'Loading...'
-            ) : profileData.username ? (
-              profileData.username
+            ) : gameState.profile.username ? (
+              gameState.profile.username
             ) : (
               'Set Username'
             )}

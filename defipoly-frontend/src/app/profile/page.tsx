@@ -7,6 +7,7 @@ import { getPropertyById } from '@/utils/constants';
 import { useNotification } from '@/contexts/NotificationContext';
 import { ProfileCustomization } from '@/components/ProfileCustomization';
 import { useTheme } from '@/contexts/ThemeContext';
+import { useGameState } from '@/contexts/GameStateContext';
 
 interface Activity {
   signature: string;
@@ -39,11 +40,15 @@ export default function ProfilePage() {
   const router = useRouter();
   const { showSuccess, showError } = useNotification();
   const themeContext = useTheme();
+  const gameState = useGameState();
   
-  const [username, setUsername] = useState('');
+  // Form state only
   const [editingUsername, setEditingUsername] = useState(false);
   const [tempUsername, setTempUsername] = useState('');
-  const [profilePicture, setProfilePicture] = useState<string | null>(null);
+  
+  // Use GameState for display data
+  const username = gameState.profile.username || '';
+  const profilePicture = gameState.profile.profilePicture;
   const [activities, setActivities] = useState<Activity[]>([]);
   const [loading, setLoading] = useState(true);
   const [leaderboardRank, setLeaderboardRank] = useState<number | null>(null);
@@ -69,7 +74,7 @@ export default function ProfilePage() {
     }
   }, [connected, publicKey, router]);
 
-  // Load username, profile picture, and stats
+  // Load stats and activities (profile data comes from GameState)
   useEffect(() => {
     if (!publicKey || !connected) return;
 
@@ -77,33 +82,21 @@ export default function ProfilePage() {
       const walletAddress = publicKey.toString();
 
       try {
-        // Fetch profile
-        const profileResponse = await fetch(`${API_BASE_URL}/api/profile/${walletAddress}`);
-        if (profileResponse.ok) {
-          const profileData = await profileResponse.json();
-          setUsername(profileData.username || '');
-          setProfilePicture(profileData.profilePicture || null);
-        }
-
-        // Fetch stats
-        const statsResponse = await fetch(`${API_BASE_URL}/api/stats/${walletAddress}`);
-        if (statsResponse.ok) {
-          const statsData = await statsResponse.json();
-          setStats({
-            walletAddress: statsData.walletAddress || walletAddress,
-            totalActions: statsData.totalActions || 0,
-            propertiesBought: statsData.propertiesBought || 0,
-            totalSpent: statsData.totalSpent || 0,
-            totalEarned: statsData.totalEarned || 0,
-            totalSlotsOwned: statsData.totalSlotsOwned || 0,
-            successfulSteals: statsData.successfulSteals || 0,
-            failedSteals: statsData.failedSteals || 0,
-            completedSets: statsData.completedSets || 0,
-            shieldsUsed: statsData.shieldsUsed || 0,
-            dailyIncome: statsData.dailyIncome || 0,
-            rewardsClaimed: statsData.rewardsClaimed || 0,
-          });
-        }
+        // Use stats from GameState
+        setStats({
+          walletAddress: gameState.stats.walletAddress || walletAddress,
+          totalActions: gameState.stats.totalActions,
+          propertiesBought: gameState.stats.propertiesBought,
+          totalSpent: gameState.stats.totalSpent,
+          totalEarned: gameState.stats.totalEarned,
+          totalSlotsOwned: gameState.stats.totalSlotsOwned,
+          successfulSteals: gameState.stats.successfulSteals,
+          failedSteals: gameState.stats.failedSteals,
+          completedSets: gameState.stats.completeSets,
+          shieldsUsed: gameState.stats.shieldsUsed,
+          dailyIncome: gameState.stats.dailyIncome,
+          rewardsClaimed: gameState.stats.rewardsClaimed,
+        });
 
         // Fetch leaderboard rank
         const leaderboardResponse = await fetch(`${API_BASE_URL}/api/leaderboard?limit=100`);
@@ -189,7 +182,8 @@ export default function ProfilePage() {
     };
 
     fetchData();
-  }, [publicKey, connected]);
+  }, [publicKey, connected, gameState.stats]);
+
 
   const handleSaveUsername = async () => {
     if (!publicKey) return;
@@ -208,6 +202,8 @@ export default function ProfilePage() {
         setUsername(tempUsername);
         setEditingUsername(false);
         showSuccess('Username Updated', 'Your username has been saved');
+        // Trigger profile update event
+        window.dispatchEvent(new Event('profileUpdated'));
       } else {
         showError('Update Failed', 'Failed to update username');
       }
@@ -287,9 +283,13 @@ export default function ProfilePage() {
               <div className="bg-purple-900/20 backdrop-blur-xl rounded-2xl border border-purple-500/20 p-6 overflow-y-auto">
                 <ProfileCustomization
                   profilePicture={profilePicture}
-                  setProfilePicture={setProfilePicture}
+                  setProfilePicture={(pic) => {
+                    // Profile picture updates will trigger GameState refresh via 'profileUpdated' event
+                  }}
                   username={username}
-                  setUsername={setUsername}
+                  setUsername={(name) => {
+                    // Username updates handled by handleSaveUsername 
+                  }}
                   editingUsername={editingUsername}
                   setEditingUsername={setEditingUsername}
                   tempUsername={tempUsername}

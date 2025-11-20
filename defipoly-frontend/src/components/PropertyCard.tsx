@@ -63,26 +63,69 @@ export function PropertyCard({ propertyId, onSelect, spectatorMode = false, spec
   const property = PROPERTIES.find(p => p.id === propertyId);
   if (!property) return null;
 
-  // Get game state from context
+  // Get game state from context (main mode) or local state (spectator mode)
   const gameState = useGameState();
-  const ownerships = gameState.ownerships;
+  const [spectatorOwnerships, setSpectatorOwnerships] = useState<any[]>([]);
+  
+  const ownerships = spectatorMode ? spectatorOwnerships : gameState.ownerships;
   const ownership = ownerships.find(o => o.propertyId === propertyId);
 
-  // Get cooldown helpers from game state
+  // Get cooldown helpers from game state (only works in main mode)
   const { 
     isSetOnCooldown, 
     getSetCooldownRemaining,
     getSetCooldown 
   } = gameState;
   
+  // For spectator mode, we disable cooldowns since they're wallet-specific
+  const spectatorIsSetOnCooldown = () => false;
+  const spectatorGetSetCooldownRemaining = () => 0;
+  const spectatorGetSetCooldown = () => null;
+  
+  const finalIsSetOnCooldown = spectatorMode ? spectatorIsSetOnCooldown : isSetOnCooldown;
+  const finalGetSetCooldownRemaining = spectatorMode ? spectatorGetSetCooldownRemaining : getSetCooldownRemaining;
+  const finalGetSetCooldown = spectatorMode ? spectatorGetSetCooldown : getSetCooldown;
+  
   const { isOnStealCooldown, stealCooldownRemaining } = useStealCooldownFromContext(propertyId);
   
   // Get cooldown info for this property's set
   const setId = property.setId;
-  const isOnCooldown = isSetOnCooldown(setId);
-  const cooldownRemaining = getSetCooldownRemaining(setId);
-  const cooldownData = getSetCooldown(setId);
+  const isOnCooldown = finalIsSetOnCooldown(setId);
+  const cooldownRemaining = finalGetSetCooldownRemaining(setId);
+  const cooldownData = finalGetSetCooldown(setId);
   const lastPurchasedPropertyId = cooldownData?.lastPurchasedPropertyId ?? null;
+  
+  // Fetch spectator ownership data
+  useEffect(() => {
+    if (!spectatorMode || !spectatorWallet) return;
+    
+    const fetchSpectatorData = async () => {
+      try {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3101'}/api/game-state/${spectatorWallet}`);
+        if (response.ok) {
+          const data = await response.json();
+          // Convert API format to frontend format
+          const convertedOwnerships = data.data.ownerships.map((o: any) => ({
+            player: spectatorWallet, // We don't need PublicKey for spectator mode
+            propertyId: o.propertyId,
+            slotsOwned: o.slotsOwned,
+            slotsShielded: o.slotsShielded,
+            purchaseTimestamp: { toNumber: () => o.purchaseTimestamp },
+            shieldExpiry: { toNumber: () => o.shieldExpiry },
+            shieldCooldownDuration: { toNumber: () => o.shieldCooldownDuration },
+            stealProtectionExpiry: { toNumber: () => o.stealProtectionExpiry },
+            bump: o.bump,
+          }));
+          setSpectatorOwnerships(convertedOwnerships);
+          console.log('🔍 [PropertyCard] Fetched spectator ownerships for', spectatorWallet, ':', convertedOwnerships.length);
+        }
+      } catch (error) {
+        console.error('Error fetching spectator ownership data:', error);
+      }
+    };
+    
+    fetchSpectatorData();
+  }, [spectatorMode, spectatorWallet]);
   
 
   // 🔍 DEBUG LOGGING
