@@ -15,6 +15,7 @@ const GapDetector = require('./src/services/gapDetector');
 const { router: wssMonitoringRouter, initMonitoring } = require('./src/routes/wssMonitoring');
 const { initSocketIO, getIO } = require('./src/services/socketService');
 const APICallCounter = require('./src/middleware/apiCallCounter');
+const crypto = require('crypto');
 const helmet = require('helmet');
 const multer = require('multer');
 
@@ -56,6 +57,11 @@ app.use(helmet({
   },
   crossOriginEmbedderPolicy: false,
 }));
+
+app.use((req, res, next) => {
+  req.id = crypto.randomUUID();
+  next();
+});
 
 // API call counter
 const apiCounter = new APICallCounter(50); 
@@ -172,24 +178,26 @@ app.get('/health', (req, res) => {
   });
 });
 
-// Security monitoring endpoints (IMPORTANT: Add authentication in production)
-app.get('/api/admin/rate-limit-stats', (req, res) => {
-  // TODO: Add authentication check here
-  // if (!req.isAuthenticated || !req.isAdmin) {
-  //   return res.status(403).json({ error: 'Unauthorized' });
-  // }
-  
-  getRateLimitStats(req, res);
-});
 
-app.post('/api/admin/unblock-ip', (req, res) => {
-  // TODO: Add authentication check here
-  // if (!req.isAuthenticated || !req.isAdmin) {
-  //   return res.status(403).json({ error: 'Unauthorized' });
-  // }
+// Admin authentication middleware
+const verifyAdmin = (req, res, next) => {
+  const adminKey = req.headers['x-admin-key'];
   
-  unblockIP(req, res);
-});
+  if (!process.env.ADMIN_KEY) {
+    return res.status(500).json({ error: 'Admin access not configured' });
+  }
+  
+  if (adminKey !== process.env.ADMIN_KEY) {
+    console.warn(`🚫 [ADMIN] Unauthorized access attempt from IP: ${req.ip}`);
+    return res.status(403).json({ error: 'Unauthorized' });
+  }
+  
+  next();
+};
+
+app.get('/api/admin/rate-limit-stats', verifyAdmin, getRateLimitStats);
+
+app.post('/api/admin/unblock-ip', verifyAdmin, unblockIP);
 
 // Mount API routes
 app.use('/api', routes);

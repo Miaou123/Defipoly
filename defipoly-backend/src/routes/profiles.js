@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { getProfile, updateProfile, getProfilesBatch, removeProfilePicture, updateThemePreferences } = require('../controllers/profileController');
-const { validateUsername } = require('../middleware/inputValidation');
+const { validateUsername } = require('../middleware/validation');
 const { uploadProfilePicture, uploadThemeBackground, deleteUpload } = require('../controllers/uploadController');
 const { verifyJWT, verifyWalletOwnership } = require('../middleware/jwtAuth');
 

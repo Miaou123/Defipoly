@@ -6,8 +6,15 @@
 const jwt = require('jsonwebtoken');
 const nacl = require('tweetnacl');
 const bs58 = require('bs58');
+require('dotenv').config();
 
-// JWT secret - MUST be in .env for production
+if (!process.env.JWT_SECRET) {
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error('❌ JWT_SECRET must be set in production environment');
+    }
+    console.warn('⚠️  WARNING: Using default JWT_SECRET. Set JWT_SECRET in .env for production!');
+  }
+
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
 const JWT_EXPIRY = '24h'; // Token valid for 24 hours
 
