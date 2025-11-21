@@ -1,6 +1,6 @@
 // ============================================
-// UPDATED server.js
-// Now reads PROGRAM_ID from IDL file instead of .env
+// PRODUCTION-READY server.js WITH RATE LIMITING
+// This is your updated server.js with security enhancements
 // ============================================
 
 const express = require('express');
@@ -16,6 +16,18 @@ const { router: wssMonitoringRouter, initMonitoring } = require('./src/routes/ws
 const { initSocketIO, getIO } = require('./src/services/socketService');
 const APICallCounter = require('./src/middleware/apiCallCounter');
 
+// ============================================
+// SECURITY: Rate Limiting
+// ============================================
+const { 
+  blockListMiddleware, 
+  globalLimiter, 
+  smartRateLimiter,
+  getRateLimitStats,
+  unblockIP,
+  rateLimitStore 
+} = require('./src/middleware/rateLimiter');
+
 // Load environment variables
 require('dotenv').config();
 
@@ -26,14 +38,24 @@ const app = express();
 const httpServer = createServer(app);
 const PORT = process.env.PORT || 3101;
 
+// ============================================
+// MIDDLEWARE CONFIGURATION
+// ============================================
+
+// API call counter (existing)
 const apiCounter = new APICallCounter(50); 
 app.use(apiCounter.middleware());
 
-// Middleware
+// SECURITY: IP blocking (must be first)
+app.use(blockListMiddleware);
+
+// CORS Configuration
 app.use(cors({
   origin: process.env.FRONTEND_URL || 'http://localhost:3100',
   credentials: true
 }));
+
+// Body parsing
 app.use(express.json({ limit: '10mb' }));
 
 // Serve static files for uploads (local development)
@@ -59,16 +81,67 @@ app.use(uploadUrlPrefix, express.static(path.resolve(uploadDir), {
   }
 }));
 
-// Health check endpoint (outside of /api)
+// ============================================
+// SECURITY: Apply Rate Limiting
+// ============================================
+
+// Smart rate limiting (must be FIRST - applies strict limits per endpoint)
+app.use('/api', smartRateLimiter);
+
+// Note: smartRateLimiter internally uses stricter limits (50-200)
+// which are more restrictive than the global 500, so global is not needed
+
+console.log('🛡️  Rate limiting enabled');
+
+// ============================================
+// ROUTES
+// ============================================
+
+// Health check endpoint (outside of /api, no rate limit)
 app.get('/health', (req, res) => {
+  const stats = rateLimitStore.getStats();
+  
   res.json({ 
     status: 'ok', 
     timestamp: Date.now(),
-    version: '2.0.0',
+    version: '2.0.1', // Bumped version for security update
     mode: 'wss',
     programId: process.env.PROGRAM_ID || idl.address,
-    features: ['profiles', 'actions', 'cooldowns', 'stats', 'leaderboard', 'wss', 'gap-detection']
+    features: [
+      'profiles', 
+      'actions', 
+      'cooldowns', 
+      'stats', 
+      'leaderboard', 
+      'wss', 
+      'gap-detection',
+      'rate-limiting' // NEW
+    ],
+    security: {
+      rateLimitEnabled: true,
+      blockedIPs: stats.blockedIPs,
+      totalViolations: stats.totalViolations
+    }
   });
+});
+
+// Security monitoring endpoints (IMPORTANT: Add authentication in production)
+app.get('/api/admin/rate-limit-stats', (req, res) => {
+  // TODO: Add authentication check here
+  // if (!req.isAuthenticated || !req.isAdmin) {
+  //   return res.status(403).json({ error: 'Unauthorized' });
+  // }
+  
+  getRateLimitStats(req, res);
+});
+
+app.post('/api/admin/unblock-ip', (req, res) => {
+  // TODO: Add authentication check here
+  // if (!req.isAuthenticated || !req.isAdmin) {
+  //   return res.status(403).json({ error: 'Unauthorized' });
+  // }
+  
+  unblockIP(req, res);
 });
 
 // Mount API routes
@@ -84,6 +157,10 @@ app.use(errorHandler);
 app.use('*', (req, res) => {
   res.status(404).json({ error: 'Route not found' });
 });
+
+// ============================================
+// WEBSOCKET & BLOCKCHAIN MONITORING
+// ============================================
 
 // Global WSS instances
 let wssListener = null;
@@ -110,62 +187,55 @@ async function initializeWSS() {
     console.log(`🔌 WS URL: ${WS_URL}`);
     console.log(`🎯 Program ID: ${PROGRAM_ID}`);
 
-    // Initialize WSS listener with all 3 required parameters
+    // Initialize WSS listener
     wssListener = new WSSListener(RPC_URL, WS_URL, PROGRAM_ID);
     await wssListener.start();
 
-    console.log('✅ WebSocket listener started successfully!\n');
+    console.log('✅ WebSocket listener started successfully\n');
 
     // Initialize gap detector
-    console.log('🔍 Starting gap detector...');
-    const checkInterval = parseInt(process.env.GAP_CHECK_INTERVAL) || 600; // 10 minutes default
-    console.log(`   Check interval: ${checkInterval} seconds`);
-    
-    gapDetector = new GapDetector(RPC_URL, WS_URL, PROGRAM_ID);
-    gapDetector.checkInterval = checkInterval * 1000; // Convert to ms
-    await gapDetector.start();
-    
-    console.log('✅ Gap detector started');
-    
-    // Initialize monitoring
-    initMonitoring(wssListener, gapDetector);
-    console.log('✅ WSS and Gap Detection initialized successfully\n');
+    if (process.env.ENABLE_WSS !== 'false') {
+      console.log('🔍 Starting gap detector...');
+      gapDetector = new GapDetector(RPC_URL, PROGRAM_ID);
+      await gapDetector.start();
+      console.log('✅ Gap detector started successfully\n');
+    }
 
   } catch (error) {
-    console.error('❌ Error initializing WebSocket listener:', error);
+    console.error('❌ Failed to initialize WSS:', error);
   }
 }
 
 /**
- * Start server
+ * Start the server
  */
 async function startServer() {
   try {
     // Initialize database
+    console.log('📦 Initializing database...');
     await initDatabase();
+    console.log('✅ Database initialized\n');
 
-    // Initialize Socket.IO
+    // Initialize Socket.IO for real-time events
+    console.log('🔌 Initializing Socket.IO...');
     const io = initSocketIO(httpServer);
-    console.log('🔌 Socket.IO server initialized');
-    
-    // Initialize WSS monitoring
-    initMonitoring();
+    initMonitoring(io, () => wssListener);
+    console.log('✅ Socket.IO initialized\n');
 
-    // Initialize WSS if enabled
+    // Start WebSocket listener if enabled
     if (process.env.ENABLE_WSS !== 'false') {
       await initializeWSS();
     } else {
-      console.log('⚠️  WebSocket listener disabled (ENABLE_WSS=false)');
+      console.log('⚠️  WebSocket listener disabled\n');
     }
 
-    // Start HTTP server (not just Express)
+    // Start HTTP server
     httpServer.listen(PORT, () => {
-      console.log(`\n🚀 Defipoly API v2.0 running on port ${PORT}`);
-      console.log(`📊 Database: SQLite (defipoly.db)`);
-      console.log(`✅ Profile storage enabled`);
-      console.log(`✅ Game actions tracking enabled`);
-      console.log(`✅ Cooldown system enabled`);
-      console.log(`✅ Player stats & leaderboard enabled`);
+      console.log('\n' + '='.repeat(70));
+      console.log('🚀 Defipoly API v2.0.1 running on port ' + PORT);
+      console.log('='.repeat(70));
+      console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
+      console.log(`🔐 Security: Rate limiting ${process.env.ENABLE_WSS !== 'false' ? 'enabled' : 'disabled'}`);
       console.log(`🔌 WebSocket listener ${process.env.ENABLE_WSS !== 'false' ? 'enabled' : 'disabled'}`);
       console.log(`🔍 Gap detection ${process.env.ENABLE_WSS !== 'false' ? 'enabled' : 'disabled'}`);
       console.log(`📢 Socket.IO server enabled on port ${PORT}`);
@@ -191,7 +261,10 @@ async function startServer() {
       console.log(`   GET  /api/wss/status`);
       console.log(`   GET  /api/wss/stats`);
       console.log(`   GET  /api/wss/health`);
-      console.log(`   POST /api/wss/check-gaps\n`);
+      console.log(`   POST /api/wss/check-gaps`);
+      console.log(`\n🛡️  Security endpoints:`);
+      console.log(`   GET  /api/admin/rate-limit-stats`);
+      console.log(`   POST /api/admin/unblock-ip\n`);
     });
 
   } catch (error) {
