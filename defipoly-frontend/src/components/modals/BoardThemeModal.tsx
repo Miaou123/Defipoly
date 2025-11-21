@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { useNotification } from '@/contexts/NotificationContext';
+import { authenticatedFetch } from '@/contexts/AuthContext';
 
 interface BoardThemeModalProps {
   isOpen: boolean;
@@ -60,7 +61,7 @@ export function BoardThemeModal({
         formData.append('oldBackgroundUrl', customBackground);
       }
 
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3101'}/api/profile/upload/theme`, {
+      const response = await authenticatedFetch(`${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3101'}/api/profile/upload/theme`, {
         method: 'POST',
         body: formData,
       });
@@ -103,7 +104,7 @@ export function BoardThemeModal({
   const handleRemoveCustom = async () => {
     if (customBackground && customBackground.startsWith('/uploads/') && publicKey) {
       try {
-        await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3101'}/api/profile/upload/delete`, {
+        await authenticatedFetch(`${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3101'}/api/profile/upload/delete`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({

@@ -7,6 +7,7 @@
 
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
+import { jwtDecode } from 'jwt-decode';
 import bs58 from 'bs58';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3101';
@@ -34,12 +35,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  // Auto-logout when wallet disconnects
   useEffect(() => {
-    if (!connected) {
-      logout();
+    const savedToken = localStorage.getItem('defipoly_auth_token');
+    
+    if (savedToken && publicKey) {
+      try {
+        const decoded = jwtDecode<{ wallet: string }>(savedToken);
+        
+        // If wallet changed, logout
+        if (decoded.wallet !== publicKey.toString()) {
+          logout();
+        }
+      } catch (error) {
+        // Invalid token
+        logout();
+      }
     }
-  }, [connected]);
+  }, [publicKey]);
 
   const login = useCallback(async () => {
     if (!publicKey || !signMessage) {
@@ -109,18 +121,24 @@ export function useAuth() {
 // ============================================
 
 export async function authenticatedFetch(url: string, options: RequestInit = {}) {
-  const token = localStorage.getItem('defipoly_auth_token');
-  
-  if (!token) {
-    throw new Error('Not authenticated');
-  }
+    const token = localStorage.getItem('defipoly_auth_token');
 
-  return fetch(url, {
-    ...options,
-    headers: {
-      ...options.headers,
-      'Authorization': `Bearer ${token}`,
-      'Content-Type': 'application/json',
-    },
-  });
+    if (!token) {
+        throw new Error('Not authenticated');
+    }
+
+    const headers: any = {
+        ...options.headers,
+        'Authorization': `Bearer ${token}`,
+    };
+
+    // Don't set Content-Type for FormData (browser sets it with boundary)
+    if (!(options.body instanceof FormData)) {
+        headers['Content-Type'] = 'application/json';
+    }
+
+    return fetch(url, {
+        ...options,
+        headers,
+    });
 }

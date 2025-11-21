@@ -135,21 +135,27 @@ const verifyJWT = (req, res, next) => {
  * Verify wallet ownership (use after verifyJWT)
  */
 const verifyWalletOwnership = (paramName = 'wallet') => {
-  return (req, res, next) => {
-    const targetWallet = req.params[paramName] || req.body[paramName];
-    
-    if (!req.authenticatedWallet) {
-      return res.status(401).json({ error: 'Not authenticated' });
-    }
-    
-    if (targetWallet !== req.authenticatedWallet) {
-      console.warn(`🚫 [AUTH] Wallet mismatch: ${req.authenticatedWallet} tried to access ${targetWallet}`);
-      return res.status(403).json({ error: 'Forbidden: You can only modify your own data' });
-    }
-    
-    next();
+    return (req, res, next) => {
+      // Check both req.body and req.params for wallet
+      const targetWallet = req.params[paramName] || req.body[paramName] || req.body.wallet;
+      
+      if (!req.authenticatedWallet) {
+        return res.status(401).json({ error: 'Not authenticated' });
+      }
+      
+      if (!targetWallet) {
+        console.warn(`🚫 [AUTH] No target wallet found in request from ${req.authenticatedWallet}`);
+        return res.status(400).json({ error: 'Wallet address required in request' });
+      }
+      
+      if (targetWallet !== req.authenticatedWallet) {
+        console.warn(`🚫 [AUTH] Wallet mismatch: ${req.authenticatedWallet} tried to access ${targetWallet}`);
+        return res.status(403).json({ error: 'Forbidden: You can only modify your own data' });
+      }
+      
+      next();
+    };
   };
-};
 
 /**
  * Optional JWT auth - doesn't fail if no token provided

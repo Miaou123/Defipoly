@@ -15,6 +15,10 @@ const uploadProfilePicture = [
         return res.status(400).json({ error: 'Wallet address required' });
       }
 
+      if (wallet !== req.authenticatedWallet) {
+        return res.status(403).json({ error: 'Forbidden' });
+      }
+
       if (!req.file) {
         return res.status(400).json({ error: 'No file uploaded' });
       }
@@ -91,6 +95,10 @@ const uploadThemeBackground = [
       if (!wallet) {
         console.error('No wallet address provided');
         return res.status(400).json({ error: 'Wallet address required' });
+      }
+
+      if (wallet !== req.authenticatedWallet) {
+        return res.status(403).json({ error: 'Forbidden' });
       }
 
       if (!themeType || !['board', 'card'].includes(themeType)) {
@@ -196,6 +204,10 @@ const deleteUpload = async (req, res) => {
     const { wallet, fileUrl } = req.body;
     
     console.log('Delete request:', { wallet, fileUrl });
+
+    if (wallet !== req.authenticatedWallet) {
+      return res.status(403).json({ error: 'Forbidden' });
+    }
     
     if (!wallet || !fileUrl) {
       return res.status(400).json({ error: 'Wallet and file URL required' });

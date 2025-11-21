@@ -1,3 +1,5 @@
+const sanitizeHtml = require('sanitize-html');
+
 const validateWallet = (req, res, next) => {
   const wallet = req.params.wallet || req.body.wallet;
   
@@ -12,6 +14,28 @@ const validateWallet = (req, res, next) => {
   
   next();
 };
+
+const validateUsername = (req, res, next) => {
+  const { username } = req.body;
+  
+  if (username !== undefined && username !== null) {
+    // Max length
+    if (username.length > 50) {
+      return res.status(400).json({ error: 'Username too long (max 50 chars)' });
+    }
+    
+    // Only alphanumeric, spaces, underscore, hyphen
+    if (!/^[a-zA-Z0-9 _-]+$/.test(username)) {
+      return res.status(400).json({ error: 'Username contains invalid characters' });
+    }
+    
+    // Strip any HTML
+    req.body.username = sanitizeHtml(username, { allowedTags: [], allowedAttributes: {} });
+  }
+  
+  next();
+};
+
 
 const validateActionData = (req, res, next) => {
   const { txSignature, actionType, playerAddress, blockTime } = req.body;
@@ -75,5 +99,6 @@ module.exports = {
   validateActionData,
   validateSetId,
   validatePropertyId,
-  validatePagination
+  validatePagination,
+  validateUsername,
 };

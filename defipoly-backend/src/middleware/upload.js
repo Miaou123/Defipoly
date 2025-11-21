@@ -56,10 +56,18 @@ const fileFilter = (req, file, cb) => {
 
 // Create multer upload instance
 const upload = multer({
-  storage: storage,
-  fileFilter: fileFilter,
+  storage: multerStorage,
   limits: {
-    fileSize: FILE_SIZE_LIMITS.board // Use max limit, we'll check specific limits later
+    fileSize: 5 * 1024 * 1024 // 5MB limit
+  },
+  fileFilter: (req, file, cb) => {
+    const allowedMimeTypes = ['image/jpeg', 'image/png'];
+    
+    if (!allowedMimeTypes.includes(file.mimetype)) {
+      return cb(new Error('Invalid file type. Only JPG and PNG allowed.'), false);
+    }
+    
+    cb(null, true);
   }
 });
 

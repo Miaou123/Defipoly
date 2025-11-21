@@ -8,6 +8,7 @@ import { PropertyThemeModal } from '@/components/modals/PropertyThemeModal';
 import { getBoardTheme, getPropertyCardTheme } from '@/utils/themes';
 import { clearProfileCache } from '@/utils/profileStorage';
 import { Edit3, Camera } from 'lucide-react';
+import { authenticatedFetch } from '@/contexts/AuthContext';
 
 interface ProfileCustomizationProps {
   // Profile picture props
@@ -107,7 +108,7 @@ export function ProfileCustomization({
       formData.append('wallet', publicKey.toString());
       formData.append('uploadType', 'profile');
       
-      const response = await fetch(`${API_BASE_URL}/api/profile/upload/picture`, {
+      const response = await authenticatedFetch(`${API_BASE_URL}/api/profile/upload/picture`, {
         method: 'POST',
         body: formData,
       });

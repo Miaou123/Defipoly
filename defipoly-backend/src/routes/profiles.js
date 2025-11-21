@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { getProfile, updateProfile, getProfilesBatch, removeProfilePicture, updateThemePreferences } = require('../controllers/profileController');
+const { validateUsername } = require('../middleware/inputValidation');
 const { uploadProfilePicture, uploadThemeBackground, deleteUpload } = require('../controllers/uploadController');
 const { verifyJWT, verifyWalletOwnership } = require('../middleware/jwtAuth');
 
@@ -11,16 +12,16 @@ router.get('/:wallet', getProfile);
 router.post('/batch', getProfilesBatch);
 
 // POST /api/profile - PROTECTED
-router.post('/', verifyJWT, verifyWalletOwnership('wallet'), updateProfile);
+router.post('/', verifyJWT, verifyWalletOwnership('wallet'), validateUsername, updateProfile);
 
-// POST /api/profile/upload/picture - PROTECTED
-router.post('/upload/picture', verifyJWT, verifyWalletOwnership('wallet'), uploadProfilePicture);
+// POST /api/profile/upload/picture - PROTECTED (no wallet ownership check - done in controller)
+router.post('/upload/picture', verifyJWT, uploadProfilePicture);
 
-// POST /api/profile/upload/theme - PROTECTED
-router.post('/upload/theme', verifyJWT, verifyWalletOwnership('wallet'), uploadThemeBackground);
+// POST /api/profile/upload/theme - PROTECTED (no wallet ownership check - done in controller)
+router.post('/upload/theme', verifyJWT, uploadThemeBackground);
 
-// POST /api/profile/upload/delete - PROTECTED
-router.post('/upload/delete', verifyJWT, verifyWalletOwnership('wallet'), deleteUpload);
+// POST /api/profile/upload/delete - PROTECTED (no wallet ownership check - done in controller)
+router.post('/upload/delete', verifyJWT, deleteUpload);
 
 // DELETE /api/profile/:wallet/picture - PROTECTED
 router.delete('/:wallet/picture', verifyJWT, verifyWalletOwnership('wallet'), removeProfilePicture);
