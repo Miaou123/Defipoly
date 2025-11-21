@@ -6,6 +6,7 @@
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3101';
 
 export interface ProfileData {
+  walletAddress?: string;
   username: string | null;
   profilePicture: string | null;
   cornerSquareStyle: 'property' | 'profile' | null;

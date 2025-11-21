@@ -2,11 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import { TrophyIcon, HexagonBadge } from './icons/UIIcons';
-
-interface ProfileData {
-  username: string | null;
-  profilePicture: string | null;
-}
+import { ProfileData } from '@/utils/profileStorage';
+import { setCachedSpectator } from '@/utils/spectatorCache';
 
 interface LeaderboardEntry {
   rank: number;
@@ -73,10 +70,50 @@ export function Leaderboard() {
               for (const [wallet, profile] of Object.entries(profiles)) {
                 profilesData[wallet] = {
                   username: (profile as any)?.username || null,
-                  profilePicture: (profile as any)?.profilePicture || null
+                  profilePicture: (profile as any)?.profilePicture || null,
+                  cornerSquareStyle: (profile as any)?.cornerSquareStyle || 'property',
+                  boardTheme: (profile as any)?.boardTheme || 'dark',
+                  propertyCardTheme: (profile as any)?.propertyCardTheme || 'dark',
+                  customBoardBackground: (profile as any)?.customBoardBackground || null,
+                  customPropertyCardBackground: (profile as any)?.customPropertyCardBackground || null,
+                  lastUpdated: (profile as any)?.updatedAt || 0
                 };
               }
               setProfiles(profilesData);
+              // ✅ Pre-populate spectator cache
+              data.leaderboard.forEach((entry) => {
+                const profile = profiles[entry.walletAddress];
+                if (profile) {
+                  setCachedSpectator(
+                    entry.walletAddress,
+                    {
+                      walletAddress: entry.walletAddress,
+                      username: (profile as any)?.username || null,
+                      profilePicture: (profile as any)?.profilePicture || null,
+                      cornerSquareStyle: (profile as any)?.cornerSquareStyle || 'property',
+                      boardTheme: (profile as any)?.boardTheme || 'dark',
+                      propertyCardTheme: (profile as any)?.propertyCardTheme || 'dark',
+                      customBoardBackground: (profile as any)?.customBoardBackground || null,
+                      customPropertyCardBackground: (profile as any)?.customPropertyCardBackground || null,
+                      lastUpdated: (profile as any)?.updatedAt || 0
+                    },
+                    {
+                      walletAddress: entry.walletAddress,
+                      totalActions: 0,
+                      propertiesBought: entry.propertiesBought || 0,
+                      totalSpent: 0,
+                      totalEarned: entry.totalEarned || 0,
+                      totalSlotsOwned: 0,
+                      successfulSteals: entry.successfulSteals || 0,
+                      failedSteals: 0,
+                      completedSets: entry.completeSets || 0,
+                      shieldsUsed: entry.shieldsActivated || 0,
+                      dailyIncome: 0
+                    }
+                  );
+                }
+              });
+              console.log(`💾 Pre-cached ${data.leaderboard.length} spectator profiles`);
             } else {
               // Fallback: just show wallet addresses without profiles
               console.log('🏆 Batch endpoint not available, showing wallet addresses only');
@@ -84,7 +121,13 @@ export function Leaderboard() {
               for (const wallet of walletAddresses) {
                 profilesData[wallet] = {
                   username: null,
-                  profilePicture: null
+                  profilePicture: null,
+                  cornerSquareStyle: 'property',
+                  boardTheme: 'dark',
+                  propertyCardTheme: 'dark',
+                  customBoardBackground: null,
+                  customPropertyCardBackground: null,
+                  lastUpdated: 0
                 };
               }
               setProfiles(profilesData);
@@ -95,7 +138,13 @@ export function Leaderboard() {
             for (const wallet of walletAddresses) {
               profilesData[wallet] = {
                 username: null,
-                profilePicture: null
+                profilePicture: null,
+                cornerSquareStyle: 'property',
+                boardTheme: 'dark',
+                propertyCardTheme: 'dark',
+                customBoardBackground: null,
+                customPropertyCardBackground: null,
+                lastUpdated: 0
               };
             }
             setProfiles(profilesData);
@@ -110,11 +159,6 @@ export function Leaderboard() {
     };
 
     fetchLeaderboard();
-    
-    // Refresh every 30 seconds
-    const interval = setInterval(fetchLeaderboard, 30000);
-    
-    return () => clearInterval(interval);
   }, []);
 
   const formatAddress = (address: string) => {

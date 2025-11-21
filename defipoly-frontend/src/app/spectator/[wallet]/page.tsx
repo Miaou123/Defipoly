@@ -6,6 +6,7 @@ import { Board } from '@/components/Board';
 import { Leaderboard } from '@/components/Leaderboard';
 import { LiveFeed } from '@/components/LiveFeed';
 import { getProfilesBatch, ProfileData } from '@/utils/profileStorage';
+import { getCachedSpectator, setCachedSpectator } from '@/utils/spectatorCache';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3101';
 
@@ -32,26 +33,40 @@ export default function SpectatorPage() {
   const [stats, setStats] = useState<PlayerStats | null>(null);
   const [leaderboardRank, setLeaderboardRank] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
+  const [spectatorOwnerships, setSpectatorOwnerships] = useState<any[]>([])
 
   useEffect(() => {
     const fetchData = async () => {
       if (!walletAddress) return;
+  
+      // ✅ Check shared cache first
+      const cached = getCachedSpectator(walletAddress);
+      
+      if (cached) {
+        console.log('✅ [SPECTATOR CACHE HIT] Using pre-cached data from Leaderboard');
+        setProfile(cached.profile);
+        setStats(cached.stats);
+        setSpectatorOwnerships(cached.ownerships || []); 
+        setLoading(false);
+        return;
+      }
+  
+      console.log('🔍 [SPECTATOR CACHE MISS] Fetching fresh data (direct URL access)');
       
       try {
-        // Fetch profile from backend API instead of localStorage
-        const profileResponse = await fetch(`${API_BASE_URL}/api/profile/${walletAddress}`);
+        // Only fetch 2 endpoints in parallel (removed leaderboard call)
+        const [profileResponse, statsResponse] = await Promise.all([
+          fetch(`${API_BASE_URL}/api/profile/${walletAddress}`),
+          fetch(`${API_BASE_URL}/api/stats/${walletAddress}`)
+        ]);
+        
         let profileData = null;
         
         if (profileResponse.ok) {
           profileData = await profileResponse.json();
-          console.log('🔍 [SPECTATOR] Fetched profile data from API for', walletAddress, ':', profileData);
-          console.log('🔍 [SPECTATOR] Custom backgrounds:', {
-            customBoardBackground: profileData?.customBoardBackground,
-            customPropertyCardBackground: profileData?.customPropertyCardBackground
-          });
+          console.log('✅ [SPECTATOR] Profile fetched');
         } else {
-          console.warn('🔍 [SPECTATOR] Profile not found for', walletAddress);
-          // Create default profile structure
+          console.warn('⚠️ [SPECTATOR] Profile not found, using defaults');
           profileData = {
             walletAddress,
             username: null,
@@ -64,37 +79,27 @@ export default function SpectatorPage() {
           };
         }
         
-        setProfile(profileData);
-
-        // Fetch stats
-        const statsResponse = await fetch(`${API_BASE_URL}/api/stats/${walletAddress}`);
+        let statsData = null;
         if (statsResponse.ok) {
-          const statsData = await statsResponse.json();
-          setStats(statsData);
+          statsData = await statsResponse.json();
+          console.log('✅ [SPECTATOR] Stats fetched');
         }
-
-        // Fetch leaderboard to get user's rank
-        try {
-          const leaderboardResponse = await fetch(`${API_BASE_URL}/api/leaderboard?limit=100`);
-          if (leaderboardResponse.ok) {
-            const leaderboardData = await leaderboardResponse.json();
-            const userEntry = leaderboardData.leaderboard.find(
-              (entry: any) => entry.walletAddress === walletAddress
-            );
-            if (userEntry) {
-              setLeaderboardRank(userEntry.rank);
-            }
-          }
-        } catch (error) {
-          console.error('Error fetching leaderboard rank:', error);
-        }
+  
+        // ✅ Cache for future visits
+        setCachedSpectator(walletAddress, profileData, statsData);
+        console.log('💾 [SPECTATOR] Data cached for 30s');
+        
+        setProfile(profileData);
+        setStats(statsData);
+        setSpectatorOwnerships(ownershipsData);
+  
       } catch (error) {
-        console.error('Error fetching data:', error);
+        console.error('❌ [SPECTATOR] Error fetching data:', error);
       } finally {
         setLoading(false);
       }
     };
-
+  
     fetchData();
   }, [walletAddress]);
 
@@ -283,6 +288,7 @@ export default function SpectatorPage() {
             onSelectProperty={() => {}}
             spectatorMode={true}
             spectatorWallet={walletAddress}
+            spectatorOwnerships={spectatorOwnerships} 
             boardTheme={profile?.boardTheme || 'dark'}
             propertyCardTheme={profile?.propertyCardTheme || 'default'}
             profilePicture={profile?.profilePicture || null}

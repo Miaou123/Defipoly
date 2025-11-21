@@ -19,6 +19,7 @@ interface PropertyCardProps {
   onSelect: (propertyId: number) => void;
   spectatorMode?: boolean;
   spectatorWallet?: string;
+  spectatorOwnerships?: any[];
   theme?: PropertyCardTheme;
   customPropertyCardBackground?: string | null;
   modalView?: boolean;
@@ -29,6 +30,7 @@ export function PropertyCard({
   onSelect, 
   spectatorMode = false, 
   spectatorWallet, 
+  spectatorOwnerships = [],
   theme, 
   customPropertyCardBackground, 
   modalView = false 
@@ -55,9 +57,6 @@ export function PropertyCard({
   // ✅ Get everything from GameStateContext
   const gameState = useGameState();
   
-  // For spectator mode, fetch separately
-  const [spectatorOwnerships, setSpectatorOwnerships] = useState<any[]>([]);
-  
   const ownerships = spectatorMode ? spectatorOwnerships : gameState.ownerships;
   const ownership = ownerships.find(o => o.propertyId === propertyId);
 
@@ -77,36 +76,6 @@ export function PropertyCard({
   // Check if this specific property is on cooldown
   const isThisPropertyOnCooldown = finalIsPropertyOnCooldown(propertyId);
   const isOnStealCooldown = finalIsStealOnCooldown(propertyId);
-  
-  // Fetch spectator ownership data
-  useEffect(() => {
-    if (!spectatorMode || !spectatorWallet) return;
-    
-    const fetchSpectatorData = async () => {
-      try {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3101'}/api/game-state/${spectatorWallet}`);
-        if (response.ok) {
-          const data = await response.json();
-          const convertedOwnerships = data.data.ownerships.map((o: any) => ({
-            player: spectatorWallet,
-            propertyId: o.propertyId,
-            slotsOwned: o.slotsOwned,
-            slotsShielded: o.slotsShielded,
-            purchaseTimestamp: { toNumber: () => o.purchaseTimestamp },
-            shieldExpiry: { toNumber: () => o.shieldExpiry },
-            shieldCooldownDuration: { toNumber: () => o.shieldCooldownDuration },
-            stealProtectionExpiry: { toNumber: () => o.stealProtectionExpiry },
-            bump: o.bump,
-          }));
-          setSpectatorOwnerships(convertedOwnerships);
-        }
-      } catch (error) {
-        console.error('Error fetching spectator ownership data:', error);
-      }
-    };
-    
-    fetchSpectatorData();
-  }, [spectatorMode, spectatorWallet]);
 
   // Determine which cooldowns are active (only show in normal mode)
   const activeCooldowns = [];
