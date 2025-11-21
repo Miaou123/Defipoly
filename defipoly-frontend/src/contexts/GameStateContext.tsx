@@ -6,6 +6,7 @@ import { PublicKey } from '@solana/web3.js';
 import BN from 'bn.js';
 import { useWebSocket } from './WebSocketContext';
 import { PROPERTIES } from '@/utils/constants';
+import { useAuth, authenticatedFetch } from '@/contexts/AuthContext';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3101';
 
@@ -113,6 +114,8 @@ const GameStateContext = createContext<GameStateContextValue | null>(null);
 export function GameStateProvider({ children }: { children: React.ReactNode }) {
   const { publicKey } = useWallet();
   const { socket, connected } = useWebSocket();
+  const { token, isAuthenticated, login } = useAuth();
+
   
   const [gameState, setGameState] = useState<GameState>({
     ownerships: [],
@@ -239,22 +242,21 @@ export function GameStateProvider({ children }: { children: React.ReactNode }) {
 
   // ========== UPDATE PROFILE ==========
   const updateProfile = useCallback(async (updates: Partial<ProfileData>): Promise<boolean> => {
-    if (!publicKey) return false;
-
+    if (!publicKey || !isAuthenticated) return false;
+  
     try {
-      const response = await fetch(`${API_BASE_URL}/api/profile`, {
+      const response = await authenticatedFetch(`${API_BASE_URL}/api/profile`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           wallet: publicKey.toString(),
           ...updates,
         }),
       });
-
+  
       if (!response.ok) {
         throw new Error('Failed to update profile');
       }
-
+  
       // Update local state immediately for better UX
       setGameState(prev => ({
         ...prev,
@@ -263,18 +265,24 @@ export function GameStateProvider({ children }: { children: React.ReactNode }) {
           ...updates,
         },
       }));
-
+  
       return true;
     } catch (error) {
       console.error('Error updating profile:', error);
       return false;
     }
-  }, [publicKey]);
+  }, [publicKey, isAuthenticated]);
 
   // ========== INITIAL LOAD ==========
   useEffect(() => {
     fetchGameState();
   }, [fetchGameState]);
+
+  useEffect(() => {
+    if (publicKey && !isAuthenticated) {
+      login().catch(console.error);
+    }
+  }, [publicKey, isAuthenticated, login]);
 
   // ========== WEBSOCKET UPDATES ==========
   useEffect(() => {

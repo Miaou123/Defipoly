@@ -7,12 +7,13 @@ const {
   getRecentActions, 
   getPropertyActions 
 } = require('../controllers/actionsController');
+const { verifyJWT } = require('../middleware/jwtAuth');
 
 // POST /api/actions
-router.post('/', storeAction);
+router.post('/', verifyJWT, storeAction);
 
 // POST /api/actions/batch
-router.post('/batch', storeActionsBatch);
+router.post('/batch', verifyJWT, storeActionsBatch);
 
 // GET /api/actions/player/:wallet
 router.get('/player/:wallet', getPlayerActions);

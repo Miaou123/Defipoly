@@ -23,6 +23,9 @@ router.use('/properties', propertiesRouter);
 router.use('/steal-cooldown', stealCooldownRouter);
 router.use('/game-state', gameStateRouter);
 
+
+const authRouter = require('./auth');
+router.use('/auth', authRouter);
 // Special routes that need custom paths
 const { getPlayerOwnership } = require('../controllers/statsController');
 router.get('/ownership/:wallet', getPlayerOwnership);
