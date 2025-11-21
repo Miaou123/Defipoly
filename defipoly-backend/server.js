@@ -47,15 +47,17 @@ const PORT = process.env.PORT || 3101;
 
 // SECURITY: Helmet (must be first - sets security headers)
 app.use(helmet({
-  contentSecurityPolicy: {
+  contentSecurityPolicy: process.env.NODE_ENV === 'production' ? {
     directives: {
       defaultSrc: ["'self'"],
       styleSrc: ["'self'", "'unsafe-inline'"],
       scriptSrc: ["'self'"],
       imgSrc: ["'self'", "data:", "https:"],
     },
-  },
+  } : false,
   crossOriginEmbedderPolicy: false,
+  crossOriginResourcePolicy: false, // ADD THIS
+  crossOriginOpenerPolicy: false,   // ADD THIS
 }));
 
 app.use((req, res, next) => {
@@ -111,17 +113,19 @@ if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });
 }
 
-// Serve uploaded files
+// Add CORS middleware BEFORE static serving
+app.use(uploadUrlPrefix, (req, res, next) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  next();
+});
+
+// Then serve static files
 app.use(uploadUrlPrefix, express.static(path.resolve(uploadDir), {
   maxAge: '30d',
   etag: true,
-  setHeaders: (res, path) => {
-    if (path.endsWith('.gif')) {
-      res.setHeader('Content-Type', 'image/gif');
-    }
-  }
 }));
-
 app.use((err, req, res, next) => {
   if (err instanceof multer.MulterError) {
     if (err.code === 'LIMIT_FILE_SIZE') {

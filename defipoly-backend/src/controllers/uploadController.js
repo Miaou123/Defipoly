@@ -2,10 +2,12 @@ const { getDatabase } = require('../config/database');
 const { upload, optimizeImage, UPLOAD_URL_PREFIX } = require('../middleware/upload');
 const fs = require('fs');
 const path = require('path');
+const { validateFileType } = require('../middleware/validateFileType');
 
 // Upload handlers for different file types
 const uploadProfilePicture = [
   upload.single('file'),
+  validateFileType,
   optimizeImage,
   async (req, res) => {
     try {
@@ -81,6 +83,7 @@ const uploadProfilePicture = [
 
 const uploadThemeBackground = [
   upload.single('file'),
+  validateFileType,
   optimizeImage,
   async (req, res) => {
     try {
