@@ -15,6 +15,8 @@ const GapDetector = require('./src/services/gapDetector');
 const { router: wssMonitoringRouter, initMonitoring } = require('./src/routes/wssMonitoring');
 const { initSocketIO, getIO } = require('./src/services/socketService');
 const APICallCounter = require('./src/middleware/apiCallCounter');
+const helmet = require('helmet');
+const multer = require('multer');
 
 // ============================================
 // SECURITY: Rate Limiting
@@ -42,17 +44,50 @@ const PORT = process.env.PORT || 3101;
 // MIDDLEWARE CONFIGURATION
 // ============================================
 
-// API call counter (existing)
+// SECURITY: Helmet (must be first - sets security headers)
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      scriptSrc: ["'self'"],
+      imgSrc: ["'self'", "data:", "https:"],
+    },
+  },
+  crossOriginEmbedderPolicy: false,
+}));
+
+// API call counter
 const apiCounter = new APICallCounter(50); 
 app.use(apiCounter.middleware());
 
-// SECURITY: IP blocking (must be first)
+// SECURITY: IP blocking
 app.use(blockListMiddleware);
+
+const ALLOWED_ORIGINS = [
+  'http://localhost:3100',
+  'http://localhost:3000',
+  'https://defipoly.app',
+  'https://www.defipoly.app',
+];
 
 // CORS Configuration
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:3100',
-  credentials: true
+  origin: (origin, callback) => {
+    // Allow requests with no origin (like mobile apps, Postman, curl)
+    if (!origin) return callback(null, true);
+    
+    // Check if origin is in whitelist
+    if (ALLOWED_ORIGINS.includes(origin)) {
+      callback(null, true);
+    } else {
+      console.warn(`🚫 Blocked CORS request from: ${origin}`);
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
 // Body parsing
@@ -87,7 +122,7 @@ app.use((err, req, res, next) => {
       return res.status(400).json({ error: 'File too large. Max 5MB.' });
     }
   }
-  if (err.message.includes('Invalid file type')) {
+  if (err.message && err.message.includes('Invalid file type')) {
     return res.status(400).json({ error: err.message });
   }
   next(err);

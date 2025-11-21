@@ -44,16 +44,6 @@ const storage = multer.diskStorage({
   }
 });
 
-// File filter
-const fileFilter = (req, file, cb) => {
-  const allowedMimes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml'];
-  if (allowedMimes.includes(file.mimetype)) {
-    cb(null, true);
-  } else {
-    cb(new Error('Invalid file type. Only JPEG, PNG, GIF, WebP and SVG are allowed.'), false);
-  }
-};
-
 // Create multer upload instance
 const upload = multer({
   storage: multerStorage,
