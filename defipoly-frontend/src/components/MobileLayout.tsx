@@ -59,7 +59,6 @@ function MobileRewardsCard() {
             <span className="text-2xl font-black text-white tabular-nums">
               {rewardsLoading ? '...' : unclaimedRewards.toLocaleString()}
             </span>
-            <span className="text-sm text-cyan-400 font-bold">DEFI</span>
           </div>
         </div>
         <button

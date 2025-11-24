@@ -81,7 +81,7 @@ export function PropertyCard({
 
   // Determine which cooldowns are active (only show in normal mode)
   const activeCooldowns = [];
-  const cooldownIconSize = compact ? 8 : 12;
+  const cooldownIconSize = compact ? 6 : 12;
   if (!spectatorMode) {
     if (shieldActive) {
       activeCooldowns.push({ 
@@ -284,20 +284,20 @@ export function PropertyCard({
         />
 
         <div 
-          className={`absolute top-0 right-0 z-20 ${compact ? 'w-3 h-3' : 'w-8 h-8 sm:w-10 sm:h-10'}`}
+          className={`absolute top-0 right-0 z-20 ${compact ? 'w-2 h-2' : 'w-8 h-8 sm:w-10 sm:h-10'}`}
           style={{
             background: colorHex,
             clipPath: 'polygon(0 0, 100% 0, 100% 100%)',
           }}
         />
 
-        <div className={`${compact ? 'px-1.5 py-1' : 'px-3 py-3'} flex-shrink-0 relative z-25`}>
+        <div className={`${compact ? 'px-1 py-0.5' : 'px-3 py-3'} flex-shrink-0 relative z-25`}>
           <div 
-            className={`${modalView ? 'text-[11px]' : compact ? 'text-[5px]' : 'text-[7px] sm:text-[8px]'} font-bold leading-tight uppercase ${compact ? 'pr-2' : 'pr-10'}`}
+            className={`${modalView ? 'text-[11px]' : compact ? 'text-[4px]' : 'text-[7px] sm:text-[8px]'} font-bold leading-tight uppercase ${compact ? 'pr-1' : 'pr-10'}`}
             style={{
               color: getTextColor(),
-              letterSpacing: compact ? '0.1px' : '0.3px',
-              lineHeight: '1.1',
+              letterSpacing: compact ? '0px' : '0.3px',
+              lineHeight: '1',
             }}
           >
             {property.name}
@@ -318,8 +318,8 @@ export function PropertyCard({
           )}
         </div>
 
-        <div className={`${compact ? 'px-1.5 pb-0.5' : 'px-4 pb-1.5'} flex items-center justify-between gap-1 flex-shrink-0`}>
-          <div className={`${modalView ? 'text-[12px]' : compact ? 'text-[5px]' : 'text-[8px]'} font-semibold text-yellow-300`}>
+        <div className={`${compact ? 'px-1 pb-0.5' : 'px-4 pb-1.5'} flex items-center justify-between gap-1 flex-shrink-0`}>
+          <div className={`${modalView ? 'text-[12px]' : compact ? 'text-[4px]' : 'text-[8px]'} font-semibold text-yellow-300`}>
             ${formatNumber(property.price)}
           </div>
           
