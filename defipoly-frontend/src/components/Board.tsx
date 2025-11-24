@@ -46,10 +46,10 @@ export function Board({
       const width = window.innerWidth;
       if (width < 1200) {
         setAspectRatio('1 / 1.2');  // Taller cards on small screens
-        setScaleFactor(0.7);         // Reduce text/icons by 30%
+        setScaleFactor(0.5);         // Reduce text/icons by 50%
       } else if (width < 1400) {
         setAspectRatio('1 / 1.1');  // Slightly taller on medium screens
-        setScaleFactor(0.85);        // Reduce text/icons by 15%
+        setScaleFactor(0.65);        // Reduce text/icons by 35%
       } else {
         setAspectRatio('1 / 1');    // Square on large screens
         setScaleFactor(1);           // Full size

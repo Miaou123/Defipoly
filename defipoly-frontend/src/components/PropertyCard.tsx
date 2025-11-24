@@ -42,13 +42,13 @@ export function PropertyCard({
   const { connected, publicKey } = useWallet();
   
   // Calculate responsive sizes based on scale factor
-  const nameSize = Math.max(4, Math.round((compact ? 4 : 7) * scaleFactor));
-  const priceSize = Math.max(4, Math.round((compact ? 4 : 8) * scaleFactor));
-  const triangleSize = Math.max(8, Math.round((compact ? 8 : 32) * scaleFactor));
-  const barWidth = Math.max(2, Math.round((compact ? 2 : 6) * scaleFactor));
-  const iconScale = (compact ? 0.35 : 0.3) * scaleFactor;
-  const buildingScale = (compact ? 0.3 : 0.25) * scaleFactor;
-  const cooldownIconSize = Math.max(8, Math.round((compact ? 6 : 12) * scaleFactor));
+  const nameSize = Math.max(3, Math.round((compact ? 4 : 9) * scaleFactor));      // Changed: Math.max 8→3, base 7→9
+  const priceSize = Math.max(3, Math.round((compact ? 4 : 10) * scaleFactor));    // Changed: Math.max 8→3, base 8→10
+  const triangleSize = Math.max(4, Math.round((compact ? 8 : 40) * scaleFactor)); // Changed: base 32→40
+  const barWidth = Math.max(1, Math.round((compact ? 2 : 8) * scaleFactor));      // Changed: Math.max 2→1, base 6→8
+  const iconScale = (compact ? 0.35 : 0.4) * Math.max(0.7, scaleFactor);                         // Changed: 0.3→0.4 (bigger icons)
+  const buildingScale = (compact ? 0.3 : 0.35) * Math.max(0.7, scaleFactor);                     // Changed: 0.25→0.35 (bigger buildings)
+  const cooldownIconSize = Math.max(6, Math.round((compact ? 6 : 14) * scaleFactor)); // Changed: Math.max 8→6, base 12→14
   
   // Default theme if none provided - dark mode
   const cardTheme = theme || {
