@@ -182,7 +182,7 @@ export default function ProfilePage() {
   return (
     <div className="h-screen overflow-hidden relative">
       {/* Main grid layout - 3 columns */}
-      <div className="grid grid-cols-1 xl:grid-cols-[minmax(280px,320px)_minmax(900px,1fr)_minmax(280px,320px)] gap-6 p-4 h-full w-full mx-auto">
+      <div className="grid grid-cols-1 lg:grid-cols-[minmax(280px,320px)_minmax(900px,1fr)_minmax(280px,320px)] gap-6 p-4 h-full w-full mx-auto">
         
         {/* LEFT COLUMN: Logo */}
         <div className="flex flex-col gap-2 overflow-hidden">

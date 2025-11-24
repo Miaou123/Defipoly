@@ -24,6 +24,7 @@ interface PropertyCardProps {
   customPropertyCardBackground?: string | null | undefined;
   modalView?: boolean;
   compact?: boolean;
+  scaleFactor?: number;
 }
 
 export function PropertyCard({ 
@@ -35,9 +36,19 @@ export function PropertyCard({
   theme, 
   customPropertyCardBackground, 
   modalView = false,
-  compact = false
+  compact = false,
+  scaleFactor = 1
 }: PropertyCardProps) {
   const { connected, publicKey } = useWallet();
+  
+  // Calculate responsive sizes based on scale factor
+  const nameSize = Math.max(4, Math.round((compact ? 4 : 7) * scaleFactor));
+  const priceSize = Math.max(4, Math.round((compact ? 4 : 8) * scaleFactor));
+  const triangleSize = Math.max(8, Math.round((compact ? 8 : 32) * scaleFactor));
+  const barWidth = Math.max(2, Math.round((compact ? 2 : 6) * scaleFactor));
+  const iconScale = (compact ? 0.35 : 0.3) * scaleFactor;
+  const buildingScale = (compact ? 0.3 : 0.25) * scaleFactor;
+  const cooldownIconSize = Math.max(8, Math.round((compact ? 6 : 12) * scaleFactor));
   
   // Default theme if none provided - dark mode
   const cardTheme = theme || {
@@ -81,7 +92,6 @@ export function PropertyCard({
 
   // Determine which cooldowns are active (only show in normal mode)
   const activeCooldowns = [];
-  const cooldownIconSize = compact ? 6 : 12;
   if (!spectatorMode) {
     if (shieldActive) {
       activeCooldowns.push({ 
@@ -276,16 +286,19 @@ export function PropertyCard({
 
       <div className="relative z-20 flex flex-col h-full">
         <div 
-          className={`absolute top-0 left-0 h-full z-30 ${compact ? 'w-0.5' : 'w-1.5'}`}
+          className="absolute top-0 left-0 h-full z-30"
           style={{
+            width: `${barWidth}px`,
             background: colorHex,
             boxShadow: compact ? 'none' : `0 0 10px ${colorHex}99`,
           }}
         />
 
         <div 
-          className={`absolute top-0 right-0 z-20 ${compact ? 'w-2 h-2' : 'w-8 h-8 sm:w-10 sm:h-10'}`}
+          className="absolute top-0 right-0 z-20"
           style={{
+            width: `${triangleSize}px`,
+            height: `${triangleSize}px`,
             background: colorHex,
             clipPath: 'polygon(0 0, 100% 0, 100% 100%)',
           }}
@@ -293,8 +306,9 @@ export function PropertyCard({
 
         <div className={`${compact ? 'px-1 py-0.5' : 'px-3 py-3'} flex-shrink-0 relative z-25`}>
           <div 
-            className={`${modalView ? 'text-[11px]' : compact ? 'text-[4px]' : 'text-[7px] sm:text-[8px]'} font-bold leading-tight uppercase ${compact ? 'pr-1' : 'pr-10'}`}
+            className={`font-bold leading-tight uppercase ${compact ? 'pr-1' : 'pr-10'}`}
             style={{
+              fontSize: modalView ? '11px' : `${nameSize}px`,
               color: getTextColor(),
               letterSpacing: compact ? '0px' : '0.3px',
               lineHeight: '1',
@@ -307,19 +321,27 @@ export function PropertyCard({
         <div className={`flex-1 flex items-center justify-center ${compact ? 'px-0' : 'px-1'} min-h-0`}>
           {buildingLevel === 0 ? (
             <div className="w-full h-full flex items-center justify-center">
-              <div className={modalView ? 'scale-[0.5]' : compact ? 'scale-[0.35]' : 'scale-[0.3] sm:scale-[0.35]'}>
+              <div style={{ transform: modalView ? 'scale(0.5)' : `scale(${iconScale})` }}>
                 <LocationPin color={property.color} size="small" />
               </div>
             </div>
           ) : (
-            <div className={`w-full h-full flex items-center justify-center ${modalView ? 'scale-[0.4]' : compact ? 'scale-[0.3]' : 'scale-[0.25]'}`}>
+            <div 
+              className="w-full h-full flex items-center justify-center"
+              style={{ transform: modalView ? 'scale(0.4)' : `scale(${buildingScale})` }}
+            >
               {BUILDING_SVGS[buildingLevel]}
             </div>
           )}
         </div>
 
         <div className={`${compact ? 'px-1 pb-0.5' : 'px-4 pb-1.5'} flex items-center justify-between gap-1 flex-shrink-0`}>
-          <div className={`${modalView ? 'text-[12px]' : compact ? 'text-[4px]' : 'text-[8px]'} font-semibold text-yellow-300`}>
+          <div 
+            className="font-semibold text-yellow-300"
+            style={{
+              fontSize: modalView ? '12px' : `${priceSize}px`,
+            }}
+          >
             ${formatNumber(property.price)}
           </div>
           

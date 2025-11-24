@@ -91,25 +91,25 @@ export default function Home() {
   return (
     <div className="h-screen overflow-hidden relative">
       {/* Main grid layout - fixed height, no scrolling */}
-      <div className="grid grid-cols-1 xl:grid-cols-[minmax(320px,400px)_minmax(800px,1fr)_minmax(320px,400px)] gap-6 p-4 h-full w-full mx-auto">
+      <div className="grid grid-cols-1 lg:grid-cols-[minmax(280px,320px)_1fr_minmax(280px,320px)] gap-4 p-4 h-full w-full mx-auto max-w-[1920px]">
         {/* LEFT COLUMN: Logo + Portfolio */}
-        <div className="flex flex-col gap-2 overflow-hidden">
-          {/* Logo at top of left column */}
-          <div className="flex items-center gap-3 rounded-xl px-4 flex-shrink-0">
-            <img 
-              src="/logo.svg" 
-              alt="Defipoly Logo" 
-              className="w-12 h-12 object-contain"
-            />
-            <div>
-              <h1 className="text-2xl font-bold text-purple-100">Defipoly</h1>
-            </div>
-          </div>
-          
-          <div className="flex-1 overflow-hidden">
-            <Portfolio onSelectProperty={setSelectedProperty} />
+        <div className="flex flex-col gap-2 overflow-hidden min-h-0">
+        {/* Logo at top of left column */}
+        <div className="flex items-center gap-2 rounded-xl px-2 flex-shrink-0">
+          <img 
+            src="/logo.svg" 
+            alt="Defipoly Logo" 
+            className="w-10 h-10 object-contain"
+          />
+          <div>
+            <h1 className="text-xl font-bold text-purple-100">Defipoly</h1>
           </div>
         </div>
+        
+        <div className="flex-1 overflow-hidden min-h-0">
+          <Portfolio onSelectProperty={setSelectedProperty} />
+        </div>
+      </div>
 
         {/* CENTER: Board */}
         <div className="flex items-center justify-center overflow-hidden">
@@ -117,21 +117,21 @@ export default function Home() {
         </div>
         
         {/* RIGHT COLUMN: Profile/Wallet + Leaderboard + Live Feed */}
-        <div className="flex flex-col gap-2 overflow-hidden">
+        <div className="flex flex-col gap-2 overflow-hidden min-h-0">
           {/* Profile & Wallet at top of right column */}
           <div className="flex-shrink-0">
             <ProfileWallet />
           </div>
           
           {/* Fixed height container - no scrolling */}
-          <div className="flex-1 flex flex-col gap-4 overflow-hidden">
-            {/* Leaderboard - 60% of space */}
-            <div className="h-[55%]">
+          <div className="flex-1 flex flex-col gap-2 overflow-hidden min-h-0">
+            {/* Leaderboard - 55% of space */}
+            <div className="h-[55%] min-h-0 overflow-hidden">
               <Leaderboard />
             </div>
             
-            {/* Live Feed - 40% of space */}
-            <div className="h-[43%]">
+            {/* Live Feed - 43% of space */}
+            <div className="h-[43%] min-h-0 overflow-hidden">
               <LiveFeed />
             </div>
           </div>

@@ -12,8 +12,7 @@ export function MobileBlocker({ children }: MobileBlockerProps) {
 
   useEffect(() => {
     const checkMobile = () => {
-      const mobile = window.innerWidth < 1024 || 
-        /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+      const mobile = window.innerWidth < 1024 ;
       setIsMobile(mobile);
       setChecked(true);
     };

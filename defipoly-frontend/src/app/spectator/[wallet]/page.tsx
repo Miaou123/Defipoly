@@ -151,7 +151,7 @@ export default function SpectatorPage() {
   return (
     <div className="h-screen overflow-hidden relative">
       {/* Main grid layout - matching home page structure */}
-      <div className="grid grid-cols-1 xl:grid-cols-[minmax(320px,400px)_minmax(800px,1fr)_minmax(320px,400px)] gap-6 p-4 h-full w-full mx-auto">
+      <div className="grid grid-cols-1 lg:grid-cols-[minmax(320px,400px)_minmax(800px,1fr)_minmax(320px,400px)] gap-6 p-4 h-full w-full mx-auto">
         
         {/* LEFT COLUMN: Logo + Player Profile/Stats */}
         <div className="flex flex-col gap-2 overflow-hidden">

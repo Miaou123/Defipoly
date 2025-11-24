@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { PROPERTIES } from '@/utils/constants';
 import { PropertyCard } from './PropertyCard';
 import { RewardsPanel } from './RewardsPanel';
@@ -34,14 +34,34 @@ export function Board({
   customPropertyCardBackground: spectatorCustomCard,
 }: BoardProps) {
   const [showRewardsPanel, setShowRewardsPanel] = useState(true);
+  const [aspectRatio, setAspectRatio] = useState('1 / 1');
+  const [scaleFactor, setScaleFactor] = useState(1);
   
   // Get game state (includes profile for main mode)
   const gameState = useGameState();
   
-  // ========== SMART THEME SELECTION ==========
-  // In main mode: use GameState profile
-  // In spectator mode: use props passed from parent
+  // ========== RESPONSIVE ASPECT RATIO & SCALE ==========
+  useEffect(() => {
+    const updateResponsive = () => {
+      const width = window.innerWidth;
+      if (width < 1200) {
+        setAspectRatio('1 / 1.2');  // Taller cards on small screens
+        setScaleFactor(0.7);         // Reduce text/icons by 30%
+      } else if (width < 1400) {
+        setAspectRatio('1 / 1.1');  // Slightly taller on medium screens
+        setScaleFactor(0.85);        // Reduce text/icons by 15%
+      } else {
+        setAspectRatio('1 / 1');    // Square on large screens
+        setScaleFactor(1);           // Full size
+      }
+    };
+    
+    updateResponsive();
+    window.addEventListener('resize', updateResponsive);
+    return () => window.removeEventListener('resize', updateResponsive);
+  }, []);
   
+  // ========== SMART THEME SELECTION ==========
   const boardTheme = spectatorMode 
     ? spectatorBoardTheme 
     : gameState.profile.boardTheme;
@@ -70,40 +90,50 @@ export function Board({
   const currentBoardTheme = getBoardTheme(boardTheme || 'dark');
   const currentPropertyCardTheme = getPropertyCardTheme(propertyCardTheme || 'dark');
   
+  // Common PropertyCard props
+  const cardProps = {
+    onSelect: onSelectProperty,
+    spectatorMode,
+    spectatorWallet,
+    spectatorOwnerships,
+    theme: currentPropertyCardTheme,
+    customPropertyCardBackground,
+    scaleFactor, // Pass scale factor to cards
+  };
+  
   return (
-    <div className="flex items-center justify-center w-full h-full relative">
-      <div 
-        className="w-full max-w-[min(90vh,90vw)] aspect-square rounded-lg relative z-10 bg-gray-900"
-      >
+      <div className="flex items-center justify-center w-full h-full relative">
+        <div 
+          className="w-full rounded-lg relative z-10 bg-gray-900"
+          style={{
+            aspectRatio: aspectRatio,
+            maxWidth: 'min(100%, 100vh - 2rem)',
+            maxHeight: '100%',
+          }}
+        >
         <div className="w-full h-full grid grid-cols-7 grid-rows-7 gap-0 relative z-10">
           
-          {/* ========== TOP-LEFT CORNER: Red 1 (Kentucky Avenue) ========== */}
-          <div className="col-start-2 row-start-1">
-            <PropertyCard propertyId={11} onSelect={onSelectProperty} spectatorMode={spectatorMode} spectatorWallet={spectatorWallet} spectatorOwnerships={spectatorOwnerships} theme={currentPropertyCardTheme} customPropertyCardBackground={customPropertyCardBackground} />
-          </div>
-
-          {/* ========== TOP-left CORNER: DEFIPOLY ========== */}
+          {/* ========== TOP-LEFT CORNER ========== */}
           <div className="col-start-1 row-start-1">
             <CornerSquare icon="🎲" label="DEFIPOLY" bgColor="bg-purple-600" profilePicture={profilePicture} cornerSquareStyle={cornerSquareStyle} customPropertyCardBackground={customPropertyCardBackground} />
           </div>
           
-          {/* ========== TOP ROW: Red (12-13) + Yellow (14-16) ========== */}
-          <div className="col-start-3 row-start-1"><PropertyCard propertyId={12} onSelect={onSelectProperty} spectatorMode={spectatorMode} spectatorWallet={spectatorWallet} spectatorOwnerships={spectatorOwnerships} theme={currentPropertyCardTheme} customPropertyCardBackground={customPropertyCardBackground} /></div>
-          <div className="col-start-4 row-start-1"><PropertyCard propertyId={13} onSelect={onSelectProperty} spectatorMode={spectatorMode} spectatorWallet={spectatorWallet} spectatorOwnerships={spectatorOwnerships} theme={currentPropertyCardTheme} customPropertyCardBackground={customPropertyCardBackground} /></div>
-          <div className="col-start-5 row-start-1"><PropertyCard propertyId={14} onSelect={onSelectProperty} spectatorMode={spectatorMode} spectatorWallet={spectatorWallet} spectatorOwnerships={spectatorOwnerships} theme={currentPropertyCardTheme} customPropertyCardBackground={customPropertyCardBackground} /></div>
-          <div className="col-start-6 row-start-1"><PropertyCard propertyId={15} onSelect={onSelectProperty} spectatorMode={spectatorMode} spectatorWallet={spectatorWallet} spectatorOwnerships={spectatorOwnerships} theme={currentPropertyCardTheme} customPropertyCardBackground={customPropertyCardBackground} /></div>
-          <div className="col-start-7 row-start-1"><PropertyCard propertyId={16} onSelect={onSelectProperty} spectatorMode={spectatorMode} spectatorWallet={spectatorWallet} spectatorOwnerships={spectatorOwnerships} theme={currentPropertyCardTheme} customPropertyCardBackground={customPropertyCardBackground} /></div>
-          
+          {/* ========== TOP ROW ========== */}
+          <div className="col-start-2 row-start-1"><PropertyCard propertyId={11} {...cardProps} /></div>
+          <div className="col-start-3 row-start-1"><PropertyCard propertyId={12} {...cardProps} /></div>
+          <div className="col-start-4 row-start-1"><PropertyCard propertyId={13} {...cardProps} /></div>
+          <div className="col-start-5 row-start-1"><PropertyCard propertyId={14} {...cardProps} /></div>
+          <div className="col-start-6 row-start-1"><PropertyCard propertyId={15} {...cardProps} /></div>
+          <div className="col-start-7 row-start-1"><PropertyCard propertyId={16} {...cardProps} /></div>
 
+          {/* ========== LEFT SIDE ========== */}
+          <div className="col-start-1 row-start-2"><PropertyCard propertyId={10} {...cardProps} /></div>
+          <div className="col-start-1 row-start-3"><PropertyCard propertyId={9} {...cardProps} /></div>
+          <div className="col-start-1 row-start-4"><PropertyCard propertyId={8} {...cardProps} /></div>
+          <div className="col-start-1 row-start-5"><PropertyCard propertyId={7} {...cardProps} /></div>
+          <div className="col-start-1 row-start-6"><PropertyCard propertyId={6} {...cardProps} /></div>
 
-          {/* ========== LEFT SIDE: Orange (10, 9, 8) + Pink (7, 6) ========== */}
-          <div className="col-start-1 row-start-2"><PropertyCard propertyId={10} onSelect={onSelectProperty} spectatorMode={spectatorMode} spectatorWallet={spectatorWallet} spectatorOwnerships={spectatorOwnerships} theme={currentPropertyCardTheme} customPropertyCardBackground={customPropertyCardBackground} /></div>
-          <div className="col-start-1 row-start-3"><PropertyCard propertyId={9} onSelect={onSelectProperty} spectatorMode={spectatorMode} spectatorWallet={spectatorWallet} spectatorOwnerships={spectatorOwnerships} theme={currentPropertyCardTheme} customPropertyCardBackground={customPropertyCardBackground} /></div>
-          <div className="col-start-1 row-start-4"><PropertyCard propertyId={8} onSelect={onSelectProperty} spectatorMode={spectatorMode} spectatorWallet={spectatorWallet} spectatorOwnerships={spectatorOwnerships} theme={currentPropertyCardTheme} customPropertyCardBackground={customPropertyCardBackground} /></div>
-          <div className="col-start-1 row-start-5"><PropertyCard propertyId={7} onSelect={onSelectProperty} spectatorMode={spectatorMode} spectatorWallet={spectatorWallet} spectatorOwnerships={spectatorOwnerships} theme={currentPropertyCardTheme} customPropertyCardBackground={customPropertyCardBackground} /></div>
-          <div className="col-start-1 row-start-6"><PropertyCard propertyId={6} onSelect={onSelectProperty} spectatorMode={spectatorMode} spectatorWallet={spectatorWallet} spectatorOwnerships={spectatorOwnerships} theme={currentPropertyCardTheme} customPropertyCardBackground={customPropertyCardBackground} /></div>
-
-          {/* ========== CENTER: Enhanced Rewards Panel ========== */}
+          {/* ========== CENTER: Rewards Panel ========== */}
           <div 
             className="col-start-2 col-span-5 row-start-2 row-span-5 flex flex-col items-center justify-center shadow-inner relative overflow-hidden"
             style={(() => {
@@ -117,12 +147,9 @@ export function Board({
               };
               
               if (hasCustomBackground) {
-                // Check if backgroundImage is already a full CSS background value or just a URL
                 if (backgroundImage && backgroundImage.includes('url(') && backgroundImage.includes('center/cover')) {
-                  // It's a full CSS background value from getBoardThemeStyles()
                   styles.background = backgroundImage;
                 } else if (backgroundImage) {
-                  // It's just a URL, so format it properly
                   styles.backgroundImage = `url(${backgroundImage})`;
                   styles.backgroundSize = 'cover';
                   styles.backgroundPosition = 'center';
@@ -135,7 +162,6 @@ export function Board({
               return styles;
             })()}
           >
-            {/* Toggle button for rewards panel - only show in non-spectator mode */}
             {!spectatorMode && (
               <button
                 onClick={() => setShowRewardsPanel(!showRewardsPanel)}
@@ -146,7 +172,6 @@ export function Board({
               </button>
             )}
 
-            {/* Rewards Panel - Hidden in spectator mode or when toggled off */}
             {!spectatorMode && showRewardsPanel && (
               <div className="relative z-10">
                 <RewardsPanel />
@@ -154,26 +179,26 @@ export function Board({
             )}
           </div>
 
-          {/* ========== RIGHT SIDE: Green (17-19) + Dark Blue (20-21) ========== */}
-          <div className="col-start-7 row-start-2"><PropertyCard propertyId={17} onSelect={onSelectProperty} spectatorMode={spectatorMode} spectatorWallet={spectatorWallet} spectatorOwnerships={spectatorOwnerships} theme={currentPropertyCardTheme} customPropertyCardBackground={customPropertyCardBackground} /></div>
-          <div className="col-start-7 row-start-3"><PropertyCard propertyId={18} onSelect={onSelectProperty} spectatorMode={spectatorMode} spectatorWallet={spectatorWallet} spectatorOwnerships={spectatorOwnerships} theme={currentPropertyCardTheme} customPropertyCardBackground={customPropertyCardBackground} /></div>
-          <div className="col-start-7 row-start-4"><PropertyCard propertyId={19} onSelect={onSelectProperty} spectatorMode={spectatorMode} spectatorWallet={spectatorWallet} spectatorOwnerships={spectatorOwnerships} theme={currentPropertyCardTheme} customPropertyCardBackground={customPropertyCardBackground} /></div>
-          <div className="col-start-7 row-start-5"><PropertyCard propertyId={20} onSelect={onSelectProperty} spectatorMode={spectatorMode} spectatorWallet={spectatorWallet} spectatorOwnerships={spectatorOwnerships} theme={currentPropertyCardTheme} customPropertyCardBackground={customPropertyCardBackground} /></div>
-          <div className="col-start-7 row-start-6"><PropertyCard propertyId={21} onSelect={onSelectProperty} spectatorMode={spectatorMode} spectatorWallet={spectatorWallet} spectatorOwnerships={spectatorOwnerships} theme={currentPropertyCardTheme} customPropertyCardBackground={customPropertyCardBackground} /></div>
+          {/* ========== RIGHT SIDE ========== */}
+          <div className="col-start-7 row-start-2"><PropertyCard propertyId={17} {...cardProps} /></div>
+          <div className="col-start-7 row-start-3"><PropertyCard propertyId={18} {...cardProps} /></div>
+          <div className="col-start-7 row-start-4"><PropertyCard propertyId={19} {...cardProps} /></div>
+          <div className="col-start-7 row-start-5"><PropertyCard propertyId={20} {...cardProps} /></div>
+          <div className="col-start-7 row-start-6"><PropertyCard propertyId={21} {...cardProps} /></div>
 
-          {/* ========== BOTTOM-LEFT CORNER: Pink 1 (St. James Place) ========== */}
+          {/* ========== BOTTOM LEFT CORNER ========== */}
           <div className="col-start-1 row-start-7">
-            <PropertyCard propertyId={5} onSelect={onSelectProperty} spectatorMode={spectatorMode} spectatorWallet={spectatorWallet} spectatorOwnerships={spectatorOwnerships} theme={currentPropertyCardTheme} customPropertyCardBackground={customPropertyCardBackground} />
+            <PropertyCard propertyId={5} {...cardProps} />
           </div>
 
-          {/* ========== BOTTOM ROW: Light Blue (4-2) + Brown (1-0) ========== */}
-          <div className="col-start-2 row-start-7"><PropertyCard propertyId={4} onSelect={onSelectProperty} spectatorMode={spectatorMode} spectatorWallet={spectatorWallet} spectatorOwnerships={spectatorOwnerships} theme={currentPropertyCardTheme} customPropertyCardBackground={customPropertyCardBackground} /></div>
-          <div className="col-start-3 row-start-7"><PropertyCard propertyId={3} onSelect={onSelectProperty} spectatorMode={spectatorMode} spectatorWallet={spectatorWallet} spectatorOwnerships={spectatorOwnerships} theme={currentPropertyCardTheme} customPropertyCardBackground={customPropertyCardBackground} /></div>
-          <div className="col-start-4 row-start-7"><PropertyCard propertyId={2} onSelect={onSelectProperty} spectatorMode={spectatorMode} spectatorWallet={spectatorWallet} spectatorOwnerships={spectatorOwnerships} theme={currentPropertyCardTheme} customPropertyCardBackground={customPropertyCardBackground} /></div>
-          <div className="col-start-5 row-start-7"><PropertyCard propertyId={1} onSelect={onSelectProperty} spectatorMode={spectatorMode} spectatorWallet={spectatorWallet} spectatorOwnerships={spectatorOwnerships} theme={currentPropertyCardTheme} customPropertyCardBackground={customPropertyCardBackground} /></div>
-          <div className="col-start-6 row-start-7"><PropertyCard propertyId={0} onSelect={onSelectProperty} spectatorMode={spectatorMode} spectatorWallet={spectatorWallet} spectatorOwnerships={spectatorOwnerships} theme={currentPropertyCardTheme} customPropertyCardBackground={customPropertyCardBackground} /></div>
+          {/* ========== BOTTOM ROW ========== */}
+          <div className="col-start-2 row-start-7"><PropertyCard propertyId={4} {...cardProps} /></div>
+          <div className="col-start-3 row-start-7"><PropertyCard propertyId={3} {...cardProps} /></div>
+          <div className="col-start-4 row-start-7"><PropertyCard propertyId={2} {...cardProps} /></div>
+          <div className="col-start-5 row-start-7"><PropertyCard propertyId={1} {...cardProps} /></div>
+          <div className="col-start-6 row-start-7"><PropertyCard propertyId={0} {...cardProps} /></div>
           
-          {/* ========== BOTTOM-RIGHT CORNER: DEFIPOLY ========== */}
+          {/* ========== BOTTOM-RIGHT CORNER ========== */}
           <div className="col-start-7 row-start-7">
             <CornerSquare icon="🎲" label="DEFIPOLY" bgColor="bg-purple-600" profilePicture={profilePicture} cornerSquareStyle={cornerSquareStyle} customPropertyCardBackground={customPropertyCardBackground} />
           </div>
