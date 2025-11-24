@@ -22,12 +22,7 @@ const nextConfig: NextConfig = {
   onDemandEntries: {
     maxInactiveAge: 60 * 1000, // 60 seconds (default is 15s)
     pagesBufferLength: 5,
-  },
-  // Improve dev indicators
-  devIndicators: {
-    buildActivity: true,
-    buildActivityPosition: 'bottom-right',
-  },
+  }
 };
 
 export default nextConfig;

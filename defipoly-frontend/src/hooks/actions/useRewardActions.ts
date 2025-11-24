@@ -39,8 +39,12 @@ export const useRewardActions = (
       console.log('🔑 Player PDA:', playerPDA.toString());
   
       // ✅ NO MORE PROPERTY ITERATION - O(1) CLAIM
-      const tx = await program.methods
-        .claimRewards() // No parameters needed!
+      const methods = program?.methods;
+      if (!methods) {
+        throw new Error('Program not initialized');
+      }
+      const tx = await methods
+        ['claimRewards']!() // No parameters needed!
         .accountsPartial({
           playerAccount: playerPDA,
           player: wallet.publicKey,

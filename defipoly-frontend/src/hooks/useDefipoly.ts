@@ -116,14 +116,18 @@ export function useDefipoly() {
 
   const initializePlayer = useCallback(async () => {
     if (!program || !wallet) throw new Error('Wallet not connected');
+    const methods = program?.methods;
+    if (!methods) {
+      throw new Error('Program not initialized');
+    }
     if (!tokenAccountExists) throw new Error('Create token account first');
 
     setLoading(true);
     try {
       const [playerPDA] = getPlayerPDA(wallet.publicKey);
 
-      const tx = await program.methods
-        .initializePlayer()
+      const tx = await methods
+        ['initializePlayer']!()
         .accountsPartial({
           player: wallet.publicKey,
           playerAccount: playerPDA,

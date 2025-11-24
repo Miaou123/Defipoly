@@ -10,7 +10,7 @@ interface Notification {
   type: NotificationType;
   title: string;
   message: string;
-  txHash?: string;
+  txHash?: string | undefined;
   duration?: number;
 }
 
@@ -63,7 +63,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
   }, [showNotification]);
 
   const getSolscanUrl = (txHash: string) => {
-    const network = process.env.NEXT_PUBLIC_SOLANA_NETWORK || 'devnet';
+    const network = process.env['NEXT_PUBLIC_SOLANA_NETWORK'] || 'devnet';
     return `https://solscan.io/tx/${txHash}${network === 'devnet' ? '?cluster=devnet' : ''}`;
   };
 

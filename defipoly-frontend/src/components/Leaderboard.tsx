@@ -26,7 +26,7 @@ interface LeaderboardData {
   };
 }
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3101';
+const API_BASE_URL = process.env['NEXT_PUBLIC_API_BASE_URL'] || 'http://localhost:3101';
 
 export function Leaderboard() {
   const [leaderboardData, setLeaderboardData] = useState<LeaderboardData | null>(null);
@@ -242,7 +242,7 @@ export function Leaderboard() {
                   <div className="w-8 h-8 rounded-full overflow-hidden bg-purple-500/10 flex-shrink-0">
                     {profiles[leader.walletAddress]?.profilePicture ? (
                       <img 
-                        src={profiles[leader.walletAddress].profilePicture || undefined} 
+                        src={profiles[leader.walletAddress]?.profilePicture || undefined} 
                         alt="Profile"
                         className="w-full h-full object-cover"
                       />

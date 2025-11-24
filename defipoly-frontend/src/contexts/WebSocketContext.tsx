@@ -32,7 +32,7 @@ export function WebSocketProvider({ children }: { children: React.ReactNode }) {
 
   // Initialize socket connection (independent of wallet)
   useEffect(() => {
-    const socketUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3101';
+    const socketUrl = process.env['NEXT_PUBLIC_API_BASE_URL'] || 'http://localhost:3101';
     
     console.log('🔌 Connecting to WebSocket server:', socketUrl);
     

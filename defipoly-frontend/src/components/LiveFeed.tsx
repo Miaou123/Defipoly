@@ -24,7 +24,7 @@ interface FeedItem {
   success?: boolean;
 }
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3101';
+const API_BASE_URL = process.env['NEXT_PUBLIC_API_BASE_URL'] || 'http://localhost:3101';
 
 export function LiveFeed() {
   const router = useRouter();

@@ -66,7 +66,7 @@ app.use((req, res, next) => {
 });
 
 // API call counter
-const apiCounter = new APICallCounter(50); 
+const apiCounter = new APICallCounter(50, true); 
 app.use(apiCounter.middleware());
 
 // SECURITY: IP blocking

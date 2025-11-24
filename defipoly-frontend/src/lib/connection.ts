@@ -25,7 +25,7 @@ export function getConnection(config?: ConnectionConfig): Connection {
   }
 
   // Get RPC URL from environment
-  const rpcUrl = process.env.NEXT_PUBLIC_RPC_URL || process.env.NEXT_PUBLIC_SOLANA_RPC_HOST;
+  const rpcUrl = process.env['NEXT_PUBLIC_RPC_URL'] || process.env['NEXT_PUBLIC_SOLANA_RPC_HOST'];
   
   if (!rpcUrl) {
     throw new Error(
@@ -105,7 +105,7 @@ export async function getConnectionStats() {
       epoch: epochInfo.epoch,
       slotIndex: epochInfo.slotIndex,
       slotsInEpoch: epochInfo.slotsInEpoch,
-      rpcUrl: process.env.NEXT_PUBLIC_RPC_URL,
+      rpcUrl: process.env['NEXT_PUBLIC_RPC_URL'],
     };
   } catch (error) {
     return {

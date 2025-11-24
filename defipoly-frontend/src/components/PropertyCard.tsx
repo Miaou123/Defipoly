@@ -18,10 +18,10 @@ interface PropertyCardProps {
   propertyId: number;
   onSelect: (propertyId: number) => void;
   spectatorMode?: boolean;
-  spectatorWallet?: string;
+  spectatorWallet?: string | undefined;
   spectatorOwnerships?: any[];
   theme?: PropertyCardTheme;
-  customPropertyCardBackground?: string | null;
+  customPropertyCardBackground?: string | null | undefined;
   modalView?: boolean;
 }
 

@@ -46,7 +46,7 @@ export function getMinSlots(setId: number): number {
   if (propertiesInSet.length === 0) return 0;
   
   // Return the maxPerPlayer for properties in this set (they're all the same)
-  return propertiesInSet[0].maxPerPlayer;
+  return propertiesInSet[0]?.maxPerPlayer ?? 0;
 }
 
 /**

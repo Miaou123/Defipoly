@@ -8,7 +8,7 @@ import { LiveFeed } from '@/components/LiveFeed';
 import { getProfilesBatch, ProfileData } from '@/utils/profileStorage';
 import { getCachedSpectator, setCachedSpectator } from '@/utils/spectatorCache';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3101';
+const API_BASE_URL = process.env['NEXT_PUBLIC_API_BASE_URL'] || 'http://localhost:3101';
 
 interface PlayerStats {
   walletAddress: string;
@@ -27,7 +27,7 @@ interface PlayerStats {
 export default function SpectatorPage() {
   const params = useParams();
   const router = useRouter();
-  const walletAddress = params.wallet as string;
+  const walletAddress = params['wallet'] as string;
   
   const [profile, setProfile] = useState<ProfileData | null>(null);
   const [stats, setStats] = useState<PlayerStats | null>(null);
@@ -55,9 +55,10 @@ export default function SpectatorPage() {
       
       try {
         // Only fetch 2 endpoints in parallel (removed leaderboard call)
-        const [profileResponse, statsResponse] = await Promise.all([
+        const [profileResponse, statsResponse, gameStateResponse] = await Promise.all([
           fetch(`${API_BASE_URL}/api/profile/${walletAddress}`),
-          fetch(`${API_BASE_URL}/api/stats/${walletAddress}`)
+          fetch(`${API_BASE_URL}/api/stats/${walletAddress}`),
+          fetch(`${API_BASE_URL}/api/game-state/${walletAddress}`) 
         ]);
         
         let profileData = null;
@@ -84,14 +85,30 @@ export default function SpectatorPage() {
           statsData = await statsResponse.json();
           console.log('✅ [SPECTATOR] Stats fetched');
         }
-  
-        // ✅ Cache for future visits
-        setCachedSpectator(walletAddress, profileData, statsData);
+
+        let ownershipsData: any[] = [];
+        if (gameStateResponse.ok) {
+          const gameStateData = await gameStateResponse.json();
+          ownershipsData = gameStateData.data.ownerships.map((o: any) => ({
+            player: walletAddress,
+            propertyId: o.propertyId,
+            slotsOwned: o.slotsOwned,
+            slotsShielded: o.slotsShielded,
+            purchaseTimestamp: { toNumber: () => o.purchaseTimestamp },
+            shieldExpiry: { toNumber: () => o.shieldExpiry },
+            shieldCooldownDuration: { toNumber: () => o.shieldCooldownDuration },
+            stealProtectionExpiry: { toNumber: () => o.stealProtectionExpiry },
+            bump: o.bump,
+          }));
+          console.log('✅ [SPECTATOR] Game state fetched:', ownershipsData.length, 'ownerships');
+        }
+
+        setCachedSpectator(walletAddress, profileData, statsData, ownershipsData);
         console.log('💾 [SPECTATOR] Data cached for 30s');
         
         setProfile(profileData);
         setStats(statsData);
-        setSpectatorOwnerships(ownershipsData);
+        setSpectatorOwnerships(ownershipsData); 
   
       } catch (error) {
         console.error('❌ [SPECTATOR] Error fetching data:', error);

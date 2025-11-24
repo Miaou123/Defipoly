@@ -15,11 +15,11 @@ const MIN_CLAIM_INTERVAL_MINUTES: i64 = 1;
     // ========== HELPER: UPDATE PENDING REWARDS ==========
 
     fn update_pending_rewards(player: &mut PlayerAccount, clock_timestamp: i64) -> Result<()> {
-        let time_elapsed = clock_timestamp - player.last_claim_timestamp;
+        let time_elapsed = clock_timestamp - player.last_accumulation_timestamp; // Use accumulation timestamp
         
         if time_elapsed > 0 && player.total_base_daily_income > 0 {
             let minutes_elapsed = time_elapsed / 60;
-            let income_per_minute = player.total_base_daily_income / 1440; // 1440 minutes per day
+            let income_per_minute = player.total_base_daily_income / 1440;
             
             let new_rewards = (income_per_minute as u128)
                 .checked_mul(minutes_elapsed as u128)
@@ -29,12 +29,10 @@ const MIN_CLAIM_INTERVAL_MINUTES: i64 = 1;
             player.pending_rewards = player.pending_rewards
                 .checked_add(new_rewards)
                 .ok_or(ErrorCode::Overflow)?;
-                
-            msg!("💰 Updated pending rewards: +{} (total: {})", new_rewards, player.pending_rewards);
         }
         
-        // Always update last_claim_timestamp to prevent double-counting
-        player.last_claim_timestamp = clock_timestamp;
+        // Only update accumulation timestamp, NOT last_claim_timestamp
+        player.last_accumulation_timestamp = clock_timestamp;
         
         Ok(())
     }
@@ -643,9 +641,10 @@ pub fn steal_property_instant(
         );
         token::transfer(transfer_ctx, total_rewards)?;
     
-        // ✅ RESET PENDING REWARDS
         player.pending_rewards = 0;
         player.total_rewards_claimed += total_rewards;
+        player.last_claim_timestamp = clock.unix_timestamp;        
+        player.last_accumulation_timestamp = clock.unix_timestamp;
     
         emit!(RewardsClaimedEvent {
             player: player.owner,
@@ -1805,6 +1804,7 @@ pub struct PlayerAccount {
     pub total_slots_owned: u16,
     pub total_base_daily_income: u64,
     pub last_claim_timestamp: i64,
+    pub last_accumulation_timestamp: i64,
     pub total_rewards_claimed: u64,
     pub complete_sets_owned: u8,
     pub properties_owned_count: u8,

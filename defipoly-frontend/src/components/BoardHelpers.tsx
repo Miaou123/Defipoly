@@ -4,9 +4,9 @@ interface CornerSquareProps {
   icon: string;
   label: string;
   bgColor: string;
-  profilePicture?: string | null;
+  profilePicture?: string | null | undefined;
   cornerSquareStyle?: 'property' | 'profile';
-  customPropertyCardBackground?: string | null;
+  customPropertyCardBackground?: string | null | undefined;
 }
 
 export function CornerSquare({ icon, label, bgColor, profilePicture, cornerSquareStyle = 'property', customPropertyCardBackground }: CornerSquareProps) {

@@ -8,7 +8,7 @@ import { useWebSocket } from './WebSocketContext';
 import { PROPERTIES } from '@/utils/constants';
 import { useAuth, authenticatedFetch } from '@/contexts/AuthContext';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3101';
+const API_BASE_URL = process.env['NEXT_PUBLIC_API_BASE_URL'] || 'http://localhost:3101';
 
 // ========== TYPES ==========
 

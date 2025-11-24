@@ -51,7 +51,7 @@ export function PropertyThemeModal({
     if (!publicKey) return;
     
     try {
-      const response = await authenticatedFetch(`${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3101'}/api/profile/themes`, {
+      const response = await authenticatedFetch(`${process.env['NEXT_PUBLIC_API_BASE_URL'] || 'http://localhost:3101'}/api/profile/themes`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -102,7 +102,7 @@ export function PropertyThemeModal({
         formData.append('oldBackgroundUrl', customBackground);
       }
 
-      const response = await authenticatedFetch(`${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3101'}/api/profile/upload/theme`, {
+      const response = await authenticatedFetch(`${process.env['NEXT_PUBLIC_API_BASE_URL'] || 'http://localhost:3101'}/api/profile/upload/theme`, {
         method: 'POST',
         body: formData,
       });
@@ -150,7 +150,7 @@ export function PropertyThemeModal({
         formData.append('oldBackgroundUrl', customBackground);
       }
 
-      const response = await authenticatedFetch(`${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3101'}/api/profile/upload/theme`, {
+      const response = await authenticatedFetch(`${process.env['NEXT_PUBLIC_API_BASE_URL'] || 'http://localhost:3101'}/api/profile/upload/theme`, {
         method: 'POST',
         body: formData,
       });
@@ -177,7 +177,7 @@ export function PropertyThemeModal({
   const handleRemoveCustom = async () => {
     if (customBackground && customBackground.startsWith('/uploads/') && publicKey) {
       try {
-        await authenticatedFetch(`${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3101'}/api/profile/upload/delete`, {
+        await authenticatedFetch(`${process.env['NEXT_PUBLIC_API_BASE_URL'] || 'http://localhost:3101'}/api/profile/upload/delete`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({

@@ -11,7 +11,7 @@ require('@solana/wallet-adapter-react-ui/styles.css');
 export function WalletContextProvider({ children }: { children: React.ReactNode }) {
   // Use custom RPC if provided, otherwise fallback to public devnet
   const endpoint = useMemo(() => {
-    return process.env.NEXT_PUBLIC_RPC_URL || clusterApiUrl('devnet');
+    return process.env['NEXT_PUBLIC_RPC_URL'] || clusterApiUrl('devnet');
   }, []);
 
   const wallets = useMemo(() => [new PhantomWalletAdapter()], []);

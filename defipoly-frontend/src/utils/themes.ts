@@ -98,9 +98,9 @@ export const DEFAULT_THEME = {
 };
 
 export function getBoardTheme(themeId: string): BoardTheme {
-  return BOARD_THEMES.find(theme => theme.id === themeId) || BOARD_THEMES[0];
+  return BOARD_THEMES.find(theme => theme.id === themeId) ?? BOARD_THEMES[0]!;
 }
 
 export function getPropertyCardTheme(themeId: string): PropertyCardTheme {
-  return PROPERTY_CARD_THEMES.find(theme => theme.id === themeId) || PROPERTY_CARD_THEMES[0];
+  return PROPERTY_CARD_THEMES.find(theme => theme.id === themeId) ?? PROPERTY_CARD_THEMES[0]!;
 }

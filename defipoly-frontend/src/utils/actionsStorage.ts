@@ -1,7 +1,7 @@
 // defipoly-frontend/src/utils/actionsStorage.ts
 // Updated to properly track slots while keeping all original functionality
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3101';
+const API_BASE_URL = process.env['NEXT_PUBLIC_API_BASE_URL'] || 'http://localhost:3101';
 
 export interface GameAction {
   id?: number;

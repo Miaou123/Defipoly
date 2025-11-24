@@ -31,7 +31,7 @@ interface PropertyShieldStatus {
   propertyName: string;
   selected: boolean;
   status: ShieldStatus;
-  error?: string;
+  error?: string | undefined;
 }
 
 export function ShieldAllModal({ ownedProperties, balance, onClose }: ShieldAllModalProps) {

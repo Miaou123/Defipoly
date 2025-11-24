@@ -57,7 +57,7 @@ export const useStealActions = (
       // This gets us ALL owners with their steal_protection_expiry data!
       console.log('🔍 Fetching property owners from backend API...');
       
-      const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3005';
+      const API_BASE_URL = process.env['NEXT_PUBLIC_API_BASE_URL'] || 'http://localhost:3005';
       const response = await fetch(`${API_BASE_URL}/api/properties/${propertyId}/owners`);
       
       if (!response.ok) {
@@ -147,8 +147,12 @@ export const useStealActions = (
       
       console.log('🎲 Executing truly random steal (target selected on-chain)...');
 
-      const tx = await program.methods
-        .stealPropertyInstant(
+      const methods = program?.methods;
+      if (!methods) {
+        throw new Error('Program not initialized');
+      }
+      const tx = await methods
+        ['stealPropertyInstant']!(
           Array.from(userRandomness)
         )
         .accountsPartial({

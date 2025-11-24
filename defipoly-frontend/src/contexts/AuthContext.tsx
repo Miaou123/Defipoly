@@ -10,7 +10,7 @@ import { useWallet } from '@solana/wallet-adapter-react';
 import { jwtDecode } from 'jwt-decode';
 import bs58 from 'bs58';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3101';
+const API_BASE_URL = process.env['NEXT_PUBLIC_API_BASE_URL'] || 'http://localhost:3101';
 
 interface AuthContextType {
   token: string | null;

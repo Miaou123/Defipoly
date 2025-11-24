@@ -52,6 +52,7 @@ export default function Home() {
         window.removeEventListener('profileUpdated', handleProfileUpdate);
       };
     }
+    return undefined;
   }, [publicKey]);
 
   return (

@@ -46,8 +46,12 @@ export const useShieldActions = (
       const [ownershipPDA] = getOwnershipPDA(wallet.publicKey, propertyId);
 
       // ✅ FIX: Include marketingTokenAccount in the accounts
-      const tx = await program.methods
-        .activateShield(cycles)
+      const methods = program?.methods;
+      if (!methods) {
+        throw new Error('Program not initialized');
+      }
+      const tx = await methods
+        ['activateShield']!(cycles)
         .accountsPartial({
           property: propertyPDA,
           ownership: ownershipPDA,

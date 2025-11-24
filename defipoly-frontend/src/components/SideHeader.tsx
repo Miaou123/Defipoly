@@ -65,6 +65,7 @@ export function SideHeader() {
         window.removeEventListener('profileUpdated', handleProfileUpdate);
       };
     }
+    return undefined;
   }, [publicKey, mounted]);
 
   return (

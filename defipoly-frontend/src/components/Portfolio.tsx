@@ -304,7 +304,7 @@ export function Portfolio({ onSelectProperty }: PortfolioProps) {
               const isComplete = isSetComplete(setId, ownedPropertyIds);
               const minSlots = getMinSlots(setId);
               const setName = getSetName(setId);
-              const setColorClass = setProperties[0].propertyInfo.color;
+              const setColorClass = setProperties[0]?.propertyInfo.color ?? 'default';
               
               const totalSlotsInSet = setProperties.reduce((sum, p) => sum + p.slotsOwned, 0);
               const totalIncomeInSet = setProperties.reduce((sum, p) => {

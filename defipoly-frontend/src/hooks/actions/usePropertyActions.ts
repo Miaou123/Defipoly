@@ -64,8 +64,12 @@ export const usePropertyActions = (
       // Initialize player if needed
       if (!playerData) {
         console.log('🆕 Adding initialize player instruction');
-        const initPlayerIx = await program.methods
-          .initializePlayer()
+        const methods = program?.methods;
+        if (!methods) {
+          throw new Error('Program not initialized');
+        }
+        const initPlayerIx = await methods
+          ['initializePlayer']!()
           .accountsPartial({
             player: wallet.publicKey,
             playerAccount: playerPDA,
@@ -88,8 +92,12 @@ export const usePropertyActions = (
       console.log('📍 Adding buy property instruction...');
       
       // Add buy property instruction
-      const buyPropertyIx = await program.methods
-        .buyProperty(slots)
+      const methods = program?.methods;
+      if (!methods) {
+        throw new Error('Program not initialized');
+      }
+      const buyPropertyIx = await methods
+        ['buyProperty']!(slots)
         .accountsPartial({
           property: propertyPDA,
           ownership: ownershipPDA,
@@ -154,8 +162,12 @@ export const usePropertyActions = (
       const [playerPDA] = getPlayerPDA(wallet.publicKey);
       const [ownershipPDA] = getOwnershipPDA(wallet.publicKey, propertyId);
 
-      const tx = await program.methods
-        .sellProperty(slots)
+      const methods = program?.methods;
+      if (!methods) {
+        throw new Error('Program not initialized');
+      }
+      const tx = await methods
+        ['sellProperty']!(slots)
         .accountsPartial({
           property: propertyPDA,
           ownership: ownershipPDA,
