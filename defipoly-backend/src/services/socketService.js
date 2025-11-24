@@ -10,6 +10,13 @@ const { getDatabase } = require('../config/database');
 
 let io = null;
 
+const ALLOWED_ORIGINS = [
+  'http://localhost:3100',
+  'http://localhost:3000',
+  'https://defipoly.app',
+  'https://www.defipoly.app',
+];
+
 /**
  * Initialize Socket.IO server
  * @param {http.Server} httpServer - HTTP server instance
@@ -18,7 +25,15 @@ let io = null;
 function initSocketIO(httpServer) {
   io = new Server(httpServer, {
     cors: {
-      origin: process.env.FRONTEND_URL || 'http://localhost:3100',
+      origin: (origin, callback) => {
+        if (!origin) return callback(null, true);
+        if (ALLOWED_ORIGINS.includes(origin)) {
+          callback(null, true);
+        } else {
+          console.warn(`🚫 [SOCKET] Blocked connection from: ${origin}`);
+          callback(new Error('Not allowed by CORS'));
+        }
+      },
       credentials: true
     },
     transports: ['websocket', 'polling']
@@ -341,4 +356,4 @@ module.exports = {
   emitToProperty,
   emitToAll,
   gameEvents
-};
+}

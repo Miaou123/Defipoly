@@ -23,14 +23,16 @@ const WebSocketContext = createContext<WebSocketContextType>({
   unsubscribeFromWallet: () => {}
 });
 
+// Replace the WebSocketProvider with this fixed version:
+
 export function WebSocketProvider({ children }: { children: React.ReactNode }) {
   const [socket, setSocket] = useState<Socket | null>(null);
   const [connected, setConnected] = useState(false);
   const [subscribedProperties, setSubscribedProperties] = useState<Set<number>>(new Set());
   const socketRef = useRef<Socket | null>(null);
-  const [currentWallet, setCurrentWallet] = useState<string | null>(null);
+  const currentWalletRef = useRef<string | null>(null);
 
-  // Initialize socket connection (independent of wallet)
+  // Initialize socket connection ONCE (no dependencies)
   useEffect(() => {
     const socketUrl = process.env['NEXT_PUBLIC_API_BASE_URL'] || 'http://localhost:3101';
     
@@ -39,26 +41,27 @@ export function WebSocketProvider({ children }: { children: React.ReactNode }) {
     const newSocket = io(socketUrl, {
       transports: ['websocket', 'polling'],
       reconnection: true,
-      reconnectionAttempts: 5,
+      reconnectionAttempts: Infinity,
       reconnectionDelay: 1000,
+      reconnectionDelayMax: 5000,
     });
 
     socketRef.current = newSocket;
     setSocket(newSocket);
 
-    // Connection event handlers
     newSocket.on('connect', () => {
       console.log('🔌 WebSocket connected');
       setConnected(true);
       
       // Re-subscribe to wallet if we had one
-      if (currentWallet) {
-        newSocket.emit('subscribe-wallet', currentWallet);
+      if (currentWalletRef.current) {
+        console.log('👛 Re-subscribing to wallet:', currentWalletRef.current);
+        newSocket.emit('subscribe-wallet', currentWalletRef.current);
       }
     });
 
-    newSocket.on('disconnect', () => {
-      console.log('🔌 WebSocket disconnected');
+    newSocket.on('disconnect', (reason) => {
+      console.log('🔌 WebSocket disconnected:', reason);
       setConnected(false);
     });
 
@@ -70,43 +73,39 @@ export function WebSocketProvider({ children }: { children: React.ReactNode }) {
       console.log('🔌 Cleaning up WebSocket connection');
       newSocket.disconnect();
     };
-  }, [currentWallet]);
+  }, []); // Empty dependency array - initialize only once
 
-  // Method to subscribe to wallet events (called from other hooks)
   const subscribeToWallet = useCallback((walletAddress: string) => {
-    setCurrentWallet(walletAddress);
-    if (socket && connected) {
+    currentWalletRef.current = walletAddress;
+    if (socketRef.current?.connected) {
       console.log('👛 Subscribing to wallet events:', walletAddress);
-      socket.emit('subscribe-wallet', walletAddress);
+      socketRef.current.emit('subscribe-wallet', walletAddress);
     }
-  }, [socket, connected]);
-
-  // Method to unsubscribe from wallet events
-  const unsubscribeFromWallet = useCallback(() => {
-    setCurrentWallet(null);
-    // Note: We don't emit unsubscribe as the backend handles disconnections automatically
   }, []);
 
-  // Property subscription management
+  const unsubscribeFromWallet = useCallback(() => {
+    currentWalletRef.current = null;
+  }, []);
+
   const subscribeToProperty = useCallback((propertyId: number) => {
-    if (socket && connected && !subscribedProperties.has(propertyId)) {
+    if (socketRef.current?.connected) {
       console.log('🏠 Subscribing to property:', propertyId);
-      socket.emit('subscribe-property', propertyId);
+      socketRef.current.emit('subscribe-property', propertyId);
       setSubscribedProperties(prev => new Set([...prev, propertyId]));
     }
-  }, [socket, connected, subscribedProperties]);
+  }, []);
 
   const unsubscribeFromProperty = useCallback((propertyId: number) => {
-    if (socket && connected && subscribedProperties.has(propertyId)) {
+    if (socketRef.current?.connected) {
       console.log('🏠 Unsubscribing from property:', propertyId);
-      socket.emit('unsubscribe-property', propertyId);
+      socketRef.current.emit('unsubscribe-property', propertyId);
       setSubscribedProperties(prev => {
         const newSet = new Set(prev);
         newSet.delete(propertyId);
         return newSet;
       });
     }
-  }, [socket, connected, subscribedProperties]);
+  }, []);
 
   return (
     <WebSocketContext.Provider 

@@ -23,6 +23,7 @@ interface PropertyCardProps {
   theme?: PropertyCardTheme;
   customPropertyCardBackground?: string | null | undefined;
   modalView?: boolean;
+  compact?: boolean;
 }
 
 export function PropertyCard({ 
@@ -33,7 +34,8 @@ export function PropertyCard({
   spectatorOwnerships = [],
   theme, 
   customPropertyCardBackground, 
-  modalView = false 
+  modalView = false,
+  compact = false
 }: PropertyCardProps) {
   const { connected, publicKey } = useWallet();
   
@@ -79,22 +81,23 @@ export function PropertyCard({
 
   // Determine which cooldowns are active (only show in normal mode)
   const activeCooldowns = [];
+  const cooldownIconSize = compact ? 8 : 12;
   if (!spectatorMode) {
     if (shieldActive) {
       activeCooldowns.push({ 
-        icon: <ShieldIcon size={12} className="text-cyan-400" />, 
+        icon: <ShieldIcon size={cooldownIconSize} className="text-cyan-400" />, 
         label: 'Shield Active',
       });
     }
     if (isThisPropertyOnCooldown) {
       activeCooldowns.push({ 
-        icon: <HourglassIcon size={12} className="text-yellow-400" />,
+        icon: <HourglassIcon size={cooldownIconSize} className="text-yellow-400" />,
         label: 'Set Cooldown',
       });
     }
     if (isOnStealCooldown) {
       activeCooldowns.push({ 
-        icon: <TargetIcon size={12} className="text-orange-400" />,
+        icon: <TargetIcon size={cooldownIconSize} className="text-orange-400" />,
         label: 'Steal Cooldown',
       });
     }
@@ -273,55 +276,55 @@ export function PropertyCard({
 
       <div className="relative z-20 flex flex-col h-full">
         <div 
-          className="absolute top-0 left-0 w-1.5 h-full z-30"
+          className={`absolute top-0 left-0 h-full z-30 ${compact ? 'w-0.5' : 'w-1.5'}`}
           style={{
             background: colorHex,
-            boxShadow: `0 0 10px ${colorHex}99`,
+            boxShadow: compact ? 'none' : `0 0 10px ${colorHex}99`,
           }}
         />
 
         <div 
-          className="absolute top-0 right-0 w-8 h-8 sm:w-10 sm:h-10 z-20"
+          className={`absolute top-0 right-0 z-20 ${compact ? 'w-3 h-3' : 'w-8 h-8 sm:w-10 sm:h-10'}`}
           style={{
             background: colorHex,
             clipPath: 'polygon(0 0, 100% 0, 100% 100%)',
           }}
         />
 
-        <div className="px-3 py-3 flex-shrink-0 relative z-25">
+        <div className={`${compact ? 'px-1.5 py-1' : 'px-3 py-3'} flex-shrink-0 relative z-25`}>
           <div 
-            className={`${modalView ? 'text-[11px]' : 'text-[7px] sm:text-[8px]'} font-bold leading-tight uppercase pr-10`}
+            className={`${modalView ? 'text-[11px]' : compact ? 'text-[5px]' : 'text-[7px] sm:text-[8px]'} font-bold leading-tight uppercase ${compact ? 'pr-2' : 'pr-10'}`}
             style={{
               color: getTextColor(),
-              letterSpacing: '0.3px',
-              lineHeight: '1.2',
+              letterSpacing: compact ? '0.1px' : '0.3px',
+              lineHeight: '1.1',
             }}
           >
             {property.name}
           </div>
         </div>
 
-        <div className="flex-1 flex items-center justify-center px-1 min-h-0">
+        <div className={`flex-1 flex items-center justify-center ${compact ? 'px-0' : 'px-1'} min-h-0`}>
           {buildingLevel === 0 ? (
             <div className="w-full h-full flex items-center justify-center">
-              <div className={modalView ? 'scale-[0.5]' : 'scale-[0.3] sm:scale-[0.35]'}>
+              <div className={modalView ? 'scale-[0.5]' : compact ? 'scale-[0.35]' : 'scale-[0.3] sm:scale-[0.35]'}>
                 <LocationPin color={property.color} size="small" />
               </div>
             </div>
           ) : (
-            <div className={`w-full h-full flex items-center justify-center ${modalView ? 'scale-[0.4]' : 'scale-[0.25]'}`}>
+            <div className={`w-full h-full flex items-center justify-center ${modalView ? 'scale-[0.4]' : compact ? 'scale-[0.3]' : 'scale-[0.25]'}`}>
               {BUILDING_SVGS[buildingLevel]}
             </div>
           )}
         </div>
 
-        <div className="px-4 pb-1.5 flex items-center justify-between gap-2 flex-shrink-0">
-          <div className={`${modalView ? 'text-[12px]' : 'text-[8px]'} font-semibold text-yellow-300`}>
+        <div className={`${compact ? 'px-1.5 pb-0.5' : 'px-4 pb-1.5'} flex items-center justify-between gap-1 flex-shrink-0`}>
+          <div className={`${modalView ? 'text-[12px]' : compact ? 'text-[5px]' : 'text-[8px]'} font-semibold text-yellow-300`}>
             ${formatNumber(property.price)}
           </div>
           
           {activeCooldowns.length > 0 && (
-            <div className="flex gap-1">
+            <div className={`flex ${compact ? 'gap-0.5' : 'gap-1'}`}>
               {activeCooldowns.map((cooldown, index) => (
                 <div key={index} className="relative group">
                   {cooldown.icon}

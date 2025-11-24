@@ -6,6 +6,7 @@ import { Leaderboard } from '@/components/Leaderboard';
 import { LiveFeed } from '@/components/LiveFeed';
 import { PropertyModal } from '@/components/property-modal';
 import { ProfileWallet } from '@/components/ProfileWallet';
+import { MobileLayout } from '@/components/MobileLayout';
 import { useState, useEffect } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { getProfile } from '@/utils/profileStorage';
@@ -15,6 +16,18 @@ export default function Home() {
   const [selectedProperty, setSelectedProperty] = useState<number | null>(null);
   const [profilePicture, setProfilePicture] = useState<string | null>(null);
   const [cornerSquareStyle, setCornerSquareStyle] = useState<'property' | 'profile'>('property');
+  const [isMobile, setIsMobile] = useState(false);
+
+  // Check for mobile
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 1024);
+    };
+    
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   // Load profile picture
   useEffect(() => {
@@ -55,6 +68,26 @@ export default function Home() {
     return undefined;
   }, [publicKey]);
 
+  // Mobile Layout
+  if (isMobile) {
+    return (
+      <>
+        <MobileLayout
+          onSelectProperty={setSelectedProperty}
+          profilePicture={profilePicture}
+          cornerSquareStyle={cornerSquareStyle}
+        />
+        {selectedProperty !== null && (
+          <PropertyModal 
+            propertyId={selectedProperty}
+            onClose={() => setSelectedProperty(null)}
+          />
+        )}
+      </>
+    );
+  }
+
+  // Desktop Layout
   return (
     <div className="h-screen overflow-hidden relative">
       {/* Main grid layout - fixed height, no scrolling */}

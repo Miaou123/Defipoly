@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { TrophyIcon, HexagonBadge } from './icons/UIIcons';
 import { ProfileData } from '@/utils/profileStorage';
 import { setCachedSpectator } from '@/utils/spectatorCache';
+import { useWebSocket } from '@/contexts/WebSocketContext';
 
 interface LeaderboardEntry {
   rank: number;
@@ -29,6 +30,7 @@ interface LeaderboardData {
 const API_BASE_URL = process.env['NEXT_PUBLIC_API_BASE_URL'] || 'http://localhost:3101';
 
 export function Leaderboard() {
+  const { socket, connected } = useWebSocket(); 
   const [leaderboardData, setLeaderboardData] = useState<LeaderboardData | null>(null);
   const [profiles, setProfiles] = useState<Record<string, ProfileData>>({});
   const [loading, setLoading] = useState(true);
@@ -160,6 +162,26 @@ export function Leaderboard() {
 
     fetchLeaderboard();
   }, []);
+
+  useEffect(() => {
+    if (!socket || !connected) return;
+
+    const handleLeaderboardChanged = (data: any) => {
+      console.log('🏆 Leaderboard updated via WebSocket');
+      if (data.topPlayers) {
+        setLeaderboardData(prev => prev ? {
+          ...prev,
+          leaderboard: data.topPlayers
+        } : null);
+      }
+    };
+
+    socket.on('leaderboard-changed', handleLeaderboardChanged);
+
+    return () => {
+      socket.off('leaderboard-changed', handleLeaderboardChanged);
+    };
+  }, [socket, connected]);
 
   const formatAddress = (address: string) => {
     return `${address.slice(0, 4)}...${address.slice(-4)}`;
