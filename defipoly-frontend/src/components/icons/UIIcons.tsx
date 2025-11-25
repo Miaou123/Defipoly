@@ -90,6 +90,36 @@ export const ShieldIcon: React.FC<IconProps> = ({ className = '', size = 24 }) =
   </svg>
 );
 
+export const ShieldCooldownIcon: React.FC<IconProps> = ({ className = '', size = 24 }) => (
+  <svg 
+    width={size} 
+    height={size} 
+    viewBox="0 0 24 24" 
+    fill="none" 
+    xmlns="http://www.w3.org/2000/svg"
+    className={className}
+  >
+    <path 
+      d="M12 2L4 6v6c0 5.5 3.8 10.7 8 12 4.2-1.3 8-6.5 8-12V6l-8-4z" 
+      fill="currentColor"
+      opacity="0.2"
+    />
+    <path 
+      d="M12 2L4 6v6c0 5.5 3.8 10.7 8 12 4.2-1.3 8-6.5 8-12V6l-8-4z" 
+      stroke="currentColor" 
+      strokeWidth="2"
+      strokeLinejoin="round"
+    />
+    <path 
+      d="M9 9l6 6M15 9l-6 6" 
+      stroke="currentColor" 
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </svg>
+);
+
 export const CoinsIcon: React.FC<IconProps> = ({ className = '', size = 24 }) => (
   <svg 
     width={size} 
@@ -682,6 +712,7 @@ export default {
   DiceIcon,
   PropertyMarkerIcon,
   ShieldIcon,
+  ShieldCooldownIcon,
   CoinsIcon,
   FlameIcon,
   BuildingIcon,

@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { useGameState } from '@/contexts/GameStateContext';
-import { ShieldIcon, HourglassIcon, TargetIcon } from './icons/UIIcons';
+import { ShieldIcon, ShieldCooldownIcon, HourglassIcon, TargetIcon } from './icons/UIIcons';
 import { LocationPin, BUILDING_SVGS } from './icons/GameAssets';
 
 import { PROPERTIES } from '@/utils/constants';
@@ -93,12 +93,25 @@ export function PropertyCard({
   // Determine which cooldowns are active (only show in normal mode)
   const activeCooldowns = [];
   if (!spectatorMode) {
+    // Check if shield is on cooldown
+    const now = Math.floor(Date.now() / 1000);
+    const shieldExpiry = ownership?.shieldExpiry?.toNumber() || 0;
+    const cooldownDuration = ownership?.shieldCooldownDuration?.toNumber() || (12 * 3600);
+    const cooldownEndTime = shieldExpiry + cooldownDuration;
+    const isShieldOnCooldown = !shieldActive && shieldExpiry > 0 && now < cooldownEndTime;
+    
     if (shieldActive) {
       activeCooldowns.push({ 
         icon: <ShieldIcon size={cooldownIconSize} className="text-cyan-400" />, 
         label: 'Shield Active',
       });
+    } else if (isShieldOnCooldown) {
+      activeCooldowns.push({ 
+        icon: <ShieldCooldownIcon size={cooldownIconSize} className="text-red-400" />, 
+        label: 'Shield Cooldown',
+      });
     }
+    
     if (isThisPropertyOnCooldown) {
       activeCooldowns.push({ 
         icon: <HourglassIcon size={cooldownIconSize} className="text-yellow-400" />,

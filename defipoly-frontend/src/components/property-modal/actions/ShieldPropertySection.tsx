@@ -7,7 +7,6 @@ import { useState, useEffect } from 'react';
 import { useDefipoly } from '@/hooks/useDefipoly';
 import { useNotification } from '@/contexts/NotificationContext';
 import { PROPERTIES } from '@/utils/constants';
-import { Clock, Shield } from 'lucide-react';
 import { ShieldIcon, TimerIcon, WarningIcon } from '@/components/icons/UIIcons';
 import { UnownedOverlay } from '../UnownedOverlay';
 
@@ -39,15 +38,13 @@ export function ShieldPropertySection({
   const totalSlots = propertyData?.owned || 0;
   const now = Date.now() / 1000;
   const shieldExpiryTimestamp = propertyData?.shieldExpiry || 0;
-  const isShieldActive = propertyData?.shieldActive && shieldExpiryTimestamp > now;
+  const isShieldActive = shieldExpiryTimestamp > now;
   
   const cooldownDurationSeconds = propertyData?.shieldCooldownDuration || (12 * 3600);
   const cooldownEndTime = shieldExpiryTimestamp + cooldownDurationSeconds;
   const isInCooldown = !isShieldActive && shieldExpiryTimestamp > 0 && now < cooldownEndTime;
   
-  const baseCostPerSlot24h = propertyData?.shieldCostPercentBps 
-  ? (property.price * propertyData.shieldCostPercentBps / 10000)
-  : 0;
+  const baseCostPerSlot24h = (property.price * property.shieldCostBps) / 10000;
   const costPerSlotForDuration = (baseCostPerSlot24h * selectedHours) / 24;
   const totalShieldCost = costPerSlotForDuration * totalSlots;
   const canShield = balance >= totalShieldCost && totalSlots > 0;
@@ -211,48 +208,6 @@ export function ShieldPropertySection({
     return <UnownedOverlay>{mockContent}</UnownedOverlay>;
   }
 
-  // Cooldown state - Compact version
-  if (isInCooldown && !isShieldActive) {
-    return (
-      <div className="mt-2 p-3 bg-gradient-to-br from-purple-900/40 to-indigo-900/40 rounded-xl border border-purple-500/30">
-        <div className="mb-2 p-2 bg-orange-900/30 border border-orange-500/40 rounded-lg">
-          <p className="text-xs text-orange-200 flex items-center gap-1.5 mb-1">
-            <Clock className="w-3.5 h-3.5" />
-            <span className="font-semibold">Shield Cooldown Active</span>
-          </p>
-          <p className="text-xs text-orange-200 flex items-center justify-between">
-            <span>Available in:</span>
-            <span className="font-bold">{timeRemaining}</span>
-          </p>
-        </div>
-      </div>
-    );
-  }
-
-  // Active state - Compact version
-  if (isShieldActive) {
-    return (
-      <div className="mt-2 p-3 bg-gradient-to-br from-purple-900/40 to-indigo-900/40 rounded-xl border border-purple-500/30">
-        <div className="mb-2 p-2 bg-green-900/30 border border-green-500/40 rounded-lg">
-          <p className="text-xs text-green-200 flex items-center gap-1.5 mb-1">
-            <Shield className="w-3.5 h-3.5" />
-            <span className="font-semibold">Shield Active</span>
-          </p>
-          <div className="space-y-1">
-            <p className="text-xs text-green-200 flex items-center justify-between">
-              <span>Protected slots:</span>
-              <span className="font-bold">{totalSlots}</span>
-            </p>
-            <p className="text-xs text-green-200 flex items-center justify-between">
-              <span>Time remaining:</span>
-              <span className="font-bold">{timeRemaining}</span>
-            </p>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   // Shield selection - Purple theme matching buy section
   return (
     <div className="mt-2 p-3 bg-gradient-to-br from-purple-900/40 to-indigo-900/40 rounded-xl border border-purple-500/30">
@@ -340,14 +295,22 @@ export function ShieldPropertySection({
       {/* Action Button - Subtle style */}
       <button
         onClick={handleShield}
-        disabled={loading || !canShield}
+        disabled={loading || !canShield || isShieldActive || isInCooldown}
         className={`w-full py-2 rounded-lg font-semibold text-sm transition-all ${
-          loading || !canShield
+          loading || !canShield || isShieldActive || isInCooldown
             ? 'bg-gray-800/30 cursor-not-allowed text-gray-500 border border-gray-700/30'
             : 'bg-blue-600/40 hover:bg-blue-600/60 border border-blue-500/50 text-blue-100 hover:border-blue-400/70'
         }`}
       >
-        {loading ? 'Activating Shield...' : 'Activate Shield'}
+        {loading ? (
+          'Activating Shield...'
+        ) : isShieldActive ? (
+          `Shield Active (${timeRemaining})`
+        ) : isInCooldown ? (
+          `On Cooldown (${timeRemaining})`
+        ) : (
+          'Activate Shield'
+        )}
       </button>
 
       {!canShield && balance < totalShieldCost && (

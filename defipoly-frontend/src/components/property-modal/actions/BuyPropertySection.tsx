@@ -11,7 +11,7 @@ import { Clock } from 'lucide-react';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { useDefipoly } from '@/hooks/useDefipoly';
 import { useNotification } from '@/contexts/NotificationContext';
-import { PROPERTIES } from '@/utils/constants';
+import { PROPERTIES, SET_BONUSES } from '@/utils/constants';
 import { CooldownExplanationModal } from '@/components/CooldownExplanationModal';
 import { ChartIcon, CoinsIcon, CheckIcon, TargetIcon } from '@/components/icons/UIIcons';
 import { useGameState } from '@/contexts/GameStateContext';
@@ -59,6 +59,10 @@ export function BuyPropertySection({
   const cooldownRemaining = getSetCooldownRemaining(setId);
   const cooldownData = getSetCooldown(setId);
   const lastPurchasedPropertyId = cooldownData?.lastPurchasedPropertyId ?? null;
+
+  const setBonusData = SET_BONUSES[property.setId.toString() as keyof typeof SET_BONUSES];
+  const setBonusBps = setBonusData?.bps || 3000;
+  const setBonusPercent = (setBonusBps / 100).toFixed(2);
   
   // Get cooldown duration in hours from cooldown data or property config
   const cooldownDurationHours = cooldownData?.cooldownDuration 
@@ -161,6 +165,15 @@ export function BuyPropertySection({
   const buyCost = property.price * slotsToBuy;
   const isThisPropertyBlocked = isOnCooldown && lastPurchasedPropertyId !== propertyId;
   const canBuy = balance >= buyCost;
+
+  const missingProperties = useMemo(() => {
+    if (!property || !setInfo) return [];
+    
+    const propertiesInSet = PROPERTIES.filter(p => p.setId === property.setId);
+    return propertiesInSet
+      .filter(p => !setInfo.ownedPropertiesInSet.includes(p.id))
+      .map(p => p.name);
+  }, [property, setInfo]);
 
   const boostedDailyIncome = (setBonusInfo.hasCompleteSet || setBonusInfo.willCompleteSet) 
     ? Math.floor(dailyIncome * 1.4 * slotsToBuy) 
@@ -293,7 +306,7 @@ export function BuyPropertySection({
                 <div className="flex items-start gap-1.5 text-green-300">
                   <CheckIcon size={16} className="text-green-400 mt-0.5" />
                   <span className="text-xs leading-relaxed bg-green-900/20 rounded py-0.5 px-1.5">
-                    Set bonus activated (+40%)
+                  Set bonus activated (+{(setBonusBps / 100).toFixed(2)}%)
                   </span>
                 </div>
               ) : setBonusInfo.willCompleteSet ? (
@@ -307,7 +320,7 @@ export function BuyPropertySection({
                 <div className="flex items-start gap-1.5 text-purple-400">
                   <TargetIcon size={16} className="text-purple-400 mt-0.5" />
                   <span className="text-xs leading-relaxed">
-                    Own {setBonusInfo.ownedInSet}/{setBonusInfo.requiredProps} • Need {setBonusInfo.requiredProps - setBonusInfo.ownedInSet} more for +40%
+                  Own: {missingProperties.join(', ')} for +{(setBonusBps / 100).toFixed(2)}%
                   </span>
                 </div>
               )}

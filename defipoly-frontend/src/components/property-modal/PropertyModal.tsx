@@ -83,17 +83,14 @@ export function PropertyModal({ propertyId, onClose }: PropertyModalProps) {
         const maxSlotsPerProperty = property?.maxPerPlayer || 10;
         const shielded = ownershipData?.slotsShielded || 0;
         const shieldExpiry = ownershipData?.shieldExpiry?.toNumber?.() || 0;
-        const shieldCooldownDuration = ownershipData?.shieldCooldownDuration?.toNumber?.() || (12 * 3600);
         const isShieldActive = shielded > 0 && shieldExpiry > Math.floor(Date.now() / 1000);
-        
+
         setPropertyData({
           owned,
           maxSlotsPerProperty,
           availableSlots,
           shielded: isShieldActive ? shielded : 0,
           shieldExpiry: isShieldActive ? shieldExpiry : 0,
-          shieldCooldownDuration,
-          shieldActive: isShieldActive,
         });
 
         // Check for complete set
@@ -210,37 +207,43 @@ export function PropertyModal({ propertyId, onClose }: PropertyModalProps) {
                 {/* Income Section */}
                 <div className="bg-purple-950/40 rounded-lg p-2 lg:p-3 border border-purple-500/20">
                   <div className="flex items-center justify-between">
-                    <span className="text-[10px] lg:text-xs text-purple-400 uppercase">💰 Income</span>
+                    <span className="text-[10px] lg:text-xs text-purple-400 uppercase">💰 Daily Income</span>
                   </div>
                   
-                  {hasSetBonus ? (
-                    <>
-                      {/* Full calculation with boost - fills width */}
-                      <div className="grid grid-cols-[1fr_auto_1fr_auto_1fr] items-center gap-1 mt-1 w-full">
-                        <div className="flex flex-col">
-                          <span className="text-[8px] lg:text-[10px] text-purple-400 uppercase">Base</span>
-                          <span className="text-base lg:text-xl font-bold text-yellow-300">{baseIncomePerSlot.toLocaleString()}</span>
-                        </div>
-                        <span className="text-purple-400 text-lg px-1">+</span>
-                        <div className="flex flex-col">
-                          <span className="text-[8px] lg:text-[10px] text-green-400 uppercase">Boost <span className="text-green-300">+{(setBonusBps / 100).toFixed(2)}%</span></span>
-                          <span className="text-base lg:text-xl font-bold text-green-400">{Math.floor(baseIncomePerSlot * setBonusBps / 10000).toLocaleString()}</span>
-                        </div>
-                        <span className="text-purple-400 text-lg px-1">=</span>
-                        <div className="flex flex-col bg-purple-800/40 rounded px-3 py-1 items-end">
-                          <span className="text-[8px] lg:text-[10px] text-purple-300 uppercase">Total</span>
-                          <span className="text-base lg:text-xl font-black text-green-300">{Math.floor(baseIncomePerSlot * (10000 + setBonusBps) / 10000).toLocaleString()}</span>
-                        </div>
+                  {/* Always show full calculation */}
+                  <div className="grid grid-cols-[1fr_auto_1fr_auto_1fr] items-center gap-1 mt-1 w-full">
+                    <div className="flex flex-col">
+                      <span className="text-[8px] lg:text-[10px] text-purple-400 uppercase">Base</span>
+                      <span className="text-base lg:text-xl font-bold text-yellow-300">{baseIncomePerSlot.toLocaleString()}</span>
+                    </div>
+                    <span className="text-purple-400 text-lg px-1">+</span>
+                    <div className="flex flex-col">
+                      <span className={`text-[8px] lg:text-[10px] uppercase ${hasSetBonus ? 'text-green-400' : 'text-gray-500'}`}>
+                        Boost <span className={hasSetBonus ? 'text-green-300' : 'text-gray-500'}>+{(setBonusBps / 100).toFixed(2)}%</span>
+                      </span>
+                      <span className={`text-base lg:text-xl font-bold ${hasSetBonus ? 'text-green-400' : 'text-gray-500'}`}>
+                        {Math.floor(baseIncomePerSlot * setBonusBps / 10000).toLocaleString()}
+                      </span>
+                    </div>
+                    <span className="text-purple-400 text-lg px-1">=</span>
+                    <div className={`flex flex-col rounded px-3 py-1 items-end ${hasSetBonus ? 'bg-purple-800/40' : 'bg-gray-800/20'}`}>
+                      <span className="text-[8px] lg:text-[10px] text-purple-300 uppercase">Total</span>
+                      <span className={`text-base lg:text-xl font-black ${hasSetBonus ? 'text-green-300' : 'text-gray-400'}`}>
+                        {hasSetBonus ? Math.floor(baseIncomePerSlot * (10000 + setBonusBps) / 10000).toLocaleString() : baseIncomePerSlot.toLocaleString()}
+                      </span>
+                    </div>
+                  </div>
+                  {hasSetBonus && (
+                    <div className="mt-2 px-2 py-1 bg-green-500/20 rounded border border-green-500/30 flex items-center justify-between">
+                      <span className="text-[9px] lg:text-xs text-green-300 font-semibold">✨ Complete Set Bonus Active</span>
+                      <span className="text-[9px] lg:text-xs text-green-400">+{(setBonusBps / 100).toFixed(2)}% on {personalOwned} slots</span>
+                    </div>
+                  )}
+                  {!hasSetBonus && (
+                    <div className="mt-2 px-2 py-1 bg-amber-500/10 rounded border border-amber-500/30">
+                      <div className="flex items-center gap-1.5 text-amber-300">
+                        <span className="text-[10px] lg:text-xs">✨ Complete this set for +{(setBonusBps / 100).toFixed(2)}% bonus</span>
                       </div>
-                      <div className="mt-2 px-2 py-1 bg-green-500/20 rounded border border-green-500/30 flex items-center justify-between">
-                        <span className="text-[9px] lg:text-xs text-green-300 font-semibold">✨ Complete Set Bonus Active</span>
-                        <span className="text-[9px] lg:text-xs text-green-400">+{(setBonusBps / 100).toFixed(2)}% on {personalOwned} slots</span>
-                      </div>
-                    </>
-                  ) : (
-                    <div className="flex items-baseline gap-1 mt-1">
-                      <span className="text-xs lg:text-sm text-purple-400">Base</span>
-                      <span className="text-lg lg:text-2xl font-black text-yellow-300">{baseIncomePerSlot.toLocaleString()}</span>
                     </div>
                   )}
                 </div>

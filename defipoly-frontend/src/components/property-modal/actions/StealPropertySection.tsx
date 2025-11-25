@@ -100,6 +100,7 @@ export function StealPropertySection({
         
         setTimeout(() => {
           setAvailableTargets(null); // Refresh stats
+          onClose(); // Close modal after success or failure
         }, 2000);
       }
     } catch (error: any) {
@@ -120,6 +121,9 @@ export function StealPropertySection({
       } else {
         showError('Steal Failed', errorMsg);
       }
+      
+      // Close modal after error is shown
+      setTimeout(() => onClose(), 2000);
     } finally {
       setLoading(false);
     }
@@ -189,14 +193,7 @@ export function StealPropertySection({
           </span>
         </div>
       </div>
-
-      {/* Warnings */}
-      {wouldExceedMaxSlots && (
-        <div className="text-center text-xs text-yellow-300 mb-2 bg-yellow-400/10 py-1.5 px-2 rounded border border-yellow-400/20">
-          <WarningIcon size={16} className="inline-block mr-1" />You're at max slots for this property
-        </div>
-      )}
-
+      
       {/* Action Button */}
       <button
         onClick={handleSteal}
