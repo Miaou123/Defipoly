@@ -38,10 +38,10 @@ export function ShieldPropertySection({
 
   const totalSlots = propertyData?.owned || 0;
   const now = Date.now() / 1000;
-  const shieldExpiryTimestamp = propertyData?.shieldExpiry?.toNumber() || 0;
+  const shieldExpiryTimestamp = propertyData?.shieldExpiry || 0;
   const isShieldActive = propertyData?.shieldActive && shieldExpiryTimestamp > now;
   
-  const cooldownDurationSeconds = propertyData?.shieldCooldownDuration?.toNumber() || (12 * 3600);
+  const cooldownDurationSeconds = propertyData?.shieldCooldownDuration || (12 * 3600);
   const cooldownEndTime = shieldExpiryTimestamp + cooldownDurationSeconds;
   const isInCooldown = !isShieldActive && shieldExpiryTimestamp > 0 && now < cooldownEndTime;
   

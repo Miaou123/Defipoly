@@ -83,14 +83,17 @@ export function PropertyModal({ propertyId, onClose }: PropertyModalProps) {
         const maxSlotsPerProperty = property?.maxPerPlayer || 10;
         const shielded = ownershipData?.slotsShielded || 0;
         const shieldExpiry = ownershipData?.shieldExpiry?.toNumber?.() || 0;
+        const shieldCooldownDuration = ownershipData?.shieldCooldownDuration?.toNumber?.() || (12 * 3600);
         const isShieldActive = shielded > 0 && shieldExpiry > Math.floor(Date.now() / 1000);
-
+        
         setPropertyData({
           owned,
           maxSlotsPerProperty,
           availableSlots,
           shielded: isShieldActive ? shielded : 0,
           shieldExpiry: isShieldActive ? shieldExpiry : 0,
+          shieldCooldownDuration,
+          shieldActive: isShieldActive,
         });
 
         // Check for complete set
