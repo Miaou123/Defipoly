@@ -33,6 +33,7 @@ export function LiveFeed() {
   const [profiles, setProfiles] = useState<Record<string, ProfileData>>({});
   const [loading, setLoading] = useState(true);
   const initialLoadDone = useRef(false);
+  const newItemsRef = useRef<Set<string>>(new Set());
 
   const formatAddress = (address: string) => {
     return `${address.slice(0, 4)}...${address.slice(-4)}`;
@@ -210,6 +211,14 @@ export function LiveFeed() {
           return prev;
         }
         
+        // Mark as new for animation
+        newItemsRef.current.add(feedItem.txSignature);
+        
+        // Remove from "new" set after animation completes
+        setTimeout(() => {
+          newItemsRef.current.delete(feedItem.txSignature);
+        }, 300);
+        
         return [feedItem, ...prev].slice(0, 50);
       });
       
@@ -270,11 +279,13 @@ export function LiveFeed() {
         ) : (
           <div className="space-y-2">
             {feed.map((item, index) => (
-              <div
-                key={`${item.txSignature}-${index}`}
-                onClick={() => handleActionClick(item)}
-                className="flex items-start gap-2 p-2 rounded-lg bg-white/[0.01] hover:bg-white/[0.05] transition-all cursor-pointer group"
-              >
+                <div
+                  key={`${item.txSignature}-${index}`}
+                  onClick={() => handleActionClick(item)}
+                  className={`flex items-start gap-2 p-2 rounded-lg bg-white/[0.01] hover:bg-white/[0.05] transition-all cursor-pointer group ${
+                    newItemsRef.current.has(item.txSignature) ? 'animate-slide-in-top' : ''
+                  }`}
+                >
                 <div className="mt-0.5 text-purple-400 group-hover:text-purple-300 transition-colors">
                   {getActionIcon(item.type)}
                 </div>

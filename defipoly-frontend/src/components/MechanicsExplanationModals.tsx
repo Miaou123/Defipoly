@@ -50,7 +50,7 @@ export function BuyPropertyExplanationModal({ onClose, onProceed }: BuyPropertyE
               <div>
                 <h3 className="font-bold text-green-100 mb-2">How It Works</h3>
                 <p className="text-green-200 text-sm leading-relaxed">
-                  Purchase property slots to start earning passive daily income. Each slot generates revenue that <span className="font-bold text-green-300">must be claimed</span> from your portfolio.
+                  Purchase property slots to start earning passive daily income. Each slot generates revenue that <span className="font-bold text-green-300">must be claimed</span>.
                 </p>
               </div>
             </div>
@@ -60,9 +60,9 @@ export function BuyPropertyExplanationModal({ onClose, onProceed }: BuyPropertyE
             <div className="flex items-start gap-3">
               <TrendingUp className="w-5 h-5 text-green-400 mt-1 flex-shrink-0" />
               <div>
-                <h3 className="font-bold text-green-100 mb-2">Set Bonus (+40%)</h3>
+                <h3 className="font-bold text-green-100 mb-2">Set Bonus</h3>
                 <p className="text-green-200 text-sm leading-relaxed mb-2">
-                  Own all properties in a color set to unlock a <span className="font-bold text-green-300">+40% income bonus</span>. The bonus applies to your minimum owned slots across the set.
+                  Own all properties in a color set to unlock a <span className="font-bold text-green-300">income bonus</span>. The bonus applies to your minimum owned slots across the set.
                 </p>
                 <p className="text-green-300 text-xs leading-relaxed bg-green-900/30 rounded p-2">
                   <span className="font-bold">Example:</span> If you own 5 slots of Property A and 3 slots of Property B in the same set, the +40% bonus applies to 3 slots of each property (the minimum).

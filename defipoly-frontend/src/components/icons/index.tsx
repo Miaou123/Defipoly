@@ -35,4 +35,9 @@ export {
   export {
     LocationPin,
     BUILDING_SVGS,
+    GreenBillSVG,
+    GoldBillSVG,
+    MoneyBagSVG,
+    DiamondSVG,
+    MONEY_SYMBOLS,
   } from './GameAssets';

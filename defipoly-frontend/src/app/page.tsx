@@ -91,7 +91,7 @@ export default function Home() {
   return (
     <div className="h-screen overflow-hidden relative">
       {/* Main grid layout - fixed height, no scrolling */}
-      <div className="grid grid-cols-1 lg:grid-cols-[minmax(280px,320px)_1fr_minmax(280px,320px)] gap-4 p-4 h-full w-full mx-auto max-w-[1920px]">
+      <div className="grid grid-cols-1 lg:grid-cols-[minmax(320px,400px)_1fr_minmax(320px,400px)] gap-2 p-4 h-full w-full mx-auto max-w-[1920px]">
         {/* LEFT COLUMN: Logo + Portfolio */}
         <div className="flex flex-col gap-2 overflow-hidden min-h-0">
         {/* Logo at top of left column */}
@@ -126,12 +126,12 @@ export default function Home() {
           {/* Fixed height container - no scrolling */}
           <div className="flex-1 flex flex-col gap-2 overflow-hidden min-h-0">
             {/* Leaderboard - 55% of space */}
-            <div className="h-[55%] min-h-0 overflow-hidden">
+            <div className="h-[45%] min-h-0 overflow-hidden">
               <Leaderboard />
             </div>
             
             {/* Live Feed - 43% of space */}
-            <div className="h-[43%] min-h-0 overflow-hidden">
+            <div className="h-[55%] min-h-0 overflow-hidden">
               <LiveFeed />
             </div>
           </div>

@@ -299,3 +299,76 @@ input[type="number"]::-webkit-outer-spin-button:hover {
       height: -webkit-fill-available;
     }
   }
+
+  @keyframes slideInFromTop {
+    from {
+      transform: translateY(-100%);
+      opacity: 0;
+    }
+    to {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  }
+  
+  .animate-slide-in-top {
+    animation: slideInFromTop 0.3s ease-out;
+  }
+
+/* ========================================
+   MONEY BILLS ANIMATIONS - Pulse & Spread
+   ======================================== */
+
+/* Building pulse animation */
+@keyframes buildingPulse {
+  0%, 100% { transform: scale(1); }
+  12% { transform: scale(1.2); }
+  25% { transform: scale(1); }
+}
+
+.building-pulse-8s { animation: buildingPulse 8s ease-in-out infinite; }
+.building-pulse-7s { animation: buildingPulse 7s ease-in-out infinite; }
+.building-pulse-6s { animation: buildingPulse 6s ease-in-out infinite; }
+.building-pulse-5s { animation: buildingPulse 5s ease-in-out infinite; }
+.building-pulse-4-5s { animation: buildingPulse 4.5s ease-in-out infinite; }
+.building-pulse-4s { animation: buildingPulse 4s ease-in-out infinite; }
+.building-pulse-3-5s { animation: buildingPulse 3.5s ease-in-out infinite; }
+.building-pulse-3s { animation: buildingPulse 3s ease-in-out infinite; }
+.building-pulse-2-5s { animation: buildingPulse 2.5s ease-in-out infinite; }
+.building-pulse-2s { animation: buildingPulse 2s ease-in-out infinite; }
+
+/* Spread animations - float up and fan out, synced with pulse */
+@keyframes spreadUp1 {
+  0%, 10% { transform: translate(-50%, -50%) scale(0); opacity: 0; }
+  12% { transform: translate(-50%, -50%) scale(1.1); opacity: 1; }
+  70% { opacity: 1; }
+  100% { transform: translate(calc(-50% - 35px), calc(-50% - 70px)) scale(0.4); opacity: 0; }
+}
+
+@keyframes spreadUp2 {
+  0%, 10% { transform: translate(-50%, -50%) scale(0); opacity: 0; }
+  12% { transform: translate(-50%, -50%) scale(1.1); opacity: 1; }
+  70% { opacity: 1; }
+  100% { transform: translate(calc(-50% + 30px), calc(-50% - 65px)) scale(0.4); opacity: 0; }
+}
+
+@keyframes spreadUp3 {
+  0%, 10% { transform: translate(-50%, -50%) scale(0); opacity: 0; }
+  12% { transform: translate(-50%, -50%) scale(1.1); opacity: 1; }
+  70% { opacity: 1; }
+  100% { transform: translate(calc(-50% - 15px), calc(-50% - 75px)) scale(0.4); opacity: 0; }
+}
+
+@keyframes spreadUp4 {
+  0%, 10% { transform: translate(-50%, -50%) scale(0); opacity: 0; }
+  12% { transform: translate(-50%, -50%) scale(1.1); opacity: 1; }
+  70% { opacity: 1; }
+  100% { transform: translate(calc(-50% + 40px), calc(-50% - 60px)) scale(0.4); opacity: 0; }
+}
+
+@keyframes spreadUp5 {
+  0%, 10% { transform: translate(-50%, -50%) scale(0); opacity: 0; }
+  12% { transform: translate(-50%, -50%) scale(1.1); opacity: 1; }
+  70% { opacity: 1; }
+  100% { transform: translate(-50%, calc(-50% - 80px)) scale(0.4); opacity: 0; }
+}

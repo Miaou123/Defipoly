@@ -10,7 +10,7 @@ import { useGameState } from '@/contexts/GameStateContext';
 import { PROPERTIES } from '@/utils/constants';
 import { fetchPropertyStats } from '@/utils/propertyStats';
 import { Clock } from 'lucide-react';
-import { DiceIcon, ShieldIcon, LightningIcon, WarningIcon, LockIcon } from '@/components/icons/UIIcons';
+import { DiceIcon, ShieldIcon, LightningIcon, WarningIcon, LockIcon, UsersIcon } from '@/components/icons/UIIcons';
 
 interface StealPropertySectionProps {
   propertyId: number;
@@ -165,7 +165,7 @@ export function StealPropertySection({
         
         {availableTargets !== null && (
           <div className="flex items-start gap-1.5 text-purple-200">
-            <span className="text-sm">👥</span>
+            <UsersIcon size={16} className="text-purple-400 mt-0.5" />
             <span className="text-xs leading-relaxed">
               Available targets: <span className={`font-bold ${availableTargets > 0 ? 'text-green-400' : 'text-red-400'}`}>
                 {availableTargets > 0 ? `${availableTargets}` : 'None'}
@@ -193,7 +193,7 @@ export function StealPropertySection({
           </span>
         </div>
       </div>
-      
+
       {/* Action Button */}
       <button
         onClick={handleSteal}

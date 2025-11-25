@@ -241,3 +241,53 @@ export const BUILDING_SVGS: { [key: number]: React.ReactNode } = {
     </svg>
   ),
 };
+
+// ============================================
+// MONEY BILL SVGS - For income animation
+// ============================================
+
+export const GreenBillSVG = () => (
+  <svg viewBox="0 0 24 16" className="w-full h-full">
+    <rect x="1" y="1" width="22" height="14" rx="2" fill="#22c55e" stroke="#15803d" strokeWidth="1"/>
+    <circle cx="12" cy="8" r="4" fill="#15803d" opacity="0.3"/>
+    <text x="12" y="10.5" textAnchor="middle" fontSize="7" fontWeight="bold" fill="#15803d">$</text>
+    <rect x="3" y="3" width="2" height="10" fill="#15803d" opacity="0.2"/>
+    <rect x="19" y="3" width="2" height="10" fill="#15803d" opacity="0.2"/>
+  </svg>
+);
+
+export const GoldBillSVG = () => (
+  <svg viewBox="0 0 24 16" className="w-full h-full">
+    <rect x="1" y="1" width="22" height="14" rx="2" fill="#fbbf24" stroke="#d97706" strokeWidth="1"/>
+    <circle cx="12" cy="8" r="4" fill="#d97706" opacity="0.3"/>
+    <text x="12" y="10.5" textAnchor="middle" fontSize="7" fontWeight="bold" fill="#92400e">$</text>
+    <rect x="3" y="3" width="2" height="10" fill="#d97706" opacity="0.2"/>
+    <rect x="19" y="3" width="2" height="10" fill="#d97706" opacity="0.2"/>
+  </svg>
+);
+
+export const MoneyBagSVG = () => (
+  <svg viewBox="0 0 20 20" className="w-full h-full">
+    <path d="M10 2 L7 5 L13 5 Z" fill="#fbbf24" stroke="#d97706" strokeWidth="0.5"/>
+    <ellipse cx="10" cy="12" rx="6" ry="6" fill="#fbbf24" stroke="#d97706" strokeWidth="1"/>
+    <text x="10" y="14.5" textAnchor="middle" fontSize="7" fontWeight="bold" fill="#92400e">$</text>
+    <path d="M7 5 Q10 7 13 5" fill="none" stroke="#d97706" strokeWidth="1"/>
+  </svg>
+);
+
+export const DiamondSVG = () => (
+  <svg viewBox="0 0 20 20" className="w-full h-full">
+    <polygon points="10,2 18,8 10,18 2,8" fill="#60a5fa" stroke="#3b82f6" strokeWidth="1"/>
+    <polygon points="10,2 14,8 10,14 6,8" fill="#93c5fd" opacity="0.5"/>
+    <line x1="2" y1="8" x2="18" y2="8" stroke="#3b82f6" strokeWidth="0.5"/>
+    <line x1="10" y1="2" x2="6" y2="8" stroke="#3b82f6" strokeWidth="0.5"/>
+    <line x1="10" y1="2" x2="14" y2="8" stroke="#3b82f6" strokeWidth="0.5"/>
+  </svg>
+);
+
+export const MONEY_SYMBOLS = {
+  green: GreenBillSVG,
+  gold: GoldBillSVG,
+  bag: MoneyBagSVG,
+  diamond: DiamondSVG,
+};

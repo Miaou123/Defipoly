@@ -5,6 +5,7 @@ import { useWallet } from '@solana/wallet-adapter-react';
 import { useGameState } from '@/contexts/GameStateContext';
 import { ShieldIcon, ShieldCooldownIcon, HourglassIcon, TargetIcon } from './icons/UIIcons';
 import { LocationPin, BUILDING_SVGS } from './icons/GameAssets';
+import { MoneyBillsAnimation, useIncomePulseClass } from './MoneyBillsAnimation';
 
 import { PROPERTIES } from '@/utils/constants';
 import { PropertyCardTheme } from '@/utils/themes';
@@ -47,7 +48,7 @@ export function PropertyCard({
   const triangleSize = Math.max(4, Math.round((compact ? 8 : 40) * scaleFactor)); // Changed: base 32→40
   const barWidth = Math.max(1, Math.round((compact ? 2 : 8) * scaleFactor));      // Changed: Math.max 2→1, base 6→8
   const iconScale = (compact ? 0.35 : 0.4) * Math.max(0.7, scaleFactor);                         // Changed: 0.3→0.4 (bigger icons)
-  const buildingScale = (compact ? 0.3 : 0.35) * Math.max(0.7, scaleFactor);                     // Changed: 0.25→0.35 (bigger buildings)
+  const buildingScale = (compact ? 0.3 : 0.35) * Math.max(0.7, scaleFactor);
   const cooldownIconSize = Math.max(6, Math.round((compact ? 6 : 14) * scaleFactor)); // Changed: Math.max 8→6, base 12→14
   
   // Default theme if none provided - dark mode
@@ -72,6 +73,11 @@ export function PropertyCard({
   
   const ownerships = spectatorMode ? spectatorOwnerships : gameState.ownerships;
   const ownership = ownerships.find(o => o.propertyId === propertyId);
+
+  const propertyIncome = ownership && ownership.slotsOwned > 0 
+    ? Math.floor((property.price * property.yieldBps) / 10000) * ownership.slotsOwned 
+    : 0;
+  const buildingPulseClass = useIncomePulseClass(propertyIncome);
 
   // ✅ Get ALL cooldown helpers from game state
   const { 
@@ -297,6 +303,15 @@ export function PropertyCard({
         </>
       )}
 
+      {/* Money Bills Animation for owned properties */}
+      {ownership && ownership.slotsOwned > 0 && (
+        <MoneyBillsAnimation 
+          income={Math.floor((property.price * property.yieldBps) / 10000) * ownership.slotsOwned}
+          compact={compact}
+          modalView={modalView}
+        />
+      )}
+
       <div className="relative z-20 flex flex-col h-full">
         <div 
           className="absolute top-0 left-0 h-full z-30"
@@ -343,11 +358,12 @@ export function PropertyCard({
               className="w-full h-full flex items-center justify-center"
               style={{ transform: modalView ? 'scale(0.4)' : `scale(${buildingScale})` }}
             >
-              {BUILDING_SVGS[buildingLevel]}
+              <div className={`w-full h-full flex items-center justify-center ${buildingPulseClass}`}>
+                {BUILDING_SVGS[buildingLevel]}
+              </div>
             </div>
           )}
         </div>
-
         <div className={`${compact ? 'px-1 pb-0.5' : 'px-4 pb-1.5'} flex items-center justify-between gap-1 flex-shrink-0`}>
           <div 
             className="font-semibold text-yellow-300"

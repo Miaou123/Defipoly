@@ -9,7 +9,7 @@ import { useWallet } from '@solana/wallet-adapter-react';
 import { useDefipoly } from '@/hooks/useDefipoly';
 import { useNotification } from '@/contexts/NotificationContext';
 import { PROPERTIES } from '@/utils/constants';
-import { ChartIcon } from '@/components/icons/UIIcons';
+import { ChartIcon, DollarBillIcon, CalendarIcon, WarningIcon, CheckIcon } from '@/components/icons/UIIcons';
 import { UnownedOverlay } from '../UnownedOverlay';
 import { getSellValueInfo } from '@/utils/sellValue';
 import { useGameState } from '@/contexts/GameStateContext';
@@ -183,13 +183,13 @@ export function SellPropertySection({
             </span>
           </div>
           <div className="flex items-start gap-1.5 text-purple-200">
-            <span className="text-sm">💵</span>
+          <DollarBillIcon size={16} className="text-orange-400 mt-0.5" />
             <span className="text-xs leading-relaxed">
               Sell value: 15-30% of buy price (based on days held)
             </span>
           </div>
           <div className="flex items-start gap-1.5 text-amber-300">
-            <span className="text-sm">⚠️</span>
+            <WarningIcon size={16} className="text-amber-400 mt-0.5" />
             <span className="text-xs leading-relaxed">
               Held longer = better value (max 30% after 14 days)
             </span>
@@ -274,21 +274,25 @@ export function SellPropertySection({
           </span>
         </div>
         <div className="flex items-start gap-1.5 text-purple-200">
-          <span className="text-sm">💵</span>
+        <DollarBillIcon size={16} className="text-orange-400 mt-0.5" />
           <span className="text-xs leading-relaxed">
             Current sell value: <span className="font-bold text-white">{sellValueInfo?.percentageDisplay || "15.0"}%</span> of buy price
           </span>
         </div>
         {sellValueInfo?.daysHeld && (
           <div className="flex items-start gap-1.5 text-purple-200">
-            <span className="text-sm">📅</span>
+            <CalendarIcon size={16} className="text-purple-400 mt-0.5" />
             <span className="text-xs leading-relaxed">
               Held for: <span className="font-bold text-white">{sellValueInfo.daysHeld}</span>
             </span>
           </div>
         )}
         <div className="flex items-start gap-1.5 text-amber-300">
-          <span className="text-sm">{sellValueInfo?.isMaxValue ? "✅" : "⚠️"}</span>
+        {sellValueInfo?.isMaxValue ? (
+          <CheckIcon size={16} className="text-green-400 mt-0.5" />
+        ) : (
+          <WarningIcon size={16} className="text-amber-400 mt-0.5" />
+        )}
           <span className="text-xs leading-relaxed">
             {sellValueInfo?.isMaxValue 
               ? "Maximum sell value reached (30%)" 
