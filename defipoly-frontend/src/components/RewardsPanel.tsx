@@ -62,7 +62,7 @@ export function RewardsPanel() {
           // Show success with ACTUAL amount from blockchain
           showSuccess(
             'Rewards Claimed!', 
-            `Successfully claimed ${(displayAmount / 1e9).toFixed(2)} DEFI!`,
+            `Successfully claimed ${(displayAmount / 1e9).toFixed(2)}`,
             signature !== 'already-processed' ? signature : undefined
           );
         } catch (backendError) {
@@ -127,7 +127,7 @@ export function RewardsPanel() {
 
         {/* Additional Info */}
         <div className="text-center text-white/40 text-xs">
-          <p>Powered by Solana • Secure • Decentralized</p>
+          <p>Powered by Solana</p>
         </div>
       </div>
     );
@@ -157,22 +157,16 @@ export function RewardsPanel() {
             }}></div>
             
             {/* Header */}
-            <div className="text-center text-[9px] tracking-[3px] text-cyan-400 font-bold mb-2 uppercase">
+            <div className="text-center text-[9px] tracking-[3px] text-cyan-400 font-bold mb-4 uppercase">
               ◆ UNCLAIMED REWARDS ◆
             </div>
             
             {/* Amount */}
-            <div className="text-center text-[48px] font-black leading-none mb-1 tabular-nums text-white" style={{
+            <div className="text-center text-[48px] font-black leading-none mb-4 tabular-nums text-white" style={{
               fontFamily: 'Courier New, monospace'
             }}>
               {unclaimedRewards.toLocaleString()}
             </div>
-            
-            {/* Currency */}
-            <div className="text-center text-sm font-bold tracking-[2px] mb-4 text-white/70">
-              DEFI
-            </div>
-            
             {/* Claim Button - Electric Cyan */}
             {unclaimedRewards > 0 && (
               <button

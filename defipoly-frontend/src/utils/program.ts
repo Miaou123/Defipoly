@@ -1,11 +1,11 @@
 // ============================================
 // FILE: defipoly-frontend/src/utils/program.ts
+// FIXED: Added retry logic to fetchPlayerData
 // ============================================
 
 import { Connection, PublicKey } from '@solana/web3.js';
 import { Program, AnchorProvider, Idl } from '@coral-xyz/anchor';
 import { PROGRAM_ID } from './constants';
-// ✅ Import from types folder (auto-synced from backend)
 import idl from '@/idl/defipoly_program.json';
 import type { Property, PropertyOwnership, PlayerAccount, PlayerSetCooldown } from '@/types/accounts';
 import { deserializeOwnership, deserializeProperty, deserializePlayer } from './deserialize';
@@ -122,25 +122,49 @@ export async function fetchOwnershipData(program: MemeopolyProgram, playerPubkey
   }
 }
 
+// ✅ FIXED: Added retry logic with exponential backoff
 export async function fetchPlayerData(program: MemeopolyProgram, playerPubkey: PublicKey): Promise<PlayerAccount | null> {
   const [playerPDA] = getPlayerPDA(playerPubkey);
-  try {
-    const connection = program.provider.connection;
-    const accountInfo = await connection.getAccountInfo(playerPDA);
-    
-    if (!accountInfo) return null;
-    
-    const playerAccount = deserializePlayer(accountInfo.data);
-    return playerAccount;
-  } catch (error) {
-    console.error('Error fetching player data:', error);
-    return null;
+  
+  // Add retry logic with exponential backoff
+  const maxRetries = 3;
+  let lastError: any = null;
+  
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      const connection = program.provider.connection;
+      const accountInfo = await connection.getAccountInfo(playerPDA);
+      
+      if (!accountInfo) {
+        // Account doesn't exist - no need to retry
+        return null;
+      }
+      
+      const playerAccount = deserializePlayer(accountInfo.data);
+      
+      // Success - log retry if it took multiple attempts
+      if (attempt > 0) {
+        console.log(`✅ fetchPlayerData succeeded on attempt ${attempt + 1}`);
+      }
+      
+      return playerAccount;
+    } catch (error) {
+      lastError = error;
+      
+      // If this isn't the last attempt, wait and retry
+      if (attempt < maxRetries - 1) {
+        const delay = Math.pow(2, attempt) * 1000; // 1s, 2s, 4s
+        console.warn(`⚠️ fetchPlayerData attempt ${attempt + 1} failed, retrying in ${delay}ms...`, error);
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
+    }
   }
+  
+  // All retries failed
+  console.error(`❌ fetchPlayerData failed after ${maxRetries} attempts:`, lastError);
+  return null;
 }
 
-/**
- * Fetch set cooldown data for a player and set
- */
 export async function fetchSetCooldownData(
   program: MemeopolyProgram,
   playerPubkey: PublicKey,
@@ -161,18 +185,11 @@ export async function fetchSetCooldownData(
       bump: data.bump,
     };
   } catch (error) {
-    // Account doesn't exist yet or other error
     console.warn(`No cooldown data for set ${setId}:`, error);
     return null;
   }
 }
 
-/**
- * Get the PDA for a player's steal cooldown for a specific set
- * @param playerPubkey - The player's public key
- * @param setId - The property set ID (0-7)
- * @returns [PDA, bump]
- */
 export function getStealCooldownPDA(
   playerPubkey: PublicKey,
   propertyId: number

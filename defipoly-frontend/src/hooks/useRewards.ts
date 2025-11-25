@@ -1,7 +1,6 @@
 // ============================================
-// FILE: useRewards.ts
-// ✅ SIMPLIFIED VERSION: Uses blockchain pending_rewards directly
-// Fetches pending_rewards from blockchain + smooth UI counting
+// FILE: defipoly-frontend/src/hooks/useRewards.ts
+// FIXED: Returns null instead of 0 when player data fetch fails
 // ============================================
 
 import { useEffect, useState, useRef } from 'react';
@@ -37,8 +36,11 @@ export function useRewards() {
     try {
       const playerData = await fetchPlayerData(program, publicKey);
       
+      // ✅ FIXED: Return null instead of 0 when playerData is null
+      // This prevents resetting rewards to 0 when the query fails
       if (!playerData) {
-        return 0;
+        console.warn('⚠️ Player data not found - account may not be initialized or query failed');
+        return null; // Return null, not 0!
       }
 
       // Get blockchain stored pending rewards (already calculated)
@@ -87,12 +89,16 @@ export function useRewards() {
       setLoading(true);
       const blockchainRewards = await fetchBlockchainRewards();
       
+      // ✅ FIXED: Only update if we got a valid value (not null)
+      // This prevents resetting to 0 when the query fails
       if (blockchainRewards !== null) {
         setUnclaimedRewards(blockchainRewards);
         lastFetchTime.current = now;
         if (!initialFetchDone) {
           setInitialFetchDone(true);
         }
+      } else {
+        console.warn('⚠️ Blockchain rewards fetch returned null - keeping previous value');
       }
       setLoading(false);
     };
