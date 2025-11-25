@@ -9,7 +9,7 @@ import { useState } from 'react';
 import { Shield, X, AlertCircle, CheckCircle, Loader, Trophy, Clock } from 'lucide-react';
 import { useDefipoly } from '@/hooks/useDefipoly';
 import { useNotification } from '../contexts/NotificationContext';
-import { PROPERTIES } from '@/utils/constants';
+import { PROPERTIES, TOKEN_TICKER } from '@/utils/constants';
 
 interface OwnedProperty {
   propertyId: number;
@@ -241,12 +241,12 @@ export function ShieldAllModal({ ownedProperties, balance, onClose }: ShieldAllM
             </div>
             <div className="flex items-center justify-between mb-3">
               <span className="text-yellow-200 font-semibold">Total Cost:</span>
-              <span className="text-yellow-100 font-black text-lg">{totalCost.toLocaleString()} DEFI</span>
+              <span className="text-yellow-100 font-black text-lg">{totalCost.toLocaleString()} ${TOKEN_TICKER}</span>
             </div>
             <div className="flex items-center justify-between">
               <span className="text-yellow-200 font-semibold">Your Balance:</span>
               <span className={`font-black text-lg ${canAfford ? 'text-green-400' : 'text-red-400'}`}>
-                {balance.toLocaleString()} DEFI
+              {balance.toLocaleString()} ${TOKEN_TICKER}
               </span>
             </div>
           </div>
@@ -270,7 +270,7 @@ export function ShieldAllModal({ ownedProperties, balance, onClose }: ShieldAllM
               <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
               <div className="text-sm text-red-200">
                 <div className="font-bold mb-1">Insufficient Balance</div>
-                <div>You need {(totalCost - balance).toLocaleString()} more DEFI to shield selected properties.</div>
+                <div>You need {(totalCost - balance).toLocaleString()} more ${TOKEN_TICKER} to shield selected properties.</div>
               </div>
             </div>
           )}

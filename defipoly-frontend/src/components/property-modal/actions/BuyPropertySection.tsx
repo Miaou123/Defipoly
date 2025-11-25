@@ -11,7 +11,7 @@ import { Clock } from 'lucide-react';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { useDefipoly } from '@/hooks/useDefipoly';
 import { useNotification } from '@/contexts/NotificationContext';
-import { PROPERTIES, SET_BONUSES } from '@/utils/constants';
+import { PROPERTIES, SET_BONUSES, TOKEN_TICKER } from '@/utils/constants';
 import { CooldownExplanationModal } from '@/components/CooldownExplanationModal';
 import { ChartIcon, CoinsIcon, CheckIcon, TargetIcon } from '@/components/icons/UIIcons';
 import { useGameState } from '@/contexts/GameStateContext';
@@ -295,7 +295,7 @@ export function BuyPropertySection({
           <div className="flex items-start gap-1.5 text-purple-200">
             <CoinsIcon size={16} className="text-purple-400 mt-0.5" />
             <span className="text-xs leading-relaxed">
-              Daily income: <span className="font-bold text-white">+{boostedDailyIncome.toLocaleString()} DEFI</span>
+              Daily income: <span className="font-bold text-white">+{boostedDailyIncome.toLocaleString()} ${TOKEN_TICKER}</span>
             </span>
           </div>
           
@@ -351,6 +351,18 @@ export function BuyPropertySection({
             'Buy Slots'
           )}
         </button>
+        {/* Insufficient Balance Warning */}
+        {!canBuy && !loading && (
+          <div className="mt-2 flex items-center justify-center gap-1.5 text-red-400 text-xs">
+            <span>⚠️</span>
+            <span>
+              Insufficient balance. Need <span className="font-bold">{buyCost.toLocaleString()}</span> $TOKEN
+              {balance > 0 && (
+                <span className="text-red-400/70"> (you have {balance.toLocaleString()})</span>
+              )}
+            </span>
+          </div>
+        )}
       </div>
 
       {/* Cooldown Explanation Modal */}

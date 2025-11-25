@@ -7,6 +7,7 @@ import { getPropertyById } from '@/utils/constants';
 import { useNotification } from '@/contexts/NotificationContext';
 import { ProfileCustomization } from '@/components/ProfileCustomization';
 import { useGameState } from '@/contexts/GameStateContext';
+import { TOKEN_TICKER } from '@/utils/constants';
 
 interface Activity {
   signature: string;
@@ -88,7 +89,7 @@ export default function ProfilePage() {
                 type = 'buy';
                 break;
               case 'sell':
-                message = `Sold ${action.slots || 1} slot${(action.slots || 1) > 1 ? 's' : ''} on ${propertyName} for ${formatAmount(action.amount || 0)} DEFI 💰`;
+                message = `Sold ${action.slots || 1} slot${(action.slots || 1) > 1 ? 's' : ''} on ${propertyName} for ${formatAmount(action.amount || 0)} ${TOKEN_TICKER} 💰`;
                 type = 'sell';
                 break;
               case 'steal_success':
@@ -104,7 +105,7 @@ export default function ProfilePage() {
                 type = 'shield';
                 break;
               case 'claim':
-                message = `Claimed ${formatAmount(action.amount || 0)} DEFI in rewards 💎`;
+                message = `Claimed ${formatAmount(action.amount || 0)} ${TOKEN_TICKER} in rewards 💎`;
                 type = 'claim';
                 break;
               default:

@@ -31,6 +31,11 @@ interface DeploymentInfo {
   network: string;
 }
 
+// ========================================
+// TOKEN DISPLAY
+// ========================================
+const TOKEN_TICKER = "DEFI";
+
 /**
  * Generate Frontend Constants (TypeScript)
  */
@@ -54,6 +59,7 @@ export const GAME_CONFIG = new PublicKey("${deployment.gameConfig}");
 export const REWARD_POOL_VAULT = new PublicKey("${deployment.rewardPoolVault || deployment.gameConfig}");
 export const REWARD_POOL = REWARD_POOL_VAULT; // ✅ FIXED: Use vault address, not numeric amount
 export const NETWORK = "${deployment.network}";
+export const TOKEN_TICKER = "${TOKEN_TICKER}";
 
 // ========================================
 // WALLET ADDRESSES

@@ -17,6 +17,7 @@ export const GAME_CONFIG = new PublicKey("BaziXxeeWJ4GSwnV1u8XjNoeEA7GqcfEiDFSfg
 export const REWARD_POOL_VAULT = new PublicKey("4RM9MM88FZN5Nx6KtJCRvxChSS5anGGHbyBgPiVbczWJ");
 export const REWARD_POOL = REWARD_POOL_VAULT; // ✅ FIXED: Use vault address, not numeric amount
 export const NETWORK = "devnet";
+export const TOKEN_TICKER = 'TOKEN';
 
 // ========================================
 // WALLET ADDRESSES

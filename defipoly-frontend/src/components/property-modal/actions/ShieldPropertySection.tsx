@@ -6,7 +6,7 @@
 import { useState, useEffect } from 'react';
 import { useDefipoly } from '@/hooks/useDefipoly';
 import { useNotification } from '@/contexts/NotificationContext';
-import { PROPERTIES } from '@/utils/constants';
+import { PROPERTIES, TOKEN_TICKER } from '@/utils/constants';
 import { ShieldIcon, TimerIcon, WarningIcon } from '@/components/icons/UIIcons';
 import { UnownedOverlay } from '../UnownedOverlay';
 
@@ -315,7 +315,7 @@ export function ShieldPropertySection({
 
       {!canShield && balance < totalShieldCost && (
         <div className="text-center text-xs text-red-300 mt-1.5">
-          <WarningIcon size={16} className="inline-block mr-1" />Need {Math.round(totalShieldCost).toLocaleString()} DEFI
+          <WarningIcon size={16} className="inline-block mr-1" />Need {Math.round(totalShieldCost).toLocaleString()} ${TOKEN_TICKER}
         </div>
       )}
     </div>

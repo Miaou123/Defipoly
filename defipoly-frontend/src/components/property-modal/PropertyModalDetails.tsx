@@ -5,6 +5,8 @@
 // FIX: Calculate dailyIncome from price and yieldBps instead of using non-existent property.dailyIncome
 // ============================================
 
+import { TOKEN_TICKER } from '@/utils/constants';
+
 interface PropertyModalDetailsProps {
   property: any;
   propertyData: any;
@@ -136,7 +138,7 @@ export function PropertyModalDetails({ property, propertyData, setBonusInfo }: P
       <div className="grid grid-cols-2 gap-2">
         <div className="bg-purple-950/30 rounded-lg p-2 border border-purple-500/10">
           <div className="text-[8px] text-purple-400 uppercase mb-0.5">💰 Price</div>
-          <div className="text-sm font-bold text-purple-100">{property.price.toLocaleString()} DEFI</div>
+          <div className="text-sm font-bold text-purple-100">{property.price.toLocaleString()} ${TOKEN_TICKER}</div>
         </div>
         
         <div className="bg-purple-950/30 rounded-lg p-2 border border-purple-500/10">

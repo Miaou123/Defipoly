@@ -3,8 +3,9 @@
 import { PROPERTIES } from '@/utils/constants';
 import { PropertyCard } from './PropertyCard';
 import { CornerSquare } from './BoardHelpers';
-import { getBoardTheme, getPropertyCardTheme } from '@/utils/themes';
 import { useGameState } from '@/contexts/GameStateContext';
+
+const DEFAULT_BACKGROUND = 'linear-gradient(135deg, rgba(31, 41, 55, 0.95), rgba(17, 24, 39, 0.9))';
 
 interface MobileBoardProps {
   onSelectProperty: (propertyId: number) => void;
@@ -40,12 +41,6 @@ export function MobileBoard({
   const cornerSquareStyle = spectatorMode 
     ? spectatorCornerStyle || 'property'
     : gameState.profile.cornerSquareStyle;
-
-  const propertyCardTheme = spectatorMode 
-    ? 'dark' 
-    : gameState.profile.propertyCardTheme;
-  
-  const currentPropertyCardTheme = getPropertyCardTheme(propertyCardTheme || 'dark');
   
   // Common props for PropertyCard
   const cardProps = {
@@ -53,7 +48,6 @@ export function MobileBoard({
     spectatorMode,
     spectatorWallet,
     spectatorOwnerships,
-    theme: currentPropertyCardTheme,
     customPropertyCardBackground,
     compact: true, // Mobile-optimized sizing
   };
@@ -88,8 +82,8 @@ export function MobileBoard({
             style={{
               background: customBoardBackground 
                 ? `url(${customBoardBackground}) center/cover no-repeat`
-                : 'linear-gradient(135deg, rgba(88, 28, 135, 0.3), rgba(109, 40, 217, 0.15))',
-              boxShadow: 'inset 0 0 20px rgba(139, 92, 246, 0.15)',
+                : DEFAULT_BACKGROUND,
+              boxShadow: 'inset 0 0 20px rgba(0, 0, 0, 0.3)',
             }}
           >
             <div className="text-center opacity-30">

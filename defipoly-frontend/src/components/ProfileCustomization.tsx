@@ -5,10 +5,11 @@ import { useWallet } from '@solana/wallet-adapter-react';
 import { useNotification } from '@/contexts/NotificationContext';
 import { BoardThemeModal } from '@/components/modals/BoardThemeModal';
 import { PropertyThemeModal } from '@/components/modals/PropertyThemeModal';
-import { getBoardTheme, getPropertyCardTheme } from '@/utils/themes';
 import { clearProfileCache } from '@/utils/profileStorage';
 import { Edit3, Camera } from 'lucide-react';
 import { authenticatedFetch } from '@/contexts/AuthContext';
+
+const DEFAULT_BACKGROUND = 'linear-gradient(135deg, rgba(31, 41, 55, 0.95), rgba(17, 24, 39, 0.9))';
 
 interface ProfileCustomizationProps {
   // Profile picture props
@@ -69,20 +70,6 @@ export function ProfileCustomization({
   
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Helper function for property card preview background - INSIDE component so it has access to propertyCardTheme
-  const getPropertyPreviewBackgroundGradient = () => {
-    if (propertyCardTheme === 'default') {
-      return 'linear-gradient(135deg, rgba(88, 28, 135, 0.8), rgba(109, 40, 217, 0.6))';
-    } else if (propertyCardTheme === 'neon') {
-      return 'linear-gradient(135deg, rgba(147, 51, 234, 0.9), rgba(236, 72, 153, 0.7))';
-    } else if (propertyCardTheme === 'gold') {
-      return 'linear-gradient(135deg, rgba(251, 191, 36, 0.9), rgba(245, 158, 11, 0.7))';
-    } else if (propertyCardTheme === 'minimal') {
-      return 'rgba(255, 255, 255, 0.95)';
-    }
-    return 'linear-gradient(to bottom right, rgba(31, 41, 55, 0.95), rgba(17, 24, 39, 0.9))';
-  };
-
   // Profile picture handlers
   const handleProfilePictureUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     if (!publicKey) return;
@@ -132,13 +119,12 @@ export function ProfileCustomization({
     }
   };
 
-
   // Get preview background for board
   const getBoardPreviewBackground = () => {
     if (customBoardBackground) {
       return `url(${customBoardBackground})`;
     }
-    return getBoardTheme(boardTheme).boardBackground;
+    return DEFAULT_BACKGROUND;
   };
 
   // Get preview background for property cards
@@ -146,19 +132,8 @@ export function ProfileCustomization({
     if (customPropertyCardBackground) {
       return `url(${customPropertyCardBackground})`;
     }
-    const theme = getPropertyCardTheme(propertyCardTheme);
-    // Convert Tailwind classes to actual gradients
-    if (propertyCardTheme === 'neon') {
-      return 'linear-gradient(135deg, rgba(147, 51, 234, 0.9), rgba(236, 72, 153, 0.7))';
-    } else if (propertyCardTheme === 'gold') {
-      return 'linear-gradient(135deg, rgba(251, 191, 36, 0.9), rgba(245, 158, 11, 0.7))';
-    } else if (propertyCardTheme === 'minimal') {
-      return 'rgba(255, 255, 255, 0.95)';
-    }
-    // Default
-    return 'linear-gradient(135deg, rgba(88, 28, 135, 0.8), rgba(109, 40, 217, 0.6))';
+    return DEFAULT_BACKGROUND;
   };
-
 
   return (
     <>
@@ -292,16 +267,16 @@ export function ProfileCustomization({
               <div 
                 className="w-full aspect-square rounded border-2 border-purple-500/25 overflow-hidden cursor-pointer"
                 style={(() => {
-                  if (propertyCardTheme === 'custom' && customPropertyCardBackground) {
+                  const bgValue = getPropertyPreviewBackground();
+                  if (bgValue.startsWith('url(')) {
                     return {
-                      backgroundImage: `url(${customPropertyCardBackground})`,
+                      backgroundImage: bgValue,
                       backgroundSize: 'cover',
-                      backgroundPosition: 'center',
-                      backgroundRepeat: 'no-repeat',
+                      backgroundPosition: 'center'
                     };
                   } else {
                     return {
-                      background: getPropertyPreviewBackgroundGradient(),
+                      background: bgValue
                     };
                   }
                 })()}

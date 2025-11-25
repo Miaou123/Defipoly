@@ -5,16 +5,15 @@ import { PROPERTIES } from '@/utils/constants';
 import { PropertyCard } from './PropertyCard';
 import { RewardsPanel } from './RewardsPanel';
 import { CornerSquare } from './BoardHelpers';
-import { getBoardTheme, getPropertyCardTheme } from '@/utils/themes';
 import { useGameState } from '@/contexts/GameStateContext';
+
+const DEFAULT_BACKGROUND = 'linear-gradient(135deg, rgba(31, 41, 55, 0.95), rgba(17, 24, 39, 0.9))';
 
 interface BoardProps {
   onSelectProperty: (propertyId: number) => void;
   spectatorMode?: boolean;
   spectatorWallet?: string;
   spectatorOwnerships?: any[];
-  boardTheme?: string;
-  propertyCardTheme?: string;
   profilePicture?: string | null;
   cornerSquareStyle?: 'property' | 'profile';
   customBoardBackground?: string | null;
@@ -26,8 +25,6 @@ export function Board({
   spectatorMode = false, 
   spectatorWallet,
   spectatorOwnerships = [],
-  boardTheme: spectatorBoardTheme,
-  propertyCardTheme: spectatorPropertyTheme,
   profilePicture: spectatorProfilePic,
   cornerSquareStyle: spectatorCornerStyle,
   customBoardBackground: spectatorCustomBoard,
@@ -61,15 +58,7 @@ export function Board({
     return () => window.removeEventListener('resize', updateResponsive);
   }, []);
   
-  // ========== SMART THEME SELECTION ==========
-  const boardTheme = spectatorMode 
-    ? spectatorBoardTheme 
-    : gameState.profile.boardTheme;
-    
-  const propertyCardTheme = spectatorMode 
-    ? spectatorPropertyTheme 
-    : gameState.profile.propertyCardTheme;
-    
+  // ========== CUSTOM BACKGROUNDS ==========
   const customBoardBackground = spectatorMode 
     ? spectatorCustomBoard 
     : gameState.profile.customBoardBackground;
@@ -86,19 +75,14 @@ export function Board({
     ? spectatorCornerStyle || 'property'
     : gameState.profile.cornerSquareStyle;
   
-  // ========== GET THEME OBJECTS ==========
-  const currentBoardTheme = getBoardTheme(boardTheme || 'dark');
-  const currentPropertyCardTheme = getPropertyCardTheme(propertyCardTheme || 'dark');
-  
   // Common PropertyCard props
   const cardProps = {
     onSelect: onSelectProperty,
     spectatorMode,
     spectatorWallet,
     spectatorOwnerships,
-    theme: currentPropertyCardTheme,
     customPropertyCardBackground,
-    scaleFactor, // Pass scale factor to cards
+    scaleFactor,
   };
   
   return (
@@ -143,7 +127,7 @@ export function Board({
               const styles: React.CSSProperties = {
                 boxShadow: hasCustomBackground 
                   ? 'inset 0 0 40px rgba(0, 0, 0, 0.4)' 
-                  : 'inset 0 0 60px rgba(139, 92, 246, 0.3)',
+                  : 'inset 0 0 40px rgba(0, 0, 0, 0.3)',
               };
               
               if (hasCustomBackground) {
@@ -156,7 +140,7 @@ export function Board({
                   styles.backgroundRepeat = 'no-repeat';
                 }
               } else {
-                styles.background = 'linear-gradient(135deg, rgba(88, 28, 135, 0.6), rgba(109, 40, 217, 0.4))';
+                styles.background = DEFAULT_BACKGROUND;
               }
               
               return styles;
