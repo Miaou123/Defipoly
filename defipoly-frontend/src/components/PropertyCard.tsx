@@ -8,7 +8,8 @@ import { LocationPin, BUILDING_SVGS } from './icons/GameAssets';
 import { MoneyBillsAnimation, useIncomePulseClass } from './MoneyBillsAnimation';
 
 import { PROPERTIES } from '@/utils/constants';
-import { PropertyCardTheme } from '@/utils/themes';
+
+const DEFAULT_BACKGROUND = 'linear-gradient(135deg, rgba(31, 41, 55, 0.95), rgba(17, 24, 39, 0.9))';
 
 // Helper function for formatting numbers without hydration issues
 const formatNumber = (num: number): string => {
@@ -21,7 +22,6 @@ interface PropertyCardProps {
   spectatorMode?: boolean;
   spectatorWallet?: string | undefined;
   spectatorOwnerships?: any[];
-  theme?: PropertyCardTheme;
   customPropertyCardBackground?: string | null | undefined;
   modalView?: boolean;
   compact?: boolean;
@@ -34,7 +34,6 @@ export function PropertyCard({
   spectatorMode = false, 
   spectatorWallet, 
   spectatorOwnerships = [],
-  theme, 
   customPropertyCardBackground, 
   modalView = false,
   compact = false,
@@ -43,32 +42,23 @@ export function PropertyCard({
   const { connected, publicKey } = useWallet();
   
   // Calculate responsive sizes based on scale factor
-  const nameSize = Math.max(3, Math.round((compact ? 4 : 9) * scaleFactor));      // Changed: Math.max 8→3, base 7→9
-  const priceSize = Math.max(3, Math.round((compact ? 4 : 10) * scaleFactor));    // Changed: Math.max 8→3, base 8→10
-  const triangleSize = Math.max(4, Math.round((compact ? 8 : 40) * scaleFactor)); // Changed: base 32→40
-  const barWidth = Math.max(1, Math.round((compact ? 2 : 8) * scaleFactor));      // Changed: Math.max 2→1, base 6→8
-  const iconScale = (compact ? 0.35 : 0.4) * Math.max(0.7, scaleFactor);                         // Changed: 0.3→0.4 (bigger icons)
+  const nameSize = Math.max(3, Math.round((compact ? 4 : 9) * scaleFactor));
+  const priceSize = Math.max(3, Math.round((compact ? 4 : 10) * scaleFactor));
+  const triangleSize = Math.max(4, Math.round((compact ? 8 : 40) * scaleFactor));
+  const barWidth = Math.max(1, Math.round((compact ? 2 : 8) * scaleFactor));
+  const iconScale = (compact ? 0.35 : 0.4) * Math.max(0.7, scaleFactor);
   const buildingScale = (compact ? 0.3 : 0.35) * Math.max(0.7, scaleFactor);
-  const cooldownIconSize = Math.max(6, Math.round((compact ? 6 : 14) * scaleFactor)); // Changed: Math.max 8→6, base 12→14
-  
-  // Default theme if none provided - dark mode
-  const cardTheme = theme || {
-    id: 'dark',
-    name: 'Dark Mode',
-    background: 'linear-gradient(135deg, rgba(31, 41, 55, 0.95), rgba(17, 24, 39, 0.9))',
-    border: 'border border-gray-600/50',
-    textColor: 'text-white',
-    accent: 'text-gray-300'
-  };
+  const cooldownIconSize = Math.max(6, Math.round((compact ? 6 : 14) * scaleFactor));
 
   const [buildingLevel, setBuildingLevel] = useState(0);
   const [shieldActive, setShieldActive] = useState(false);
   const [hasCompleteSet, setHasCompleteSet] = useState(false);
+  const [isHovered, setIsHovered] = useState(false);
   
   const property = PROPERTIES.find(p => p.id === propertyId);
   if (!property) return null;
 
-  // ✅ Get everything from GameStateContext
+  // Get everything from GameStateContext
   const gameState = useGameState();
   
   const ownerships = spectatorMode ? spectatorOwnerships : gameState.ownerships;
@@ -79,10 +69,10 @@ export function PropertyCard({
     : 0;
   const buildingPulseClass = useIncomePulseClass(propertyIncome);
 
-  // ✅ Get ALL cooldown helpers from game state
+  // Get ALL cooldown helpers from game state
   const { 
-    isPropertyOnCooldown,      // ✅ Per-property cooldown helper
-    isStealOnCooldown,         // ✅ Steal cooldown helper
+    isPropertyOnCooldown,
+    isStealOnCooldown,
   } = gameState;
   
   // For spectator mode, disable cooldowns (wallet-specific)
@@ -99,7 +89,6 @@ export function PropertyCard({
   // Determine which cooldowns are active (only show in normal mode)
   const activeCooldowns = [];
   if (!spectatorMode) {
-    // Check if shield is on cooldown
     const now = Math.floor(Date.now() / 1000);
     const shieldExpiry = ownership?.shieldExpiry?.toNumber() || 0;
     const cooldownDuration = ownership?.shieldCooldownDuration?.toNumber() || (12 * 3600);
@@ -184,50 +173,21 @@ export function PropertyCard({
 
   const colorHex = getColorHex(property.color);
 
-  const getCardBackground = () => {
-    if (spectatorMode) {
-      if (customPropertyCardBackground) {
-        return `url(${customPropertyCardBackground}) center/cover`;
-      }
-      if (cardTheme.id === 'custom') {
-        return `linear-gradient(to bottom right, rgba(31, 41, 55, 0.95), rgba(17, 24, 39, 0.9))`;
-      }
-    } else {
-      if (customPropertyCardBackground) {
-        return `url(${customPropertyCardBackground}) center/cover`;
-      }
-    }
-    
-    if (cardTheme.id === 'default') {
-      return `linear-gradient(135deg, rgba(88, 28, 135, 0.8), rgba(109, 40, 217, 0.6))`;
-    } else if (cardTheme.id === 'neon') {
-      return `linear-gradient(135deg, rgba(147, 51, 234, 0.9), rgba(236, 72, 153, 0.7))`;
-    } else if (cardTheme.id === 'gold') {
-      return `linear-gradient(135deg, rgba(251, 191, 36, 0.9), rgba(245, 158, 11, 0.7))`;
-    } else if (cardTheme.id === 'minimal') {
-      return `rgba(255, 255, 255, 0.95)`;
-    }
-    return `linear-gradient(to bottom right, rgba(31, 41, 55, 0.95), rgba(17, 24, 39, 0.9))`;
-  };
-
   const getStyleProps = () => {
     try {
-      const isCustomBg = spectatorMode 
-        ? customPropertyCardBackground !== null && customPropertyCardBackground !== undefined
-        : (customPropertyCardBackground !== null && customPropertyCardBackground !== undefined);
+      const hasCustomBg = customPropertyCardBackground !== null && customPropertyCardBackground !== undefined;
       
       const styles: React.CSSProperties = {
         transition: 'all 0.3s ease',
       };
 
-      if (isCustomBg) {
-        const backgroundImage = customPropertyCardBackground;
-        styles.background = `url(${backgroundImage}) center/cover no-repeat`;
+      if (hasCustomBg) {
+        styles.background = `url(${customPropertyCardBackground}) center/cover no-repeat`;
       } else {
-        styles.background = getCardBackground();
+        styles.background = DEFAULT_BACKGROUND;
       }
 
-      if (!isCustomBg) {
+      if (!hasCustomBg) {
         styles.border = `1px solid ${colorHex}80`;
       }
 
@@ -235,7 +195,7 @@ export function PropertyCard({
     } catch (error) {
       console.warn('PropertyCard style error:', error);
       return {
-        background: 'linear-gradient(to bottom right, rgba(31, 41, 55, 0.95), rgba(17, 24, 39, 0.9))',
+        background: DEFAULT_BACKGROUND,
         border: '1px solid #6b7280',
         borderRadius: '16px',
         transition: 'all 0.3s ease',
@@ -243,13 +203,11 @@ export function PropertyCard({
     }
   };
 
-  const getTextColor = () => {
-    return cardTheme.id === 'minimal' ? '#1f2937' : '#ffffff';
-  };
-
   return (
     <button
       onClick={() => onSelect(propertyId)}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
       className="w-full h-full relative overflow-hidden cursor-pointer group"
       style={getStyleProps()}
     >
@@ -337,7 +295,7 @@ export function PropertyCard({
             className={`font-bold leading-tight uppercase ${compact ? 'pr-1' : 'pr-10'}`}
             style={{
               fontSize: modalView ? '11px' : `${nameSize}px`,
-              color: getTextColor(),
+              color: '#ffffff',
               letterSpacing: compact ? '0px' : '0.3px',
               lineHeight: '1',
             }}
@@ -347,10 +305,12 @@ export function PropertyCard({
         </div>
 
         <div className={`flex-1 flex items-center justify-center ${compact ? 'px-0' : 'px-1'} min-h-0`}>
-          {buildingLevel === 0 ? (
+         {buildingLevel === 0 ? (
             <div className="w-full h-full flex items-center justify-center">
               <div style={{ transform: modalView ? 'scale(0.5)' : `scale(${iconScale})` }}>
-                <LocationPin color={property.color} size="small" />
+                <div className={isHovered || modalView ? 'animate-bounce-pin' : ''}>
+                  <LocationPin color={property.color} size="small" />
+                </div>
               </div>
             </div>
           ) : (
@@ -442,6 +402,19 @@ export function PropertyCard({
           75% {
             opacity: 0;
           }
+        }
+
+        @keyframes bounce-pin {
+          0%, 100% {
+            transform: translateY(0);
+          }
+          50% {
+            transform: translateY(-6px);
+          }
+        }
+
+        :global(.animate-bounce-pin) {
+          animation: bounce-pin 1s ease-in-out infinite;
         }
       `}</style>
     </button>
