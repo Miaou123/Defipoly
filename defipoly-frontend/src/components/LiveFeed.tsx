@@ -1,11 +1,13 @@
 'use client';
 
 import { useEffect, useState, useCallback, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { useRouter } from 'next/navigation';
 import { getPropertyById } from '@/utils/constants';
 import { getProfilesBatch, ProfileData } from '@/utils/profileStorage';
-import { getActionIcon, FeedIcon } from './icons/UIIcons';
+import { getActionIcon, FeedIcon, PointerArrowIcon } from './icons/UIIcons';
 import { useWebSocket } from '@/contexts/WebSocketContext';
+import { useGameState } from '@/contexts/GameStateContext';
 
 interface FeedItem {
   type: 'buy' | 'steal_success' | 'steal_failed' | 'shield' | 'claim' | 'sell';
@@ -34,6 +36,52 @@ export function LiveFeed() {
   const [loading, setLoading] = useState(true);
   const initialLoadDone = useRef(false);
   const newItemsRef = useRef<Set<string>>(new Set());
+  const [showSpectatorHint, setShowSpectatorHint] = useState(false);
+  
+  // For portal arrow positioning
+  const firstRowRef = useRef<HTMLDivElement>(null);
+  const [arrowPosition, setArrowPosition] = useState<{ top: number; left: number } | null>(null);
+  
+  // Get game state to check if user owns properties
+  const gameState = useGameState();
+  const totalSlotsOwned = gameState.stats.totalSlotsOwned || 0;
+
+  // Check if we should show the spectator hint
+  useEffect(() => {
+    const hasUsedSpectator = localStorage.getItem('hasUsedSpectator');
+    // Show hint if: user owns at least 1 property AND hasn't used spectator yet
+    if (!hasUsedSpectator && totalSlotsOwned > 0) {
+      setShowSpectatorHint(true);
+    }
+  }, [totalSlotsOwned]);
+
+  useEffect(() => {
+    if (!showSpectatorHint || !firstRowRef.current) return;
+    
+    const updatePosition = () => {
+      const rect = firstRowRef.current?.getBoundingClientRect();
+      if (rect) {
+        setArrowPosition({
+          top: rect.top + rect.height / 2 - 12,
+          left: rect.left - 28
+        });
+      }
+    };
+    updatePosition();
+    window.addEventListener('resize', updatePosition);
+    window.addEventListener('scroll', updatePosition, true);
+    
+    return () => {
+      window.removeEventListener('resize', updatePosition);
+      window.removeEventListener('scroll', updatePosition, true);
+    };
+  }, [showSpectatorHint, loading]);
+
+  const dismissSpectatorHint = () => {
+    localStorage.setItem('hasUsedSpectator', 'true');
+    setShowSpectatorHint(false);
+    setArrowPosition(null);
+  };
 
   const formatAddress = (address: string) => {
     return `${address.slice(0, 4)}...${address.slice(-4)}`;
@@ -63,7 +111,6 @@ export function LiveFeed() {
         return `${getDisplayName(playerAddr || '')} sold ${sellSlots} slot${sellSlots > 1 ? 's' : ''} at ${propertyName}`;
         
       case 'steal_success':
-        const successSlots = item.slots || 1;
         return `${getDisplayName(playerAddr || '')} stole ${propertyName} from ${getDisplayName(targetAddr || '')}`;
         
       case 'steal_failed':
@@ -82,6 +129,10 @@ export function LiveFeed() {
   };
 
   const handleActionClick = (item: FeedItem) => {
+    // Dismiss hint on first click
+    if (showSpectatorHint) {
+      dismissSpectatorHint();
+    }
     const playerAddr = item.playerAddress || item.buyer || item.seller || item.attacker || item.owner || item.wallet;
     if (playerAddr) {
       router.push(`/spectator/${playerAddr}`);
@@ -181,7 +232,7 @@ export function LiveFeed() {
     };
 
     fetchHistoricalActions();
-  }, []); // Empty dependency array - only run once on mount
+  }, [actionToFeedItem]);
 
   // Subscribe to WebSocket events for real-time updates
   useEffect(() => {
@@ -190,7 +241,6 @@ export function LiveFeed() {
     const handleRecentAction = async (data: any) => {
       console.log('📥 [LiveFeed] Received WebSocket action:', data);
       
-      // ✅ Use the same conversion function as initial load
       const feedItem = actionToFeedItem(data);
       
       if (!feedItem) {
@@ -200,7 +250,6 @@ export function LiveFeed() {
       
       console.log('✅ [LiveFeed] Converted to feed item:', feedItem);
       
-      // Check if this exact action already exists in the feed
       setFeed(prev => {
         const isDuplicate = prev.some(existingItem => 
           existingItem.txSignature === feedItem.txSignature
@@ -211,10 +260,8 @@ export function LiveFeed() {
           return prev;
         }
         
-        // Mark as new for animation
         newItemsRef.current.add(feedItem.txSignature);
         
-        // Remove from "new" set after animation completes
         setTimeout(() => {
           newItemsRef.current.delete(feedItem.txSignature);
         }, 300);
@@ -222,7 +269,6 @@ export function LiveFeed() {
         return [feedItem, ...prev].slice(0, 50);
       });
       
-      // Fetch profiles for new addresses
       const newAddresses = new Set<string>();
       if (feedItem.playerAddress) newAddresses.add(feedItem.playerAddress);
       if (feedItem.targetAddress) newAddresses.add(feedItem.targetAddress);
@@ -233,72 +279,96 @@ export function LiveFeed() {
       }
     };
 
-    // Listen to the recent-action event
     socket.on('recent-action', handleRecentAction);
 
-    // Cleanup
     return () => {
       socket.off('recent-action', handleRecentAction);
     };
-  }, [socket, connected, profiles]);
+  }, [socket, connected, actionToFeedItem]);
 
   return (
-    <div className="bg-purple-900/8 backdrop-blur-xl rounded-2xl border border-purple-500/20 h-full flex flex-col overflow-hidden">
-      {/* Header - matching Leaderboard/Portfolio style - NON-SCROLLABLE */}
-      <div className="p-4 pb-2">
-        <div className="flex items-center justify-between">
-          <div>
-            <div className="flex items-center gap-2 border-b border-purple-500/20 pb-2">
-              <FeedIcon size={20} className="text-white" />
-              <h2 className="text-lg font-bold text-white">Live Feed</h2>
+    <>
+      <div className="bg-purple-900/8 backdrop-blur-xl rounded-2xl border border-purple-500/20 h-full flex flex-col overflow-hidden">
+        {/* Header */}
+        <div className="p-4 pb-2">
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="flex items-center gap-2 border-b border-purple-500/20 pb-2">
+                <FeedIcon size={20} className="text-white" />
+                <h2 className="text-lg font-bold text-white">Live Feed</h2>
+              </div>
+              <p className="text-xs text-purple-400 mt-1">Click on an action to see the player's board</p>
             </div>
-            <p className="text-xs text-purple-400 mt-1">Click on an action to see the player's board</p>
+            <div className="flex items-center gap-1.5">
+              <div className={`w-2 h-2 rounded-full ${connected ? 'bg-green-500' : 'bg-red-500'}`} />
+              <span className="text-xs text-purple-400">{connected ? 'Live' : 'Offline'}</span>
+            </div>
           </div>
-          <div className="flex items-center gap-1.5">
-            <div className={`w-2 h-2 rounded-full ${connected ? 'bg-green-500' : 'bg-red-500'}`} />
-            <span className="text-xs text-purple-400">{connected ? 'Live' : 'Offline'}</span>
-          </div>
+        </div>
+
+        {/* Scrollable Content */}
+        <div className="flex-1 overflow-y-auto px-4 pb-6">
+          {loading ? (
+            <div className="text-center py-8">
+              <div className="text-xl mb-1">⏳</div>
+              <div className="text-xs text-purple-300">Loading activity...</div>
+            </div>
+          ) : feed.length === 0 ? (
+            <div className="text-center py-8">
+              <div className="text-3xl mb-2 opacity-50">📡</div>
+              <div className="text-xs text-gray-400">
+                No activity yet<br />
+                Be the first to make a move!
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {feed.map((item, index) => {
+                const isFirstRow = index === 0;
+                const showHintOnRow = showSpectatorHint && isFirstRow;
+                
+                return (
+                  <div
+                    key={`${item.txSignature}-${index}`}
+                    ref={isFirstRow ? firstRowRef : null}
+                    onClick={() => handleActionClick(item)}
+                    className={`relative flex items-start gap-2 p-2 rounded-lg transition-all cursor-pointer group ${
+                      showHintOnRow
+                        ? 'bg-yellow-500/10 border border-yellow-400/50 shadow-[0_0_15px_rgba(250,204,21,0.3)]'
+                        : `bg-white/[0.01] hover:bg-white/[0.05] ${newItemsRef.current.has(item.txSignature) ? 'animate-slide-in-top' : ''}`
+                    }`}
+                  >
+                    <div className="mt-0.5 text-purple-400 group-hover:text-purple-300 transition-colors">
+                      {getActionIcon(item.type)}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm text-purple-100 break-words group-hover:text-white transition-colors">
+                        {generateMessage(item)}
+                      </p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Scrollable Content - matches Portfolio structure */}
-      <div className="flex-1 overflow-y-auto px-4 pb-6">
-        {loading ? (
-          <div className="text-center py-8">
-            <div className="text-xl mb-1">⏳</div>
-            <div className="text-xs text-purple-300">Loading activity...</div>
-          </div>
-        ) : feed.length === 0 ? (
-          <div className="text-center py-8">
-            <div className="text-3xl mb-2 opacity-50">📡</div>
-            <div className="text-xs text-gray-400">
-              No activity yet<br />
-              Be the first to make a move!
-            </div>
-          </div>
-        ) : (
-          <div className="space-y-2">
-            {feed.map((item, index) => (
-                <div
-                  key={`${item.txSignature}-${index}`}
-                  onClick={() => handleActionClick(item)}
-                  className={`flex items-start gap-2 p-2 rounded-lg bg-white/[0.01] hover:bg-white/[0.05] transition-all cursor-pointer group ${
-                    newItemsRef.current.has(item.txSignature) ? 'animate-slide-in-top' : ''
-                  }`}
-                >
-                <div className="mt-0.5 text-purple-400 group-hover:text-purple-300 transition-colors">
-                  {getActionIcon(item.type)}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm text-purple-100 break-words group-hover:text-white transition-colors">
-                    {generateMessage(item)}
-                  </p>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-    </div>
+      {/* Portal arrow - renders at document.body level */}
+      {showSpectatorHint && arrowPosition && typeof document !== 'undefined' && createPortal(
+        <div 
+          className="fixed animate-bounce-x pointer-events-none"
+          style={{ 
+            top: arrowPosition.top, 
+            left: arrowPosition.left,
+            transform: 'translateY(-50%)',
+            zIndex: 9999
+          }}
+        >
+          <PointerArrowIcon className="w-6 h-6 text-yellow-400 drop-shadow-[0_0_8px_rgba(250,204,21,0.8)]" />
+        </div>,
+        document.body
+      )}
+    </>
   );
 }

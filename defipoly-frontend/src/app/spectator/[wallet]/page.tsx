@@ -338,11 +338,6 @@ export default function SpectatorPage() {
                     Back to Game
                   </div>
                 </div>
-
-                {/* Arrow icon */}
-                <svg className="w-4 h-4 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                </svg>
               </button>
             </div>
           </div>

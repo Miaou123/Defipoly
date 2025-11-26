@@ -1,11 +1,11 @@
 // ============================================
 // FILE: src/components/property-modal/PropertyActionsBar.tsx
-// ✅ MOBILE RESPONSIVE VERSION
+// ✅ MOBILE RESPONSIVE VERSION + TOOLTIP HINT FOR NEW USERS
 // ============================================
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ShoppingCart, Shield, DollarSign, Crosshair, HelpCircle } from 'lucide-react';
 import { PROPERTIES } from '@/utils/constants';
 import {
@@ -41,6 +41,22 @@ export function PropertyActionsBar({
   isMobile = false
 }: PropertyActionsBarProps) {
   const [activeAction, setActiveAction] = useState<ActionType>(null);
+  const [showTooltipHint, setShowTooltipHint] = useState(false);
+
+  // Show tooltip hint for new users who don't own any properties yet
+  useEffect(() => {
+    const hasSeen = localStorage.getItem('hasSeenTooltipHint');
+    const ownsProperty = propertyData?.owned > 0;
+    
+    if (!hasSeen && !ownsProperty) {
+      setShowTooltipHint(true);
+    }
+  }, [propertyData?.owned]);
+
+  const dismissTooltipHint = () => {
+    localStorage.setItem('hasSeenTooltipHint', 'true');
+    setShowTooltipHint(false);
+  };
 
   const toggleAction = (action: ActionType) => {
     setActiveAction(current => current === action ? null : action);
@@ -48,6 +64,7 @@ export function PropertyActionsBar({
 
   const openHelpModal = (action: ActionType, e: React.MouseEvent) => {
     e.stopPropagation();
+    if (showTooltipHint) dismissTooltipHint();
     onOpenHelp(action);
   };
 
@@ -56,8 +73,20 @@ export function PropertyActionsBar({
   const buttonPadding = isMobile ? 'py-3 px-2' : 'py-2.5 px-2';
   const helpButtonSize = isMobile ? 'w-5 h-5' : 'w-4 h-4';
 
+  // Pulse animation classes for help buttons
+  const helpButtonPulse = showTooltipHint 
+  ? 'animate-pulse ring-4 ring-yellow-400/90 shadow-[0_0_15px_rgba(250,204,21,0.8)]' 
+  : '';
+
   return (
     <div className="space-y-2">
+      {/* Tooltip hint for new users */}
+      {showTooltipHint && (
+        <div className="text-center text-xs text-purple-300 animate-pulse pb-1">
+          💡 Tap the <HelpCircle className="inline w-3 h-3" /> icons to learn how each action works
+        </div>
+      )}
+
       {/* Buttons in one line */}
       <div className="grid grid-cols-4 gap-2">
         {/* Buy Button */}
@@ -77,7 +106,7 @@ export function PropertyActionsBar({
             <span className={`${textSize} font-semibold text-emerald-100`}>Buy</span>
           </button>
           <button
-            className={`absolute -top-2 -right-2 p-1 bg-emerald-600/80 hover:bg-emerald-600 rounded-full transition-colors shadow-lg z-10`}
+            className={`absolute -top-2 -right-2 p-1 bg-emerald-600/80 hover:bg-emerald-600 rounded-full transition-colors shadow-lg z-10 ${helpButtonPulse}`}
             onClick={(e) => openHelpModal('buy', e)}
           >
             <HelpCircle className={`${helpButtonSize} text-white`} />
@@ -101,7 +130,7 @@ export function PropertyActionsBar({
             <span className={`${textSize} font-semibold text-blue-100`}>Shield</span>
           </button>
           <button
-            className={`absolute -top-2 -right-2 p-1 bg-blue-600/80 hover:bg-blue-600 rounded-full transition-colors shadow-lg z-10`}
+            className={`absolute -top-2 -right-2 p-1 bg-blue-600/80 hover:bg-blue-600 rounded-full transition-colors shadow-lg z-10 ${helpButtonPulse}`}
             onClick={(e) => openHelpModal('shield', e)}
           >
             <HelpCircle className={`${helpButtonSize} text-white`} />
@@ -125,7 +154,7 @@ export function PropertyActionsBar({
             <span className={`${textSize} font-semibold text-orange-100`}>Sell</span>
           </button>
           <button
-            className={`absolute -top-2 -right-2 p-1 bg-orange-600/80 hover:bg-orange-600 rounded-full transition-colors shadow-lg z-10`}
+            className={`absolute -top-2 -right-2 p-1 bg-orange-600/80 hover:bg-orange-600 rounded-full transition-colors shadow-lg z-10 ${helpButtonPulse}`}
             onClick={(e) => openHelpModal('sell', e)}
           >
             <HelpCircle className={`${helpButtonSize} text-white`} />
@@ -149,7 +178,7 @@ export function PropertyActionsBar({
             <span className={`${textSize} font-semibold text-rose-100`}>Steal</span>
           </button>
           <button
-            className={`absolute -top-2 -right-2 p-1 bg-rose-600/80 hover:bg-rose-600 rounded-full transition-colors shadow-lg z-10`}
+            className={`absolute -top-2 -right-2 p-1 bg-rose-600/80 hover:bg-rose-600 rounded-full transition-colors shadow-lg z-10 ${helpButtonPulse}`}
             onClick={(e) => openHelpModal('steal', e)}
           >
             <HelpCircle className={`${helpButtonSize} text-white`} />

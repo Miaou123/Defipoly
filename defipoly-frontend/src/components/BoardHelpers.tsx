@@ -10,29 +10,10 @@ interface CornerSquareProps {
 }
 
 export function CornerSquare({ icon, label, bgColor, profilePicture, cornerSquareStyle = 'property', customPropertyCardBackground }: CornerSquareProps) {
-  
-  // Debug logging for corner squares
-  console.log('🏠 [CORNER] CornerSquare props:', {
-    cornerSquareStyle,
-    profilePicture,
-    hasProfilePic: !!profilePicture,
-    customPropertyCardBackground,
-    themeContextCustomPropertyCardBackground: customPropertyCardBackground
-  });
 
   // Helper to check if custom background is a solid color (not an image URL)
   const isCustomBackgroundSolidColor = () => {
     const customBg = customPropertyCardBackground;
-    
-    console.log('🎨 [CORNER] Checking if solid color:', {
-      customBg,
-      hasValue: !!customBg,
-      startsWithHash: customBg?.startsWith('#'),
-      startsWithRgb: customBg?.startsWith('rgb'),
-      startsWithHttp: customBg?.startsWith('http'),
-      startsWithSlash: customBg?.startsWith('/'),
-      hasImageExt: customBg?.includes('.png') || customBg?.includes('.jpg')
-    });
     
     if (!customBg) return false;
     
@@ -41,17 +22,13 @@ export function CornerSquare({ icon, label, bgColor, profilePicture, cornerSquar
         customBg.includes('.png') || customBg.includes('.jpg') || 
         customBg.includes('.jpeg') || customBg.includes('.webp') || 
         customBg.includes('.gif')) {
-      console.log('🎨 [CORNER] Detected as IMAGE URL');
       return false;
     }
     
     // If it starts with # or rgb/rgba, it's a color
     if (customBg.startsWith('#') || customBg.startsWith('rgb')) {
-      console.log('🎨 [CORNER] Detected as SOLID COLOR');
       return true;
     }
-    
-    console.log('🎨 [CORNER] Could not determine type, treating as color');
     // If we can't determine, assume it's a color
     return true;
   };
@@ -59,14 +36,6 @@ export function CornerSquare({ icon, label, bgColor, profilePicture, cornerSquar
   // Check if we have a custom background (solid color or image)
   const hasCustomBackground = !!customPropertyCardBackground;
   const isCustomSolidColor = hasCustomBackground && isCustomBackgroundSolidColor();
-
-  console.log('🏠 [CORNER] Final decision:', {
-    hasCustomBackground,
-    isCustomSolidColor,
-    cornerSquareStyle,
-    willShowLogo: !(cornerSquareStyle === 'profile' && profilePicture) && 
-                   !(cornerSquareStyle === 'property' && hasCustomBackground && !isCustomSolidColor)
-  });
 
   // Get background - either custom or default dark
   const getBackground = () => {

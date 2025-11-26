@@ -1,10 +1,12 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { TrophyIcon, HexagonBadge } from './icons/UIIcons';
+import { useEffect, useState, useRef } from 'react';
+import { createPortal } from 'react-dom';
+import { TrophyIcon, HexagonBadge, PointerArrowIcon } from './icons/UIIcons';
 import { ProfileData } from '@/utils/profileStorage';
 import { setCachedSpectator } from '@/utils/spectatorCache';
 import { useWebSocket } from '@/contexts/WebSocketContext';
+import { useGameState } from '@/contexts/GameStateContext';
 
 interface LeaderboardEntry {
   rank: number;
@@ -34,6 +36,53 @@ export function Leaderboard() {
   const [leaderboardData, setLeaderboardData] = useState<LeaderboardData | null>(null);
   const [profiles, setProfiles] = useState<Record<string, ProfileData>>({});
   const [loading, setLoading] = useState(true);
+  const [showSpectatorHint, setShowSpectatorHint] = useState(false);
+  
+  // For portal arrow positioning
+  const firstRowRef = useRef<HTMLDivElement>(null);
+  const [arrowPosition, setArrowPosition] = useState<{ top: number; left: number } | null>(null);
+  
+  // Get game state to check if user owns properties
+  const gameState = useGameState();
+  const totalSlotsOwned = gameState.stats.totalSlotsOwned || 0;
+
+  // Check if we should show the spectator hint
+  useEffect(() => {
+    const hasUsedSpectator = localStorage.getItem('hasUsedSpectator');
+    // Show hint if: user owns at least 1 property AND hasn't used spectator yet
+    if (!hasUsedSpectator && totalSlotsOwned > 0) {
+      setShowSpectatorHint(true);
+    }
+  }, [totalSlotsOwned]);
+
+  // Update arrow position when hint is shown
+  useEffect(() => {
+    if (!showSpectatorHint || !firstRowRef.current) return;
+    
+    const updatePosition = () => {
+      const rect = firstRowRef.current?.getBoundingClientRect();
+      if (rect) {
+        setArrowPosition({
+          top: rect.top + rect.height / 2 - 12,
+          left: rect.left - 28
+        });
+      }
+    };
+    updatePosition();
+    window.addEventListener('resize', updatePosition);
+    window.addEventListener('scroll', updatePosition, true);
+    
+    return () => {
+      window.removeEventListener('resize', updatePosition);
+      window.removeEventListener('scroll', updatePosition, true);
+    };
+  }, [showSpectatorHint, loading]);
+
+  const dismissSpectatorHint = () => {
+    localStorage.setItem('hasUsedSpectator', 'true');
+    setShowSpectatorHint(false);
+    setArrowPosition(null);
+  };
 
   useEffect(() => {
     const fetchLeaderboard = async () => {
@@ -54,71 +103,21 @@ export function Leaderboard() {
         
         // Check if backend has a batch profiles endpoint, otherwise use localStorage
         const walletAddresses = data.leaderboard.map((entry) => entry.walletAddress);
+        
         if (walletAddresses.length > 0) {
           try {
-            // Try batch endpoint first
-            const batchResponse = await fetch(`${API_BASE_URL}/api/profiles/batch`, {
+            // Try batch API first
+            const profilesResponse = await fetch(`${API_BASE_URL}/api/profiles/batch`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ wallets: walletAddresses })
             });
             
-            if (batchResponse.ok) {
-              const batchData = await batchResponse.json();
-              const profiles = batchData.profiles || {};
-              console.log('🏆 Fetched profiles via batch endpoint for', Object.keys(profiles).length, 'wallets');
-              
-              const profilesData: Record<string, ProfileData> = {};
-              for (const [wallet, profile] of Object.entries(profiles)) {
-                profilesData[wallet] = {
-                  username: (profile as any)?.username || null,
-                  profilePicture: (profile as any)?.profilePicture || null,
-                  cornerSquareStyle: (profile as any)?.cornerSquareStyle || 'property',
-                  boardTheme: (profile as any)?.boardTheme || 'dark',
-                  propertyCardTheme: (profile as any)?.propertyCardTheme || 'dark',
-                  customBoardBackground: (profile as any)?.customBoardBackground || null,
-                  customPropertyCardBackground: (profile as any)?.customPropertyCardBackground || null,
-                  lastUpdated: (profile as any)?.updatedAt || 0
-                };
-              }
+            if (profilesResponse.ok) {
+              const profilesData = await profilesResponse.json();
               setProfiles(profilesData);
-              // ✅ Pre-populate spectator cache
-              data.leaderboard.forEach((entry) => {
-                const profile = profiles[entry.walletAddress];
-                if (profile) {
-                  setCachedSpectator(
-                    entry.walletAddress,
-                    {
-                      walletAddress: entry.walletAddress,
-                      username: (profile as any)?.username || null,
-                      profilePicture: (profile as any)?.profilePicture || null,
-                      cornerSquareStyle: (profile as any)?.cornerSquareStyle || 'property',
-                      boardTheme: (profile as any)?.boardTheme || 'dark',
-                      propertyCardTheme: (profile as any)?.propertyCardTheme || 'dark',
-                      customBoardBackground: (profile as any)?.customBoardBackground || null,
-                      customPropertyCardBackground: (profile as any)?.customPropertyCardBackground || null,
-                      lastUpdated: (profile as any)?.updatedAt || 0
-                    },
-                    {
-                      walletAddress: entry.walletAddress,
-                      totalActions: 0,
-                      propertiesBought: entry.propertiesBought || 0,
-                      totalSpent: 0,
-                      totalEarned: entry.totalEarned || 0,
-                      totalSlotsOwned: 0,
-                      successfulSteals: entry.successfulSteals || 0,
-                      failedSteals: 0,
-                      completedSets: entry.completeSets || 0,
-                      shieldsUsed: entry.shieldsActivated || 0,
-                      dailyIncome: 0
-                    }
-                  );
-                }
-              });
-              console.log(`💾 Pre-cached ${data.leaderboard.length} spectator profiles`);
             } else {
-              // Fallback: just show wallet addresses without profiles
-              console.log('🏆 Batch endpoint not available, showing wallet addresses only');
+              console.warn('🏆 Batch profiles API unavailable, showing wallet addresses only');
               const profilesData: Record<string, ProfileData> = {};
               for (const wallet of walletAddresses) {
                 profilesData[wallet] = {
@@ -193,6 +192,10 @@ export function Leaderboard() {
   };
 
   const handlePlayerClick = (leader: LeaderboardEntry) => {
+    // Dismiss hint on first click
+    if (showSpectatorHint) {
+      dismissSpectatorHint();
+    }
     window.location.href = `/spectator/${leader.walletAddress}`;
   };
 
@@ -205,102 +208,125 @@ export function Leaderboard() {
   };
 
   return (
-    <div className="bg-purple-900/8 backdrop-blur-xl rounded-2xl border border-purple-500/20 h-full overflow-hidden flex flex-col">
-      {/* Header */}
-      <div className="p-4 pb-2">
-        <div className="flex items-center justify-between">
-          <div>
-            <div className="flex items-center gap-2 border-b border-purple-500/20 pb-2">
-              <TrophyIcon size={20} className="text-yellow-400" />
-              <h2 className="text-lg font-bold text-white">
-                Leaderboard
-              </h2>
+    <>
+      <div className="bg-purple-900/8 backdrop-blur-xl rounded-2xl border border-purple-500/20 h-full overflow-hidden flex flex-col">
+        {/* Header */}
+        <div className="p-4 pb-2">
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="flex items-center gap-2 border-b border-purple-500/20 pb-2">
+                <TrophyIcon size={20} className="text-yellow-400" />
+                <h2 className="text-lg font-bold text-white">
+                  Leaderboard
+                </h2>
+              </div>
+              <p className="text-xs text-purple-400 mt-1">Click on a player to see their board</p>
             </div>
-            <p className="text-xs text-purple-400 mt-1">Click on a player to see their board</p>
           </div>
+        </div>
+
+        {/* Scrollable Content */}
+        <div className="flex-1 overflow-y-auto px-4 pb-4">
+          {loading ? (
+            <div className="text-center py-8">
+              <div className="text-xl mb-1">⏳</div>
+              <div className="text-xs text-purple-300">Loading...</div>
+            </div>
+          ) : !leaderboardData || leaderboardData.leaderboard.length === 0 ? (
+            <div className="text-center py-8">
+              <TrophyIcon size={24} className="mx-auto mb-1 text-yellow-400" />
+              <div className="text-xs text-purple-400">No players yet</div>
+              <div className="text-[10px] text-purple-500 mt-0.5">Be the first!</div>
+            </div>
+          ) : (
+            <div className="space-y-0.5">
+              {leaderboardData.leaderboard.map((leader, index) => {
+                const isTop3 = leader.rank <= 3;
+                const isFirstRow = index === 0;
+                const showHintOnRow = showSpectatorHint && isFirstRow;
+                
+                return (
+                  <div
+                    key={leader.walletAddress}
+                    ref={isFirstRow ? firstRowRef : null}
+                    onClick={() => handlePlayerClick(leader)}
+                    className={`relative flex items-center gap-3 py-2 px-2 rounded-lg transition-all cursor-pointer ${
+                      showHintOnRow
+                        ? 'bg-yellow-500/10 border border-yellow-400/50 shadow-[0_0_15px_rgba(250,204,21,0.3)]'
+                        : isTop3 
+                          ? 'bg-white/[0.03] hover:bg-white/[0.08]' 
+                          : 'bg-white/[0.01] hover:bg-white/[0.05]'
+                    }`}
+                  >
+                    {/* Rank - Use HexagonBadge for top 3 */}
+                    <div className="w-8 flex items-center justify-center">
+                      {isTop3 ? (
+                        <HexagonBadge rank={leader.rank as 1 | 2 | 3} size={32} />
+                      ) : (
+                        <div className="text-xs font-bold text-purple-400">
+                          #{leader.rank}
+                        </div>
+                      )}
+                    </div>
+                    
+                    {/* Profile Picture */}
+                    <div className="w-8 h-8 rounded-full overflow-hidden bg-purple-500/10 flex-shrink-0">
+                      {profiles[leader.walletAddress]?.profilePicture ? (
+                        <img 
+                          src={profiles[leader.walletAddress]?.profilePicture || undefined} 
+                          alt="Profile"
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-purple-400 text-[10px] font-bold">
+                          {getDisplayName(leader.walletAddress).slice(0, 2).toUpperCase()}
+                        </div>
+                      )}
+                    </div>
+                    
+                    {/* Name and Details */}
+                    <div className="flex-1 min-w-0">
+                      <div className={`font-semibold text-xs truncate ${
+                        isTop3 ? 'text-white' : 'text-purple-100'
+                      }`}>
+                        {getDisplayName(leader.walletAddress)}
+                      </div>
+                    </div>
+                    
+                    {/* Score */}
+                    <div className="text-right">
+                      <div className={`text-xs font-bold font-mono ${
+                        isTop3 ? 'text-yellow-400' : 'text-purple-300'
+                      }`}>
+                        {leader.leaderboardScore.toLocaleString()}
+                      </div>
+                      <div className="text-[9px] text-purple-500 uppercase tracking-wider">
+                        score
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Scrollable Content */}
-      <div className="flex-1 overflow-y-auto px-4 pb-4">
-        {loading ? (
-          <div className="text-center py-8">
-            <div className="text-xl mb-1">⏳</div>
-            <div className="text-xs text-purple-300">Loading...</div>
-          </div>
-        ) : !leaderboardData || leaderboardData.leaderboard.length === 0 ? (
-          <div className="text-center py-8">
-            <TrophyIcon size={24} className="mx-auto mb-1 text-yellow-400" />
-            <div className="text-xs text-purple-400">No players yet</div>
-            <div className="text-[10px] text-purple-500 mt-0.5">Be the first!</div>
-          </div>
-        ) : (
-          <div className="space-y-0.5">
-            {leaderboardData.leaderboard.map((leader) => {
-              const isTop3 = leader.rank <= 3;
-              
-              return (
-                <div
-                  key={leader.walletAddress}
-                  onClick={() => handlePlayerClick(leader)}
-                  className={`flex items-center gap-3 py-2 px-2 rounded-lg transition-all cursor-pointer ${
-                    isTop3 
-                      ? 'bg-white/[0.03] hover:bg-white/[0.08]' 
-                      : 'bg-white/[0.01] hover:bg-white/[0.05]'
-                  }`}
-                >
-                  {/* Rank - Use HexagonBadge for top 3 */}
-                  <div className="w-8 flex items-center justify-center">
-                    {isTop3 ? (
-                      <HexagonBadge rank={leader.rank as 1 | 2 | 3} size={32} />
-                    ) : (
-                      <div className="text-xs font-bold text-purple-400">
-                        #{leader.rank}
-                      </div>
-                    )}
-                  </div>
-                  
-                  {/* Profile Picture */}
-                  <div className="w-8 h-8 rounded-full overflow-hidden bg-purple-500/10 flex-shrink-0">
-                    {profiles[leader.walletAddress]?.profilePicture ? (
-                      <img 
-                        src={profiles[leader.walletAddress]?.profilePicture || undefined} 
-                        alt="Profile"
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-purple-400 text-[10px] font-bold">
-                        {getDisplayName(leader.walletAddress).slice(0, 2).toUpperCase()}
-                      </div>
-                    )}
-                  </div>
-                  
-                  {/* Name and Details */}
-                  <div className="flex-1 min-w-0">
-                    <div className={`font-semibold text-xs truncate ${
-                      isTop3 ? 'text-white' : 'text-purple-100'
-                    }`}>
-                      {getDisplayName(leader.walletAddress)}
-                    </div>
-                  </div>
-                  
-                  {/* Score */}
-                  <div className="text-right">
-                    <div className={`text-xs font-bold font-mono ${
-                      isTop3 ? 'text-yellow-400' : 'text-purple-300'
-                    }`}>
-                      {leader.leaderboardScore.toLocaleString()}
-                    </div>
-                    <div className="text-[9px] text-purple-500 uppercase tracking-wider">
-                      score
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
-    </div>
+      {/* Portal arrow - renders at document.body level */}
+      {showSpectatorHint && arrowPosition && typeof document !== 'undefined' && createPortal(
+        <div 
+          className="fixed animate-bounce-x pointer-events-none"
+          style={{ 
+            top: arrowPosition.top, 
+            left: arrowPosition.left,
+            transform: 'translateY(-50%)',
+            zIndex: 9999
+          }}
+        >
+          <PointerArrowIcon className="w-6 h-6 text-yellow-400 drop-shadow-[0_0_8px_rgba(250,204,21,0.8)]" />
+        </div>,
+        document.body
+      )}
+    </>
   );
 }

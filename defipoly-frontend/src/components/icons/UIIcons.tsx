@@ -714,6 +714,19 @@ export const CollectionIcon: React.FC<IconProps> = ({ className = '', size = 24 
   </svg>
 );
 
+
+export const PointerArrowIcon = ({ className = "w-6 h-6" }: { className?: string }) => (
+  <svg 
+    className={className} 
+    viewBox="0 0 24 24" 
+    fill="currentColor"
+    stroke="currentColor"
+    strokeWidth="2"
+  >
+    <path d="M4 12l1.41 1.41L11 7.83V20h2V7.83l5.58 5.59L20 12l-8-8-8 8z" transform="rotate(90 12 12)"/>
+  </svg>
+);
+
 // Hexagon Badge with House for leaderboard rankings
 interface HexagonBadgeProps {
   rank: 1 | 2 | 3;
@@ -770,6 +783,7 @@ export const HexagonBadge: React.FC<HexagonBadgeProps> = ({ rank, size = 32, cla
   );
 };
 
+
 // ============================================
 // DEFAULT EXPORT (optional, for convenience)
 // ============================================
@@ -802,6 +816,8 @@ export default {
   SwordIcon,
   CollectionIcon,
   HexagonBadge,
+  PointerArrowIcon,
   ACTION_ICONS,
   getActionIcon,
+
 };
