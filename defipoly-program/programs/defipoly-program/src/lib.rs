@@ -66,7 +66,18 @@ pub mod defipoly_program {
         game_config.min_claim_interval_minutes = MIN_CLAIM_INTERVAL_MINUTES;
         game_config.bump = ctx.bumps.game_config;
         game_config.reward_pool_vault_bump = ctx.bumps.reward_pool_vault;
-        
+
+        game_config.accumulation_tier1_threshold = 0;
+        game_config.accumulation_tier1_bonus_bps = 0;
+        game_config.accumulation_tier2_threshold = 0;
+        game_config.accumulation_tier2_bonus_bps = 0;
+        game_config.accumulation_tier3_threshold = 0;
+        game_config.accumulation_tier3_bonus_bps = 0;
+        game_config.accumulation_tier4_threshold = 0;
+        game_config.accumulation_tier4_bonus_bps = 0;
+        game_config.accumulation_tier5_threshold = 0;
+        game_config.accumulation_tier5_bonus_bps = 0;
+
         msg!("Game initialized - Phase 1");
         Ok(())
     }
@@ -597,7 +608,7 @@ pub fn steal_property_instant(
 
     pub fn claim_rewards<'info>(
         ctx: Context<'_, '_, '_, 'info, ClaimRewards<'info>>,
-    ) -> Result<()> {  // ✅ REMOVED num_properties parameter
+    ) -> Result<()> {
         let game_config = &ctx.accounts.game_config;
         let player = &mut ctx.accounts.player_account;
         let clock = Clock::get()?;
@@ -609,18 +620,31 @@ pub fn steal_property_instant(
             ErrorCode::ClaimTooSoon
         );
         
-        // ✅ ACCUMULATE ANY REMAINING REWARDS
         update_pending_rewards(player, clock.unix_timestamp)?;
         
-        let total_rewards = player.pending_rewards;
+        let base_rewards = player.pending_rewards;
         
-        require!(total_rewards > 0, ErrorCode::NoRewardsToClaim);
+        require!(base_rewards > 0, ErrorCode::NoRewardsToClaim);
+        
+        // Calculate accumulation bonus
+        let bonus_bps = get_accumulation_bonus_bps(base_rewards, game_config);
+        let bonus_amount = (base_rewards as u128)
+            .checked_mul(bonus_bps as u128)
+            .and_then(|r| r.checked_div(10000))
+            .and_then(|r| u64::try_from(r).ok())
+            .ok_or(ErrorCode::Overflow)?;
+        
+        let total_rewards = base_rewards
+            .checked_add(bonus_amount)
+            .ok_or(ErrorCode::Overflow)?;
+        
         require!(
             ctx.accounts.reward_pool_vault.amount >= total_rewards,
             ErrorCode::InsufficientRewardPool
         );
         
-        msg!("💰 Claiming {} tokens from pending rewards", total_rewards);
+        msg!("💰 Claiming {} base + {} bonus ({} bps) = {} total", 
+             base_rewards, bonus_amount, bonus_bps, total_rewards);
         
         let game_config_key = game_config.key();
         let seeds = &[
@@ -649,7 +673,7 @@ pub fn steal_property_instant(
         emit!(RewardsClaimedEvent {
             player: player.owner,
             amount: total_rewards,
-            seconds_elapsed: 0,  // Not relevant anymore
+            seconds_elapsed: 0,
         });
     
         msg!("✅ Rewards claimed successfully!");
@@ -1189,6 +1213,42 @@ pub fn steal_property_instant(
         
         Ok(())
     }
+
+    pub fn admin_update_accumulation_bonus(
+        ctx: Context<AdminUpdateGame>,
+        tier1_threshold: u64,
+        tier1_bonus_bps: u16,
+        tier2_threshold: u64,
+        tier2_bonus_bps: u16,
+        tier3_threshold: u64,
+        tier3_bonus_bps: u16,
+        tier4_threshold: u64,
+        tier4_bonus_bps: u16,
+        tier5_threshold: u64,
+        tier5_bonus_bps: u16,
+    ) -> Result<()> {
+        let game_config = &mut ctx.accounts.game_config;
+        
+        require!(tier1_bonus_bps <= 5000, ErrorCode::InvalidBonus);
+        require!(tier2_bonus_bps <= 5000, ErrorCode::InvalidBonus);
+        require!(tier3_bonus_bps <= 5000, ErrorCode::InvalidBonus);
+        require!(tier4_bonus_bps <= 5000, ErrorCode::InvalidBonus);
+        require!(tier5_bonus_bps <= 5000, ErrorCode::InvalidBonus);
+        
+        game_config.accumulation_tier1_threshold = tier1_threshold;
+        game_config.accumulation_tier1_bonus_bps = tier1_bonus_bps;
+        game_config.accumulation_tier2_threshold = tier2_threshold;
+        game_config.accumulation_tier2_bonus_bps = tier2_bonus_bps;
+        game_config.accumulation_tier3_threshold = tier3_threshold;
+        game_config.accumulation_tier3_bonus_bps = tier3_bonus_bps;
+        game_config.accumulation_tier4_threshold = tier4_threshold;
+        game_config.accumulation_tier4_bonus_bps = tier4_bonus_bps;
+        game_config.accumulation_tier5_threshold = tier5_threshold;
+        game_config.accumulation_tier5_bonus_bps = tier5_bonus_bps;
+        
+        msg!("Accumulation bonuses updated (5 tiers)");
+        Ok(())
+    }
 }
 
 // ========== HELPER FUNCTIONS (OUTSIDE #[program] MODULE) ==========
@@ -1257,6 +1317,27 @@ fn distribute_payment<'info>(
     )?;
 
     Ok(())
+}
+
+fn get_accumulation_bonus_bps(pending_rewards: u64, game_config: &GameConfig) -> u16 {
+    if game_config.accumulation_tier5_threshold > 0 
+        && pending_rewards >= game_config.accumulation_tier5_threshold {
+        game_config.accumulation_tier5_bonus_bps
+    } else if game_config.accumulation_tier4_threshold > 0 
+        && pending_rewards >= game_config.accumulation_tier4_threshold {
+        game_config.accumulation_tier4_bonus_bps
+    } else if game_config.accumulation_tier3_threshold > 0 
+        && pending_rewards >= game_config.accumulation_tier3_threshold {
+        game_config.accumulation_tier3_bonus_bps
+    } else if game_config.accumulation_tier2_threshold > 0 
+        && pending_rewards >= game_config.accumulation_tier2_threshold {
+        game_config.accumulation_tier2_bonus_bps
+    } else if game_config.accumulation_tier1_threshold > 0 
+        && pending_rewards >= game_config.accumulation_tier1_threshold {
+        game_config.accumulation_tier1_bonus_bps
+    } else {
+        0
+    }
 }
 
 // ========== ACCOUNT CONTEXTS ==========
@@ -1749,8 +1830,20 @@ pub struct GameConfig {
     pub min_claim_interval_minutes: i64,
     pub bump: u8,
     pub reward_pool_vault_bump: u8,
+
+    // Accumulation bonus tiers
+    pub accumulation_tier1_threshold: u64,
+    pub accumulation_tier1_bonus_bps: u16,
+    pub accumulation_tier2_threshold: u64,
+    pub accumulation_tier2_bonus_bps: u16,
+    pub accumulation_tier3_threshold: u64,
+    pub accumulation_tier3_bonus_bps: u16,
+    pub accumulation_tier4_threshold: u64,
+    pub accumulation_tier4_bonus_bps: u16,
+    pub accumulation_tier5_threshold: u64,
+    pub accumulation_tier5_bonus_bps: u16,
     
-    pub padding: [u8; 128],  // Reserved for future features
+    pub padding: [u8; 78], // Reserved for future features
 }
 
 impl GameConfig {
@@ -2119,4 +2212,6 @@ pub enum ErrorCode {
     InvalidPropertyCount,
     #[msg("Invalid claim interval")]
     InvalidClaimInterval,
+    #[msg("Invalid bonus percentage (max 50%)")]
+    InvalidBonus,
 }

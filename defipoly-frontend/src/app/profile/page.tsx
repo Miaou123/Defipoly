@@ -187,7 +187,10 @@ export default function ProfilePage() {
         
         {/* LEFT COLUMN: Logo */}
         <div className="flex flex-col gap-2 overflow-hidden">
-          <div className="flex items-center gap-3 rounded-xl px-4 flex-shrink-0">
+          <a 
+            href="/"
+            className="flex items-center gap-3 rounded-xl px-4 flex-shrink-0 hover:opacity-80 transition-opacity cursor-pointer"
+          >
             <img 
               src="/logo.svg" 
               alt="Defipoly Logo" 
@@ -196,7 +199,7 @@ export default function ProfilePage() {
             <div>
               <h1 className="text-2xl font-bold text-purple-100">Defipoly</h1>
             </div>
-          </div>
+          </a>
           <div className="flex-1"></div>
         </div>
 

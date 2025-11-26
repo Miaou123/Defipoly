@@ -1,9 +1,13 @@
+// ============================================
+// FILE: defipoly-frontend/src/components/RewardsPanel.tsx
+// Rewards display with particle-based counting
+// ============================================
+
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useWallet, useConnection } from '@solana/wallet-adapter-react';
 import { useRewards } from '@/hooks/useRewards';
-import { usePlayerStats } from '@/hooks/usePlayerStats';
 import { useDefipoly } from '@/hooks/useDefipoly';
 import { useGameState } from '@/contexts/GameStateContext';
 import { useNotification } from '../contexts/NotificationContext';
@@ -12,23 +16,102 @@ import { PROGRAM_ID, TOKEN_TICKER } from '@/utils/constants';
 import { BorshCoder, EventParser } from '@coral-xyz/anchor';
 import idl from '@/idl/defipoly_program.json';
 import { BuildingIcon, WalletIcon, GiftIcon, TargetIcon, ShieldIcon } from './icons/UIIcons';
+import { BankSVG } from './icons/GameAssets';
 
-export function RewardsPanel() {
+interface Floater {
+  id: number;
+  amount: number;
+  x: number;
+  size: number;
+}
+
+interface RewardsPanelProps {
+  incomeArrived?: number | null; // Income value from particle arrival
+}
+
+export function RewardsPanel({ incomeArrived = null }: RewardsPanelProps) {
   const { connected, publicKey } = useWallet();
   const { connection } = useConnection();
   const { unclaimedRewards, dailyIncome, loading: rewardsLoading } = useRewards();
-  const { totalEarned } = usePlayerStats();
   const { claimRewards, loading: claimLoading } = useDefipoly();
   const { showSuccess, showError } = useNotification();
   const [claiming, setClaiming] = useState(false);
+  const [floaters, setFloaters] = useState<Floater[]>([]);
+  const [displayedRewards, setDisplayedRewards] = useState<number>(0);
+  const [isPulsing, setIsPulsing] = useState(false);
+  const floaterIdRef = useRef(0);
   const claimingRef = useRef(false);
+  const initializedRef = useRef(false);
   
-  // Get game state to check if user owns any properties
   const gameState = useGameState();
-  const totalSlotsOwned = gameState.stats.totalSlotsOwned || 0;
+  const totalSlotsOwned = gameState.stats.totalSlotsOwned || gameState.ownerships.reduce((sum, o) => sum + o.slotsOwned, 0);
+  const floaterTimeoutsRef = useRef<Set<NodeJS.Timeout>>(new Set());
+  const pulseTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
+  // Cleanup timeouts on unmount
+  useEffect(() => {
+    return () => {
+      floaterTimeoutsRef.current.forEach(t => clearTimeout(t));
+      floaterTimeoutsRef.current.clear();
+      if (pulseTimeoutRef.current) clearTimeout(pulseTimeoutRef.current);
+    };
+  }, []);
+
+  // Initialize displayedRewards from blockchain value
+  useEffect(() => {
+    if (!initializedRef.current && unclaimedRewards > 0) {
+      setDisplayedRewards(unclaimedRewards);
+      initializedRef.current = true;
+    }
+  }, [unclaimedRewards]);
+
+  // Periodically sync with blockchain value (in case of drift)
+  useEffect(() => {
+    if (initializedRef.current && unclaimedRewards > 0) {
+      // Only sync if blockchain is significantly different (>5% difference)
+      const diff = Math.abs(displayedRewards - unclaimedRewards);
+      const threshold = unclaimedRewards * 0.05;
+      if (diff > threshold) {
+        setDisplayedRewards(unclaimedRewards);
+      }
+    }
+  }, [unclaimedRewards, displayedRewards]);
+
+  // Handle income arrival from particles
+  useEffect(() => {
+    if (incomeArrived !== null && incomeArrived > 0) {
+      // Add to displayed rewards
+      setDisplayedRewards(prev => prev + incomeArrived);
+      
+      // Trigger pulse
+      setIsPulsing(true);
+      if (pulseTimeoutRef.current) clearTimeout(pulseTimeoutRef.current);
+      pulseTimeoutRef.current = setTimeout(() => setIsPulsing(false), 300);
+      
+      // Create floater
+      const id = floaterIdRef.current++;
+      const x = Math.random() * 60 - 30;
+      const size = 20 + Math.random() * 8; // 20-28px
+      
+      setFloaters(prev => {
+        // Safety: limit max floaters
+        if (prev.length > 40) {
+          return [...prev.slice(-20), { id, amount: incomeArrived, x, size }];
+        }
+        return [...prev, { id, amount: incomeArrived, x, size }];
+      });
+      
+      const timeout = setTimeout(() => {
+        setFloaters(prev => prev.filter(f => f.id !== id));
+        floaterTimeoutsRef.current.delete(timeout);
+      }, 2000);
+      floaterTimeoutsRef.current.add(timeout);
+    }
+  }, [incomeArrived]);
+
+  // Reset counter after claiming
   const handleClaimRewards = async () => {
-    if (!connected || !publicKey || unclaimedRewards === 0 || claiming || claimingRef.current) return;
+    if (!connected || !publicKey || displayedRewards === 0 || claiming || claimingRef.current) return;
     
     claimingRef.current = true;
     setClaiming(true);
@@ -60,19 +143,25 @@ export function RewardsPanel() {
             }
           }
           
-          const displayAmount = actualClaimedAmount > 0 ? actualClaimedAmount : unclaimedRewards;
+          const claimedAmount = actualClaimedAmount > 0 ? actualClaimedAmount : displayedRewards;
   
           showSuccess(
             'Rewards Claimed!', 
-            `Successfully claimed ${(displayAmount / 1e9).toFixed(2)}`,
+            `Successfully claimed ${(claimedAmount / 1e9).toFixed(2)}`,
             signature !== 'already-processed' ? signature : undefined
           );
+          
+          // Reset counter after claim
+          setDisplayedRewards(0);
+          initializedRef.current = false;
         } catch (parseError) {
           showSuccess(
             'Rewards Claimed!', 
             `Successfully claimed rewards!`,
             signature !== 'already-processed' ? signature : undefined
           );
+          setDisplayedRewards(0);
+          initializedRef.current = false;
         }
       }
     } catch (error) {
@@ -82,6 +171,8 @@ export function RewardsPanel() {
       if (errorMessage.includes('already been processed') || 
           errorMessage.includes('AlreadyProcessed')) {
         showSuccess('Rewards Claimed!', 'Rewards have been claimed!');
+        setDisplayedRewards(0);
+        initializedRef.current = false;
       } else {
         showError('Claim Failed', 'Failed to claim rewards. Please try again.');
       }
@@ -91,11 +182,25 @@ export function RewardsPanel() {
     }
   };
 
+  // Format number for display
+  const formatRewards = (value: number) => {
+    if (value < 100000) {
+      return value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+    return Math.floor(value).toLocaleString();
+  };
+
+  // Format floater amount
+  const formatFloater = (value: number) => {
+    if (value < 0.01) return '+0.01';
+    if (value < 1) return `+${value.toFixed(2)}`;
+    return `+${Math.floor(value)}`;
+  };
+
   // Not connected - show welcome screen
   if (!connected) {
     return (
       <div className="relative space-y-6 px-4 max-w-md w-full">
-        {/* Logo + Message */}
         <div className="text-center space-y-4">
           <img 
             src="/logo.svg" 
@@ -110,12 +215,10 @@ export function RewardsPanel() {
           </p>
         </div>
         
-        {/* Connect Button */}
         <div className="flex justify-center">
           <StyledWalletButton variant="board" />
         </div>
 
-        {/* Feature Icons */}
         <div className="grid grid-cols-3 gap-4 pt-4">
           <div className="bg-black/20 backdrop-blur rounded-xl p-4 text-center border border-purple-500/20 hover:border-purple-500/40 transition-all">
             <BuildingIcon size={32} className="mx-auto mb-2 text-purple-400" />
@@ -142,14 +245,12 @@ export function RewardsPanel() {
   if (totalSlotsOwned === 0) {
     return (
       <div className="relative space-y-6 px-4 max-w-md w-full">
-        {/* Header */}
         <div className="text-center">
           <div className="text-3xl mb-2">🎲</div>
           <h2 className="text-2xl font-bold text-white mb-1">How to Play Defipoly</h2>
           <p className="text-white/50 text-sm">Get started in 3 steps</p>
         </div>
 
-        {/* Steps */}
         <div className="space-y-3">
           <div className="bg-black/30 backdrop-blur rounded-xl p-4 border border-purple-500/20 flex items-center gap-4">
             <div className="w-10 h-10 rounded-full bg-purple-600 flex items-center justify-center text-white font-bold shrink-0">
@@ -191,7 +292,6 @@ export function RewardsPanel() {
           </div>
         </div>
 
-        {/* Pro Tips */}
         <div className="bg-purple-900/20 rounded-xl p-4 border border-purple-500/20">
           <div className="text-xs text-purple-400 font-semibold mb-2">💡 PRO TIPS</div>
           <div className="space-y-2 text-sm text-white/70">
@@ -210,7 +310,6 @@ export function RewardsPanel() {
           </div>
         </div>
 
-        {/* Call to Action */}
         <div className="text-center">
           <div className="text-white/60 text-sm animate-pulse">
             ↓ Click a property to start ↓
@@ -220,84 +319,92 @@ export function RewardsPanel() {
     );
   }
 
-  // Connected and owns properties - show rewards panel
+  // ========================================
+  // Connected and owns properties - BANK DESIGN
+  // ========================================
   return (
-    <div className="relative w-full max-w-sm px-4">
+    <div className="relative flex flex-col items-center justify-center">
       {rewardsLoading ? (
         <div className="text-white/60 text-center">Loading rewards...</div>
       ) : (
-        <div className="space-y-3">
-          {/* Electric Cyan Rewards Box */}
-          <div className="relative rounded-[16px] p-5 overflow-hidden" style={{
-            background: 'linear-gradient(135deg, rgba(20, 10, 40, 0.9), rgba(40, 10, 60, 0.9))',
-            boxShadow: '0 0 30px rgba(147, 51, 234, 0.3), inset 0 0 20px rgba(147, 51, 234, 0.1)'
-          }}>
-            {/* Animated Glow Ring */}
-            <div className="absolute inset-[-3px] rounded-[16px] animate-glow-rotate" style={{
-              background: 'linear-gradient(135deg, #9333ea, #06b6d4, #9333ea)',
-              zIndex: -1
-            }}></div>
+        <>
+          {/* Bank SVG */}
+          <div className="relative w-[220px] h-[160px]">
+            <BankSVG isPulsing={isPulsing} className="w-full h-full" />
             
-            {/* Radial glowing spots */}
-            <div className="absolute inset-0 pointer-events-none" style={{
-              background: 'radial-gradient(circle at 20% 30%, rgba(147, 51, 234, 0.2) 0%, transparent 50%), radial-gradient(circle at 80% 70%, rgba(236, 72, 153, 0.2) 0%, transparent 50%)',
-              zIndex: -1
-            }}></div>
-            
-            {/* Header */}
-            <div className="text-center text-[9px] tracking-[3px] text-cyan-400 font-bold mb-4 uppercase">
-              ◆ UNCLAIMED REWARDS ◆
+            {/* Floating +X numbers */}
+            {floaters.map(floater => (
+              <div
+                key={floater.id}
+                className="absolute pointer-events-none font-bold"
+                style={{
+                  left: `calc(50% + ${floater.x}px)`,
+                  top: '20%',
+                  fontSize: `${floater.size}px`,
+                  color: '#4ade80',
+                  textShadow: '0 0 10px rgba(74, 222, 128, 0.6), 0 2px 4px rgba(0,0,0,0.5)',
+                  animation: 'floatUp 2s ease-out forwards',
+                }}
+              >
+                {formatFloater(floater.amount)}
+              </div>
+            ))}
+          </div>
+
+          {/* Rewards display */}
+          <div className="text-center mt-5">
+            <div 
+              className="text-4xl font-bold tabular-nums"
+              style={{
+                color: '#fbbf24',
+                textShadow: displayedRewards > 0 ? '0 0 25px rgba(251, 191, 36, 0.5)' : 'none',
+              }}
+            >
+              {formatRewards(displayedRewards)}
             </div>
-            
-            {/* Amount */}
-            <div className="text-center text-[48px] font-black leading-none mb-4 tabular-nums text-white" style={{
-              fontFamily: 'Courier New, monospace'
-            }}>
-              {unclaimedRewards.toLocaleString()}
-            </div>
-            
-            {/* Claim Button */}
-            {unclaimedRewards > 0 && (
+            {/* Collect button */}
+            {displayedRewards > 0 && (
               <button
                 onClick={handleClaimRewards}
-                disabled={claiming || claimLoading || unclaimedRewards === 0}
-                className="w-full py-3 rounded-lg font-black text-base uppercase tracking-[2px] transition-all disabled:opacity-50 disabled:cursor-not-allowed relative overflow-hidden"
+                disabled={claiming || claimLoading}
+                className="mt-4 px-8 py-2.5 rounded-full font-bold text-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                 style={{
-                  background: 'linear-gradient(135deg, #06b6d4, #0891b2)',
-                  border: '2px solid #06b6d4',
-                  color: '#0a0015',
-                  fontFamily: 'Courier New, monospace'
+                  background: 'linear-gradient(135deg, #a855f7 0%, #7c3aed 100%)',
+                  color: '#fff',
                 }}
                 onMouseEnter={(e) => {
-                  if (!claiming && !claimLoading && unclaimedRewards > 0) {
-                    e.currentTarget.style.transform = 'translateY(-2px)';
-                    e.currentTarget.style.boxShadow = '0 0 30px rgba(6, 182, 212, 0.6)';
+                  if (!claiming && !claimLoading) {
+                    e.currentTarget.style.transform = 'scale(1.05)';
+                    e.currentTarget.style.boxShadow = '0 0 25px rgba(168, 85, 247, 0.5)';
                   }
                 }}
                 onMouseLeave={(e) => {
-                  e.currentTarget.style.transform = 'translateY(0)';
+                  e.currentTarget.style.transform = 'scale(1)';
                   e.currentTarget.style.boxShadow = 'none';
                 }}
               >
-                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/40 to-transparent -translate-x-full transition-transform duration-500 hover:translate-x-full pointer-events-none"></div>
-                <span className="relative z-10">
-                  {claiming ? '⏳ CLAIMING...' : 'COLLECT REWARDS'}
-                </span>
+                {claiming ? '...' : 'Collect'}
               </button>
             )}
+
           </div>
-        </div>
+        </>
       )}
-      
-      {/* CSS Animations */}
+
+      {/* Floating animation styles */}
       <style jsx>{`
-        @keyframes glow-rotate {
-          0% { filter: hue-rotate(0deg); }
-          100% { filter: hue-rotate(360deg); }
-        }
-        
-        .animate-glow-rotate {
-          animation: glow-rotate 4s linear infinite;
+        @keyframes floatUp {
+          0% {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0) scale(1);
+          }
+          70% {
+            opacity: 0.8;
+          }
+          100% {
+            opacity: 0;
+            transform: translateX(-50%) translateY(-120px) scale(0.9);
+          }
         }
       `}</style>
     </div>

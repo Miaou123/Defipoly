@@ -183,7 +183,42 @@ async function main() {
     }
   }
 
-  // Step 4: Save deployment info for generate-constants.ts
+  // Step 4: Set accumulation bonus tiers
+  console.log("\n4. Setting accumulation bonus tiers...");
+
+  const DECIMALS = 1_000_000_000; // 9 decimals based on your token
+
+  try {
+    await program.methods
+      .adminUpdateAccumulationBonus(
+        new BN(50_000 * DECIMALS),    // Tier 1: 50k tokens
+        500,                           // 5% bonus
+        new BN(100_000 * DECIMALS),   // Tier 2: 100k tokens
+        1000,                          // 10% bonus
+        new BN(250_000 * DECIMALS),   // Tier 3: 250k tokens
+        1500,                          // 15% bonus
+        new BN(500_000 * DECIMALS),   // Tier 4: 500k tokens
+        2000,                          // 20% bonus
+        new BN(1_000_000 * DECIMALS), // Tier 5: 1M tokens
+        2500,                          // 25% bonus
+      )
+      .accounts({
+        gameConfig,
+        authority,
+      })
+      .rpc();
+
+    console.log("✅ Accumulation bonuses set!");
+    console.log("   Tier 1: 50k tokens → 5% bonus");
+    console.log("   Tier 2: 100k tokens → 10% bonus");
+    console.log("   Tier 3: 250k tokens → 15% bonus");
+    console.log("   Tier 4: 500k tokens → 20% bonus");
+    console.log("   Tier 5: 1M tokens → 25% bonus");
+  } catch (error: any) {
+    console.error("❌ Failed to set accumulation bonuses:", error.message);
+  }
+
+  // Step 5: Save deployment info for generate-constants.ts
   const deploymentInfo = {
     programId: programId.toString(),
     tokenMint: tokenMint.toString(),

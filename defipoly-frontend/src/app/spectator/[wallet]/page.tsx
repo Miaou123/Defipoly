@@ -155,18 +155,21 @@ export default function SpectatorPage() {
         
         {/* LEFT COLUMN: Logo + Player Profile/Stats */}
         <div className="flex flex-col gap-2 overflow-hidden">
-          {/* Logo at top of left column */}
-          <div className="flex items-center gap-3 rounded-xl px-4 flex-shrink-0">
-            <img 
-              src="/logo.svg" 
-              alt="Defipoly Logo" 
-              className="w-12 h-12 object-contain"
-            />
-            <div>
-              <h1 className="text-2xl font-bold text-purple-100">Defipoly</h1>
-            </div>
+        {/* Logo at top of left column */}
+        <a 
+          href="/"
+          className="flex items-center gap-3 rounded-xl px-4 flex-shrink-0 hover:opacity-80 transition-opacity cursor-pointer"
+        >
+          <img 
+            src="/logo.svg" 
+            alt="Defipoly Logo" 
+            className="w-12 h-12 object-contain"
+          />
+          <div>
+            <h1 className="text-2xl font-bold text-purple-100">Defipoly</h1>
           </div>
-          
+        </a>
+                    
           {/* Player Profile/Stats Card - scrollable */}
           <div className="flex-1 overflow-y-auto">
             <div className="bg-purple-900/20 backdrop-blur-xl rounded-2xl border border-purple-500/20 p-6">
@@ -306,8 +309,6 @@ export default function SpectatorPage() {
             spectatorMode={true}
             spectatorWallet={walletAddress}
             spectatorOwnerships={spectatorOwnerships} 
-            boardTheme={profile?.boardTheme || 'dark'}
-            propertyCardTheme={profile?.propertyCardTheme || 'default'}
             profilePicture={profile?.profilePicture || null}
             cornerSquareStyle={profile?.cornerSquareStyle || 'property'}
             customBoardBackground={profile?.customBoardBackground || null}

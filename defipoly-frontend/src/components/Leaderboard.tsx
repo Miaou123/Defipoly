@@ -300,9 +300,6 @@ export function Leaderboard() {
                       }`}>
                         {leader.leaderboardScore.toLocaleString()}
                       </div>
-                      <div className="text-[9px] text-purple-500 uppercase tracking-wider">
-                        score
-                      </div>
                     </div>
                   </div>
                 );

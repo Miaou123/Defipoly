@@ -1,11 +1,12 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { PROPERTIES } from '@/utils/constants';
 import { PropertyCard } from './PropertyCard';
 import { RewardsPanel } from './RewardsPanel';
 import { CornerSquare } from './BoardHelpers';
 import { useGameState } from '@/contexts/GameStateContext';
+import { IncomeFlowOverlay } from './IncomeFlowOverlay';
 
 const DEFAULT_BACKGROUND = 'linear-gradient(135deg, rgba(31, 41, 55, 0.95), rgba(17, 24, 39, 0.9))';
 
@@ -33,9 +34,25 @@ export function Board({
   const [showRewardsPanel, setShowRewardsPanel] = useState(true);
   const [aspectRatio, setAspectRatio] = useState('1 / 1');
   const [scaleFactor, setScaleFactor] = useState(1);
+  const [lastIncomeArrived, setLastIncomeArrived] = useState<number | null>(null);
   
   // Get game state (includes profile for main mode)
   const gameState = useGameState();
+
+  // Callback for when particles arrive at the bank
+  const handleParticleArrive = useCallback((incomeValue: number) => {
+    setLastIncomeArrived(incomeValue);
+    setTimeout(() => setLastIncomeArrived(null), 50);
+  }, []);
+
+  // Reset after RewardsPanel processes it
+  useEffect(() => {
+    if (lastIncomeArrived !== null) {
+      const timer = setTimeout(() => setLastIncomeArrived(null), 50);
+      return () => clearTimeout(timer);
+    }
+    return undefined;
+  }, [lastIncomeArrived]);
   
   // ========== RESPONSIVE ASPECT RATIO & SCALE ==========
   useEffect(() => {
@@ -146,6 +163,7 @@ export function Board({
               return styles;
             })()}
           >
+            {!spectatorMode && <IncomeFlowOverlay onParticleArrive={handleParticleArrive} />}
             {!spectatorMode && (
               <button
                 onClick={() => setShowRewardsPanel(!showRewardsPanel)}
@@ -158,7 +176,7 @@ export function Board({
 
             {!spectatorMode && showRewardsPanel && (
               <div className="relative z-10">
-                <RewardsPanel />
+                <RewardsPanel incomeArrived={lastIncomeArrived} />
               </div>
             )}
           </div>

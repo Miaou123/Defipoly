@@ -5,7 +5,7 @@ import { useWallet } from '@solana/wallet-adapter-react';
 import { useGameState } from '@/contexts/GameStateContext';
 import { ShieldIcon, ShieldCooldownIcon, HourglassIcon, TargetIcon } from './icons/UIIcons';
 import { LocationPin, BUILDING_SVGS } from './icons/GameAssets';
-import { MoneyBillsAnimation, useIncomePulseClass } from './MoneyBillsAnimation';
+import { usePropertySpawnTime } from '@/contexts/ParticleSpawnContext';
 
 import { PROPERTIES } from '@/utils/constants';
 
@@ -54,7 +54,20 @@ export function PropertyCard({
   const [shieldActive, setShieldActive] = useState(false);
   const [hasCompleteSet, setHasCompleteSet] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
-  
+
+  const [buildingPulse, setBuildingPulse] = useState(false);
+  const lastSpawnTime = usePropertySpawnTime(propertyId);
+
+  // Trigger pulse when particle spawns
+  useEffect(() => {
+    if (lastSpawnTime > 0 && buildingLevel > 0) {
+      setBuildingPulse(true);
+      const timer = setTimeout(() => setBuildingPulse(false), 300);
+      return () => clearTimeout(timer);
+    }
+    return undefined;
+  }, [lastSpawnTime, buildingLevel]);
+
   const property = PROPERTIES.find(p => p.id === propertyId);
   if (!property) return null;
 
@@ -67,7 +80,6 @@ export function PropertyCard({
   const propertyIncome = ownership && ownership.slotsOwned > 0 
     ? Math.floor((property.price * property.yieldBps) / 10000) * ownership.slotsOwned 
     : 0;
-  const buildingPulseClass = useIncomePulseClass(propertyIncome);
 
   // Get ALL cooldown helpers from game state
   const { 
@@ -205,6 +217,7 @@ export function PropertyCard({
 
   return (
     <button
+      data-property-id={propertyId}
       onClick={() => onSelect(propertyId)}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
@@ -261,14 +274,6 @@ export function PropertyCard({
         </>
       )}
 
-      {/* Money Bills Animation for owned properties */}
-      {ownership && ownership.slotsOwned > 0 && (
-        <MoneyBillsAnimation 
-          income={Math.floor((property.price * property.yieldBps) / 10000) * ownership.slotsOwned}
-          compact={compact}
-          modalView={modalView}
-        />
-      )}
 
       <div className="relative z-20 flex flex-col h-full">
         <div 
@@ -318,7 +323,10 @@ export function PropertyCard({
               className="w-full h-full flex items-center justify-center"
               style={{ transform: modalView ? 'scale(0.4)' : `scale(${buildingScale})` }}
             >
-              <div className={`w-full h-full flex items-center justify-center ${buildingPulseClass}`}>
+            <div 
+              className="w-full h-full flex items-center justify-center transition-transform duration-150"
+              style={{ transform: buildingPulse ? 'scale(1.15)' : 'scale(1)' }}
+            >
                 {BUILDING_SVGS[buildingLevel]}
               </div>
             </div>

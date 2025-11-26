@@ -337,41 +337,6 @@ input[type="number"]::-webkit-outer-spin-button:hover {
 .building-pulse-2-5s { animation: buildingPulse 2.5s ease-in-out infinite; }
 .building-pulse-2s { animation: buildingPulse 2s ease-in-out infinite; }
 
-/* Spread animations - float up and fan out, synced with pulse */
-@keyframes spreadUp1 {
-  0%, 10% { transform: translate(-50%, -50%) scale(0); opacity: 0; }
-  12% { transform: translate(-50%, -50%) scale(1.1); opacity: 1; }
-  70% { opacity: 1; }
-  100% { transform: translate(calc(-50% - 35px), calc(-50% - 70px)) scale(0.4); opacity: 0; }
-}
-
-@keyframes spreadUp2 {
-  0%, 10% { transform: translate(-50%, -50%) scale(0); opacity: 0; }
-  12% { transform: translate(-50%, -50%) scale(1.1); opacity: 1; }
-  70% { opacity: 1; }
-  100% { transform: translate(calc(-50% + 30px), calc(-50% - 65px)) scale(0.4); opacity: 0; }
-}
-
-@keyframes spreadUp3 {
-  0%, 10% { transform: translate(-50%, -50%) scale(0); opacity: 0; }
-  12% { transform: translate(-50%, -50%) scale(1.1); opacity: 1; }
-  70% { opacity: 1; }
-  100% { transform: translate(calc(-50% - 15px), calc(-50% - 75px)) scale(0.4); opacity: 0; }
-}
-
-@keyframes spreadUp4 {
-  0%, 10% { transform: translate(-50%, -50%) scale(0); opacity: 0; }
-  12% { transform: translate(-50%, -50%) scale(1.1); opacity: 1; }
-  70% { opacity: 1; }
-  100% { transform: translate(calc(-50% + 40px), calc(-50% - 60px)) scale(0.4); opacity: 0; }
-}
-
-@keyframes spreadUp5 {
-  0%, 10% { transform: translate(-50%, -50%) scale(0); opacity: 0; }
-  12% { transform: translate(-50%, -50%) scale(1.1); opacity: 1; }
-  70% { opacity: 1; }
-  100% { transform: translate(-50%, calc(-50% - 80px)) scale(0.4); opacity: 0; }
-}
 
 @keyframes bounceX {
   0%, 100% { transform: translateX(0); }

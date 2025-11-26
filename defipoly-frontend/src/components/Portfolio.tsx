@@ -238,8 +238,9 @@ export function Portfolio({ onSelectProperty }: PortfolioProps) {
                 </div>
                 <div className="text-right">
                   <div className="text-[10px] text-purple-400 uppercase tracking-wide">Daily Rewards</div>
-                  <div className="text-sm font-bold text-green-400">
-                    {stats.dailyIncome > 0 ? stats.dailyIncome.toLocaleString() : '0'}
+                  <div className="text-sm font-bold text-green-400 flex items-center gap-1">
+                    <span>📈</span>
+                    <span>+{stats.dailyIncome > 0 ? stats.dailyIncome.toLocaleString() : '0'}/day</span>
                   </div>
                 </div>
               </div>
