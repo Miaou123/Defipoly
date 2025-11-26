@@ -55,7 +55,7 @@ export function BuyPropertySection({
 
   
   const setId = property.setId;
-  const isOnCooldown = isPropertyOnCooldown(setId);
+  const isOnCooldown = isPropertyOnCooldown(propertyId);
   const cooldownRemaining = getSetCooldownRemaining(setId);
   const cooldownData = getSetCooldown(setId);
   const lastPurchasedPropertyId = cooldownData?.lastPurchasedPropertyId ?? null;
