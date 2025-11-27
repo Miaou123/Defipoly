@@ -410,6 +410,7 @@ export function RewardsPanel({ incomeArrived = null, scaleFactor = 1 }: RewardsP
             className="relative transition-all disabled:cursor-not-allowed"
             style={{
               marginTop: `${marginTop}px`,
+              minWidth: `${bankWidth}px`,  // ADD THIS LINE
               background: isButtonHovered 
                 ? 'rgba(10, 10, 20, 0.98)' 
                 : 'rgba(5, 5, 15, 0.95)',

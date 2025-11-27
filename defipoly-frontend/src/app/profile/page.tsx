@@ -33,6 +33,36 @@ export default function ProfilePage() {
   const [activities, setActivities] = useState<Activity[]>([]);
   const [loading, setLoading] = useState(true);
   const [leaderboardRank, setLeaderboardRank] = useState<number | null>(null);
+  
+  // Scaling system (same as main page)
+  const [isMobile, setIsMobile] = useState(false);
+  const [sideColumnWidth, setSideColumnWidth] = useState(400);
+  
+  // Calculate scaleFactor based on side column width (from 0.7 to 1.0)
+  const scaleFactor = Math.max(0.7, Math.min(1.0, sideColumnWidth / 400));
+
+  // Check for mobile and calculate column width
+  useEffect(() => {
+    const updateLayout = () => {
+      const width = window.innerWidth;
+      setIsMobile(width < 1024);
+      
+      // Calculate side column width based on screen size
+      if (width < 1200) {
+        setSideColumnWidth(240);
+      } else if (width < 1400) {
+        setSideColumnWidth(280);
+      } else if (width < 1600) {
+        setSideColumnWidth(340);
+      } else {
+        setSideColumnWidth(400);
+      }
+    };
+    
+    updateLayout();
+    window.addEventListener('resize', updateLayout);
+    return () => window.removeEventListener('resize', updateLayout);
+  }, []);
 
   // Redirect if not connected
   useEffect(() => {
@@ -182,11 +212,63 @@ export default function ProfilePage() {
 
   return (
     <div className="h-screen overflow-hidden relative">
+      {/* Mobile/Tablet Header - Shows when sidebars are hidden */}
+      <div className="xl:hidden fixed top-4 left-4 right-4 z-50 flex justify-between items-center">
+        {/* Left: Logo */}
+        <a href="/" className="flex items-center gap-3 hover:opacity-80 transition-opacity">
+          <img src="/logo.svg" alt="Defipoly" className="w-10 h-10" />
+          <span className="text-2xl font-bold text-purple-100">Defipoly</span>
+        </a>
+        
+        {/* Right: Back + Wallet - ProfileWallet style */}
+        <div className="bg-black/60 backdrop-blur-xl rounded-xl border border-purple-500/30 shadow-xl flex">
+          {/* Back to Game Button */}
+          <button
+            onClick={() => router.push('/')}
+            className="px-4 py-3 hover:bg-purple-900/20 transition-all flex items-center gap-3 border-r border-purple-500/20"
+          >
+            <div className="w-10 h-10 rounded-full bg-purple-600/30 flex items-center justify-center flex-shrink-0">
+              <svg className="w-5 h-5 text-purple-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+              </svg>
+            </div>
+            <div className="text-left">
+              <div className="text-xs text-purple-300">Navigation</div>
+              <div className="text-sm font-bold text-white">Back to Game</div>
+            </div>
+          </button>
+          
+          {/* Wallet Button */}
+          <button
+            onClick={disconnect}
+            className="px-4 py-3 hover:bg-purple-900/20 transition-all flex items-center gap-3"
+          >
+            <div className="w-10 h-10 rounded-full bg-purple-600/30 flex items-center justify-center flex-shrink-0">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-purple-300">
+                <rect x="3" y="6" width="18" height="13" rx="2" stroke="currentColor" strokeWidth="2"/>
+                <path d="M3 10h18" stroke="currentColor" strokeWidth="2"/>
+                <circle cx="17" cy="15" r="1.5" fill="currentColor"/>
+              </svg>
+            </div>
+            <div className="flex-1 text-left min-w-0">
+              <div className="text-xs text-purple-300">Wallet</div>
+              <div className="text-sm font-mono font-bold text-white truncate">
+                {formatAddress(publicKey.toString())}
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+              <span className="text-xs text-green-400 font-semibold">Connected</span>
+            </div>
+          </button>
+        </div>
+      </div>
+
       {/* Main grid layout - 3 columns */}
-      <div className="grid grid-cols-1 lg:grid-cols-[minmax(280px,320px)_minmax(900px,1fr)_minmax(280px,320px)] gap-6 p-4 h-full w-full mx-auto">
+      <div className="grid grid-cols-1 xl:grid-cols-[minmax(280px,320px)_1fr_minmax(280px,320px)] gap-4 p-4 h-full w-full mx-auto">
         
         {/* LEFT COLUMN: Logo */}
-        <div className="flex flex-col gap-2 overflow-hidden">
+        <div className="hidden xl:flex flex-col gap-2 overflow-hidden">
           <a 
             href="/"
             className="flex items-center gap-3 rounded-xl px-4 flex-shrink-0 hover:opacity-80 transition-opacity cursor-pointer"
@@ -194,17 +276,26 @@ export default function ProfilePage() {
             <img 
               src="/logo.svg" 
               alt="Defipoly Logo" 
-              className="w-12 h-12 object-contain"
+              className="object-contain"
+              style={{ 
+                width: `${Math.round(48 * scaleFactor)}px`, 
+                height: `${Math.round(48 * scaleFactor)}px` 
+              }}
             />
             <div>
-              <h1 className="text-2xl font-bold text-purple-100">Defipoly</h1>
+              <h1 
+                className="font-bold text-purple-100"
+                style={{ fontSize: `${Math.round(24 * scaleFactor)}px` }}
+              >
+                Defipoly
+              </h1>
             </div>
           </a>
           <div className="flex-1"></div>
         </div>
 
         {/* CENTER: Main Content */}
-        <div className="flex items-start justify-center overflow-hidden py-6">
+        <div className="flex items-start justify-center overflow-hidden py-6 pt-24 xl:pt-6 px-4 xl:px-0">
           <div className="w-full h-full overflow-y-auto">
             <div className="grid grid-cols-1 lg:grid-cols-[350px_1fr] gap-5 h-full">
               
@@ -368,7 +459,7 @@ export default function ProfilePage() {
         </div>
         
         {/* RIGHT COLUMN: Back Button + Wallet */}
-        <div className="flex flex-col gap-2 overflow-hidden">
+        <div className="hidden xl:flex flex-col gap-2 overflow-hidden">
           <div className="flex-shrink-0">
             <div className="bg-black/60 backdrop-blur-xl rounded-xl border border-purple-500/30 shadow-xl overflow-hidden">
               
@@ -377,8 +468,23 @@ export default function ProfilePage() {
                 onClick={() => router.push('/')}
                 className="w-full px-4 py-3 hover:bg-purple-900/20 transition-all flex items-center gap-3 text-left"
               >
-                <div className="w-10 h-10 rounded-full bg-purple-600/30 flex items-center justify-center flex-shrink-0">
-                  <svg className="w-5 h-5 text-purple-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <div 
+                  className="rounded-full bg-purple-600/30 flex items-center justify-center flex-shrink-0"
+                  style={{ 
+                    width: `${Math.round(40 * scaleFactor)}px`, 
+                    height: `${Math.round(40 * scaleFactor)}px` 
+                  }}
+                >
+                  <svg 
+                    className="text-purple-300" 
+                    fill="none" 
+                    viewBox="0 0 24 24" 
+                    stroke="currentColor"
+                    style={{ 
+                      width: `${Math.round(20 * scaleFactor)}px`, 
+                      height: `${Math.round(20 * scaleFactor)}px` 
+                    }}
+                  >
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
                   </svg>
                 </div>
@@ -399,8 +505,23 @@ export default function ProfilePage() {
                 onClick={disconnect}
                 className="w-full px-4 py-3 hover:bg-purple-900/20 transition-all flex items-center gap-3"
               >
-                <div className="w-10 h-10 rounded-full bg-purple-600/30 flex items-center justify-center flex-shrink-0">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-purple-300">
+                <div 
+                  className="rounded-full bg-purple-600/30 flex items-center justify-center flex-shrink-0"
+                  style={{ 
+                    width: `${Math.round(40 * scaleFactor)}px`, 
+                    height: `${Math.round(40 * scaleFactor)}px` 
+                  }}
+                >
+                  <svg 
+                    viewBox="0 0 24 24" 
+                    fill="none" 
+                    xmlns="http://www.w3.org/2000/svg" 
+                    className="text-purple-300"
+                    style={{ 
+                      width: `${Math.round(20 * scaleFactor)}px`, 
+                      height: `${Math.round(20 * scaleFactor)}px` 
+                    }}
+                  >
                     <rect x="3" y="6" width="18" height="13" rx="2" stroke="currentColor" strokeWidth="2"/>
                     <path d="M3 10h18" stroke="currentColor" strokeWidth="2"/>
                     <circle cx="17" cy="15" r="1.5" fill="currentColor"/>

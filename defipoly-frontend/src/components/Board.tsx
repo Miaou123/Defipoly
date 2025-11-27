@@ -6,6 +6,7 @@ import { PropertyCard } from './PropertyCard';
 import { RewardsPanel } from './RewardsPanel';
 import { useGameState } from '@/contexts/GameStateContext';
 import { IncomeFlowOverlay } from './IncomeFlowOverlay';
+import { HideIcon } from '@/components/icons/UIIcons';
 
 const DEFAULT_BACKGROUND = 'linear-gradient(135deg, rgba(31, 41, 55, 0.95), rgba(17, 24, 39, 0.9))';
 
@@ -190,7 +191,7 @@ export function Board({
                 className="absolute top-2 right-2 z-20 p-2 bg-black/50 hover:bg-black/70 rounded-lg transition-colors"
                 title={showAnimations ? 'Hide animations' : 'Show animations'}
               >
-                {showAnimations ? '👁️' : '👁️‍🗨️'}
+                <HideIcon size={20} className={showAnimations ? 'text-purple-400' : 'text-purple-600'} />
               </button>
             )}
 

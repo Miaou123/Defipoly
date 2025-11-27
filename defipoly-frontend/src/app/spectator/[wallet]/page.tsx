@@ -33,7 +33,37 @@ export default function SpectatorPage() {
   const [stats, setStats] = useState<PlayerStats | null>(null);
   const [leaderboardRank, setLeaderboardRank] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
-  const [spectatorOwnerships, setSpectatorOwnerships] = useState<any[]>([])
+  const [spectatorOwnerships, setSpectatorOwnerships] = useState<any[]>([]);
+  
+  // Scaling system (same as main page)
+  const [isMobile, setIsMobile] = useState(false);
+  const [sideColumnWidth, setSideColumnWidth] = useState(400);
+  
+  // Calculate scaleFactor based on side column width (from 0.7 to 1.0)
+  const scaleFactor = Math.max(0.7, Math.min(1.0, sideColumnWidth / 400));
+
+  // Check for mobile and calculate column width
+  useEffect(() => {
+    const updateLayout = () => {
+      const width = window.innerWidth;
+      setIsMobile(width < 1024);
+      
+      // Calculate side column width based on screen size
+      if (width < 1200) {
+        setSideColumnWidth(240);
+      } else if (width < 1400) {
+        setSideColumnWidth(280);
+      } else if (width < 1600) {
+        setSideColumnWidth(340);
+      } else {
+        setSideColumnWidth(400);
+      }
+    };
+    
+    updateLayout();
+    window.addEventListener('resize', updateLayout);
+    return () => window.removeEventListener('resize', updateLayout);
+  }, []);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -150,8 +180,13 @@ export default function SpectatorPage() {
 
   return (
     <div className="h-screen overflow-hidden relative">
-      {/* Main grid layout - matching home page structure */}
-      <div className="grid grid-cols-1 lg:grid-cols-[minmax(320px,400px)_minmax(800px,1fr)_minmax(320px,400px)] gap-6 p-4 h-full w-full mx-auto">
+      {/* Main grid layout - with dynamic scaling */}
+      <div 
+        className="grid gap-2 p-4 h-full w-full mx-auto max-w-[1920px]"
+        style={{
+          gridTemplateColumns: isMobile ? '1fr' : `${sideColumnWidth}px 1fr ${sideColumnWidth}px`,
+        }}
+      >
         
         {/* LEFT COLUMN: Logo + Player Profile/Stats */}
         <div className="flex flex-col gap-2 overflow-hidden">
@@ -163,10 +198,19 @@ export default function SpectatorPage() {
           <img 
             src="/logo.svg" 
             alt="Defipoly Logo" 
-            className="w-12 h-12 object-contain"
+            className="object-contain"
+            style={{ 
+              width: `${Math.round(48 * scaleFactor)}px`, 
+              height: `${Math.round(48 * scaleFactor)}px` 
+            }}
           />
           <div>
-            <h1 className="text-2xl font-bold text-purple-100">Defipoly</h1>
+            <h1 
+              className="font-bold text-purple-100"
+              style={{ fontSize: `${Math.round(24 * scaleFactor)}px` }}
+            >
+              Defipoly
+            </h1>
           </div>
         </a>
                     
@@ -326,8 +370,23 @@ export default function SpectatorPage() {
                 className="w-full px-4 py-3 hover:bg-purple-900/20 transition-all flex items-center gap-3"
               >
                 {/* Back Icon */}
-                <div className="w-10 h-10 rounded-full bg-purple-600/30 flex items-center justify-center flex-shrink-0">
-                  <svg className="w-5 h-5 text-purple-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <div 
+                  className="rounded-full bg-purple-600/30 flex items-center justify-center flex-shrink-0"
+                  style={{ 
+                    width: `${Math.round(40 * scaleFactor)}px`, 
+                    height: `${Math.round(40 * scaleFactor)}px` 
+                  }}
+                >
+                  <svg 
+                    className="text-purple-300" 
+                    fill="none" 
+                    viewBox="0 0 24 24" 
+                    stroke="currentColor"
+                    style={{ 
+                      width: `${Math.round(20 * scaleFactor)}px`, 
+                      height: `${Math.round(20 * scaleFactor)}px` 
+                    }}
+                  >
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
                   </svg>
                 </div>
@@ -347,12 +406,12 @@ export default function SpectatorPage() {
           <div className="flex-1 flex flex-col gap-4 overflow-hidden">
             {/* Leaderboard - 60% of space */}
             <div className="h-[55%]">
-              <Leaderboard />
+              <Leaderboard scaleFactor={scaleFactor} />
             </div>
             
             {/* Live Feed - 40% of space */}
             <div className="h-[43%]">
-              <LiveFeed />
+              <LiveFeed scaleFactor={scaleFactor} />
             </div>
           </div>
         </div>
