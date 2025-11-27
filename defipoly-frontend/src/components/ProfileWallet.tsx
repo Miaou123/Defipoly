@@ -8,8 +8,20 @@ import { useRouter } from 'next/navigation';
 import { useGameState } from '@/contexts/GameStateContext';
 import { PointerArrowIcon } from './icons/UIIcons';
 
-export function ProfileWallet() {
+interface ProfileWalletProps {
+  scaleFactor?: number;
+}
+
+export function ProfileWallet({ scaleFactor = 1 }: ProfileWalletProps) {
   const { connected, publicKey, disconnect } = useWallet();
+  
+  // Calculate scaled sizes
+  const profilePicSize = Math.max(24, Math.round(40 * scaleFactor));
+  const walletIconSize = Math.max(24, Math.round(40 * scaleFactor));
+  const textSizeSmall = Math.max(10, Math.round(12 * scaleFactor));
+  const textSizeMedium = Math.max(12, Math.round(14 * scaleFactor));
+  const padding = Math.max(8, Math.round(16 * scaleFactor));
+  const gap = Math.max(8, Math.round(12 * scaleFactor));
   const { setVisible } = useWalletModal();
   const router = useRouter();
   const [mounted, setMounted] = useState(false);
@@ -99,14 +111,18 @@ export function ProfileWallet() {
     return (
       <button
         onClick={handleWalletClick}
-        className="w-full bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-500 hover:to-purple-600 px-6 py-4 rounded-xl font-semibold transition-all flex items-center justify-center gap-3 shadow-xl hover:shadow-purple-500/40 border border-purple-400/30"
+        className="w-full bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-500 hover:to-purple-600 rounded-xl font-semibold transition-all flex items-center justify-center shadow-xl hover:shadow-purple-500/40 border border-purple-400/30"
+        style={{ 
+          padding: `${Math.round(padding * 0.75)}px ${padding}px`,
+          gap: `${gap}px` 
+        }}
       >
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <svg width={Math.round(20 * scaleFactor)} height={Math.round(20 * scaleFactor)} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
           <rect x="3" y="6" width="18" height="13" rx="2" stroke="currentColor" strokeWidth="2"/>
           <path d="M3 10h18" stroke="currentColor" strokeWidth="2"/>
           <circle cx="17" cy="15" r="1.5" fill="currentColor"/>
         </svg>
-        <span>Connect Wallet</span>
+        <span style={{ fontSize: `${textSizeMedium}px` }}>Connect Wallet</span>
       </button>
     );
   }
@@ -119,14 +135,21 @@ export function ProfileWallet() {
         <button
           ref={profileButtonRef}
           onClick={handleProfileClick}
-          className={`w-full px-4 py-3 hover:bg-purple-900/20 transition-all flex items-center gap-3 text-left ${
+          className={`w-full hover:bg-purple-900/20 transition-all flex items-center text-left ${
             showProfileHint 
               ? 'bg-yellow-500/10 ring-2 ring-inset ring-yellow-400/50 shadow-[inset_0_0_15px_rgba(250,204,21,0.2)]' 
               : ''
           }`}
+          style={{ 
+            padding: `${Math.round(padding * 0.75)}px ${padding}px`,
+            gap: `${gap}px` 
+          }}
         >
           {/* Profile Picture */}
-          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center overflow-hidden flex-shrink-0">
+          <div 
+            className="rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center overflow-hidden flex-shrink-0"
+            style={{ width: profilePicSize, height: profilePicSize }}
+          >
             {gameState.loading ? (
               <span className="text-xs animate-pulse">⏳</span>
             ) : gameState.profile.profilePicture ? (
@@ -136,14 +159,14 @@ export function ProfileWallet() {
                 className="w-full h-full object-cover"
               />
             ) : (
-              <span className="text-xl">👤</span>
+              <span style={{ fontSize: `${Math.round(20 * scaleFactor)}px` }}>👤</span>
             )}
           </div>
           
           {/* Profile Info */}
           <div className="flex-1 min-w-0">
-            <div className="text-xs text-purple-300">Profile</div>
-            <div className="text-sm font-bold text-white truncate">
+            <div className="text-purple-300" style={{ fontSize: `${textSizeSmall}px` }}>Profile</div>
+            <div className="font-bold text-white truncate" style={{ fontSize: `${textSizeMedium}px` }}>
               {gameState.loading ? (
                 'Loading...'
               ) : gameState.profile.username ? (
@@ -155,7 +178,7 @@ export function ProfileWallet() {
           </div>
 
           {/* Arrow icon */}
-          <svg className="w-4 h-4 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <svg className="text-purple-400" width={Math.round(16 * scaleFactor)} height={Math.round(16 * scaleFactor)} fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
           </svg>
         </button>
@@ -166,11 +189,18 @@ export function ProfileWallet() {
         {/* Wallet Section - Clickable */}
         <button
           onClick={handleWalletClick}
-          className="w-full px-4 py-3 hover:bg-purple-900/20 transition-all flex items-center gap-3"
+          className="w-full hover:bg-purple-900/20 transition-all flex items-center"
+          style={{ 
+            padding: `${Math.round(padding * 0.75)}px ${padding}px`,
+            gap: `${gap}px` 
+          }}
         >
           {/* Wallet Icon */}
-          <div className="w-10 h-10 rounded-full bg-purple-600/30 flex items-center justify-center flex-shrink-0">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-purple-300">
+          <div 
+            className="rounded-full bg-purple-600/30 flex items-center justify-center flex-shrink-0"
+            style={{ width: walletIconSize, height: walletIconSize }}
+          >
+            <svg width={Math.round(20 * scaleFactor)} height={Math.round(20 * scaleFactor)} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-purple-300">
               <rect x="3" y="6" width="18" height="13" rx="2" stroke="currentColor" strokeWidth="2"/>
               <path d="M3 10h18" stroke="currentColor" strokeWidth="2"/>
               <circle cx="17" cy="15" r="1.5" fill="currentColor"/>
@@ -179,8 +209,8 @@ export function ProfileWallet() {
 
           {/* Wallet Address */}
           <div className="flex-1 text-left min-w-0">
-            <div className="text-xs text-purple-300">Wallet</div>
-            <div className="text-sm font-mono font-bold text-white truncate">
+            <div className="text-purple-300" style={{ fontSize: `${textSizeSmall}px` }}>Wallet</div>
+            <div className="font-mono font-bold text-white truncate" style={{ fontSize: `${textSizeMedium}px` }}>
               {publicKey?.toString().slice(0, 4)}...{publicKey?.toString().slice(-4)}
             </div>
           </div>
@@ -188,7 +218,7 @@ export function ProfileWallet() {
           {/* Connected Indicator */}
           <div className="flex items-center gap-2">
             <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-            <span className="text-xs text-green-400 font-semibold">Connected</span>
+            <span className="text-green-400 font-semibold" style={{ fontSize: `${textSizeSmall}px` }}>Connected</span>
           </div>
         </button>
       </div>

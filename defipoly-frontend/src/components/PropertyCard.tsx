@@ -28,6 +28,8 @@ interface PropertyCardProps {
   scaleFactor?: number;
   isCorner?: boolean;
   cornerLabel?: string;
+  gridColumn?: number;
+  gridRow?: number;
 }
 
 export function PropertyCard({ 
@@ -41,7 +43,9 @@ export function PropertyCard({
   compact = false,
   scaleFactor = 1,
   isCorner = false,
-  cornerLabel = 'DEFIPOLY'
+  cornerLabel = 'DEFIPOLY',
+  gridColumn,
+  gridRow
 }: PropertyCardProps) {
   const { connected, publicKey } = useWallet();
   
@@ -57,6 +61,8 @@ export function PropertyCard({
             ? `url(${customPropertyCardBackground}) center/cover`
             : 'linear-gradient(to bottom right, rgba(31, 41, 55, 0.95), rgba(17, 24, 39, 0.9))',
           border: '1px solid rgba(139, 92, 246, 0.5)',
+          gridColumn: gridColumn,
+          gridRow: gridRow,
         }}
       >
         <div className="w-full h-full flex flex-col items-center justify-center relative z-10">
@@ -256,6 +262,8 @@ export function PropertyCard({
         ...getStyleProps(),
         margin: 0,
         padding: 0,
+        gridColumn: gridColumn,
+        gridRow: gridRow,
       }}
     >
       <div 

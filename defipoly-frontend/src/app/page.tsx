@@ -144,7 +144,7 @@ export default function Home() {
         <div className="flex flex-col gap-2 overflow-hidden min-h-0">
           {/* Profile & Wallet at top of right column */}
           <div className="flex-shrink-0">
-            <ProfileWallet />
+            <ProfileWallet scaleFactor={scaleFactor} />
           </div>
           
           {/* Fixed height container - no scrolling */}

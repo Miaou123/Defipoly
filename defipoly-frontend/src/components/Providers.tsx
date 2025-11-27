@@ -5,11 +5,10 @@ import { NotificationProvider } from "@/contexts/NotificationContext";
 import { WebSocketProvider } from '@/contexts/WebSocketContext';
 import { GameStateProvider } from '@/contexts/GameStateContext';
 import { AuthProvider } from '@/contexts/AuthContext';
-import { MobileBlocker } from './MobileBlocker';
+
 
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
-    <MobileBlocker>
     <WalletContextProvider>
       <AuthProvider>
       <NotificationProvider>
@@ -21,6 +20,5 @@ export function Providers({ children }: { children: React.ReactNode }) {
       </NotificationProvider>
       </AuthProvider>
     </WalletContextProvider>
-    </MobileBlocker>
   );
 }

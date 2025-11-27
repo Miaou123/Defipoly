@@ -123,41 +123,41 @@ export function Board({
         {!spectatorMode && <IncomeFlowOverlay onParticleArrive={handleParticleArrive} />}
         
         <div 
-          className="w-full h-full grid gap-0 relative z-10"
-          style={{ 
-            gridTemplateColumns: 'repeat(7, minmax(0, 1fr))',
-            gridTemplateRows: 'repeat(7, minmax(0, 1fr))',
+          className="w-full h-full grid grid-cols-7 grid-rows-7 gap-0 relative z-10"
+          style={{
+            alignItems: 'stretch',
+            justifyItems: 'stretch',
           }}
         >
           
           {/* ========== TOP-LEFT CORNER ========== */}
-          <div className="col-start-1 row-start-1 h-full w-full">
-            <PropertyCard propertyId={-1} onSelect={() => {}} isCorner cornerLabel="DEFIPOLY" customPropertyCardBackground={customPropertyCardBackground} scaleFactor={scaleFactor} />
-          </div>
+          <PropertyCard propertyId={-1} onSelect={() => {}} isCorner cornerLabel="DEFIPOLY" customPropertyCardBackground={customPropertyCardBackground} scaleFactor={scaleFactor} gridColumn={1} gridRow={1} />
           
           {/* ========== TOP ROW ========== */}
-          <div className="col-start-2 row-start-1 h-full w-full"><PropertyCard propertyId={11} {...cardProps} /></div>
-          <div className="col-start-3 row-start-1 h-full w-full"><PropertyCard propertyId={12} {...cardProps} /></div>
-          <div className="col-start-4 row-start-1 h-full w-full"><PropertyCard propertyId={13} {...cardProps} /></div>
-          <div className="col-start-5 row-start-1 h-full w-full"><PropertyCard propertyId={14} {...cardProps} /></div>
-          <div className="col-start-6 row-start-1 h-full w-full"><PropertyCard propertyId={15} {...cardProps} /></div>
-          <div className="col-start-7 row-start-1 h-full w-full"><PropertyCard propertyId={16} {...cardProps} /></div>
+          <PropertyCard propertyId={11} {...cardProps} gridColumn={2} gridRow={1} />
+          <PropertyCard propertyId={12} {...cardProps} gridColumn={3} gridRow={1} />
+          <PropertyCard propertyId={13} {...cardProps} gridColumn={4} gridRow={1} />
+          <PropertyCard propertyId={14} {...cardProps} gridColumn={5} gridRow={1} />
+          <PropertyCard propertyId={15} {...cardProps} gridColumn={6} gridRow={1} />
+          <PropertyCard propertyId={16} {...cardProps} gridColumn={7} gridRow={1} />
 
           {/* ========== LEFT SIDE ========== */}
-          <div className="col-start-1 row-start-2 h-full w-full"><PropertyCard propertyId={10} {...cardProps} /></div>
-          <div className="col-start-1 row-start-3 h-full w-full"><PropertyCard propertyId={9} {...cardProps} /></div>
-          <div className="col-start-1 row-start-4 h-full w-full"><PropertyCard propertyId={8} {...cardProps} /></div>
-          <div className="col-start-1 row-start-5 h-full w-full"><PropertyCard propertyId={7} {...cardProps} /></div>
-          <div className="col-start-1 row-start-6 h-full w-full"><PropertyCard propertyId={6} {...cardProps} /></div>
+          <PropertyCard propertyId={10} {...cardProps} gridColumn={1} gridRow={2} />
+          <PropertyCard propertyId={9} {...cardProps} gridColumn={1} gridRow={3} />
+          <PropertyCard propertyId={8} {...cardProps} gridColumn={1} gridRow={4} />
+          <PropertyCard propertyId={7} {...cardProps} gridColumn={1} gridRow={5} />
+          <PropertyCard propertyId={6} {...cardProps} gridColumn={1} gridRow={6} />
 
           {/* ========== CENTER: Rewards Panel ========== */}
           <div 
-            className="col-start-2 col-span-5 row-start-2 row-span-5 flex flex-col items-center justify-center shadow-inner relative overflow-hidden"
+            className="flex flex-col items-center justify-center shadow-inner relative overflow-hidden"
             style={(() => {
               const hasCustomBackground = !!customBoardBackground;
               const backgroundImage = customBoardBackground;
 
               const styles: React.CSSProperties = {
+                gridColumn: '2 / 7',
+                gridRow: '2 / 7',
                 boxShadow: hasCustomBackground 
                   ? 'inset 0 0 40px rgba(0, 0, 0, 0.4)' 
                   : 'inset 0 0 40px rgba(0, 0, 0, 0.3)',
@@ -197,28 +197,24 @@ export function Board({
           </div>
 
           {/* ========== RIGHT SIDE ========== */}
-          <div className="col-start-7 row-start-2 h-full w-full"><PropertyCard propertyId={17} {...cardProps} /></div>
-          <div className="col-start-7 row-start-3 h-full w-full"><PropertyCard propertyId={18} {...cardProps} /></div>
-          <div className="col-start-7 row-start-4 h-full w-full"><PropertyCard propertyId={19} {...cardProps} /></div>
-          <div className="col-start-7 row-start-5 h-full w-full"><PropertyCard propertyId={20} {...cardProps} /></div>
-          <div className="col-start-7 row-start-6 h-full w-full"><PropertyCard propertyId={21} {...cardProps} /></div>
+          <PropertyCard propertyId={17} {...cardProps} gridColumn={7} gridRow={2} />
+          <PropertyCard propertyId={18} {...cardProps} gridColumn={7} gridRow={3} />
+          <PropertyCard propertyId={19} {...cardProps} gridColumn={7} gridRow={4} />
+          <PropertyCard propertyId={20} {...cardProps} gridColumn={7} gridRow={5} />
+          <PropertyCard propertyId={21} {...cardProps} gridColumn={7} gridRow={6} />
 
           {/* ========== BOTTOM LEFT CORNER ========== */}
-          <div className="col-start-1 row-start-7 h-full w-full">
-            <PropertyCard propertyId={5} {...cardProps} />
-          </div>
+          <PropertyCard propertyId={5} {...cardProps} gridColumn={1} gridRow={7} />
 
           {/* ========== BOTTOM ROW ========== */}
-          <div className="col-start-2 row-start-7 h-full w-full"><PropertyCard propertyId={4} {...cardProps} /></div>
-          <div className="col-start-3 row-start-7 h-full w-full"><PropertyCard propertyId={3} {...cardProps} /></div>
-          <div className="col-start-4 row-start-7 h-full w-full"><PropertyCard propertyId={2} {...cardProps} /></div>
-          <div className="col-start-5 row-start-7 h-full w-full"><PropertyCard propertyId={1} {...cardProps} /></div>
-          <div className="col-start-6 row-start-7 h-full w-full"><PropertyCard propertyId={0} {...cardProps} /></div>
+          <PropertyCard propertyId={4} {...cardProps} gridColumn={2} gridRow={7} />
+          <PropertyCard propertyId={3} {...cardProps} gridColumn={3} gridRow={7} />
+          <PropertyCard propertyId={2} {...cardProps} gridColumn={4} gridRow={7} />
+          <PropertyCard propertyId={1} {...cardProps} gridColumn={5} gridRow={7} />
+          <PropertyCard propertyId={0} {...cardProps} gridColumn={6} gridRow={7} />
           
           {/* ========== BOTTOM-RIGHT CORNER ========== */}
-          <div className="col-start-7 row-start-7 h-full w-full">
-            <PropertyCard propertyId={-1} onSelect={() => {}} isCorner cornerLabel="DEFIPOLY" customPropertyCardBackground={customPropertyCardBackground} scaleFactor={scaleFactor} />
-          </div>
+          <PropertyCard propertyId={-1} onSelect={() => {}} isCorner cornerLabel="DEFIPOLY" customPropertyCardBackground={customPropertyCardBackground} scaleFactor={scaleFactor} gridColumn={7} gridRow={7} />
         </div>
       </div>
 
