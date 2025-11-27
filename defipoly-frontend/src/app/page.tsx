@@ -123,11 +123,11 @@ export default function Home() {
             <img 
               src="/logo.svg" 
               alt="Defipoly Logo" 
-              className="w-12 h-12 object-contain"
+              className="w-10 h-10 object-contain"
             />
-            <div>
-              <h1 className="text-2xl font-bold text-purple-100">Defipoly</h1>
-            </div>
+            <h1 className="font-orbitron text-2xl font-bold text-white">
+              Defipoly
+            </h1>
           </a>
           
           <div className="flex-1 overflow-hidden min-h-0">

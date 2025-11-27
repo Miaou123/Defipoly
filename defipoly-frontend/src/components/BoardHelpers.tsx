@@ -91,7 +91,7 @@ export function CornerSquare({ icon, label, bgColor, profilePicture, cornerSquar
           />
           {/* DEFIPOLY Text */}
           <div 
-            className="font-black tracking-wider text-white"
+            className="font-orbitron font-black tracking-wider text-white"
             style={{ fontSize: textSize }}
           >
             DEFIPOLY

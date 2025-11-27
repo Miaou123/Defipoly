@@ -114,7 +114,7 @@ export function MobileLayout({
             alt="Defipoly" 
             className="w-8 h-8 object-contain"
           />
-          <span className="font-bold text-white text-lg">Defipoly</span>
+          <span className="font-orbitron font-bold text-white text-lg">Defipoly</span>
         </div>
         
         <div className="flex items-center gap-2">

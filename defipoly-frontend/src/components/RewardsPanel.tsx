@@ -17,6 +17,7 @@ import { BorshCoder, EventParser } from '@coral-xyz/anchor';
 import idl from '@/idl/defipoly_program.json';
 import { BuildingIcon, WalletIcon, GiftIcon, TargetIcon, ShieldIcon } from './icons/UIIcons';
 import { BankSVG } from './icons/GameAssets';
+import { Logo3D } from './Logo3D';
 
 interface Floater {
   id: number;
@@ -231,15 +232,13 @@ export function RewardsPanel({ incomeArrived = null, scaleFactor = 1 }: RewardsP
   // Not connected - show welcome screen
   if (!connected) {
     return (
-      <div className="relative space-y-6 px-4 max-w-md w-full">
+      <div className="relative space-y-6 px-4 max-w-md w-full" style={{ transform: 'translateY(-40px)' }}>
         <div className="text-center space-y-4">
-          <img 
-            src="/logo.svg" 
-            alt="Defipoly Logo" 
-            className="w-24 h-24 mx-auto"
-          />
-          <p className="text-white text-4xl font-bold">
-            Welcome to Defipoly
+          <div className="flex justify-center">
+            <Logo3D size={160} />
+          </div>
+          <p className="font-orbitron text-4xl font-bold bg-gradient-to-r from-purple-400 via-cyan-400 to-purple-400 bg-[length:200%_auto] bg-clip-text text-transparent animate-shimmer">
+            Defipoly
           </p>
           <p className="text-white/60 text-base">
             Connect your Solana wallet to start playing
@@ -248,21 +247,6 @@ export function RewardsPanel({ incomeArrived = null, scaleFactor = 1 }: RewardsP
         
         <div className="flex justify-center">
           <StyledWalletButton variant="board" />
-        </div>
-
-        <div className="grid grid-cols-3 gap-4 pt-4">
-          <div className="bg-black/20 backdrop-blur rounded-xl p-4 text-center border border-purple-500/20 hover:border-purple-500/40 transition-all">
-            <BuildingIcon size={32} className="mx-auto mb-2 text-purple-400" />
-            <div className="text-xs text-white/80 font-semibold">Buy Properties</div>
-          </div>
-          <div className="bg-black/20 backdrop-blur rounded-xl p-4 text-center border border-purple-500/20 hover:border-purple-500/40 transition-all">
-            <GiftIcon size={32} className="mx-auto mb-2 text-green-400" />
-            <div className="text-xs text-white/80 font-semibold">Earn Rewards</div>
-          </div>
-          <div className="bg-black/20 backdrop-blur rounded-xl p-4 text-center border border-purple-500/20 hover:border-purple-500/40 transition-all">
-            <TargetIcon size={32} className="mx-auto mb-2 text-red-400" />
-            <div className="text-xs text-white/80 font-semibold">Steal Slots</div>
-          </div>
         </div>
       </div>
     );

@@ -234,7 +234,7 @@ export function Leaderboard({ scaleFactor = 1 }: LeaderboardProps) {
             <div>
               <div className="flex items-center border-b border-purple-500/20" style={{ gap: `${rowGap}px`, paddingBottom: `${rowPaddingY}px` }}>
                 <TrophyIcon size={headerIconSize} className="text-yellow-400" />
-                <h2 className="font-bold text-white" style={{ fontSize: `${titleSize}px` }}>
+                <h2 className="font-orbitron font-bold text-white" style={{ fontSize: `${titleSize}px` }}>
                   Leaderboard
                 </h2>
               </div>

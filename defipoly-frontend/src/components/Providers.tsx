@@ -12,7 +12,6 @@ import { MobileBlocker } from "./MobileBlocker";
 
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
-    <MobileBlocker>
     <WalletContextProvider>
       <DefipolyProvider>
         <AuthProvider>
@@ -30,6 +29,5 @@ export function Providers({ children }: { children: React.ReactNode }) {
         </AuthProvider>
       </DefipolyProvider>
     </WalletContextProvider>
-    </MobileBlocker>
   );
 }

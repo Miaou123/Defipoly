@@ -5,9 +5,9 @@
  width="1024.000000pt" height="1024.000000pt" viewBox="0 0 1024.000000 1024.000000"
  preserveAspectRatio="xMidYMid meet">
 
-<!-- Main hat body in purple -->
+<!-- Main hat body in purple with black stroke -->
 <g transform="translate(0.000000,1024.000000) scale(0.100000,-0.100000)"
-fill="#4D2783" stroke="none">
+fill="#4D2783" stroke="#000000" stroke-width="150">
 <path d="M4855 8224 c-503 -32 -895 -91 -1202 -178 -466 -134 -713 -304 -713
 -492 0 -28 13 -163 30 -300 128 -1075 175 -1831 168 -2669 l-3 -350 -155 -27
 c-495 -86 -876 -239 -1045 -419 -26 -27 -60 -79 -77 -115 -28 -60 -30 -72 -26

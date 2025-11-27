@@ -229,7 +229,7 @@ export function Portfolio({ onSelectProperty, scaleFactor = 1 }: PortfolioProps)
         <div style={{ padding: `${Math.round(padding * 1.5)}px`, paddingBottom: `${padding}px`, gap: `${padding}px`, display: 'flex', flexDirection: 'column' }}>
           {/* Header */}
           <div className="flex justify-between items-center">
-            <h2 className="font-bold text-white" style={{ fontSize: `${titleSize}px` }}>My Portfolio</h2>
+            <h2 className="font-orbitron font-bold text-white" style={{ fontSize: `${titleSize}px` }}>My Portfolio</h2>
             <span className="text-purple-400" style={{ fontSize: `${subtitleSize}px` }}>{totalSlots} slots</span>
           </div>
 

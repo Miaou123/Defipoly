@@ -206,7 +206,7 @@ export default function SpectatorPage() {
           />
           <div>
             <h1 
-              className="font-bold text-purple-100"
+              className="font-orbitron font-bold text-white"
               style={{ fontSize: `${Math.round(24 * scaleFactor)}px` }}
             >
               Defipoly

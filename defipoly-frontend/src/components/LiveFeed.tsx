@@ -311,7 +311,7 @@ export function LiveFeed({ scaleFactor = 1 }: LiveFeedProps) {
                 <div style={{ width: headerIconSize, height: headerIconSize }}>
                   <FeedIcon size={headerIconSize} className="text-white" />
                 </div>
-                <h2 className="font-bold text-white" style={{ fontSize: `${titleSize}px` }}>Live Feed</h2>
+                <h2 className="font-orbitron font-bold text-white" style={{ fontSize: `${titleSize}px` }}>Live Feed</h2>
               </div>
               <p className="text-purple-400" style={{ fontSize: `${subtitleSize}px`, marginTop: `${Math.round(4 * scaleFactor)}px` }}>Click on an action to see the player's board</p>
             </div>

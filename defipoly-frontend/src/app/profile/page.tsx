@@ -217,7 +217,7 @@ export default function ProfilePage() {
         {/* Left: Logo */}
         <a href="/" className="flex items-center gap-3 hover:opacity-80 transition-opacity">
           <img src="/logo.svg" alt="Defipoly" className="w-10 h-10" />
-          <span className="text-2xl font-bold text-purple-100">Defipoly</span>
+          <span className="font-orbitron text-2xl font-bold text-white">Defipoly</span>
         </a>
         
         {/* Right: Back + Wallet - ProfileWallet style */}
@@ -284,7 +284,7 @@ export default function ProfilePage() {
             />
             <div>
               <h1 
-                className="font-bold text-purple-100"
+                className="font-orbitron font-bold text-white"
                 style={{ fontSize: `${Math.round(24 * scaleFactor)}px` }}
               >
                 Defipoly
