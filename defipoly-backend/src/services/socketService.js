@@ -215,17 +215,46 @@ const gameEvents = {
   },
   
   propertyStolen: (data) => {
+    console.log(`🎯 [SOCKET] Emitting property-stolen for property ${data.propertyId}`);
     emitToProperty(data.propertyId, 'property-stolen', data);
     emitToWallet(data.attacker, 'property-stolen', data);
     emitToWallet(data.victim, 'property-stolen', data);
     emitToAll('recent-action', { type: 'steal', ...data });
+
+    // Emit ownership-changed for both attacker and victim
+    // Attacker: new ownership + steal cooldown
+    // Victim: lost slot + steal protection
+    emitToWallet(data.attacker, 'ownership-changed', {
+      wallet: data.attacker,
+      propertyId: data.propertyId,
+      timestamp: Date.now()
+    });
+    emitToWallet(data.victim, 'ownership-changed', {
+      wallet: data.victim,
+      propertyId: data.propertyId,
+      timestamp: Date.now()
+    });
   },
   
   stealFailed: (data) => {
+    console.log(`❌ [SOCKET] Emitting steal-failed for property ${data.propertyId}`);
     emitToProperty(data.propertyId, 'steal-failed', data);
     emitToWallet(data.attacker, 'steal-failed', data);
     emitToWallet(data.victim, 'steal-failed', data);
     emitToAll('recent-action', { type: 'steal-failed', ...data });
+
+    // Emit ownership-changed for both attacker (cooldown) and victim (protection)
+    // This triggers GameStateContext.fetchGameState() for UI refresh
+    emitToWallet(data.attacker, 'ownership-changed', {
+      wallet: data.attacker,
+      propertyId: data.propertyId,
+      timestamp: Date.now()
+    });
+    emitToWallet(data.victim, 'ownership-changed', {
+      wallet: data.victim,
+      propertyId: data.propertyId,
+      timestamp: Date.now()
+    });
   },
 
   stealAttempted: (data) => {
@@ -236,8 +265,10 @@ const gameEvents = {
   },
   
   propertyShielded: (data) => {
+    // Support both 'owner' and 'player' field names for backward compatibility
+    const walletAddress = data.owner || data.player;
     emitToProperty(data.propertyId, 'property-shielded', data);
-    emitToWallet(data.owner, 'property-shielded', data);
+    emitToWallet(walletAddress, 'property-shielded', data);
   },
   
   // Player events

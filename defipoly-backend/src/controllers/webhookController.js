@@ -229,6 +229,17 @@ async function processWebhook(payload) {
               });
               break;
               
+            case 'steal_failed':
+              gameEvents.stealFailed({
+                propertyId: action.propertyId,
+                attacker: action.playerAddress,
+                victim: action.targetAddress,
+                cost: action.amount,
+                txSignature: action.txSignature,
+                timestamp: action.blockTime
+              });
+              break;
+              
             case 'claim':
               gameEvents.rewardsClaimed({
                 wallet: action.playerAddress,
@@ -267,8 +278,9 @@ async function processWebhook(payload) {
           await gameEvents.playerStatsChanged(action.playerAddress);
           await gameEvents.rewardsUpdated(action.playerAddress);
 
-          // If steal, update target player too
-          if (action.actionType === 'steal_success' && action.targetAddress) {
+          // If steal (success OR failed), update target player too
+          // Both success and failed set steal_protection_expiry on target
+          if ((action.actionType === 'steal_success' || action.actionType === 'steal_failed') && action.targetAddress) {
             gameEvents.playerStatsUpdated({
               wallet: action.targetAddress,
               actionType: 'stolen_from'

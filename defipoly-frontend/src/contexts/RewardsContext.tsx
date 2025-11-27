@@ -1,18 +1,30 @@
 // ============================================
-// FILE: defipoly-frontend/src/hooks/useRewards.ts
-// FIXED: Returns null instead of 0 when player data fetch fails
+// FILE: defipoly-frontend/src/contexts/RewardsContext.tsx
+// Makes useRewards state a singleton to prevent multiple 15-minute intervals
 // ============================================
 
-import { useEffect, useState, useRef } from 'react';
+'use client';
+
+import React, { createContext, useContext, useEffect, useState, useRef, useCallback } from 'react';
 import { useWallet, useConnection } from '@solana/wallet-adapter-react';
 import { useWebSocket } from '@/contexts/WebSocketContext';
 import { useGameState } from '@/contexts/GameStateContext';
 import { fetchPlayerData } from '@/utils/program';
-import { useDefipoly } from './useDefipoly';
+import { useDefipoly } from '@/contexts/DefipolyContext';
 
 const REFRESH_INTERVAL = 15 * 60 * 1000; // 15 minutes in milliseconds
 
-export function useRewards() {
+interface RewardsContextType {
+  ownerships: any[];
+  dailyIncome: number;
+  unclaimedRewards: number;
+  loading: boolean;
+  resetRewards: () => void;
+}
+
+const RewardsContext = createContext<RewardsContextType | null>(null);
+
+export function RewardsProvider({ children }: { children: React.ReactNode }) {
   const { publicKey } = useWallet();
   const { connection } = useConnection();
   const { socket, connected } = useWebSocket();
@@ -72,6 +84,22 @@ export function useRewards() {
       return null;
     }
   };
+
+  // Reset rewards function for when claims happen
+  const resetRewards = useCallback(() => {
+    setUnclaimedRewards(0);
+    lastFetchTime.current = Date.now();
+  }, []);
+
+  // Reset when wallet disconnects
+  useEffect(() => {
+    if (!publicKey) {
+      setUnclaimedRewards(0);
+      setInitialFetchDone(false);
+      lastFetchTime.current = 0;
+      incomePerSecondRef.current = 0;
+    }
+  }, [publicKey]);
 
   // ✅ Fetch pending rewards from blockchain on mount and every 15 min
   useEffect(() => {
@@ -159,8 +187,7 @@ export function useRewards() {
     const handleRewardClaimed = async (data: any) => {
       if (data.wallet === publicKey.toString()) {
         // Reset unclaimed rewards to 0
-        setUnclaimedRewards(0);
-        lastFetchTime.current = Date.now();
+        resetRewards();
       }
     };
 
@@ -171,12 +198,27 @@ export function useRewards() {
       socket.off('ownership-changed', handleOwnershipChanged);
       socket.off('reward-claimed', handleRewardClaimed);
     };
-  }, [socket, connected, publicKey]);
+  }, [socket, connected, publicKey, resetRewards]);
 
-  return {
+  const value = {
     ownerships: apiOwnerships, // Still return for compatibility
     dailyIncome: stats.dailyIncome, // Use backend calculated daily income with set bonuses
     unclaimedRewards: Math.floor(unclaimedRewards), // Display as whole DEFI tokens (already converted from lamports)
     loading: loading || ownershipLoading,
+    resetRewards,
   };
+
+  return (
+    <RewardsContext.Provider value={value}>
+      {children}
+    </RewardsContext.Provider>
+  );
+}
+
+export function useRewards() {
+  const context = useContext(RewardsContext);
+  if (!context) {
+    throw new Error('useRewards must be used within RewardsProvider');
+  }
+  return context;
 }

@@ -4,7 +4,7 @@
 // ============================================
 
 import { useState, useEffect } from 'react';
-import { useDefipoly } from '@/hooks/useDefipoly';
+import { useDefipoly } from '@/contexts/DefipolyContext';
 import { useNotification } from '@/contexts/NotificationContext';
 import { useGameState } from '@/contexts/GameStateContext';
 import { PROPERTIES } from '@/utils/constants';

@@ -30,7 +30,8 @@ export function Board({
   customBoardBackground: spectatorCustomBoard,
   customPropertyCardBackground: spectatorCustomCard,
 }: BoardProps) {
-  const [showRewardsPanel, setShowRewardsPanel] = useState(true);
+  // Renamed from showRewardsPanel to showAnimations - controls everything
+  const [showAnimations, setShowAnimations] = useState(true);
   const [aspectRatio, setAspectRatio] = useState('1 / 1');
   const [scaleFactor, setScaleFactor] = useState(1);
   const [lastIncomeArrived, setLastIncomeArrived] = useState<number | null>(null);
@@ -100,7 +101,7 @@ export function Board({
     ? spectatorCornerStyle || 'property'
     : gameState.profile.cornerSquareStyle;
   
-  // Common PropertyCard props
+  // Common PropertyCard props - now includes showAnimations to control pulse
   const cardProps = {
     onSelect: onSelectProperty,
     spectatorMode,
@@ -108,6 +109,7 @@ export function Board({
     spectatorOwnerships,
     customPropertyCardBackground,
     scaleFactor,
+    disableAnimations: !showAnimations, // Pass to PropertyCard to disable pulse
   };
   
   return (
@@ -120,7 +122,10 @@ export function Board({
             maxHeight: 'calc(100% - 1rem)',
           }}
         >
-        {!spectatorMode && <IncomeFlowOverlay onParticleArrive={handleParticleArrive} />}
+        {/* IncomeFlowOverlay - only render when showAnimations is true */}
+        {!spectatorMode && showAnimations && (
+          <IncomeFlowOverlay onParticleArrive={handleParticleArrive} enabled={showAnimations} />
+        )}
         
         <div 
           className="w-full h-full grid grid-cols-7 grid-rows-7 gap-0 relative z-10"
@@ -181,15 +186,15 @@ export function Board({
           >
             {!spectatorMode && (
               <button
-                onClick={() => setShowRewardsPanel(!showRewardsPanel)}
+                onClick={() => setShowAnimations(!showAnimations)}
                 className="absolute top-2 right-2 z-20 p-2 bg-black/50 hover:bg-black/70 rounded-lg transition-colors"
-                title={showRewardsPanel ? 'Hide rewards panel' : 'Show rewards panel'}
+                title={showAnimations ? 'Hide animations' : 'Show animations'}
               >
-                {showRewardsPanel ? '👁️' : '👁️'}
+                {showAnimations ? '👁️' : '👁️‍🗨️'}
               </button>
             )}
 
-            {!spectatorMode && showRewardsPanel && (
+            {!spectatorMode && showAnimations && (
               <div className="relative z-10">
                 <RewardsPanel incomeArrived={lastIncomeArrived} scaleFactor={scaleFactor} />
               </div>

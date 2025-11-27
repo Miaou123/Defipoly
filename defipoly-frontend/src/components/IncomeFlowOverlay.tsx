@@ -145,7 +145,7 @@ export function IncomeFlowOverlay({ enabled = true, onParticleArrive }: IncomeFl
 
       // Random curve control point
       const controlX = startX + (50 - startX) * 0.5 + (Math.random() - 0.5) * 40;
-      const controlY = startY + (50 - startY) * 0.5 + (Math.random() - 0.5) * 40;
+      const controlY = startY + (40 - startY) * 0.5 + (Math.random() - 0.5) * 40;
 
       const incomeValue = (income / 86400) * (intervalUsed / 1000);
 
@@ -274,8 +274,11 @@ export function IncomeFlowOverlay({ enabled = true, onParticleArrive }: IncomeFl
 
   const getPosition = (p: Particle) => {
     const t = Math.max(0, p.progress);
-    const x = (1 - t) * (1 - t) * p.startX + 2 * (1 - t) * t * p.controlX + t * t * 50;
-    const y = (1 - t) * (1 - t) * p.startY + 2 * (1 - t) * t * p.controlY + t * t * 50;
+    // Target X = 50 (center), Target Y = 38 (higher up, into the bank)
+    const targetX = 50;
+    const targetY = 44;
+    const x = (1 - t) * (1 - t) * p.startX + 2 * (1 - t) * t * p.controlX + t * t * targetX;
+    const y = (1 - t) * (1 - t) * p.startY + 2 * (1 - t) * t * p.controlY + t * t * targetY;
     return { x, y };
   };
 

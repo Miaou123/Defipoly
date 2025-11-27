@@ -1,7 +1,7 @@
 // ============================================
 // FILE: wssListener.js
 // WebSocket listener for Solana transactions
-// Replaces Helius webhooks with direct RPC connection
+// FIXED: Added deduplication to prevent processing same tx twice
 // ============================================
 
 const { Connection, PublicKey } = require('@solana/web3.js');
@@ -20,11 +20,16 @@ class WSSListener {
     this.reconnectDelay = 5000; // 5 seconds
     this.startTime = Date.now();
     
+    // Deduplication: track recently processed signatures
+    this.recentSignatures = new Set();
+    this.maxRecentSignatures = 1000; // Keep last 1000 signatures
+    
     // Stats tracking
     this.stats = {
       received: 0,
       processed: 0,
       failed: 0,
+      duplicates: 0,
       reconnections: 0
     };
   }
@@ -99,6 +104,25 @@ class WSSListener {
     try {
       const signature = logs.signature;
       const slot = context.slot;
+
+      // DEDUPLICATION CHECK: Skip if we've already processed this signature
+      if (this.recentSignatures.has(signature)) {
+        this.stats.duplicates++;
+        console.log(`   ⏭️  [WSS] Skipping duplicate: ${signature.substring(0, 20)}...`);
+        return;
+      }
+
+      // Add to recent signatures immediately to prevent race conditions
+      this.recentSignatures.add(signature);
+      
+      // Cleanup old signatures if we have too many
+      if (this.recentSignatures.size > this.maxRecentSignatures) {
+        const iterator = this.recentSignatures.values();
+        // Remove oldest 100 signatures
+        for (let i = 0; i < 100; i++) {
+          this.recentSignatures.delete(iterator.next().value);
+        }
+      }
 
       this.stats.received++;
       console.log(`\n🔔 [WSS] Transaction detected: ${signature}`);
@@ -265,6 +289,7 @@ class WSSListener {
         received: this.stats.received,
         processed: this.stats.processed,
         failed: this.stats.failed,
+        duplicates: this.stats.duplicates,
         successRate: this.stats.received > 0 
           ? ((this.stats.processed / this.stats.received) * 100).toFixed(2) + '%'
           : '100.00%'

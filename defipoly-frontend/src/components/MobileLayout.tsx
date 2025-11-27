@@ -8,8 +8,8 @@ import { LiveFeed } from './LiveFeed';
 import { useWallet, useConnection } from '@solana/wallet-adapter-react';
 import { StyledWalletButton } from './StyledWalletButton';
 import { useGameState } from '@/contexts/GameStateContext';
-import { useRewards } from '@/hooks/useRewards';
-import { useDefipoly } from '@/hooks/useDefipoly';
+import { useRewards } from '@/contexts/RewardsContext';
+import { useDefipoly } from '@/contexts/DefipolyContext';
 import { useNotification } from '@/contexts/NotificationContext';
 
 type TabType = 'board' | 'portfolio' | 'leaderboard' | 'feed';

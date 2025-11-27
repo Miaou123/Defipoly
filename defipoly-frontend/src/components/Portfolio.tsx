@@ -4,13 +4,12 @@ import { useEffect, useState } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { PROPERTIES, getSetBonus } from '@/utils/constants';
 import { getSetName, isSetComplete, getMinSlots } from '@/utils/gameHelpers';
-import { useDefipoly } from '@/hooks/useDefipoly';
+import { useDefipoly } from '@/contexts/DefipolyContext';
 import type { PropertyOwnership } from '@/types/accounts';
 import { Shield, ChevronDown, ChevronRight, Award, Zap, Wallet } from 'lucide-react';
 import { ShieldAllModal } from './ShieldAllModal';
-import { useTokenBalance } from '@/hooks/useTokenBalance';
 import { BuildingIcon } from './icons/UIIcons';
-import { useRewards } from '@/hooks/useRewards';
+import { useRewards } from '@/contexts/RewardsContext';
 import { useGameState } from '@/contexts/GameStateContext';
 
 interface OwnedProperty extends PropertyOwnership {
@@ -40,8 +39,7 @@ export function Portfolio({ onSelectProperty, scaleFactor = 1 }: PortfolioProps)
   const balanceCardPadding = Math.max(6, Math.round(12 * scaleFactor));
   const rowGap = Math.max(6, Math.round(12 * scaleFactor));
   const { publicKey, connected } = useWallet();
-  const { program } = useDefipoly(); // Still need program for transactions
-  const { balance, loading: balanceLoading } = useTokenBalance();
+  const { program, tokenBalance: balance, loading: balanceLoading } = useDefipoly(); // Still need program for transactions
   // Use backend calculated daily income with set bonuses from GameState
   
   const { ownerships, loading, stats } = useGameState();

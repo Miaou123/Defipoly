@@ -22,7 +22,8 @@ export function ParticleSpawnProvider({ children }: { children: ReactNode }) {
   const triggerSpawn = useCallback((propertyId: number) => {
     setLastSpawnTimes(prev => {
       const next = new Map(prev);
-      next.set(propertyId, Date.now());
+      const timestamp = Date.now();
+      next.set(propertyId, timestamp);
       return next;
     });
   }, []);

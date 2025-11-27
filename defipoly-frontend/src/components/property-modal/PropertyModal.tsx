@@ -5,12 +5,11 @@
 
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef, useMemo } from 'react';
 import { PROPERTIES, SET_BONUSES } from '@/utils/constants';
-import { useDefipoly } from '@/hooks/useDefipoly';
+import { useDefipoly } from '@/contexts/DefipolyContext';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { useAnchorWallet } from '@solana/wallet-adapter-react';
-import { useTokenBalance } from '@/hooks/useTokenBalance';
 import { StyledWalletButton } from '../StyledWalletButton';
 import { X } from 'lucide-react';
 import { PropertyCard } from '../PropertyCard';
@@ -33,12 +32,20 @@ type HelpModalType = 'buy' | 'shield' | 'sell' | 'steal' | null;
 
 export function PropertyModal({ propertyId, onClose }: PropertyModalProps) {
   const { connected } = useWallet();
-  const { program } = useDefipoly();
+  const { program, tokenBalance: balance } = useDefipoly();
   const wallet = useAnchorWallet();
-  const property = propertyId !== null ? PROPERTIES.find(p => p.id === propertyId) : null;
-  const { balance } = useTokenBalance();
+  
+  // Memoize property to prevent unnecessary re-renders
+  const property = useMemo(() => 
+    propertyId !== null ? PROPERTIES.find(p => p.id === propertyId) : null,
+    [propertyId]
+  );
   
   const { getOwnership } = useGameState();
+  
+  // Prevent duplicate API calls
+  const fetchingRef = useRef(false);
+  const lastFetchedPropertyId = useRef<number | null>(null);
   
   const [loading, setLoading] = useState(false);
   const [propertyData, setPropertyData] = useState<any>(null);
@@ -58,74 +65,117 @@ export function PropertyModal({ propertyId, onClose }: PropertyModalProps) {
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
   
-  // Fetch property and ownership data from API
+  // Fetch property state from API (only when needed)
   useEffect(() => {
-    if (propertyId === null || !connected) {
+    if (propertyId === null || !connected || !property) {
       setPropertyData(null);
+      setSetBonusInfo(null);
+      lastFetchedPropertyId.current = null;
+      return;
+    }
+
+    // Skip if already fetching or already have data for this property
+    if (fetchingRef.current || lastFetchedPropertyId.current === propertyId) {
       return;
     }
 
     const fetchData = async () => {
+      fetchingRef.current = true;
+      
       try {
+        // Get ownership data (use getOwnership inside effect, not as dependency)
         const ownershipData = wallet ? getOwnership(propertyId) : null;
         const propertyState = await fetchPropertyState(propertyId);
 
-        console.log('🔍 PropertyModal Debug:', {
-          propertyId,
-          ownershipData,
-          propertyState,
-          availableSlots: propertyState?.available_slots,
-        });
+        // Only log once per property fetch
+        if (lastFetchedPropertyId.current !== propertyId) {
+          console.log('🔍 PropertyModal fetching data for property:', propertyId);
+        }
     
-        const availableSlots = propertyState?.available_slots ?? property?.maxSlots ?? 0;
+        const availableSlots = propertyState?.available_slots ?? property.maxSlots ?? 0;
 
         const owned = ownershipData?.slotsOwned || 0;
-        const maxSlotsPerProperty = property?.maxPerPlayer || 10;
+        const maxSlotsPerProperty = property.maxPerPlayer || 10;
         const shielded = ownershipData?.slotsShielded || 0;
         const shieldExpiry = ownershipData?.shieldExpiry?.toNumber?.() || 0;
         const isShieldActive = shielded > 0 && shieldExpiry > Math.floor(Date.now() / 1000);
 
-        setPropertyData({
+        const newPropertyData = {
           owned,
           maxSlotsPerProperty,
           availableSlots,
           shielded: isShieldActive ? shielded : 0,
           shieldExpiry: isShieldActive ? shieldExpiry : 0,
+        };
+
+        // Only update state if data actually changed
+        setPropertyData(prevData => {
+          if (!prevData || 
+              prevData.owned !== newPropertyData.owned ||
+              prevData.availableSlots !== newPropertyData.availableSlots ||
+              prevData.shielded !== newPropertyData.shielded) {
+            return newPropertyData;
+          }
+          return prevData;
         });
 
-        // Check for complete set
-        if (property) {
-          const propertiesInSet = PROPERTIES.filter(p => p.setId === property.setId);
-          const requiredProps = property.setId === 0 || property.setId === 7 ? 2 : 3;
-          
-          let ownedInSetCount = 0;
-          let totalBoostedSlots = 0;
-          let totalSlotsInSet = 0;
-
-          for (const p of propertiesInSet) {
-            const ownership = getOwnership(p.id);
-            if (ownership && ownership.slotsOwned > 0) {
-              ownedInSetCount++;
-              totalBoostedSlots += ownership.slotsOwned;
-            }
-            totalSlotsInSet += p.maxSlots;
-          }
-
-          const hasCompleteSet = ownedInSetCount >= requiredProps;
-          setSetBonusInfo({
-            hasCompleteSet,
-            boostedSlots: hasCompleteSet ? totalBoostedSlots : 0,
-            totalSlots: totalSlotsInSet,
-          });
-        }
+        lastFetchedPropertyId.current = propertyId;
 
       } catch (error) {
         console.error('Error fetching property data:', error);
+      } finally {
+        fetchingRef.current = false;
       }
     };
 
     fetchData();
-  }, [propertyId, connected, wallet, property, getOwnership]);
+  }, [propertyId, connected, wallet?.publicKey?.toString(), property]);
+
+  // Separate effect for set bonus calculation (only when ownership data might have changed)
+  useEffect(() => {
+    if (!property || !propertyData) {
+      setSetBonusInfo(null);
+      return;
+    }
+
+    const calculateSetBonus = () => {
+      const propertiesInSet = PROPERTIES.filter(p => p.setId === property.setId);
+      const requiredProps = property.setId === 0 || property.setId === 7 ? 2 : 3;
+      
+      let ownedInSetCount = 0;
+      let minSlotsInSet = Infinity;
+      let totalSlotsInSet = 0;
+
+      for (const p of propertiesInSet) {
+        const ownership = getOwnership(p.id);
+        if (ownership && ownership.slotsOwned > 0) {
+          ownedInSetCount++;
+          // For set bonus, we need the MINIMUM slots across all properties in the set
+          minSlotsInSet = Math.min(minSlotsInSet, ownership.slotsOwned);
+        }
+        totalSlotsInSet += p.maxSlots;
+      }
+
+      const hasCompleteSet = ownedInSetCount >= requiredProps;
+      const newSetBonusInfo = {
+        hasCompleteSet,
+        boostedSlots: hasCompleteSet ? minSlotsInSet : 0,
+        totalSlots: totalSlotsInSet,
+      };
+
+      // Only update if values actually changed
+      setSetBonusInfo(prevInfo => {
+        if (!prevInfo || 
+            prevInfo.hasCompleteSet !== newSetBonusInfo.hasCompleteSet ||
+            prevInfo.boostedSlots !== newSetBonusInfo.boostedSlots) {
+          return newSetBonusInfo;
+        }
+        return prevInfo;
+      });
+    };
+
+    calculateSetBonus();
+  }, [property, propertyData?.owned]); // Only re-run when owned slots change
 
   if (propertyId === null || !property) return null;
 
@@ -236,7 +286,7 @@ export function PropertyModal({ propertyId, onClose }: PropertyModalProps) {
                   {hasSetBonus && (
                     <div className="mt-2 px-2 py-1 bg-green-500/20 rounded border border-green-500/30 flex items-center justify-between">
                       <span className="text-[9px] lg:text-xs text-green-300 font-semibold">✨ Complete Set Bonus Active</span>
-                      <span className="text-[9px] lg:text-xs text-green-400">+{(setBonusBps / 100).toFixed(2)}% on {personalOwned} slots</span>
+                      <span className="text-[9px] lg:text-xs text-green-400">+{(setBonusBps / 100).toFixed(2)}% on {setBonusInfo?.boostedSlots || 0} slots</span>
                     </div>
                   )}
                   {!hasSetBonus && (

@@ -9,7 +9,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Clock } from 'lucide-react';
 import { useWallet } from '@solana/wallet-adapter-react';
-import { useDefipoly } from '@/hooks/useDefipoly';
+import { useDefipoly } from '@/contexts/DefipolyContext';
 import { useNotification } from '@/contexts/NotificationContext';
 import { PROPERTIES, SET_BONUSES, TOKEN_TICKER } from '@/utils/constants';
 import { CooldownExplanationModal } from '@/components/CooldownExplanationModal';

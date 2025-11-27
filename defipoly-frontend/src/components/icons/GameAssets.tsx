@@ -356,15 +356,20 @@ export const BankSVG = ({ isPulsing = false, className = '' }: BankSVGProps) => 
     {/* Decorative roof trim */}
     <polygon points="60,7 112,26 8,26" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="0.5"/>
     
-    {/* TOP HAT EMBLEM */}
-    <g transform="translate(60, 17)">
-      <rect x="-5" y="-5" width="10" height="8" rx="0.5" fill="url(#bankHatGradient)"/>
-      <ellipse cx="0" cy="-5" rx="5" ry="1.8" fill="url(#bankHatTop)"/>
-      <ellipse cx="0" cy="-5" rx="4" ry="1.2" fill="#581c87"/>
-      <rect x="-5" y="1.5" width="10" height="2" fill="url(#bankHatBand)"/>
-      <ellipse cx="0" cy="3.5" rx="8" ry="2.5" fill="url(#bankBrimGradient)"/>
-      <ellipse cx="0" cy="3.5" rx="7" ry="1.8" fill="none" stroke="rgba(255,255,255,0.2)" strokeWidth="0.4"/>
-      <rect x="-4" y="-3.5" width="1" height="5" rx="0.3" fill="rgba(255,255,255,0.2)"/>
+    {/* TOP HAT EMBLEM - Matching logo design */}
+    <g transform="translate(60, 15) scale(0.002, -0.002)">
+      {/* Main hat body - purple */}
+      <path 
+        d="M4855 8224 c-503 -32 -895 -91 -1202 -178 -466 -134 -713 -304 -713 -492 0 -28 13 -163 30 -300 128 -1075 175 -1831 168 -2669 l-3 -350 -155 -27 c-495 -86 -876 -239 -1045 -419 -26 -27 -60 -79 -77 -115 -28 -60 -30 -72 -26 -147 5 -107 44 -184 143 -282 375 -372 1380 -650 2620 -725 219 -13 871 -13 1090 0 1052 63 1945 282 2420 591 109 71 234 198 271 274 26 53 29 70 29 155 0 83 -3 101 -27 145 -123 235 -524 423 -1116 522 l-163 28 1 485 c1 865 44 1508 175 2587 30 242 30 285 6 339 -119 261 -766 486 -1606 559 -173 15 -695 27 -820 19z"
+        fill="#4D2783"
+        transform="translate(-5120, -5120)"
+      />
+      {/* Gold band */}
+      <path 
+        d="M3458 4434 c444 -134 878 -201 1453 -224 645 -26 1248 44 1824 210 94 27 178 52 188 56 17 6 18 -13 15 -384 l-3 -391 -34 -35 c-127 -131 -617 -255 -1231 -312 -225 -21 -849 -24 -1065 -6 -549 48 -1022 154 -1204 272 -97 63 -91 30 -91 473 0 367 1 389 18 382 9 -3 68 -22 130 -41z"
+        fill="#FFBD32"
+        transform="translate(-5120, -5120)"
+      />
     </g>
     
     {/* Decorative corners */}

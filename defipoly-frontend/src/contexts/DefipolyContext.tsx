@@ -1,6 +1,13 @@
-import { useMemo, useState, useCallback, useEffect } from 'react';
+// ============================================
+// FILE: defipoly-frontend/src/contexts/DefipolyContext.tsx
+// Makes useDefipoly state a singleton shared across all components
+// ============================================
+
+'use client';
+
+import React, { createContext, useContext, useMemo, useState, useCallback, useEffect, useRef } from 'react';
 import { useConnection, useAnchorWallet } from '@solana/wallet-adapter-react';
-import { AnchorProvider } from '@coral-xyz/anchor';
+import { AnchorProvider, Program } from '@coral-xyz/anchor';
 import { SystemProgram, Transaction } from '@solana/web3.js';
 import { TOKEN_PROGRAM_ID, getAssociatedTokenAddress } from '@solana/spl-token';
 
@@ -20,18 +27,36 @@ import {
 import { createEventParser } from '@/utils/eventStorage';
 
 // Action hooks
-import { usePropertyActions } from './actions/usePropertyActions';
-import { useShieldActions } from './actions/useShieldActions';
-import { useRewardActions } from './actions/useRewardActions';
-import { useStealActions } from './actions/useStealActions';
+import { usePropertyActions } from '@/hooks/actions/usePropertyActions';
+import { useShieldActions } from '@/hooks/actions/useShieldActions';
+import { useRewardActions } from '@/hooks/actions/useRewardActions';
+import { useStealActions } from '@/hooks/actions/useStealActions';
 
-export function useDefipoly() {
+interface DefipolyContextType {
+  program: Program | null;
+  tokenBalance: number;
+  playerInitialized: boolean;
+  tokenAccountExists: boolean;
+  loading: boolean;
+  createTokenAccount: () => Promise<string>;
+  initializePlayer: () => Promise<{ playerAccount: any; tx: string }>;
+  buyProperty: (propertyId: number, slots?: number) => Promise<string>;
+  sellProperty: (propertyId: number, slots: number) => Promise<string>;
+  activateShield: (propertyId: number, cycles: number) => Promise<string>;
+  claimRewards: () => Promise<string>;
+  stealPropertyInstant: (propertyId: number) => Promise<any>;
+}
+
+const DefipolyContext = createContext<DefipolyContextType | null>(null);
+
+export function DefipolyProvider({ children }: { children: React.ReactNode }) {
   const { connection } = useConnection();
   const wallet = useAnchorWallet();
   const [tokenBalance, setTokenBalance] = useState<number>(0);
   const [playerInitialized, setPlayerInitialized] = useState(false);
   const [tokenAccountExists, setTokenAccountExists] = useState(false);
   const [loading, setLoading] = useState(false);
+  const initCheckDone = useRef(false);
 
   // Initialize event parser for storing actions
   const eventParser = useMemo(() => createEventParser(wallet), [wallet]);
@@ -48,23 +73,37 @@ export function useDefipoly() {
     return getProgram(provider);
   }, [provider]);
 
-
-  // Check initialization status - ONLY ON MOUNT, NO POLLING
+  // Reset when wallet disconnects
   useEffect(() => {
     if (!wallet) {
+      initCheckDone.current = false;
       setTokenBalance(0);
       setPlayerInitialized(false);
       setTokenAccountExists(false);
+    }
+  }, [wallet]);
+
+  // Check initialization status - wait for program to be ready
+  useEffect(() => {
+    if (!wallet || !program) {
+      return;
+    }
+
+    // Don't re-check if already done for this wallet
+    if (initCheckDone.current) {
       return;
     }
 
     const checkInitialization = async () => {
+      console.log('🔍 [DefipolyContext] Starting initialization check...');
+      
       try {
         // Check token account
         const hasTokenAccount = await checkTokenAccountExists(connection, wallet.publicKey);
+        console.log('💰 [DefipolyContext] Token account exists:', hasTokenAccount);
         setTokenAccountExists(hasTokenAccount);
 
-        // Fetch token balance if account exists (only on mount)
+        // Fetch token balance if account exists
         if (hasTokenAccount) {
           try {
             const tokenAccount = await getAssociatedTokenAddress(
@@ -80,16 +119,17 @@ export function useDefipoly() {
         }
 
         // Check if player is initialized
-        if (program) {
-          const playerData = await fetchPlayerData(program, wallet.publicKey);
-          setPlayerInitialized(playerData !== null);
-        }
+        const playerData = await fetchPlayerData(program, wallet.publicKey);
+        const isInitialized = playerData !== null;
+        console.log('👤 [DefipolyContext] Player initialized:', isInitialized);
+        setPlayerInitialized(isInitialized);
+        
+        initCheckDone.current = true;
       } catch (error) {
-        console.error('Error checking initialization:', error);
+        console.error('❌ [DefipolyContext] Error checking initialization:', error);
       }
     };
 
-    // Only run once on mount - no polling interval
     checkInitialization();
   }, [wallet, connection, program]);
 
@@ -146,7 +186,7 @@ export function useDefipoly() {
     }
   }, [program, wallet, tokenAccountExists]);
 
-  // Action hooks
+  // Action hooks - using the shared state
   const propertyActions = usePropertyActions(
     program, wallet, provider, connection, eventParser,
     playerInitialized, tokenAccountExists, setLoading,
@@ -167,9 +207,8 @@ export function useDefipoly() {
     program, wallet, provider, connection, eventParser,
     playerInitialized, setLoading
   );
-  
 
-  return {
+  const value = useMemo(() => ({
     program,
     tokenBalance,
     playerInitialized,
@@ -177,13 +216,35 @@ export function useDefipoly() {
     loading,
     createTokenAccount,
     initializePlayer,
-    // Property actions
     ...propertyActions,
-    // Shield actions
     ...shieldActions,
-    // Reward actions
     ...rewardActions,
-    // Steal actions - ONLY random steal now
     ...stealActions,
-  };
+  }), [
+    program,
+    tokenBalance,
+    playerInitialized,
+    tokenAccountExists,
+    loading,
+    createTokenAccount,
+    initializePlayer,
+    propertyActions,
+    shieldActions,
+    rewardActions,
+    stealActions,
+  ]);
+
+  return (
+    <DefipolyContext.Provider value={value}>
+      {children}
+    </DefipolyContext.Provider>
+  );
+}
+
+export function useDefipoly() {
+  const context = useContext(DefipolyContext);
+  if (!context) {
+    throw new Error('useDefipoly must be used within DefipolyProvider');
+  }
+  return context;
 }

@@ -30,6 +30,7 @@ interface PropertyCardProps {
   cornerLabel?: string;
   gridColumn?: number;
   gridRow?: number;
+  disableAnimations?: boolean;
 }
 
 export function PropertyCard({ 
@@ -45,7 +46,8 @@ export function PropertyCard({
   isCorner = false,
   cornerLabel = 'DEFIPOLY',
   gridColumn,
-  gridRow
+  gridRow,
+  disableAnimations = false,
 }: PropertyCardProps) {
   const { connected, publicKey } = useWallet();
   
@@ -96,13 +98,13 @@ export function PropertyCard({
 
   // Trigger pulse when particle spawns
   useEffect(() => {
-    if (lastSpawnTime > 0 && buildingLevel > 0) {
+    if (lastSpawnTime > 0 && buildingLevel > 0 && !disableAnimations) {
       setBuildingPulse(true);
       const timer = setTimeout(() => setBuildingPulse(false), 300);
       return () => clearTimeout(timer);
     }
     return undefined;
-  }, [lastSpawnTime, buildingLevel]);
+  }, [lastSpawnTime, buildingLevel, disableAnimations]);
 
   const property = PROPERTIES.find(p => p.id === propertyId);
   if (!property) return null;

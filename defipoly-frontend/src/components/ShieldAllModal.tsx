@@ -7,7 +7,7 @@
 
 import { useState } from 'react';
 import { Shield, X, AlertCircle, CheckCircle, Loader, Trophy, Clock } from 'lucide-react';
-import { useDefipoly } from '@/hooks/useDefipoly';
+import { useDefipoly } from '@/contexts/DefipolyContext';
 import { useNotification } from '../contexts/NotificationContext';
 import { PROPERTIES, TOKEN_TICKER } from '@/utils/constants';
 
