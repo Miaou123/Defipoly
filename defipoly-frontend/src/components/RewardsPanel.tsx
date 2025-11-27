@@ -26,10 +26,11 @@ interface Floater {
 }
 
 interface RewardsPanelProps {
-  incomeArrived?: number | null; // Income value from particle arrival
+  incomeArrived?: number | null;
+  scaleFactor?: number;
 }
 
-export function RewardsPanel({ incomeArrived = null }: RewardsPanelProps) {
+export function RewardsPanel({ incomeArrived = null, scaleFactor = 1 }: RewardsPanelProps) {
   const { connected, publicKey } = useWallet();
   const { connection } = useConnection();
   const { unclaimedRewards, dailyIncome, loading: rewardsLoading } = useRewards();
@@ -322,14 +323,29 @@ export function RewardsPanel({ incomeArrived = null }: RewardsPanelProps) {
   // ========================================
   // Connected and owns properties - BANK DESIGN
   // ========================================
+  
+  // Scale sizes based on scaleFactor
+  const bankWidth = Math.round(220 * scaleFactor);
+  const bankHeight = Math.round(160 * scaleFactor);
+  const rewardsTextSize = Math.max(16, Math.round(36 * scaleFactor));
+  const labelTextSize = Math.max(8, Math.round(10 * scaleFactor));
+  const buttonPaddingX = Math.max(16, Math.round(32 * scaleFactor));
+  const buttonPaddingY = Math.max(6, Math.round(10 * scaleFactor));
+  const buttonTextSize = Math.max(10, Math.round(14 * scaleFactor));
+  const incomeTextSize = Math.max(10, Math.round(14 * scaleFactor));
+  const marginTop = Math.max(8, Math.round(20 * scaleFactor));
+  
   return (
-    <div className="relative flex flex-col items-center justify-center">
+    <div className="relative flex flex-col items-center justify-center z-30">
       {rewardsLoading ? (
         <div className="text-white/60 text-center">Loading rewards...</div>
       ) : (
         <>
           {/* Bank SVG */}
-          <div className="relative w-[220px] h-[160px]">
+          <div 
+            className="relative z-30"
+            style={{ width: `${bankWidth}px`, height: `${bankHeight}px` }}
+          >
             <BankSVG isPulsing={isPulsing} className="w-full h-full" />
             
             {/* Floating +X numbers */}
@@ -338,9 +354,9 @@ export function RewardsPanel({ incomeArrived = null }: RewardsPanelProps) {
                 key={floater.id}
                 className="absolute pointer-events-none font-bold"
                 style={{
-                  left: `calc(50% + ${floater.x}px)`,
+                  left: `calc(50% + ${floater.x * scaleFactor}px)`,
                   top: '20%',
-                  fontSize: `${floater.size}px`,
+                  fontSize: `${floater.size * scaleFactor}px`,
                   color: '#4ade80',
                   textShadow: '0 0 10px rgba(74, 222, 128, 0.6), 0 2px 4px rgba(0,0,0,0.5)',
                   animation: 'floatUp 2s ease-out forwards',
@@ -352,23 +368,28 @@ export function RewardsPanel({ incomeArrived = null }: RewardsPanelProps) {
           </div>
 
           {/* Rewards display */}
-          <div className="text-center mt-5">
+          <div className="text-center" style={{ marginTop: `${marginTop}px` }}>
             <div 
-              className="text-4xl font-bold tabular-nums"
+              className="font-bold tabular-nums"
               style={{
+                fontSize: `${rewardsTextSize}px`,
                 color: '#fbbf24',
                 textShadow: displayedRewards > 0 ? '0 0 25px rgba(251, 191, 36, 0.5)' : 'none',
               }}
             >
               {formatRewards(displayedRewards)}
             </div>
+
             {/* Collect button */}
             {displayedRewards > 0 && (
               <button
                 onClick={handleClaimRewards}
                 disabled={claiming || claimLoading}
-                className="mt-4 px-8 py-2.5 rounded-full font-bold text-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                className="rounded-full font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                 style={{
+                  marginTop: `${marginTop}px`,
+                  padding: `${buttonPaddingY}px ${buttonPaddingX}px`,
+                  fontSize: `${buttonTextSize}px`,
                   background: 'linear-gradient(135deg, #a855f7 0%, #7c3aed 100%)',
                   color: '#fff',
                 }}
@@ -386,7 +407,6 @@ export function RewardsPanel({ incomeArrived = null }: RewardsPanelProps) {
                 {claiming ? '...' : 'Collect'}
               </button>
             )}
-
           </div>
         </>
       )}

@@ -31,7 +31,11 @@ interface LeaderboardData {
 
 const API_BASE_URL = process.env['NEXT_PUBLIC_API_BASE_URL'] || 'http://localhost:3101';
 
-export function Leaderboard() {
+interface LeaderboardProps {
+  scaleFactor?: number;
+}
+
+export function Leaderboard({ scaleFactor = 1 }: LeaderboardProps) {
   const { socket, connected } = useWebSocket(); 
   const [leaderboardData, setLeaderboardData] = useState<LeaderboardData | null>(null);
   const [profiles, setProfiles] = useState<Record<string, ProfileData>>({});
@@ -45,6 +49,21 @@ export function Leaderboard() {
   // Get game state to check if user owns properties
   const gameState = useGameState();
   const totalSlotsOwned = gameState.stats.totalSlotsOwned || 0;
+
+  // Scaled sizes
+  const titleSize = Math.max(12, Math.round(18 * scaleFactor));
+  const subtitleSize = Math.max(8, Math.round(12 * scaleFactor));
+  const textSize = Math.max(9, Math.round(12 * scaleFactor));
+  const padding = Math.max(8, Math.round(16 * scaleFactor));
+  const headerIconSize = Math.max(14, Math.round(20 * scaleFactor));
+  const rankSize = Math.max(8, Math.round(12 * scaleFactor));
+  const nameSize = Math.max(9, Math.round(12 * scaleFactor));
+  const scoreSize = Math.max(9, Math.round(12 * scaleFactor));
+  const avatarSize = Math.max(24, Math.round(32 * scaleFactor));
+  const badgeSize = Math.max(24, Math.round(32 * scaleFactor));
+  const rowPaddingY = Math.max(4, Math.round(8 * scaleFactor));
+  const rowPaddingX = Math.max(4, Math.round(8 * scaleFactor));
+  const rowGap = Math.max(8, Math.round(12 * scaleFactor));
 
   // Check if we should show the spectator hint
   useEffect(() => {
@@ -211,35 +230,39 @@ export function Leaderboard() {
     <>
       <div className="bg-purple-900/8 backdrop-blur-xl rounded-2xl border border-purple-500/20 h-full overflow-hidden flex flex-col">
         {/* Header */}
-        <div className="p-4 pb-2">
+        <div style={{ padding: `${padding}px`, paddingBottom: `${padding / 2}px` }}>
           <div className="flex items-center justify-between">
             <div>
-              <div className="flex items-center gap-2 border-b border-purple-500/20 pb-2">
-                <TrophyIcon size={20} className="text-yellow-400" />
-                <h2 className="text-lg font-bold text-white">
+              <div className="flex items-center border-b border-purple-500/20" style={{ gap: `${rowGap}px`, paddingBottom: `${rowPaddingY}px` }}>
+                <div style={{ width: headerIconSize, height: headerIconSize }}>
+                  <TrophyIcon size={headerIconSize} className="text-yellow-400" />
+                </div>
+                <h2 className="font-bold text-white" style={{ fontSize: `${titleSize}px` }}>
                   Leaderboard
                 </h2>
               </div>
-              <p className="text-xs text-purple-400 mt-1">Click on a player to see their board</p>
+              <p className="text-purple-400" style={{ fontSize: `${subtitleSize}px`, marginTop: `${Math.round(4 * scaleFactor)}px` }}>Click on a player to see their board</p>
             </div>
           </div>
         </div>
 
         {/* Scrollable Content */}
-        <div className="flex-1 overflow-y-auto px-4 pb-4">
-          {loading ? (
-            <div className="text-center py-8">
-              <div className="text-xl mb-1">⏳</div>
-              <div className="text-xs text-purple-300">Loading...</div>
+        <div className="flex-1 overflow-y-auto" style={{ padding: `0 ${padding}px ${padding}px` }}>
+        {loading ? (
+            <div className="text-center" style={{ padding: `${padding * 2}px 0` }}>
+              <div style={{ fontSize: `${Math.round(20 * scaleFactor)}px`, marginBottom: `${Math.round(4 * scaleFactor)}px` }}>⏳</div>
+              <div className="text-purple-300" style={{ fontSize: `${subtitleSize}px` }}>Loading...</div>
             </div>
           ) : !leaderboardData || leaderboardData.leaderboard.length === 0 ? (
-            <div className="text-center py-8">
-              <TrophyIcon size={24} className="mx-auto mb-1 text-yellow-400" />
-              <div className="text-xs text-purple-400">No players yet</div>
-              <div className="text-[10px] text-purple-500 mt-0.5">Be the first!</div>
+            <div className="text-center" style={{ padding: `${padding * 2}px 0` }}>
+              <div style={{ width: Math.round(24 * scaleFactor), height: Math.round(24 * scaleFactor), margin: `0 auto ${Math.round(4 * scaleFactor)}px` }}>
+                <TrophyIcon size={Math.round(24 * scaleFactor)} className="text-yellow-400" />
+              </div>
+              <div className="text-purple-400" style={{ fontSize: `${subtitleSize}px` }}>No players yet</div>
+              <div className="text-purple-500" style={{ fontSize: `${Math.round(10 * scaleFactor)}px`, marginTop: `${Math.round(2 * scaleFactor)}px` }}>Be the first!</div>
             </div>
           ) : (
-            <div className="space-y-0.5">
+            <div style={{ gap: `${Math.round(2 * scaleFactor)}px`, display: 'flex', flexDirection: 'column' }}>
               {leaderboardData.leaderboard.map((leader, index) => {
                 const isTop3 = leader.rank <= 3;
                 const isFirstRow = index === 0;
@@ -250,27 +273,28 @@ export function Leaderboard() {
                     key={leader.walletAddress}
                     ref={isFirstRow ? firstRowRef : null}
                     onClick={() => handlePlayerClick(leader)}
-                    className={`relative flex items-center gap-3 py-2 px-2 rounded-lg transition-all cursor-pointer ${
+                    className={`relative flex items-center rounded-lg transition-all cursor-pointer ${
                       showHintOnRow
                         ? 'bg-yellow-500/10 border border-yellow-400/50 shadow-[0_0_15px_rgba(250,204,21,0.3)]'
                         : isTop3 
                           ? 'bg-white/[0.03] hover:bg-white/[0.08]' 
                           : 'bg-white/[0.01] hover:bg-white/[0.05]'
                     }`}
+                    style={{ gap: `${Math.round(12 * scaleFactor)}px`, padding: `${rowPaddingY}px ${rowPaddingX}px` }}
                   >
                     {/* Rank - Use HexagonBadge for top 3 */}
-                    <div className="w-8 flex items-center justify-center">
+                    <div style={{ width: avatarSize, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                       {isTop3 ? (
-                        <HexagonBadge rank={leader.rank as 1 | 2 | 3} size={32} />
+                        <HexagonBadge rank={leader.rank as 1 | 2 | 3} size={badgeSize} />
                       ) : (
-                        <div className="text-xs font-bold text-purple-400">
+                        <div className="font-bold text-purple-400" style={{ fontSize: `${rankSize}px` }}>
                           #{leader.rank}
                         </div>
                       )}
                     </div>
                     
                     {/* Profile Picture */}
-                    <div className="w-8 h-8 rounded-full overflow-hidden bg-purple-500/10 flex-shrink-0">
+                    <div className="rounded-full overflow-hidden bg-purple-500/10 flex-shrink-0" style={{ width: avatarSize, height: avatarSize }}>
                       {profiles[leader.walletAddress]?.profilePicture ? (
                         <img 
                           src={profiles[leader.walletAddress]?.profilePicture || undefined} 
@@ -278,7 +302,7 @@ export function Leaderboard() {
                           className="w-full h-full object-cover"
                         />
                       ) : (
-                        <div className="w-full h-full flex items-center justify-center text-purple-400 text-[10px] font-bold">
+                        <div className="w-full h-full flex items-center justify-center text-purple-400 font-bold" style={{ fontSize: `${Math.round(10 * scaleFactor)}px` }}>
                           {getDisplayName(leader.walletAddress).slice(0, 2).toUpperCase()}
                         </div>
                       )}
@@ -286,18 +310,18 @@ export function Leaderboard() {
                     
                     {/* Name and Details */}
                     <div className="flex-1 min-w-0">
-                      <div className={`font-semibold text-xs truncate ${
+                      <div className={`font-semibold truncate ${
                         isTop3 ? 'text-white' : 'text-purple-100'
-                      }`}>
+                      }`} style={{ fontSize: `${nameSize}px` }}>
                         {getDisplayName(leader.walletAddress)}
                       </div>
                     </div>
                     
                     {/* Score */}
                     <div className="text-right">
-                      <div className={`text-xs font-bold font-mono ${
+                      <div className={`font-bold font-mono ${
                         isTop3 ? 'text-yellow-400' : 'text-purple-300'
-                      }`}>
+                      }`} style={{ fontSize: `${scoreSize}px` }}>
                         {leader.leaderboardScore.toLocaleString()}
                       </div>
                     </div>

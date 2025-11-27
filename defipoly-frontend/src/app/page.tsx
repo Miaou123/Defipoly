@@ -17,16 +17,32 @@ export default function Home() {
   const [profilePicture, setProfilePicture] = useState<string | null>(null);
   const [cornerSquareStyle, setCornerSquareStyle] = useState<'property' | 'profile'>('property');
   const [isMobile, setIsMobile] = useState(false);
+  const [sideColumnWidth, setSideColumnWidth] = useState(400);
+  
+  // Calculate scaleFactor based on side column width (from 0.7 to 1.0)
+  const scaleFactor = Math.max(0.7, Math.min(1.0, sideColumnWidth / 400));
 
-  // Check for mobile
+  // Check for mobile and calculate column width
   useEffect(() => {
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth < 1024);
+    const updateLayout = () => {
+      const width = window.innerWidth;
+      setIsMobile(width < 1024);
+      
+      // Calculate side column width based on screen size
+      if (width < 1200) {
+        setSideColumnWidth(240);
+      } else if (width < 1400) {
+        setSideColumnWidth(280);
+      } else if (width < 1600) {
+        setSideColumnWidth(340);
+      } else {
+        setSideColumnWidth(400);
+      }
     };
     
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
+    updateLayout();
+    window.addEventListener('resize', updateLayout);
+    return () => window.removeEventListener('resize', updateLayout);
   }, []);
 
   // Load profile picture
@@ -91,28 +107,33 @@ export default function Home() {
   return (
     <div className="h-screen overflow-hidden relative">
       {/* Main grid layout - fixed height, no scrolling */}
-      <div className="grid grid-cols-1 lg:grid-cols-[minmax(320px,400px)_1fr_minmax(320px,400px)] gap-2 p-4 h-full w-full mx-auto max-w-[1920px]">
+      <div 
+        className="grid gap-2 p-4 h-full w-full mx-auto max-w-[1920px]"
+        style={{
+          gridTemplateColumns: `${sideColumnWidth}px 1fr ${sideColumnWidth}px`,
+        }}
+      >
         {/* LEFT COLUMN: Logo + Portfolio */}
         <div className="flex flex-col gap-2 overflow-hidden min-h-0">
-        {/* Logo at top of left column */}
-        <a 
-          href="/"
-          className="flex items-center gap-3 rounded-xl px-4 flex-shrink-0 hover:opacity-80 transition-opacity cursor-pointer"
-        >
-          <img 
-            src="/logo.svg" 
-            alt="Defipoly Logo" 
-            className="w-12 h-12 object-contain"
-          />
-          <div>
-            <h1 className="text-2xl font-bold text-purple-100">Defipoly</h1>
+          {/* Logo at top of left column */}
+          <a 
+            href="/"
+            className="flex items-center gap-3 rounded-xl px-4 flex-shrink-0 hover:opacity-80 transition-opacity cursor-pointer"
+          >
+            <img 
+              src="/logo.svg" 
+              alt="Defipoly Logo" 
+              className="w-12 h-12 object-contain"
+            />
+            <div>
+              <h1 className="text-2xl font-bold text-purple-100">Defipoly</h1>
+            </div>
+          </a>
+          
+          <div className="flex-1 overflow-hidden min-h-0">
+            <Portfolio onSelectProperty={setSelectedProperty} scaleFactor={scaleFactor} />
           </div>
-        </a>
-        
-        <div className="flex-1 overflow-hidden min-h-0">
-          <Portfolio onSelectProperty={setSelectedProperty} />
         </div>
-      </div>
 
         {/* CENTER: Board */}
         <div className="flex items-center justify-center overflow-hidden">
@@ -128,14 +149,14 @@ export default function Home() {
           
           {/* Fixed height container - no scrolling */}
           <div className="flex-1 flex flex-col gap-2 overflow-hidden min-h-0">
-            {/* Leaderboard - 55% of space */}
+            {/* Leaderboard - 45% of space */}
             <div className="h-[45%] min-h-0 overflow-hidden">
-              <Leaderboard />
+              <Leaderboard scaleFactor={scaleFactor} />
             </div>
             
-            {/* Live Feed - 43% of space */}
+            {/* Live Feed - 55% of space */}
             <div className="h-[55%] min-h-0 overflow-hidden">
-              <LiveFeed />
+              <LiveFeed scaleFactor={scaleFactor} />
             </div>
           </div>
         </div>

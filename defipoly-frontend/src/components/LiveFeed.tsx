@@ -28,7 +28,11 @@ interface FeedItem {
 
 const API_BASE_URL = process.env['NEXT_PUBLIC_API_BASE_URL'] || 'http://localhost:3101';
 
-export function LiveFeed() {
+interface LiveFeedProps {
+  scaleFactor?: number;
+}
+
+export function LiveFeed({ scaleFactor = 1 }: LiveFeedProps) {
   const router = useRouter();
   const { socket, connected } = useWebSocket();
   const [feed, setFeed] = useState<FeedItem[]>([]);
@@ -45,6 +49,16 @@ export function LiveFeed() {
   // Get game state to check if user owns properties
   const gameState = useGameState();
   const totalSlotsOwned = gameState.stats.totalSlotsOwned || 0;
+
+  // Scaled sizes
+  const titleSize = Math.max(12, Math.round(18 * scaleFactor));
+  const subtitleSize = Math.max(8, Math.round(12 * scaleFactor));
+  const textSize = Math.max(9, Math.round(12 * scaleFactor));
+  const padding = Math.max(8, Math.round(16 * scaleFactor));
+  const headerIconSize = Math.max(16, Math.round(20 * scaleFactor));
+  const statusIconSize = Math.max(6, Math.round(8 * scaleFactor));
+  const feedIconSize = Math.max(14, Math.round(16 * scaleFactor));
+  const rowGap = Math.max(6, Math.round(8 * scaleFactor));
 
   // Check if we should show the spectator hint
   useEffect(() => {
@@ -290,39 +304,41 @@ export function LiveFeed() {
     <>
       <div className="bg-purple-900/8 backdrop-blur-xl rounded-2xl border border-purple-500/20 h-full flex flex-col overflow-hidden">
         {/* Header */}
-        <div className="p-4 pb-2">
+        <div style={{ padding: `${padding}px`, paddingBottom: `${padding / 2}px` }}>
           <div className="flex items-center justify-between">
             <div>
-              <div className="flex items-center gap-2 border-b border-purple-500/20 pb-2">
-                <FeedIcon size={20} className="text-white" />
-                <h2 className="text-lg font-bold text-white">Live Feed</h2>
+              <div className="flex items-center border-b border-purple-500/20" style={{ gap: `${rowGap}px`, paddingBottom: `${rowGap}px` }}>
+                <div style={{ width: headerIconSize, height: headerIconSize }}>
+                  <FeedIcon size={headerIconSize} className="text-white" />
+                </div>
+                <h2 className="font-bold text-white" style={{ fontSize: `${titleSize}px` }}>Live Feed</h2>
               </div>
-              <p className="text-xs text-purple-400 mt-1">Click on an action to see the player's board</p>
+              <p className="text-purple-400" style={{ fontSize: `${subtitleSize}px`, marginTop: `${Math.round(4 * scaleFactor)}px` }}>Click on an action to see the player's board</p>
             </div>
-            <div className="flex items-center gap-1.5">
-              <div className={`w-2 h-2 rounded-full ${connected ? 'bg-green-500' : 'bg-red-500'}`} />
-              <span className="text-xs text-purple-400">{connected ? 'Live' : 'Offline'}</span>
+            <div className="flex items-center" style={{ gap: `${Math.round(6 * scaleFactor)}px` }}>
+              <div className={`rounded-full ${connected ? 'bg-green-500' : 'bg-red-500'}`} style={{ width: statusIconSize, height: statusIconSize }} />
+              <span className="text-purple-400" style={{ fontSize: `${subtitleSize}px` }}>{connected ? 'Live' : 'Offline'}</span>
             </div>
           </div>
         </div>
 
         {/* Scrollable Content */}
-        <div className="flex-1 overflow-y-auto px-4 pb-6">
+        <div className="flex-1 overflow-y-auto" style={{ padding: `0 ${padding}px ${Math.round(padding * 1.5)}px` }}>
           {loading ? (
-            <div className="text-center py-8">
-              <div className="text-xl mb-1">⏳</div>
-              <div className="text-xs text-purple-300">Loading activity...</div>
+            <div className="text-center" style={{ padding: `${padding * 2}px 0` }}>
+              <div style={{ fontSize: `${Math.round(20 * scaleFactor)}px`, marginBottom: `${Math.round(4 * scaleFactor)}px` }}>⏳</div>
+              <div className="text-purple-300" style={{ fontSize: `${subtitleSize}px` }}>Loading activity...</div>
             </div>
           ) : feed.length === 0 ? (
-            <div className="text-center py-8">
-              <div className="text-3xl mb-2 opacity-50">📡</div>
-              <div className="text-xs text-gray-400">
+            <div className="text-center" style={{ padding: `${padding * 2}px 0` }}>
+              <div className="opacity-50" style={{ fontSize: `${Math.round(30 * scaleFactor)}px`, marginBottom: `${Math.round(8 * scaleFactor)}px` }}>📡</div>
+              <div className="text-gray-400" style={{ fontSize: `${subtitleSize}px` }}>
                 No activity yet<br />
                 Be the first to make a move!
               </div>
             </div>
           ) : (
-            <div className="space-y-2">
+            <div style={{ gap: `${Math.round(8 * scaleFactor)}px`, display: 'flex', flexDirection: 'column' }}>
               {feed.map((item, index) => {
                 const isFirstRow = index === 0;
                 const showHintOnRow = showSpectatorHint && isFirstRow;
@@ -332,17 +348,18 @@ export function LiveFeed() {
                     key={`${item.txSignature}-${index}`}
                     ref={isFirstRow ? firstRowRef : null}
                     onClick={() => handleActionClick(item)}
-                    className={`relative flex items-start gap-2 p-2 rounded-lg transition-all cursor-pointer group ${
+                    className={`relative flex items-start rounded-lg transition-all cursor-pointer group ${
                       showHintOnRow
                         ? 'bg-yellow-500/10 border border-yellow-400/50 shadow-[0_0_15px_rgba(250,204,21,0.3)]'
                         : `bg-white/[0.01] hover:bg-white/[0.05] ${newItemsRef.current.has(item.txSignature) ? 'animate-slide-in-top' : ''}`
                     }`}
+                    style={{ gap: `${rowGap}px`, padding: `${rowGap}px` }}
                   >
-                    <div className="mt-0.5 text-purple-400 group-hover:text-purple-300 transition-colors">
+                    <div className="text-purple-400 group-hover:text-purple-300 transition-colors" style={{ marginTop: `${Math.round(2 * scaleFactor)}px`, width: feedIconSize, height: feedIconSize, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                       {getActionIcon(item.type)}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm text-purple-100 break-words group-hover:text-white transition-colors">
+                      <p className="text-purple-100 break-words group-hover:text-white transition-colors" style={{ fontSize: `${textSize}px` }}>
                         {generateMessage(item)}
                       </p>
                     </div>

@@ -113,7 +113,7 @@ const GameStateContext = createContext<GameStateContextValue | null>(null);
 
 export function GameStateProvider({ children }: { children: React.ReactNode }) {
   const { publicKey } = useWallet();
-  const { socket, connected } = useWebSocket();
+  const { socket, connected, subscribeToWallet } = useWebSocket();
   const { token, isAuthenticated, login } = useAuth();
 
   
@@ -283,6 +283,13 @@ export function GameStateProvider({ children }: { children: React.ReactNode }) {
       login().catch(console.error);
     }
   }, [publicKey, isAuthenticated, login]);
+
+  // ========== SUBSCRIBE TO WALLET EVENTS ==========
+  useEffect(() => {
+    if (publicKey && connected) {
+      subscribeToWallet(publicKey.toString());
+    }
+  }, [publicKey, connected, subscribeToWallet]);
 
   // ========== WEBSOCKET UPDATES ==========
   useEffect(() => {

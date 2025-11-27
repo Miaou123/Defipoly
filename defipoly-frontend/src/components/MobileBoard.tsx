@@ -2,7 +2,6 @@
 
 import { PROPERTIES } from '@/utils/constants';
 import { PropertyCard } from './PropertyCard';
-import { CornerSquare } from './BoardHelpers';
 import { useGameState } from '@/contexts/GameStateContext';
 
 const DEFAULT_BACKGROUND = 'linear-gradient(135deg, rgba(31, 41, 55, 0.95), rgba(17, 24, 39, 0.9))';
@@ -67,7 +66,7 @@ export function MobileBoard({
         {/* Simple equal 7x7 grid - all cells same size */}
         <div className="w-full h-full grid grid-cols-7 grid-rows-7 gap-[1px]">
           {/* ========== ROW 1: Top row ========== */}
-          <CornerSquare icon="🎲" label="DEFI" bgColor="bg-purple-600" profilePicture={profilePicture} cornerSquareStyle={cornerSquareStyle} customPropertyCardBackground={customPropertyCardBackground} />
+          <PropertyCard propertyId={-1} onSelect={() => {}} isCorner cornerLabel="DEFI" customPropertyCardBackground={customPropertyCardBackground} compact />
           <PropertyCard propertyId={11} {...cardProps} />
           <PropertyCard propertyId={12} {...cardProps} />
           <PropertyCard propertyId={13} {...cardProps} />
@@ -115,7 +114,7 @@ export function MobileBoard({
           <PropertyCard propertyId={2} {...cardProps} />
           <PropertyCard propertyId={1} {...cardProps} />
           <PropertyCard propertyId={0} {...cardProps} />
-          <CornerSquare icon="🎲" label="POLY" bgColor="bg-purple-600" profilePicture={profilePicture} cornerSquareStyle={cornerSquareStyle} customPropertyCardBackground={customPropertyCardBackground} />
+          <PropertyCard propertyId={-1} onSelect={() => {}} isCorner cornerLabel="POLY" customPropertyCardBackground={customPropertyCardBackground} compact />
         </div>
       </div>
     </div>

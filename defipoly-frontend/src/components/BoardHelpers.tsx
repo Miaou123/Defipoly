@@ -1,15 +1,21 @@
 'use client';
 
-interface CornerSquareProps {
+export interface CornerSquareProps {
   icon: string;
   label: string;
   bgColor: string;
   profilePicture?: string | null | undefined;
   cornerSquareStyle?: 'property' | 'profile';
   customPropertyCardBackground?: string | null | undefined;
+  scaleFactor?: number;
 }
 
-export function CornerSquare({ icon, label, bgColor, profilePicture, cornerSquareStyle = 'property', customPropertyCardBackground }: CornerSquareProps) {
+export function CornerSquare({ icon, label, bgColor, profilePicture, cornerSquareStyle = 'property', customPropertyCardBackground, scaleFactor = 1 }: CornerSquareProps) {
+  // Scaled sizes
+  const logoSize = Math.max(24, Math.round(48 * scaleFactor));
+  const textSize = Math.max(6, Math.round(12 * scaleFactor));
+  const padding = Math.max(4, Math.round(8 * scaleFactor));
+  const gap = Math.max(2, Math.round(4 * scaleFactor));
 
   // Helper to check if custom background is a solid color (not an image URL)
   const isCustomBackgroundSolidColor = () => {
@@ -57,13 +63,13 @@ export function CornerSquare({ icon, label, bgColor, profilePicture, cornerSquar
       className="w-full h-full relative overflow-hidden"
       style={{
         background: getBackground(),
-        border: '2px solid rgba(139, 92, 246, 0.3)',
+        border: `1px solid rgba(139, 92, 246, 0.5)`,
       }}
     >
       {/* Card content */}
       {cornerSquareStyle === 'profile' && profilePicture ? (
         // Profile Picture Mode - Show profile picture
-        <div className="w-full h-full flex items-center justify-center p-2">
+        <div className="w-full h-full flex items-center justify-center" style={{ padding }}>
           <img 
             src={profilePicture} 
             alt="Profile" 
@@ -75,16 +81,18 @@ export function CornerSquare({ icon, label, bgColor, profilePicture, cornerSquar
         <div className="w-full h-full" />
       ) : (
         // Default OR Solid Color Mode - Show Logo and Text
-        <div className="w-full h-full flex flex-col items-center justify-center p-2 gap-1">
+        <div className="w-full h-full flex flex-col items-center justify-center" style={{ padding, gap }}>
           {/* Logo */}
           <img 
             src="/logo.svg" 
             alt="Defipoly Logo" 
-            className="w-12 h-12 object-contain"
+            className="object-contain"
+            style={{ width: logoSize, height: logoSize }}
           />
           {/* DEFIPOLY Text */}
           <div 
-            className="text-xs font-black tracking-wider text-white"
+            className="font-black tracking-wider text-white"
+            style={{ fontSize: textSize }}
           >
             DEFIPOLY
           </div>

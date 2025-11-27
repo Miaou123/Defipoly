@@ -19,6 +19,7 @@ interface OwnedProperty extends PropertyOwnership {
 
 interface PortfolioProps {
   onSelectProperty: (propertyId: number) => void;
+  scaleFactor?: number;
 }
 
 // Helper function to calculate daily income from price and yieldBps
@@ -26,7 +27,18 @@ const calculateDailyIncome = (price: number, yieldBps: number): number => {
   return Math.floor((price * yieldBps) / 10000);
 };
 
-export function Portfolio({ onSelectProperty }: PortfolioProps) {
+export function Portfolio({ onSelectProperty, scaleFactor = 1 }: PortfolioProps) {
+  // Scaled sizes
+  const titleSize = Math.max(12, Math.round(18 * scaleFactor));
+  const subtitleSize = Math.max(8, Math.round(12 * scaleFactor));
+  const textSize = Math.max(9, Math.round(12 * scaleFactor));
+  const padding = Math.max(8, Math.round(16 * scaleFactor));
+  const headerIconSize = Math.max(14, Math.round(16 * scaleFactor));
+  const buttonIconSize = Math.max(12, Math.round(16 * scaleFactor));
+  const badgeIconSize = Math.max(9, Math.round(12 * scaleFactor));
+  const smallTextSize = Math.max(8, Math.round(10 * scaleFactor));
+  const balanceCardPadding = Math.max(6, Math.round(12 * scaleFactor));
+  const rowGap = Math.max(6, Math.round(12 * scaleFactor));
   const { publicKey, connected } = useWallet();
   const { program } = useDefipoly(); // Still need program for transactions
   const { balance, loading: balanceLoading } = useTokenBalance();
@@ -177,13 +189,21 @@ export function Portfolio({ onSelectProperty }: PortfolioProps) {
       <button
         onClick={() => hasShieldableProperties && setShowShieldAllModal(true)}
         disabled={!hasShieldableProperties}
-        className={`w-full mb-4 px-4 py-2.5 rounded-lg font-semibold text-sm transition-all flex items-center justify-center gap-2 ${
+        className={`w-full rounded-lg font-semibold transition-all flex items-center justify-center ${
           hasShieldableProperties
             ? 'bg-gradient-to-r from-yellow-600 to-amber-600 hover:from-yellow-500 hover:to-amber-500 text-white'
             : 'bg-gray-800/50 text-gray-500 cursor-not-allowed'
         }`}
+        style={{ 
+          fontSize: `${subtitleSize}px`, 
+          gap: `${Math.round(8 * scaleFactor)}px`,
+          padding: `${Math.round(10 * scaleFactor)}px ${padding}px`,
+          marginBottom: `${padding}px`
+        }}
       >
-        <Shield className="w-4 h-4" />
+        <div style={{ width: buttonIconSize, height: buttonIconSize }}>
+          <Shield style={{ width: '100%', height: '100%' }} />
+        </div>
         {hasShieldableProperties 
           ? `Shield ${shieldablePropertiesCount} ${shieldablePropertiesCount === 1 ? 'Property' : 'Properties'}`
           : 'All Properties Protected'
@@ -198,7 +218,7 @@ export function Portfolio({ onSelectProperty }: PortfolioProps) {
     if (!acc[setId]) {
       acc[setId] = [];
     }
-    acc[setId].push(prop);
+    acc[setId]!.push(prop);
     return acc;
   }, {} as Record<number, OwnedProperty[]>);
 
@@ -208,26 +228,28 @@ export function Portfolio({ onSelectProperty }: PortfolioProps) {
     <>
       <div className="bg-purple-900/8 backdrop-blur-xl rounded-2xl border border-purple-500/20 h-full overflow-hidden flex flex-col">
         {/* Header + Balance + Shield Button - Sticky */}
-        <div className="p-6 pb-4 space-y-4">
+        <div style={{ padding: `${Math.round(padding * 1.5)}px`, paddingBottom: `${padding}px`, gap: `${padding}px`, display: 'flex', flexDirection: 'column' }}>
           {/* Header */}
           <div className="flex justify-between items-center">
-            <h2 className="text-xl font-bold text-white">My Portfolio</h2>
-            <span className="text-sm text-purple-400">{totalSlots} slots</span>
+            <h2 className="font-bold text-white" style={{ fontSize: `${titleSize}px` }}>My Portfolio</h2>
+            <span className="text-purple-400" style={{ fontSize: `${subtitleSize}px` }}>{totalSlots} slots</span>
           </div>
 
           {/* Token Balance Card - Compact */}
           {connected && (
-            <div className="bg-gradient-to-br from-purple-800/40 to-purple-900/40 backdrop-blur-sm rounded-lg border border-purple-500/30 p-3">
-              <div className="flex items-center justify-between gap-3">
-                <div className="flex items-center gap-2">
-                  <div className="w-7 h-7 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center flex-shrink-0">
-                    <Wallet className="w-3.5 h-3.5 text-white" />
+            <div className="bg-gradient-to-br from-purple-800/40 to-purple-900/40 backdrop-blur-sm rounded-lg border border-purple-500/30" style={{ padding: `${balanceCardPadding}px` }}>
+              <div className="flex items-center justify-between" style={{ gap: `${balanceCardPadding}px` }}>
+                <div className="flex items-center" style={{ gap: `${Math.round(8 * scaleFactor)}px` }}>
+                  <div className="rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center flex-shrink-0" style={{ width: `${Math.round(28 * scaleFactor)}px`, height: `${Math.round(28 * scaleFactor)}px` }}>
+                    <div style={{ width: headerIconSize, height: headerIconSize }}>
+                      <Wallet style={{ width: '100%', height: '100%' }} className="text-white" />
+                    </div>
                   </div>
                   <div>
-                    <div className="text-[10px] text-purple-300 font-semibold uppercase tracking-wide">
+                    <div className="text-purple-300 font-semibold uppercase tracking-wide" style={{ fontSize: `${smallTextSize}px` }}>
                       Balance
                     </div>
-                    <div className="text-lg font-black text-white leading-tight">
+                    <div className="font-black text-white leading-tight" style={{ fontSize: `${Math.round(18 * scaleFactor)}px` }}>
                       {balanceLoading ? (
                         <span className="animate-pulse">...</span>
                       ) : (
@@ -237,8 +259,8 @@ export function Portfolio({ onSelectProperty }: PortfolioProps) {
                   </div>
                 </div>
                 <div className="text-right">
-                  <div className="text-[10px] text-purple-400 uppercase tracking-wide">Daily Rewards</div>
-                  <div className="text-sm font-bold text-green-400 flex items-center gap-1">
+                  <div className="text-purple-400 uppercase tracking-wide" style={{ fontSize: `${smallTextSize}px` }}>Daily Rewards</div>
+                  <div className="font-bold text-green-400 flex items-center" style={{ fontSize: `${subtitleSize}px`, gap: `${Math.round(4 * scaleFactor)}px` }}>
                     <span>📈</span>
                     <span>+{stats.dailyIncome > 0 ? stats.dailyIncome.toLocaleString() : '0'}/day</span>
                   </div>
@@ -252,20 +274,22 @@ export function Portfolio({ onSelectProperty }: PortfolioProps) {
         </div>
 
         {/* Scrollable Content */}
-        <div className="flex-1 overflow-y-auto px-6 pb-6">
+        <div className="flex-1 overflow-y-auto" style={{ padding: `0 ${Math.round(padding * 1.5)}px ${Math.round(padding * 1.5)}px` }}>
         {/* Loading State */}
         {loading && ownedProperties.length === 0 && (
-          <div className="text-center py-12">
-            <div className="text-2xl mb-2">⏳</div>
-            <div className="text-sm text-purple-300">Loading portfolio...</div>
+          <div className="text-center" style={{ padding: `${padding * 3}px 0` }}>
+            <div style={{ fontSize: `${Math.round(32 * scaleFactor)}px`, marginBottom: `${Math.round(8 * scaleFactor)}px` }}>⏳</div>
+            <div className="text-purple-300" style={{ fontSize: `${subtitleSize}px` }}>Loading portfolio...</div>
           </div>
         )}
 
         {/* Empty State */}
         {!loading && ownedProperties.length === 0 && (
-          <div className="text-center py-12">
-            <BuildingIcon size={60} className="mx-auto mb-3 text-purple-400 opacity-50" />
-            <div className="text-sm text-gray-400">
+          <div className="text-center" style={{ padding: `${padding * 3}px 0` }}>
+            <div style={{ margin: `0 auto ${balanceCardPadding}px`, width: Math.round(60 * scaleFactor), height: Math.round(60 * scaleFactor) }}>
+              <BuildingIcon size={Math.round(60 * scaleFactor)} className="text-purple-400 opacity-50" />
+            </div>
+            <div className="text-gray-400" style={{ fontSize: `${subtitleSize}px` }}>
               No properties yet<br />
               Click on a property to start building!
             </div>
@@ -274,7 +298,7 @@ export function Portfolio({ onSelectProperty }: PortfolioProps) {
 
         {/* Properties Grouped by Set - SORTED BY HIGHEST TO LOWEST DAILY REWARDS */}
         {!loading && ownedProperties.length > 0 && (
-          <div className="space-y-3">
+          <div style={{ gap: `${balanceCardPadding}px`, display: 'flex', flexDirection: 'column' }}>
             {Object.entries(groupedProperties)
               .sort(([aSetId, aProps], [bSetId, bProps]) => {
                 const ownedPropertyIds = getOwnedPropertyIds();
@@ -321,17 +345,20 @@ export function Portfolio({ onSelectProperty }: PortfolioProps) {
                   {/* Set Header - Collapsible */}
                   <button
                     onClick={() => toggleSet(setId)}
-                    className="w-full px-3 py-2.5 flex items-center justify-between hover:bg-white/[0.03] transition-all"
+                    className="w-full flex items-center justify-between hover:bg-white/[0.03] transition-all"
+                    style={{ padding: `${balanceCardPadding}px ${rowGap}px` }}
                   >
-                    <div className="flex items-center gap-2">
-                      {isExpanded ? 
-                        <ChevronDown className="w-4 h-4 text-purple-400" /> : 
-                        <ChevronRight className="w-4 h-4 text-purple-400" />
-                      }
-                      <div className={`${setColorClass} w-3 h-3 rounded-full`} />
-                      <span className="font-bold text-sm text-purple-100">{setName}</span>
+                    <div className="flex items-center" style={{ gap: `${Math.round(8 * scaleFactor)}px` }}>
+                      <div style={{ width: buttonIconSize, height: buttonIconSize }}>
+                        {isExpanded ? 
+                          <ChevronDown style={{ width: '100%', height: '100%' }} className="text-purple-400" /> : 
+                          <ChevronRight style={{ width: '100%', height: '100%' }} className="text-purple-400" />
+                        }
+                      </div>
+                      <div className={`${setColorClass} rounded-full`} style={{ width: `${rowGap}px`, height: `${rowGap}px` }} />
+                      <span className="font-bold text-purple-100" style={{ fontSize: `${subtitleSize}px` }}>{setName}</span>
                     </div>
-                    <div className="text-xs">
+                    <div style={{ fontSize: `${smallTextSize}px` }}>
                       <span className="text-purple-400">{totalSlotsInSet} slots • </span>
                       <span className={isComplete ? 'text-green-400 font-bold' : 'text-purple-400'}>
                         {totalIncomeInSet.toLocaleString()}/day
@@ -341,23 +368,21 @@ export function Portfolio({ onSelectProperty }: PortfolioProps) {
                   
                   {/* Expandable Content */}
                   {isExpanded && (
-                    <div className="px-3 pb-2">
+                    <div style={{ padding: `0 ${rowGap}px ${Math.round(8 * scaleFactor)}px` }}>
                       {/* Set Bonus Info Banner */}
-                      {isComplete && (() => {
-                        const setBonus = getSetBonus(setId);
-                        const bonusPercent = setBonus?.percent || 40;
-                        return (
-                          <div className="bg-green-900/30 rounded px-2 py-1.5 mb-2">
-                            <div className="text-[10px] text-green-300 font-bold uppercase tracking-wide flex items-center gap-1">
-                              <Award className="w-3 h-3" />
-                              Complete Set Bonus: +{bonusPercent}%
+                      {isComplete && (
+                        <div className="bg-green-900/30 rounded" style={{ padding: `${Math.round(8 * scaleFactor)}px ${Math.round(8 * scaleFactor)}px`, marginBottom: `${Math.round(8 * scaleFactor)}px` }}>
+                          <div className="text-green-300 font-bold uppercase tracking-wide flex items-center" style={{ fontSize: `${smallTextSize}px`, gap: `${Math.round(4 * scaleFactor)}px` }}>
+                            <div style={{ width: badgeIconSize, height: badgeIconSize }}>
+                              <Award style={{ width: '100%', height: '100%' }} />
                             </div>
+                            Complete Set Bonus: +{getSetBonus(setId)?.percent || 40}%
                           </div>
-                        );
-                      })()}
+                        </div>
+                      )}
                       
                       {/* Properties List with Detailed Breakdown */}
-                      <div className="space-y-1.5">
+                      <div style={{ gap: `${Math.round(6 * scaleFactor)}px`, display: 'flex', flexDirection: 'column' }}>
                         {setProperties.map((owned) => {
                           const income = calculateIncome(owned, minSlots, isComplete);
                           const shieldActive = isShieldActive(owned);
@@ -369,21 +394,28 @@ export function Portfolio({ onSelectProperty }: PortfolioProps) {
                             <div 
                               key={`property-${owned.propertyId}`}
                               onClick={() => onSelectProperty(owned.propertyId)}
-                              className="bg-white/[0.02] rounded-lg px-2 py-2 hover:bg-white/[0.06] transition-all cursor-pointer"
+                              className="bg-white/[0.02] rounded-lg hover:bg-white/[0.06] transition-all cursor-pointer"
+                              style={{ padding: `${Math.round(8 * scaleFactor)}px` }}
                             >
-                              <div className="flex items-center justify-between mb-1">
+                              <div className="flex items-center justify-between" style={{ marginBottom: `${Math.round(4 * scaleFactor)}px` }}>
                                 <div className="flex-1 min-w-0">
-                                  <div className="text-xs font-bold text-purple-100 truncate">
+                                  <div className="font-bold text-purple-100 truncate" style={{ fontSize: `${smallTextSize}px` }}>
                                     {owned.propertyInfo.name}
                                   </div>
                                 </div>
-                                <div className="text-right flex items-center gap-2">
-                                  <div className="text-xs font-bold text-purple-200">
+                                <div className="text-right flex items-center" style={{ gap: `${Math.round(8 * scaleFactor)}px` }}>
+                                  <div className="font-bold text-purple-200" style={{ fontSize: `${smallTextSize}px` }}>
                                     {owned.slotsOwned} slot{owned.slotsOwned > 1 ? 's' : ''}
                                   </div>
                                   {shieldActive && timeRemaining && (
-                                    <div className="text-xs bg-amber-500/20 text-amber-400 px-1.5 py-0.5 rounded font-mono flex items-center gap-1">
-                                      <Shield className="w-3 h-3" />
+                                    <div className="bg-amber-500/20 text-amber-400 rounded font-mono flex items-center" style={{ 
+                                      fontSize: `${smallTextSize}px`, 
+                                      padding: `${Math.round(2 * scaleFactor)}px ${Math.round(6 * scaleFactor)}px`,
+                                      gap: `${Math.round(4 * scaleFactor)}px`
+                                    }}>
+                                      <div style={{ width: badgeIconSize, height: badgeIconSize }}>
+                                        <Shield style={{ width: '100%', height: '100%' }} />
+                                      </div>
                                       {timeRemaining}
                                     </div>
                                   )}
@@ -391,18 +423,20 @@ export function Portfolio({ onSelectProperty }: PortfolioProps) {
                               </div>
                               
                               {/* Income breakdown */}
-                              <div className="flex items-center gap-2 text-xs flex-wrap">
+                              <div className="flex items-center flex-wrap" style={{ gap: `${Math.round(8 * scaleFactor)}px`, fontSize: `${smallTextSize}px` }}>
                                 {isComplete && income.bonusedSlots > 0 ? (
                                   <>
-                                    <div className="flex items-center gap-1">
-                                      <Zap className="w-3 h-3 text-green-400" />
+                                    <div className="flex items-center" style={{ gap: `${Math.round(4 * scaleFactor)}px` }}>
+                                      <div style={{ width: badgeIconSize, height: badgeIconSize }}>
+                                        <Zap style={{ width: '100%', height: '100%' }} className="text-green-400" />
+                                      </div>
                                       <span className="text-green-400 font-bold">{income.bonusedSlots}×</span>
                                       <span className="text-green-300">{Math.floor(income.bonusIncome / income.bonusedSlots)}</span>
                                     </div>
                                     {income.regularSlots > 0 && (
                                       <>
                                         <span className="text-purple-500">+</span>
-                                        <div className="flex items-center gap-1">
+                                        <div className="flex items-center" style={{ gap: `${Math.round(4 * scaleFactor)}px` }}>
                                           <span className="text-purple-400">{income.regularSlots}×</span>
                                           <span className="text-purple-300">{calculateDailyIncome(owned.propertyInfo.price, owned.propertyInfo.yieldBps)}</span>
                                         </div>
@@ -413,7 +447,7 @@ export function Portfolio({ onSelectProperty }: PortfolioProps) {
                                   </>
                                 ) : (
                                   <>
-                                    <div className="flex items-center gap-1">
+                                    <div className="flex items-center" style={{ gap: `${Math.round(4 * scaleFactor)}px` }}>
                                       <span className="text-purple-400 font-bold">{owned.slotsOwned}×</span>
                                       <span className="text-purple-300">{calculateDailyIncome(owned.propertyInfo.price, owned.propertyInfo.yieldBps)}</span>
                                     </div>

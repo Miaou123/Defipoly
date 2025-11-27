@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { MobileBoard } from './MobileBoard';
 import { Portfolio } from './Portfolio';
 import { Leaderboard } from './Leaderboard';
@@ -81,6 +81,21 @@ export function MobileLayout({
   const [activeTab, setActiveTab] = useState<TabType>('board');
   const { publicKey, connected } = useWallet();
   const { profile } = useGameState();
+  const [scaleFactor, setScaleFactor] = useState(1);
+  
+  // Calculate scaleFactor based on screen width for mobile
+  useEffect(() => {
+    const updateScaleFactor = () => {
+      const width = window.innerWidth;
+      // Scale from 0.7 to 1.0 based on mobile screen width (320px to 480px+)
+      const factor = Math.max(0.7, Math.min(1.0, (width - 320) / (480 - 320) * 0.3 + 0.7));
+      setScaleFactor(factor);
+    };
+    
+    updateScaleFactor();
+    window.addEventListener('resize', updateScaleFactor);
+    return () => window.removeEventListener('resize', updateScaleFactor);
+  }, []);
 
   const tabs: { id: TabType; icon: string; label: string }[] = [
     { id: 'board', icon: '🎮', label: 'Board' },
@@ -150,19 +165,19 @@ export function MobileLayout({
 
         {activeTab === 'portfolio' && (
           <div className="h-full overflow-hidden">
-            <Portfolio onSelectProperty={onSelectProperty} />
+            <Portfolio onSelectProperty={onSelectProperty} scaleFactor={scaleFactor} />
           </div>
         )}
 
         {activeTab === 'leaderboard' && (
           <div className="h-full overflow-hidden">
-            <Leaderboard />
+            <Leaderboard scaleFactor={scaleFactor} />
           </div>
         )}
 
         {activeTab === 'feed' && (
           <div className="h-full overflow-hidden">
-            <LiveFeed />
+            <LiveFeed scaleFactor={scaleFactor} />
           </div>
         )}
       </main>

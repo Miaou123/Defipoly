@@ -26,6 +26,8 @@ interface PropertyCardProps {
   modalView?: boolean;
   compact?: boolean;
   scaleFactor?: number;
+  isCorner?: boolean;
+  cornerLabel?: string;
 }
 
 export function PropertyCard({ 
@@ -37,9 +39,33 @@ export function PropertyCard({
   customPropertyCardBackground, 
   modalView = false,
   compact = false,
-  scaleFactor = 1
+  scaleFactor = 1,
+  isCorner = false,
+  cornerLabel = 'DEFIPOLY'
 }: PropertyCardProps) {
   const { connected, publicKey } = useWallet();
+  
+  if (isCorner) {
+    const logoSize = Math.max(24, Math.round(48 * scaleFactor));
+    const textSize = Math.max(6, Math.round(12 * scaleFactor));
+    
+    return (
+      <button
+        className="w-full h-full relative overflow-hidden"
+        style={{
+          background: customPropertyCardBackground 
+            ? `url(${customPropertyCardBackground}) center/cover`
+            : 'linear-gradient(to bottom right, rgba(31, 41, 55, 0.95), rgba(17, 24, 39, 0.9))',
+          border: '1px solid rgba(139, 92, 246, 0.5)',
+        }}
+      >
+        <div className="w-full h-full flex flex-col items-center justify-center relative z-10">
+          <img src="/logo.svg" alt="Logo" style={{ width: logoSize, height: logoSize }} />
+          <div className="font-black tracking-wider text-white" style={{ fontSize: textSize }}>{cornerLabel}</div>
+        </div>
+      </button>
+    );
+  }
   
   // Calculate responsive sizes based on scale factor
   const nameSize = Math.max(3, Math.round((compact ? 4 : 9) * scaleFactor));
@@ -49,6 +75,10 @@ export function PropertyCard({
   const iconScale = (compact ? 0.35 : 0.4) * Math.max(0.7, scaleFactor);
   const buildingScale = (compact ? 0.3 : 0.35) * Math.max(0.7, scaleFactor);
   const cooldownIconSize = Math.max(6, Math.round((compact ? 6 : 14) * scaleFactor));
+  const namePaddingX = Math.max(2, Math.round((compact ? 4 : 12) * scaleFactor));
+  const namePaddingY = Math.max(1, Math.round((compact ? 2 : 12) * scaleFactor));
+  const pricePaddingX = Math.max(2, Math.round((compact ? 4 : 16) * scaleFactor));
+  const pricePaddingB = Math.max(1, Math.round((compact ? 2 : 6) * scaleFactor));
 
   const [buildingLevel, setBuildingLevel] = useState(0);
   const [shieldActive, setShieldActive] = useState(false);
@@ -221,8 +251,12 @@ export function PropertyCard({
       onClick={() => onSelect(propertyId)}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
-      className="w-full h-full relative overflow-hidden cursor-pointer group"
-      style={getStyleProps()}
+      className="w-full h-full relative overflow-hidden cursor-pointer group m-0 p-0 border-0"
+      style={{
+        ...getStyleProps(),
+        margin: 0,
+        padding: 0,
+      }}
     >
       <div 
         className="absolute top-0 left-0 w-full h-full pointer-events-none z-10 opacity-0 group-hover:opacity-100"
@@ -275,7 +309,7 @@ export function PropertyCard({
       )}
 
 
-      <div className="relative z-20 flex flex-col h-full">
+      <div className="relative z-20 flex flex-col h-full justify-start">
         <div 
           className="absolute top-0 left-0 h-full z-30"
           style={{
@@ -295,22 +329,33 @@ export function PropertyCard({
           }}
         />
 
-        <div className={`${compact ? 'px-1 py-0.5' : 'px-3 py-3'} flex-shrink-0 relative z-25`}>
-          <div 
-            className={`font-bold leading-tight uppercase ${compact ? 'pr-1' : 'pr-10'}`}
-            style={{
-              fontSize: modalView ? '11px' : `${nameSize}px`,
-              color: '#ffffff',
-              letterSpacing: compact ? '0px' : '0.3px',
-              lineHeight: '1',
-            }}
-          >
+        <div 
+          className="flex-shrink-0 relative z-25"
+          style={{
+            padding: `${namePaddingY}px ${namePaddingX}px`,
+          }}
+        >
+        <div 
+          className="font-bold leading-tight uppercase"
+          style={{
+            fontSize: modalView ? '11px' : `${nameSize}px`,
+            color: '#ffffff',
+            letterSpacing: compact ? '0px' : '0.3px',
+            lineHeight: '1',
+            paddingRight: `${Math.round(triangleSize * 0.3)}px`,
+          }}
+        >
             {property.name}
           </div>
         </div>
 
-        <div className={`flex-1 flex items-center justify-center ${compact ? 'px-0' : 'px-1'} min-h-0`}>
-         {buildingLevel === 0 ? (
+        <div 
+          className="flex-1 flex items-center justify-center min-h-0"
+          style={{
+            padding: `0 ${Math.round(4 * scaleFactor)}px`,
+          }}
+        >
+            {buildingLevel === 0 ? (
             <div className="w-full h-full flex items-center justify-center">
               <div style={{ transform: modalView ? 'scale(0.5)' : `scale(${iconScale})` }}>
                 <div className={isHovered || modalView ? 'animate-bounce-pin' : ''}>
@@ -332,7 +377,13 @@ export function PropertyCard({
             </div>
           )}
         </div>
-        <div className={`${compact ? 'px-1 pb-0.5' : 'px-4 pb-1.5'} flex items-center justify-between gap-1 flex-shrink-0`}>
+        <div 
+          className="flex items-center justify-between flex-shrink-0"
+          style={{
+            padding: `0 ${pricePaddingX}px ${pricePaddingB}px`,
+            gap: `${Math.max(2, Math.round(4 * scaleFactor))}px`,
+          }}
+        >
           <div 
             className="font-semibold text-yellow-300"
             style={{

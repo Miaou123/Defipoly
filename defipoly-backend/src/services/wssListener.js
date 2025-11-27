@@ -55,6 +55,11 @@ class WSSListener {
       this.isConnected = true;
       this.reconnectAttempts = 0;
 
+      if (this.monitoringInterval) {
+        clearInterval(this.monitoringInterval);
+        this.monitoringInterval = null;
+      }
+
       // Set up connection monitoring
       this.setupConnectionMonitoring();
 
@@ -206,18 +211,23 @@ class WSSListener {
   async handleConnectionError(error) {
     console.error('Connection error:', error.message);
     this.isConnected = false;
-    
-    if (this.reconnectAttempts < this.maxReconnectAttempts) {
-      await this.reconnect();
-    } else {
-      console.error('❌ Max reconnection attempts reached. Manual intervention required.');
-    }
+    await this.reconnect();
   }
 
   /**
    * Reconnect to WebSocket
    */
   async reconnect() {
+    // Check max attempts BEFORE trying
+    if (this.reconnectAttempts >= this.maxReconnectAttempts) {
+      console.error('❌ Max reconnection attempts reached. Stopping reconnection.');
+      if (this.monitoringInterval) {
+        clearInterval(this.monitoringInterval);
+        this.monitoringInterval = null;
+      }
+      return;
+    }
+
     this.reconnectAttempts++;
     this.stats.reconnections++;
     

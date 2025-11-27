@@ -4,7 +4,6 @@ import { useState, useEffect, useCallback } from 'react';
 import { PROPERTIES } from '@/utils/constants';
 import { PropertyCard } from './PropertyCard';
 import { RewardsPanel } from './RewardsPanel';
-import { CornerSquare } from './BoardHelpers';
 import { useGameState } from '@/contexts/GameStateContext';
 import { IncomeFlowOverlay } from './IncomeFlowOverlay';
 
@@ -58,15 +57,24 @@ export function Board({
   useEffect(() => {
     const updateResponsive = () => {
       const width = window.innerWidth;
-      if (width < 1200) {
-        setAspectRatio('1 / 1.2');  // Taller cards on small screens
-        setScaleFactor(0.5);         // Reduce text/icons by 50%
-      } else if (width < 1400) {
-        setAspectRatio('1 / 1.1');  // Slightly taller on medium screens
-        setScaleFactor(0.65);        // Reduce text/icons by 35%
+      
+      // Smooth continuous scaling based on width
+      if (width < 1024) {
+        // Mobile - handled separately
+        setAspectRatio('1 / 1.2');
+        setScaleFactor(0.5);
+      } else if (width < 1600) {
+        // Interpolate between 1024 and 1600
+        const t = (width - 1024) / (1600 - 1024); // 0 to 1
+        const scale = 0.5 + (t * 0.5); // 0.5 to 1.0
+        setScaleFactor(scale);
+        
+        // Aspect ratio: interpolate from 1.2 to 1.0
+        const aspectHeight = 1.2 - (t * 0.2); // 1.2 to 1.0
+        setAspectRatio(`1 / ${aspectHeight.toFixed(2)}`);
       } else {
-        setAspectRatio('1 / 1');    // Square on large screens
-        setScaleFactor(1);           // Full size
+        setAspectRatio('1 / 1');
+        setScaleFactor(1);
       }
     };
     
@@ -109,30 +117,38 @@ export function Board({
           style={{
             aspectRatio: aspectRatio,
             maxWidth: 'min(100%, 100vh - 2rem)',
-            maxHeight: '100%',
+            maxHeight: 'calc(100% - 1rem)',
           }}
         >
-        <div className="w-full h-full grid grid-cols-7 grid-rows-7 gap-0 relative z-10">
+        {!spectatorMode && <IncomeFlowOverlay onParticleArrive={handleParticleArrive} />}
+        
+        <div 
+          className="w-full h-full grid gap-0 relative z-10"
+          style={{ 
+            gridTemplateColumns: 'repeat(7, minmax(0, 1fr))',
+            gridTemplateRows: 'repeat(7, minmax(0, 1fr))',
+          }}
+        >
           
           {/* ========== TOP-LEFT CORNER ========== */}
-          <div className="col-start-1 row-start-1">
-            <CornerSquare icon="🎲" label="DEFIPOLY" bgColor="bg-purple-600" profilePicture={profilePicture} cornerSquareStyle={cornerSquareStyle} customPropertyCardBackground={customPropertyCardBackground} />
+          <div className="col-start-1 row-start-1 h-full w-full">
+            <PropertyCard propertyId={-1} onSelect={() => {}} isCorner cornerLabel="DEFIPOLY" customPropertyCardBackground={customPropertyCardBackground} scaleFactor={scaleFactor} />
           </div>
           
           {/* ========== TOP ROW ========== */}
-          <div className="col-start-2 row-start-1"><PropertyCard propertyId={11} {...cardProps} /></div>
-          <div className="col-start-3 row-start-1"><PropertyCard propertyId={12} {...cardProps} /></div>
-          <div className="col-start-4 row-start-1"><PropertyCard propertyId={13} {...cardProps} /></div>
-          <div className="col-start-5 row-start-1"><PropertyCard propertyId={14} {...cardProps} /></div>
-          <div className="col-start-6 row-start-1"><PropertyCard propertyId={15} {...cardProps} /></div>
-          <div className="col-start-7 row-start-1"><PropertyCard propertyId={16} {...cardProps} /></div>
+          <div className="col-start-2 row-start-1 h-full w-full"><PropertyCard propertyId={11} {...cardProps} /></div>
+          <div className="col-start-3 row-start-1 h-full w-full"><PropertyCard propertyId={12} {...cardProps} /></div>
+          <div className="col-start-4 row-start-1 h-full w-full"><PropertyCard propertyId={13} {...cardProps} /></div>
+          <div className="col-start-5 row-start-1 h-full w-full"><PropertyCard propertyId={14} {...cardProps} /></div>
+          <div className="col-start-6 row-start-1 h-full w-full"><PropertyCard propertyId={15} {...cardProps} /></div>
+          <div className="col-start-7 row-start-1 h-full w-full"><PropertyCard propertyId={16} {...cardProps} /></div>
 
           {/* ========== LEFT SIDE ========== */}
-          <div className="col-start-1 row-start-2"><PropertyCard propertyId={10} {...cardProps} /></div>
-          <div className="col-start-1 row-start-3"><PropertyCard propertyId={9} {...cardProps} /></div>
-          <div className="col-start-1 row-start-4"><PropertyCard propertyId={8} {...cardProps} /></div>
-          <div className="col-start-1 row-start-5"><PropertyCard propertyId={7} {...cardProps} /></div>
-          <div className="col-start-1 row-start-6"><PropertyCard propertyId={6} {...cardProps} /></div>
+          <div className="col-start-1 row-start-2 h-full w-full"><PropertyCard propertyId={10} {...cardProps} /></div>
+          <div className="col-start-1 row-start-3 h-full w-full"><PropertyCard propertyId={9} {...cardProps} /></div>
+          <div className="col-start-1 row-start-4 h-full w-full"><PropertyCard propertyId={8} {...cardProps} /></div>
+          <div className="col-start-1 row-start-5 h-full w-full"><PropertyCard propertyId={7} {...cardProps} /></div>
+          <div className="col-start-1 row-start-6 h-full w-full"><PropertyCard propertyId={6} {...cardProps} /></div>
 
           {/* ========== CENTER: Rewards Panel ========== */}
           <div 
@@ -163,7 +179,6 @@ export function Board({
               return styles;
             })()}
           >
-            {!spectatorMode && <IncomeFlowOverlay onParticleArrive={handleParticleArrive} />}
             {!spectatorMode && (
               <button
                 onClick={() => setShowRewardsPanel(!showRewardsPanel)}
@@ -176,33 +191,33 @@ export function Board({
 
             {!spectatorMode && showRewardsPanel && (
               <div className="relative z-10">
-                <RewardsPanel incomeArrived={lastIncomeArrived} />
+                <RewardsPanel incomeArrived={lastIncomeArrived} scaleFactor={scaleFactor} />
               </div>
             )}
           </div>
 
           {/* ========== RIGHT SIDE ========== */}
-          <div className="col-start-7 row-start-2"><PropertyCard propertyId={17} {...cardProps} /></div>
-          <div className="col-start-7 row-start-3"><PropertyCard propertyId={18} {...cardProps} /></div>
-          <div className="col-start-7 row-start-4"><PropertyCard propertyId={19} {...cardProps} /></div>
-          <div className="col-start-7 row-start-5"><PropertyCard propertyId={20} {...cardProps} /></div>
-          <div className="col-start-7 row-start-6"><PropertyCard propertyId={21} {...cardProps} /></div>
+          <div className="col-start-7 row-start-2 h-full w-full"><PropertyCard propertyId={17} {...cardProps} /></div>
+          <div className="col-start-7 row-start-3 h-full w-full"><PropertyCard propertyId={18} {...cardProps} /></div>
+          <div className="col-start-7 row-start-4 h-full w-full"><PropertyCard propertyId={19} {...cardProps} /></div>
+          <div className="col-start-7 row-start-5 h-full w-full"><PropertyCard propertyId={20} {...cardProps} /></div>
+          <div className="col-start-7 row-start-6 h-full w-full"><PropertyCard propertyId={21} {...cardProps} /></div>
 
           {/* ========== BOTTOM LEFT CORNER ========== */}
-          <div className="col-start-1 row-start-7">
+          <div className="col-start-1 row-start-7 h-full w-full">
             <PropertyCard propertyId={5} {...cardProps} />
           </div>
 
           {/* ========== BOTTOM ROW ========== */}
-          <div className="col-start-2 row-start-7"><PropertyCard propertyId={4} {...cardProps} /></div>
-          <div className="col-start-3 row-start-7"><PropertyCard propertyId={3} {...cardProps} /></div>
-          <div className="col-start-4 row-start-7"><PropertyCard propertyId={2} {...cardProps} /></div>
-          <div className="col-start-5 row-start-7"><PropertyCard propertyId={1} {...cardProps} /></div>
-          <div className="col-start-6 row-start-7"><PropertyCard propertyId={0} {...cardProps} /></div>
+          <div className="col-start-2 row-start-7 h-full w-full"><PropertyCard propertyId={4} {...cardProps} /></div>
+          <div className="col-start-3 row-start-7 h-full w-full"><PropertyCard propertyId={3} {...cardProps} /></div>
+          <div className="col-start-4 row-start-7 h-full w-full"><PropertyCard propertyId={2} {...cardProps} /></div>
+          <div className="col-start-5 row-start-7 h-full w-full"><PropertyCard propertyId={1} {...cardProps} /></div>
+          <div className="col-start-6 row-start-7 h-full w-full"><PropertyCard propertyId={0} {...cardProps} /></div>
           
           {/* ========== BOTTOM-RIGHT CORNER ========== */}
-          <div className="col-start-7 row-start-7">
-            <CornerSquare icon="🎲" label="DEFIPOLY" bgColor="bg-purple-600" profilePicture={profilePicture} cornerSquareStyle={cornerSquareStyle} customPropertyCardBackground={customPropertyCardBackground} />
+          <div className="col-start-7 row-start-7 h-full w-full">
+            <PropertyCard propertyId={-1} onSelect={() => {}} isCorner cornerLabel="DEFIPOLY" customPropertyCardBackground={customPropertyCardBackground} scaleFactor={scaleFactor} />
           </div>
         </div>
       </div>
