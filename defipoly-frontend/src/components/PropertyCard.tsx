@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { useGameState } from '@/contexts/GameStateContext';
 import { ShieldIcon, ShieldCooldownIcon, HourglassIcon, TargetIcon } from './icons/UIIcons';
-import { LocationPin, BUILDING_SVGS } from './icons/GameAssets';
+import { LocationPin, getBuildingComponent } from './icons/GameAssets';
 import { usePropertySpawnTime } from '@/contexts/ParticleSpawnContext';
 
 import { PROPERTIES } from '@/utils/constants';
@@ -379,10 +379,9 @@ export function PropertyCard({
               style={{ transform: modalView ? 'scale(0.4)' : `scale(${buildingScale})` }}
             >
             <div 
-              className="w-full h-full flex items-center justify-center transition-transform duration-150"
-              style={{ transform: buildingPulse ? 'scale(1.15)' : 'scale(1)' }}
+              className="w-full h-full flex items-center justify-center"
             >
-                {BUILDING_SVGS[buildingLevel]}
+                {getBuildingComponent(buildingLevel, buildingPulse)}
               </div>
             </div>
           )}

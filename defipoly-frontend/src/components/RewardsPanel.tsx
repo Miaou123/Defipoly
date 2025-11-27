@@ -16,8 +16,9 @@ import { PROGRAM_ID, TOKEN_TICKER } from '@/utils/constants';
 import { BorshCoder, EventParser } from '@coral-xyz/anchor';
 import idl from '@/idl/defipoly_program.json';
 import { BuildingIcon, WalletIcon, GiftIcon, TargetIcon, ShieldIcon } from './icons/UIIcons';
-import { BankSVG } from './icons/GameAssets';
-import { Logo3D } from './Logo3D';
+import { Bank3D } from './3d/Bank3D';
+import { Logo3D } from './3d/Logo3D';
+import { getProfile, ProfileData } from '@/utils/profileStorage';
 
 interface Floater {
   id: number;
@@ -41,7 +42,7 @@ export function RewardsPanel({ incomeArrived = null, scaleFactor = 1 }: RewardsP
   const [floaters, setFloaters] = useState<Floater[]>([]);
   const [displayedRewards, setDisplayedRewards] = useState<number>(0);
   const [isPulsing, setIsPulsing] = useState(false);
-  const [isButtonHovered, setIsButtonHovered] = useState(false);
+  const [profilePicture, setProfilePicture] = useState<string | null>(null);
   const floaterIdRef = useRef(0);
   const claimingRef = useRef(false);
   const initializedRef = useRef(false);
@@ -51,6 +52,25 @@ export function RewardsPanel({ incomeArrived = null, scaleFactor = 1 }: RewardsP
   const totalSlotsOwned = gameState.stats.totalSlotsOwned || gameState.ownerships.reduce((sum, o) => sum + o.slotsOwned, 0);
   const floaterTimeoutsRef = useRef<Set<NodeJS.Timeout>>(new Set());
   const pulseTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Fetch profile picture when user connects
+  useEffect(() => {
+    const fetchProfile = async () => {
+      if (connected && publicKey) {
+        try {
+          const profile = await getProfile(publicKey.toString());
+          setProfilePicture(profile?.profilePicture || null);
+        } catch (error) {
+          console.error('Error fetching profile:', error);
+          setProfilePicture(null);
+        }
+      } else {
+        setProfilePicture(null);
+      }
+    };
+    
+    fetchProfile();
+  }, [connected, publicKey]);
 
   // Cleanup timeouts on unmount
   useEffect(() => {
@@ -337,24 +357,12 @@ export function RewardsPanel({ incomeArrived = null, scaleFactor = 1 }: RewardsP
   // Connected and owns properties - BANK + NEON COUNTER DESIGN
   // ========================================
   
-  // Scale sizes based on scaleFactor
-  const bankWidth = Math.round(220 * scaleFactor);
-  const bankHeight = Math.round(160 * scaleFactor);
-  const counterPaddingX = Math.max(16, Math.round(24 * scaleFactor));
-  const counterPaddingY = Math.max(10, Math.round(12 * scaleFactor));
-  const ledPaddingX = Math.max(12, Math.round(16 * scaleFactor));
-  const ledPaddingY = Math.max(6, Math.round(8 * scaleFactor));
-  const rewardsTextSize = Math.max(18, Math.round(28 * scaleFactor));
-  const labelTextSize = Math.max(8, Math.round(10 * scaleFactor));
-  const buttonPaddingX = Math.max(20, Math.round(32 * scaleFactor));
-  const buttonPaddingY = Math.max(8, Math.round(10 * scaleFactor));
-  const buttonTextSize = Math.max(10, Math.round(12 * scaleFactor));
-  const marginTop = Math.max(8, Math.round(12 * scaleFactor));
-  const cornerDotSize = Math.max(3, Math.round(5 * scaleFactor));
-  const cornerDotOffset = Math.max(5, Math.round(6 * scaleFactor));
+  // Scale sizes based on scaleFactor - Bigger than center square but not overwhelming
+  const bankWidth = Math.round(350 * scaleFactor);
+  const bankHeight = Math.round(350 * scaleFactor);
   
   return (
-    <div className="relative flex flex-col items-center justify-center z-30">
+    <div className="relative flex flex-col items-center justify-center z-30 overflow-visible">
       {rewardsLoading ? (
         <div className="text-white/60 text-center">Loading rewards...</div>
       ) : (
@@ -364,7 +372,13 @@ export function RewardsPanel({ incomeArrived = null, scaleFactor = 1 }: RewardsP
             className="relative z-30"
             style={{ width: `${bankWidth}px`, height: `${bankHeight}px` }}
           >
-            <BankSVG isPulsing={isPulsing} className="w-full h-full" />
+            <Bank3D 
+              isPulsing={isPulsing} 
+              size={bankWidth}
+              rewardsAmount={displayedRewards}
+              profilePicture={profilePicture}
+              onCollect={handleClaimRewards}
+            />
             
             {/* Floating +X numbers */}
             {floaters.map(floater => (
@@ -385,98 +399,6 @@ export function RewardsPanel({ incomeArrived = null, scaleFactor = 1 }: RewardsP
             ))}
           </div>
 
-          {/* Combined Rewards Button */}
-          <button
-            onClick={handleClaimRewards}
-            disabled={claiming || claimLoading || displayedRewards === 0}
-            onMouseEnter={() => setIsButtonHovered(true)}
-            onMouseLeave={() => setIsButtonHovered(false)}
-            className="relative transition-all disabled:cursor-not-allowed"
-            style={{
-              marginTop: `${marginTop}px`,
-              minWidth: `${bankWidth}px`,  // ADD THIS LINE
-              background: isButtonHovered 
-                ? 'rgba(10, 10, 20, 0.98)' 
-                : 'rgba(5, 5, 15, 0.95)',
-              border: '2px solid #a855f7',
-              borderRadius: `${Math.round(8 * scaleFactor)}px`,
-              padding: `${counterPaddingY}px ${counterPaddingX}px`,
-              transform: isButtonHovered && displayedRewards > 0 ? 'scale(1.02)' : 'scale(1)',
-              boxShadow: isButtonHovered && displayedRewards > 0
-                ? '0 0 30px rgba(168, 85, 247, 0.4)'
-                : 'none',
-              opacity: displayedRewards === 0 ? 0.6 : 1,
-            }}
-          >
-            {/* Corner dots */}
-            <div 
-              className="absolute rounded-full"
-              style={{
-                width: `${cornerDotSize}px`,
-                height: `${cornerDotSize}px`,
-                background: '#a855f7',
-                top: `${cornerDotOffset}px`,
-                left: `${cornerDotOffset}px`,
-              }}
-            />
-            <div 
-              className="absolute rounded-full"
-              style={{
-                width: `${cornerDotSize}px`,
-                height: `${cornerDotSize}px`,
-                background: '#a855f7',
-                top: `${cornerDotOffset}px`,
-                right: `${cornerDotOffset}px`,
-              }}
-            />
-            <div 
-              className="absolute rounded-full"
-              style={{
-                width: `${cornerDotSize}px`,
-                height: `${cornerDotSize}px`,
-                background: '#a855f7',
-                bottom: `${cornerDotOffset}px`,
-                left: `${cornerDotOffset}px`,
-              }}
-            />
-            <div 
-              className="absolute rounded-full"
-              style={{
-                width: `${cornerDotSize}px`,
-                height: `${cornerDotSize}px`,
-                background: '#a855f7',
-                bottom: `${cornerDotOffset}px`,
-                right: `${cornerDotOffset}px`,
-              }}
-            />
-
-            {/* Rewards Amount */}
-            <div 
-              className="font-bold tabular-nums text-center"
-              style={{
-                fontFamily: "'Orbitron', 'Space Mono', monospace",
-                fontSize: `${rewardsTextSize}px`,
-                color: '#06b6d4',
-                letterSpacing: '2px',
-              }}
-            >
-              {formatRewards(displayedRewards)}
-            </div>
-
-            {/* Collect Label */}
-            <div 
-              className="uppercase tracking-widest text-center font-semibold"
-              style={{
-                marginTop: `${Math.round(6 * scaleFactor)}px`,
-                fontSize: `${buttonTextSize}px`,
-                color: isButtonHovered ? '#06b6d4' : 'rgba(6, 182, 212, 0.5)',
-                letterSpacing: '3px',
-                transition: 'color 0.2s ease',
-              }}
-            >
-              {claiming ? '...' : 'Collect'}
-            </div>
-          </button>
         </>
       )}
 

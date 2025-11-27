@@ -23,7 +23,14 @@ export function Logo3D({ size = 160 }: Logo3DProps) {
     const container = containerRef.current;
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 1000);
-    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    
+    // Add better WebGL context options
+    const renderer = new THREE.WebGLRenderer({ 
+      antialias: true, 
+      alpha: true,
+      preserveDrawingBuffer: false,
+      powerPreference: "default"
+    });
     
     renderer.setSize(size, size);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -156,13 +163,26 @@ export function Logo3D({ size = 160 }: Logo3DProps) {
     camera.position.set(0, 1.8, 6);
     camera.lookAt(0, 1, 0);
 
-    const animate = (): number => {
-      const id = requestAnimationFrame(animate);
+    let animationId: number;
+
+    const animate = () => {
+      animationId = requestAnimationFrame(animate);
+      
+      // Check if renderer context is still valid
+      if (!renderer.domElement || renderer.getContext().isContextLost()) {
+        return;
+      }
+      
       hatGroup.rotation.y += 0.008;
-      renderer.render(scene, camera);
-      return id;
+      
+      try {
+        renderer.render(scene, camera);
+      } catch (error) {
+        console.warn('WebGL render error in Logo3D:', error);
+        cancelAnimationFrame(animationId);
+      }
     };
-    const animationId = animate();
+    animate();
 
     // Store refs for cleanup
     sceneRef.current = { renderer, animationId };
