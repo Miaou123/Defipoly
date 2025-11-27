@@ -109,7 +109,7 @@ export function PropertyModal({ propertyId, onClose }: PropertyModalProps) {
         };
 
         // Only update state if data actually changed
-        setPropertyData(prevData => {
+        setPropertyData((prevData: typeof propertyData) => {
           if (!prevData || 
               prevData.owned !== newPropertyData.owned ||
               prevData.availableSlots !== newPropertyData.availableSlots ||
