@@ -49,12 +49,11 @@ export function LazyView3D({
   return (
     <div ref={ref} className={className} style={style} onClick={onClick}>
       {isVisible ? (
-        <View3D>
+        <View3D className="w-full h-full">
           {children}
         </View3D>
       ) : (
-        // Placeholder with same dimensions while loading
-        <div style={{ width: '120px', height: '120px', backgroundColor: 'transparent' }} />
+        <div style={{ width: '100%', height: '100%' }} />
       )}
     </div>
   );

@@ -273,10 +273,10 @@ export function GameStateProvider({ children }: { children: React.ReactNode }) {
     }
   }, [publicKey, isAuthenticated]);
 
-  // ========== INITIAL LOAD ==========
+  // ========== LOAD GAME STATE WHEN WALLET CHANGES ==========
   useEffect(() => {
     fetchGameState();
-  }, [fetchGameState]);
+  }, [publicKey]); // Fetch when publicKey changes, not fetchGameState function
 
   useEffect(() => {
     if (publicKey && !isAuthenticated) {

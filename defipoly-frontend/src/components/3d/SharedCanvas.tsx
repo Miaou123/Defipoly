@@ -33,7 +33,6 @@ export function SharedCanvasProvider({ children }: SharedCanvasProviderProps) {
       
       {/* Single WebGL canvas that renders all views */}
       <Canvas
-        frameloop="demand"
         style={{
           position: 'fixed',
           top: 0,

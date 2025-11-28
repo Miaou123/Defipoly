@@ -25,6 +25,20 @@ const nextConfig: NextConfig = {
         three: 'three',
       };
     }
+
+    // Split Three.js into a shared vendor chunk instead of duplicating
+    config.optimization = config.optimization || {};
+    config.optimization.splitChunks = {
+      chunks: 'all',
+      cacheGroups: {
+        three: {
+          test: /[\\/]node_modules[\\/](three|@react-three)[\\/]/,
+          name: 'three-vendor',
+          chunks: 'all',
+          priority: 10,
+        },
+      },
+    };
     
     return config;
   },
