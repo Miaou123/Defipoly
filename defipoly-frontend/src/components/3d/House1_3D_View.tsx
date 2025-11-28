@@ -3,6 +3,7 @@
 import { LazyView3D } from './LazyView3D';
 import { House1_R3F } from './r3f/House1_R3F';
 import { PerspectiveCamera } from '@react-three/drei';
+import { useRef } from 'react';
 
 interface House1_3D_ViewProps {
   size?: number;
@@ -12,6 +13,12 @@ interface House1_3D_ViewProps {
 // This component replaces the old House1_3D component
 // It uses the shared canvas system instead of creating its own WebGL context
 export function House1_3D_View({ size = 120, isPulsing = false }: House1_3D_ViewProps) {
+  const renderCount = useRef(0);
+  renderCount.current++;
+  if (renderCount.current > 5) {
+    console.log(`🔄 House1_3D_View render #${renderCount.current} - CALLING LazyView3D!`);
+  }
+
   return (
     <LazyView3D 
       className="flex items-center justify-center" 

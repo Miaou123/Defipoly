@@ -24,6 +24,8 @@ interface SharedCanvasProviderProps {
 export function SharedCanvasProvider({ children }: SharedCanvasProviderProps) {
   const ref = useRef<HTMLDivElement>(null);
 
+  console.log('🖼️ SharedCanvasProvider render');
+
   return (
     <>
       {/* All 3D view containers go here */}
@@ -40,6 +42,7 @@ export function SharedCanvasProvider({ children }: SharedCanvasProviderProps) {
           width: '100%',
           height: '100%',
           pointerEvents: 'none',
+          zIndex: 50,
         }}
         eventSource={ref}
         eventPrefix="client"
@@ -63,12 +66,17 @@ interface View3DProps {
 }
 
 export function View3D({ children, className, style, onClick }: View3DProps & { onClick?: () => void }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const renderCount = useRef(0);
+  
+  renderCount.current++;
+  if (renderCount.current > 5) {
+    console.log(`🔄 View3D render #${renderCount.current} - INFINITE LOOP DETECTED!`);
+  }
+  
   return (
-    <View className={className} style={style} onClick={onClick}>
-      <SharedLighting />
-      <Suspense fallback={null}>
-        {children}
-      </Suspense>
-    </View>
+    <div ref={ref} className={className} style={style} onClick={onClick}>
+      Simple div - no 3D
+    </div>
   );
 }

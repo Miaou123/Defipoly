@@ -2,7 +2,7 @@
 
 import { useState, useEffect, ReactNode } from 'react';
 import { Providers } from './Providers';
-import { SharedCanvasProvider } from './3d/SharedCanvas';
+import { SharedCanvasProvider } from './3d/SharedCanvasClient';
 
 interface AppShellProps {
   children: ReactNode;
