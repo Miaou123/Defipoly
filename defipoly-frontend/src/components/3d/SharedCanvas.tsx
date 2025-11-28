@@ -7,15 +7,23 @@ import { ReactNode, useRef, Suspense, memo } from 'react';
 function SharedLighting() {
   return (
     <>
-      <ambientLight intensity={0.8} />
-      <directionalLight position={[5, 10, 7]} intensity={1.0} />
-      <directionalLight position={[-5, 5, -5]} intensity={0.3} color="#ffeedd" />
+      <ambientLight intensity={1.2} />
+      <directionalLight position={[5, 10, 7]} intensity={1.5} />
+      <directionalLight position={[-5, 5, -5]} intensity={0.5} color="#ffeedd" />
+      <directionalLight position={[0, -5, 5]} intensity={0.3} />
     </>
   );
 }
 
 interface SharedCanvasProviderProps {
   children: ReactNode;
+}
+
+interface View3DProps {
+  children: ReactNode;
+  className?: string;
+  style?: React.CSSProperties;
+  onClick?: () => void;  // Add ? here
 }
 
 export function SharedCanvasProvider({ children }: SharedCanvasProviderProps) {

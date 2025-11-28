@@ -3,13 +3,15 @@
 import { LazyView3D } from './LazyView3D';
 import { Bank3D_R3F } from './r3f/Bank3D_R3F';
 import { PerspectiveCamera } from '@react-three/drei';
+import { useState, useEffect, useRef, ReactNode, memo } from 'react';
 
-interface Bank3D_ViewProps {
-  size?: number;
-  isPulsing?: boolean;
-  rewardsAmount?: number;
-  profilePicture?: string | null;
-  onCollect?: () => void;
+interface LazyView3DProps {
+  children: ReactNode;
+  className?: string;
+  style?: React.CSSProperties;
+  onClick?: () => void; 
+  rootMargin?: string;
+  threshold?: number;
 }
 
 // This component replaces the old Bank3D component

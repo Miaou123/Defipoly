@@ -12,7 +12,6 @@ interface LazyView3DProps {
   threshold?: number;
 }
 
-// Define the component first, then wrap with memo
 function LazyView3DComponent({ 
   children, 
   className, 
@@ -23,12 +22,17 @@ function LazyView3DComponent({
 }: LazyView3DProps) {
   const [isVisible, setIsVisible] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const hasChecked = useRef(false);
 
   useEffect(() => {
+    if (hasChecked.current) return;
+    hasChecked.current = true;
+
     const element = ref.current;
     if (!element) return;
 
     const rect = element.getBoundingClientRect();
+    
     if (rect.top < window.innerHeight && rect.bottom > 0 &&
         rect.left < window.innerWidth && rect.right > 0) {
       setIsVisible(true);
@@ -36,8 +40,9 @@ function LazyView3DComponent({
     }
 
     const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
+      (entries) => {
+        const entry = entries[0];
+        if (entry && entry.isIntersecting) {
           setIsVisible(true);
           observer.disconnect();
         }
@@ -62,5 +67,4 @@ function LazyView3DComponent({
   );
 }
 
-// Export the memoized version
 export const LazyView3D = memo(LazyView3DComponent);

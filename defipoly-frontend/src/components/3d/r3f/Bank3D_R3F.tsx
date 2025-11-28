@@ -19,7 +19,6 @@ export function Bank3D_R3F({
   const groupRef = useRef<THREE.Group>(null);
   const scaleRef = useRef({ current: 1, target: 1 });
   const [profileTexture, setProfileTexture] = useState<THREE.Texture | null>(null);
-  const { gl } = useThree();
 
   // Handle pulsing animation
   useFrame((state, delta) => {
@@ -37,25 +36,35 @@ export function Bank3D_R3F({
 
   // Load profile texture
   useEffect(() => {
+    let texture: THREE.Texture | null = null;
+    
     if (profilePicture) {
       const loader = new THREE.TextureLoader();
+      loader.setCrossOrigin('anonymous');
+      
       loader.load(
         profilePicture,
-        (texture) => {
+        (loadedTexture) => {
+          texture = loadedTexture;
           texture.needsUpdate = true;
           setProfileTexture(texture);
         },
         undefined,
-        () => {
+        (error) => {
+          console.error('❌ Texture load error:', error);
           setProfileTexture(null);
         }
       );
     } else {
       setProfileTexture(null);
     }
+    
+    return () => {
+      if (texture) {
+        texture.dispose();
+      }
+    };
   }, [profilePicture]);
-
-  // No need to create material objects in R3F - use JSX directly
 
   const buildingWidth = 18;
   const buildingHeight = 8;
@@ -109,7 +118,7 @@ export function Bank3D_R3F({
   roofGeometry.computeVertexNormals();
 
   return (
-    <group ref={groupRef} position={[0, -6.5, 0]} scale={0.5}>
+    <group ref={groupRef} position={[0, -6.5, 0]} scale={1}>
       {/* Base platform */}
       <mesh position={[0, 0.4, 0]}>
         <boxGeometry args={[20, 0.8, 12]} />
@@ -198,20 +207,20 @@ export function Bank3D_R3F({
       </mesh>
 
       {/* Profile picture circle */}
-      <group position={[0, roofBaseY + peakHeight * 0.40, roofDepth/2 + 0.2]}>
-        <mesh>
-          <circleGeometry args={[2.2, 32]} />
-          {profileTexture ? (
-            <meshBasicMaterial map={profileTexture} side={THREE.DoubleSide} />
-          ) : (
-            <meshBasicMaterial color={0x1a0a2e} side={THREE.DoubleSide} />
-          )}
-        </mesh>
-        <mesh position={[0, 0, 0.04]}>
-          <torusGeometry args={[2.35, 0.18, 16, 32]} />
-          <meshStandardMaterial color={0xFFBD32} roughness={0.2} metalness={0.7} />
-        </mesh>
-      </group>
+      <group position={[0, roofBaseY + peakHeight * 0.40, roofDepth/2 + 1.0]}>
+  <mesh>
+    <circleGeometry args={[2.2, 32]} />
+    {profileTexture ? (
+      <meshStandardMaterial map={profileTexture} side={THREE.DoubleSide} />
+    ) : (
+      <meshStandardMaterial color={0xff0000} side={THREE.DoubleSide} />
+    )}
+  </mesh>
+  <mesh position={[0, 0, 0.04]}>
+    <torusGeometry args={[2.35, 0.18, 16, 32]} />
+    <meshStandardMaterial color={0xFFBD32} roughness={0.2} metalness={0.7} />
+  </mesh>
+</group>
 
       {/* Door */}
       <mesh position={[0, 4.0, frontZ + 0.1]}>
