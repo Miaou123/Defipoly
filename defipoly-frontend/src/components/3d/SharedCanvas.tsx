@@ -3,7 +3,6 @@
 import { Canvas } from '@react-three/fiber';
 import { View } from '@react-three/drei';
 import { ReactNode, useRef, Suspense, memo } from 'react';
-import * as THREE from 'three';
 
 function SharedLighting() {
   return (
@@ -43,9 +42,6 @@ export function SharedCanvasProvider({ children }: SharedCanvasProviderProps) {
           antialias: true,
           alpha: true,
           powerPreference: 'default',
-        }}
-        onCreated={(state) => {
-          state.gl.setClearColor(0x000000, 0);
         }}
       >
         <View.Port />
