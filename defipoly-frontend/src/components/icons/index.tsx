@@ -34,7 +34,6 @@ export {
   // ============================================
   export {
     LocationPin,
-    BUILDING_SVGS,
     GreenBillSVG,
     GoldBillSVG,
     MoneyBagSVG,

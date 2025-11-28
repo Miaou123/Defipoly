@@ -2,7 +2,7 @@
 
 import { Canvas } from '@react-three/fiber';
 import { View } from '@react-three/drei';
-import { ReactNode, useRef, Suspense } from 'react';
+import { ReactNode, useRef, Suspense, memo, useMemo } from 'react';
 import * as THREE from 'three';
 
 // Shared scene components that will be used across all views
@@ -24,36 +24,35 @@ interface SharedCanvasProviderProps {
 export function SharedCanvasProvider({ children }: SharedCanvasProviderProps) {
   const ref = useRef<HTMLDivElement>(null);
 
-  console.log('🖼️ SharedCanvasProvider render');
+  const canvasElement = useMemo(() => (
+    <Canvas
+      style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        width: '100%',
+        height: '100%',
+        pointerEvents: 'none',
+        zIndex: 50,
+      }}
+      eventSource={ref}
+      eventPrefix="client"
+      gl={{
+        antialias: true,
+        toneMapping: THREE.ACESFilmicToneMapping,
+        alpha: true,
+      }}
+    >
+      <View.Port />
+    </Canvas>
+  ), []);
 
   return (
     <>
-      {/* All 3D view containers go here */}
       <div ref={ref} style={{ position: 'relative', width: '100%', height: '100%' }}>
         {children}
       </div>
-      
-      {/* Single WebGL canvas that renders all views */}
-      <Canvas
-        style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          width: '100%',
-          height: '100%',
-          pointerEvents: 'none',
-          zIndex: 50,
-        }}
-        eventSource={ref}
-        eventPrefix="client"
-        gl={{
-          antialias: true,
-          toneMapping: THREE.ACESFilmicToneMapping,
-          alpha: true,
-        }}
-      >
-        <View.Port />
-      </Canvas>
+      {canvasElement}
     </>
   );
 }
@@ -63,19 +62,29 @@ interface View3DProps {
   children: ReactNode;
   className?: string;
   style?: React.CSSProperties;
+  onClick?: () => void;
 }
 
-export function View3D({ children, className, style, onClick }: View3DProps & { onClick?: () => void }) {
-  const localRef = useRef<HTMLDivElement>(null!);
-  
+// Define the component first
+function View3DComponent({ 
+  children, 
+  className, 
+  style, 
+  onClick 
+}: View3DProps) {
+  const trackRef = useRef<HTMLDivElement>(null);
+
   return (
     <div 
-      ref={localRef} 
+      ref={trackRef} 
       className={className} 
-      style={{ ...style, position: 'relative' }}  // Ensure position context
+      style={{ ...style, position: 'relative' }} 
       onClick={onClick}
     >
-      <View track={localRef} style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}>
+      <View 
+        track={trackRef}
+        style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}
+      >
         <SharedLighting />
         <Suspense fallback={null}>
           {children}
@@ -84,3 +93,6 @@ export function View3D({ children, className, style, onClick }: View3DProps & { 
     </div>
   );
 }
+
+// Export the memoized version
+export const View3D = memo(View3DComponent);

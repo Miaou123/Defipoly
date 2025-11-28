@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { useGameState } from '@/contexts/GameStateContext';
 import { ShieldIcon, ShieldCooldownIcon, HourglassIcon, TargetIcon } from './icons/UIIcons';
-import { LocationPin, getBuildingComponent } from './icons/GameAssets';
+import { House1_3D_View, House2_3D_View, House3_3D_View, House4_3D_View, House5_3D_View, Pin3D_View } from './3d/DynamicViews';
 import { usePropertySpawnTime } from '@/contexts/ParticleSpawnContext';
 
 import { PROPERTIES } from '@/utils/constants';
@@ -369,7 +369,7 @@ export function PropertyCard({
             <div className="w-full h-full flex items-center justify-center">
               <div style={{ transform: modalView ? 'scale(0.5)' : `scale(${iconScale})` }}>
                 <div className={isHovered || modalView ? 'animate-bounce-pin' : ''}>
-                  <LocationPin color={property.color} size="small" />
+                  <Pin3D_View size={80} color={property.color} />
                 </div>
               </div>
             </div>
@@ -381,7 +381,11 @@ export function PropertyCard({
             <div 
               className="w-full h-full flex items-center justify-center"
             >
-                {getBuildingComponent(buildingLevel, buildingPulse)}
+            {buildingLevel === 1 && <House1_3D_View size={120} isPulsing={buildingPulse} />}
+            {buildingLevel === 2 && <House2_3D_View size={120} isPulsing={buildingPulse} />}
+            {buildingLevel === 3 && <House3_3D_View size={120} isPulsing={buildingPulse} />}
+            {buildingLevel === 4 && <House4_3D_View size={120} isPulsing={buildingPulse} />}
+            {buildingLevel === 5 && <House5_3D_View size={120} isPulsing={buildingPulse} />}
               </div>
             </div>
           )}
