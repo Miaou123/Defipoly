@@ -9,6 +9,7 @@ import { AuthProvider } from '@/contexts/AuthContext';
 import { ParticleSpawnProvider } from '@/contexts/ParticleSpawnContext';
 import { DefipolyProvider } from '@/contexts/DefipolyContext';
 import { MobileBlocker } from "./MobileBlocker";
+import { SharedCanvasProvider } from "./3d/SharedCanvas";
 
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
@@ -20,7 +21,9 @@ export function Providers({ children }: { children: React.ReactNode }) {
                 <GameStateProvider>
                   <RewardsProvider>
                     <ParticleSpawnProvider>
-                      {children}
+                      <SharedCanvasProvider>
+                        {children}
+                      </SharedCanvasProvider>
                     </ParticleSpawnProvider>
                   </RewardsProvider>
                 </GameStateProvider>

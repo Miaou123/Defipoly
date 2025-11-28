@@ -4,7 +4,12 @@ import { useState, useEffect } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { useGameState } from '@/contexts/GameStateContext';
 import { ShieldIcon, ShieldCooldownIcon, HourglassIcon, TargetIcon } from './icons/UIIcons';
-import { House1_3D_View, House2_3D_View, House3_3D_View, House4_3D_View, House5_3D_View, Pin3D_View } from './3d/DynamicViews';
+import { House1_3D_View } from './3d/House1_3D_View';
+import { House2_3D_View } from './3d/House2_3D_View';
+import { House3_3D_View } from './3d/House3_3D_View';
+import { House4_3D_View } from './3d/House4_3D_View';
+import { House5_3D_View } from './3d/House5_3D_View';
+import { Pin3D_View } from './3d/Pin3D_View';
 import { usePropertySpawnTime } from '@/contexts/ParticleSpawnContext';
 
 import { PROPERTIES } from '@/utils/constants';
@@ -365,7 +370,20 @@ export function PropertyCard({
             padding: `0 ${Math.round(4 * scaleFactor)}px`,
           }}
         >
-            {buildingLevel === 0 ? (
+          {/* DEBUG LOG */}
+          {(() => { 
+            console.log('🏠 PropertyCard:', { propertyId, buildingLevel, ownership: ownership?.slotsOwned }); 
+            return null; 
+          })()}
+          
+          {/* FORCE TEST - remove after debugging */}
+          {propertyId === 1 && (
+            <div style={{ width: 120, height: 120, border: '2px solid red' }}>
+              <House1_3D_View size={120} isPulsing={false} />
+            </div>
+          )}
+
+          {buildingLevel === 0 ? (
             <div className="w-full h-full flex items-center justify-center">
               <div style={{ transform: modalView ? 'scale(0.5)' : `scale(${iconScale})` }}>
                 <div className={isHovered || modalView ? 'animate-bounce-pin' : ''}>
@@ -378,14 +396,12 @@ export function PropertyCard({
               className="w-full h-full flex items-center justify-center"
               style={{ transform: modalView ? 'scale(0.4)' : `scale(${buildingScale})` }}
             >
-            <div 
-              className="w-full h-full flex items-center justify-center"
-            >
-            {buildingLevel === 1 && <House1_3D_View size={120} isPulsing={buildingPulse} />}
-            {buildingLevel === 2 && <House2_3D_View size={120} isPulsing={buildingPulse} />}
-            {buildingLevel === 3 && <House3_3D_View size={120} isPulsing={buildingPulse} />}
-            {buildingLevel === 4 && <House4_3D_View size={120} isPulsing={buildingPulse} />}
-            {buildingLevel === 5 && <House5_3D_View size={120} isPulsing={buildingPulse} />}
+              <div className="w-full h-full flex items-center justify-center">
+                {buildingLevel === 1 && <House1_3D_View size={120} isPulsing={buildingPulse} />}
+                {buildingLevel === 2 && <House2_3D_View size={120} isPulsing={buildingPulse} />}
+                {buildingLevel === 3 && <House3_3D_View size={120} isPulsing={buildingPulse} />}
+                {buildingLevel === 4 && <House4_3D_View size={120} isPulsing={buildingPulse} />}
+                {buildingLevel === 5 && <House5_3D_View size={120} isPulsing={buildingPulse} />}
               </div>
             </div>
           )}

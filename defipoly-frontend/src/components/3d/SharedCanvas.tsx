@@ -2,7 +2,7 @@
 
 import { Canvas } from '@react-three/fiber';
 import { View } from '@react-three/drei';
-import { ReactNode, useRef, Suspense, memo, useMemo } from 'react';
+import { ReactNode, useRef, useEffect, Suspense, memo, useMemo } from 'react';
 import * as THREE from 'three';
 
 // Shared scene components that will be used across all views
@@ -22,7 +22,7 @@ interface SharedCanvasProviderProps {
 
 // This component provides the single WebGL canvas that all 3D objects will share
 export function SharedCanvasProvider({ children }: SharedCanvasProviderProps) {
-  const ref = useRef<HTMLDivElement>(null);
+  const ref = useRef<HTMLDivElement>(null!);  // Non-null assertion
 
   const canvasElement = useMemo(() => (
     <Canvas
@@ -35,7 +35,7 @@ export function SharedCanvasProvider({ children }: SharedCanvasProviderProps) {
         pointerEvents: 'none',
         zIndex: 50,
       }}
-      eventSource={ref}
+      eventSource={ref as React.RefObject<HTMLElement>}
       eventPrefix="client"
       gl={{
         antialias: true,
@@ -72,17 +72,29 @@ function View3DComponent({
   style, 
   onClick 
 }: View3DProps) {
-  const trackRef = useRef<HTMLDivElement>(null);
+  const trackRef = useRef<HTMLDivElement>(null!);
+
+  useEffect(() => {
+    if (trackRef.current) {
+      const rect = trackRef.current.getBoundingClientRect();
+      console.log('📦 View3D track rect:', { 
+        width: rect.width, 
+        height: rect.height,
+        top: rect.top,
+        left: rect.left 
+      });
+    }
+  }, []);
 
   return (
     <div 
       ref={trackRef} 
       className={className} 
-      style={{ ...style, position: 'relative' }} 
+      style={{ ...style, position: 'relative', overflow: 'visible' }} 
       onClick={onClick}
     >
       <View 
-        track={trackRef}
+        track={trackRef as React.RefObject<HTMLElement>}
         style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}
       >
         <SharedLighting />
