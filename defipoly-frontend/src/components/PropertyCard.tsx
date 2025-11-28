@@ -370,18 +370,7 @@ export function PropertyCard({
             padding: `0 ${Math.round(4 * scaleFactor)}px`,
           }}
         >
-          {/* DEBUG LOG */}
-          {(() => { 
-            console.log('🏠 PropertyCard:', { propertyId, buildingLevel, ownership: ownership?.slotsOwned }); 
-            return null; 
-          })()}
           
-          {/* FORCE TEST - remove after debugging */}
-          {propertyId === 1 && (
-            <div style={{ width: 120, height: 120, border: '2px solid red' }}>
-              <House1_3D_View size={120} isPulsing={false} />
-            </div>
-          )}
 
           {buildingLevel === 0 ? (
             <div className="w-full h-full flex items-center justify-center">
@@ -392,17 +381,12 @@ export function PropertyCard({
               </div>
             </div>
           ) : (
-            <div 
-              className="w-full h-full flex items-center justify-center"
-              style={{ transform: modalView ? 'scale(0.4)' : `scale(${buildingScale})` }}
-            >
-              <div className="w-full h-full flex items-center justify-center">
-                {buildingLevel === 1 && <House1_3D_View size={120} isPulsing={buildingPulse} />}
-                {buildingLevel === 2 && <House2_3D_View size={120} isPulsing={buildingPulse} />}
-                {buildingLevel === 3 && <House3_3D_View size={120} isPulsing={buildingPulse} />}
-                {buildingLevel === 4 && <House4_3D_View size={120} isPulsing={buildingPulse} />}
-                {buildingLevel === 5 && <House5_3D_View size={120} isPulsing={buildingPulse} />}
-              </div>
+            <div className="w-full h-full flex items-center justify-center">
+              {buildingLevel === 1 && <House1_3D_View size={60} isPulsing={buildingPulse} />}
+              {buildingLevel === 2 && <House2_3D_View size={60} isPulsing={buildingPulse} />}
+              {buildingLevel === 3 && <House3_3D_View size={60} isPulsing={buildingPulse} />}
+              {buildingLevel === 4 && <House4_3D_View size={60} isPulsing={buildingPulse} />}
+              {buildingLevel === 5 && <House5_3D_View size={60} isPulsing={buildingPulse} />}
             </div>
           )}
         </div>

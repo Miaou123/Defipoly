@@ -2,7 +2,6 @@
 
 import { useState, useEffect, ReactNode } from 'react';
 import { Providers } from './Providers';
-import { SharedCanvasProvider } from './3d/SharedCanvasClient';
 
 interface AppShellProps {
   children: ReactNode;
@@ -15,8 +14,6 @@ export function AppShell({ children }: AppShellProps) {
     setMounted(true);
   }, []);
 
-  // During SSR and initial client render, show nothing
-  // This prevents hydration mismatch from browser extensions
   if (!mounted) {
     return (
       <div className="h-screen flex flex-col items-center justify-center bg-gradient-to-b from-purple-950/50 to-black gap-4">
@@ -30,11 +27,5 @@ export function AppShell({ children }: AppShellProps) {
     );
   }
 
-  return (
-    <Providers>
-      <SharedCanvasProvider>
-        {children}
-      </SharedCanvasProvider>
-    </Providers>
-  );
+  return <Providers>{children}</Providers>;
 }

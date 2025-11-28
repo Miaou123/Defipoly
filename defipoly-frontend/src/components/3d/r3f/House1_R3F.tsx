@@ -109,22 +109,6 @@ export function House1_R3F({ isPulsing = false }: House1_R3FProps) {
         <meshStandardMaterial color={0xA0522D} roughness={0.7} metalness={0.0} />
       </mesh>
 
-      {/* Top hat logo */}
-      <group position={[0, houseHeight + roofHeight * 0.35, houseDepth / 2 + 0.03]}>
-        <mesh position={[0, 0.175, 0]}>
-          <boxGeometry args={[0.3, 0.35, 0.06]} />
-          <meshStandardMaterial color={0x4D2783} roughness={0.5} metalness={0.1} />
-        </mesh>
-        <mesh position={[0, 0, 0]}>
-          <boxGeometry args={[0.48, 0.05, 0.06]} />
-          <meshStandardMaterial color={0x4D2783} roughness={0.5} metalness={0.1} />
-        </mesh>
-        <mesh position={[0, 0.1, 0]}>
-          <boxGeometry args={[0.32, 0.08, 0.07]} />
-          <meshStandardMaterial color={0xFFBD32} roughness={0.3} metalness={0.6} />
-        </mesh>
-      </group>
-
       {/* Door */}
       <mesh position={[0, 0.35, houseDepth / 2 + 0.04]}>
         <boxGeometry args={[0.4, 0.7, 0.08]} />

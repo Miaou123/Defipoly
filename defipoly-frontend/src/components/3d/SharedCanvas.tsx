@@ -2,14 +2,13 @@
 
 import { Canvas } from '@react-three/fiber';
 import { View } from '@react-three/drei';
-import { ReactNode, useRef, useEffect, Suspense, memo, useMemo } from 'react';
+import { ReactNode, useRef, Suspense, memo } from 'react';
 import * as THREE from 'three';
 
-// Shared scene components that will be used across all views
 function SharedLighting() {
   return (
     <>
-      <ambientLight intensity={0.5} />
+      <ambientLight intensity={0.8} />
       <directionalLight position={[5, 10, 7]} intensity={1.0} />
       <directionalLight position={[-5, 5, -5]} intensity={0.3} color="#ffeedd" />
     </>
@@ -20,44 +19,41 @@ interface SharedCanvasProviderProps {
   children: ReactNode;
 }
 
-// This component provides the single WebGL canvas that all 3D objects will share
 export function SharedCanvasProvider({ children }: SharedCanvasProviderProps) {
-  const ref = useRef<HTMLDivElement>(null!);  // Non-null assertion
-
-  const canvasElement = useMemo(() => (
-    <Canvas
-      style={{
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        width: '100%',
-        height: '100%',
-        pointerEvents: 'none',
-        zIndex: 50,
-      }}
-      eventSource={ref as React.RefObject<HTMLElement>}
-      eventPrefix="client"
-      gl={{
-        antialias: true,
-        toneMapping: THREE.ACESFilmicToneMapping,
-        alpha: true,
-      }}
-    >
-      <View.Port />
-    </Canvas>
-  ), []);
+  const containerRef = useRef<HTMLDivElement>(null!);
 
   return (
-    <>
-      <div ref={ref} style={{ position: 'relative', width: '100%', height: '100%' }}>
-        {children}
-      </div>
-      {canvasElement}
-    </>
+    <div ref={containerRef} style={{ position: 'relative', width: '100%', height: '100%' }}>
+      {children}
+      <Canvas
+        style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          pointerEvents: 'none',
+          zIndex: 50,
+        }}
+        eventSource={containerRef}
+        eventPrefix="client"
+        frameloop="always"
+        flat
+        gl={{
+          antialias: true,
+          alpha: true,
+          powerPreference: 'default',
+        }}
+        onCreated={(state) => {
+          state.gl.setClearColor(0x000000, 0);
+        }}
+      >
+        <View.Port />
+      </Canvas>
+    </div>
   );
 }
 
-// Wrapper component for individual 3D objects
 interface View3DProps {
   children: ReactNode;
   className?: string;
@@ -65,7 +61,6 @@ interface View3DProps {
   onClick?: () => void;
 }
 
-// Define the component first
 function View3DComponent({ 
   children, 
   className, 
@@ -74,27 +69,15 @@ function View3DComponent({
 }: View3DProps) {
   const trackRef = useRef<HTMLDivElement>(null!);
 
-  useEffect(() => {
-    if (trackRef.current) {
-      const rect = trackRef.current.getBoundingClientRect();
-      console.log('📦 View3D track rect:', { 
-        width: rect.width, 
-        height: rect.height,
-        top: rect.top,
-        left: rect.left 
-      });
-    }
-  }, []);
-
   return (
     <div 
       ref={trackRef} 
       className={className} 
-      style={{ ...style, position: 'relative', overflow: 'visible' }} 
+      style={{ ...style, position: 'relative' }} 
       onClick={onClick}
     >
       <View 
-        track={trackRef as React.RefObject<HTMLElement>}
+        track={trackRef}
         style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}
       >
         <SharedLighting />
@@ -106,5 +89,4 @@ function View3DComponent({
   );
 }
 
-// Export the memoized version
 export const View3D = memo(View3DComponent);

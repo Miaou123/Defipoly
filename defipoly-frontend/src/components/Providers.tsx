@@ -8,8 +8,6 @@ import { RewardsProvider } from '@/contexts/RewardsContext';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { ParticleSpawnProvider } from '@/contexts/ParticleSpawnContext';
 import { DefipolyProvider } from '@/contexts/DefipolyContext';
-import { MobileBlocker } from "./MobileBlocker";
-import { SharedCanvasProvider } from "./3d/SharedCanvas";
 
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
@@ -17,17 +15,15 @@ export function Providers({ children }: { children: React.ReactNode }) {
       <DefipolyProvider>
         <AuthProvider>
           <NotificationProvider>
-              <WebSocketProvider>
-                <GameStateProvider>
-                  <RewardsProvider>
-                    <ParticleSpawnProvider>
-                      <SharedCanvasProvider>
-                        {children}
-                      </SharedCanvasProvider>
-                    </ParticleSpawnProvider>
-                  </RewardsProvider>
-                </GameStateProvider>
-              </WebSocketProvider>
+            <WebSocketProvider>
+              <GameStateProvider>
+                <RewardsProvider>
+                  <ParticleSpawnProvider>
+                    {children}
+                  </ParticleSpawnProvider>
+                </RewardsProvider>
+              </GameStateProvider>
+            </WebSocketProvider>
           </NotificationProvider>
         </AuthProvider>
       </DefipolyProvider>
