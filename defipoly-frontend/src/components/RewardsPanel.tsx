@@ -16,8 +16,7 @@ import { PROGRAM_ID, TOKEN_TICKER } from '@/utils/constants';
 import { BorshCoder, EventParser } from '@coral-xyz/anchor';
 import idl from '@/idl/defipoly_program.json';
 import { BuildingIcon, WalletIcon, GiftIcon, TargetIcon, ShieldIcon } from './icons/UIIcons';
-import { Bank3D_View } from './3d/Bank3D_View';
-import { Logo3D_View } from './3d/Logo3D_View';
+import { Bank3D_View, Logo3D_View } from './3d/DynamicViews';
 import { getProfile, ProfileData } from '@/utils/profileStorage';
 
 interface Floater {

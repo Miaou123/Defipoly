@@ -16,12 +16,26 @@ const nextConfig: NextConfig = {
         aggregateTimeout: 300,
       };
     }
+    
+    // Handle three.js and R3F modules
+    if (!isServer) {
+      config.externals = config.externals || [];
+      config.resolve.alias = {
+        ...config.resolve.alias,
+        three: 'three',
+      };
+    }
+    
     return config;
   },
   // Increase timeout for on-demand entries (prevents chunk timeout on idle)
   onDemandEntries: {
     maxInactiveAge: 60 * 1000, // 60 seconds (default is 15s)
     pagesBufferLength: 5,
+  },
+  // Add experimental features for better chunk loading
+  experimental: {
+    esmExternals: 'loose',
   }
 };
 

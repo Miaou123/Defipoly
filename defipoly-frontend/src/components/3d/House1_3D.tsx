@@ -91,18 +91,6 @@ export function House1_3D({ size = 120, isPulsing = false }: House1_3DProps) {
       emissiveIntensity: 0.3
     });
 
-    const purpleMaterial = new THREE.MeshStandardMaterial({ 
-      color: 0x4D2783,
-      roughness: 0.5, 
-      metalness: 0.1
-    });
-
-    const goldMaterial = new THREE.MeshStandardMaterial({ 
-      color: 0xFFBD32,
-      roughness: 0.3, 
-      metalness: 0.6
-    });
-
     // === HOUSE DIMENSIONS ===
     const houseWidth = 2;
     const houseHeight = 1.5;
@@ -209,35 +197,6 @@ export function House1_3D({ size = 120, isPulsing = false }: House1_3DProps) {
     backGable.rotation.y = Math.PI;
     houseGroup.add(backGable);
 
-    // === TOP HAT LOGO on front gable ===
-    const logoGroup = new THREE.Group();
-    
-    const crownWidth = 0.3;
-    const crownHeight2 = 0.35;
-    const crown = new THREE.Mesh(
-      new THREE.BoxGeometry(crownWidth, crownHeight2, 0.06),
-      purpleMaterial
-    );
-    crown.position.y = crownHeight2 / 2;
-    logoGroup.add(crown);
-    
-    const brim = new THREE.Mesh(
-      new THREE.BoxGeometry(crownWidth + 0.18, 0.05, 0.06),
-      purpleMaterial
-    );
-    brim.position.y = 0;
-    logoGroup.add(brim);
-    
-    const band = new THREE.Mesh(
-      new THREE.BoxGeometry(crownWidth + 0.02, 0.08, 0.07),
-      goldMaterial
-    );
-    band.position.y = 0.1;
-    logoGroup.add(band);
-
-    logoGroup.position.set(0, houseHeight + roofHeight * 0.35, houseDepth / 2 + 0.03);
-    houseGroup.add(logoGroup);
-
     // === DOOR ===
     const doorWidth = 0.4;
     const doorHeight = 0.7;
@@ -297,7 +256,6 @@ export function House1_3D({ size = 120, isPulsing = false }: House1_3DProps) {
       animationId = requestAnimationFrame(animate);
       time += 0.016;
 
-      // Check if renderer context is still valid
       if (!renderer.domElement || renderer.getContext().isContextLost()) {
         return;
       }
@@ -342,7 +300,6 @@ export function House1_3D({ size = 120, isPulsing = false }: House1_3DProps) {
     };
   }, [size]);
 
-  // Use common pulse hook
   use3DPulse(sceneRef, isPulsing);
 
   return <div ref={containerRef} className="flex items-center justify-center" />;
