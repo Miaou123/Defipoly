@@ -27,58 +27,7 @@ export function House1_R3F({ isPulsing = false }: House1_R3FProps) {
     groupRef.current.rotation.y = Math.sin(Date.now() * 0.0003) * 0.15 + 0.4;
   });
 
-  // Materials
-  const wallMaterial = new THREE.MeshStandardMaterial({ 
-    color: 0xD2691E,
-    roughness: 0.7, 
-    metalness: 0.0
-  });
-  
-  const wallSideMaterial = new THREE.MeshStandardMaterial({ 
-    color: 0xA0522D,
-    roughness: 0.7, 
-    metalness: 0.0
-  });
-  
-  const roofMaterial = new THREE.MeshStandardMaterial({ 
-    color: 0x8B4513,
-    roughness: 0.6, 
-    metalness: 0.0,
-    side: THREE.DoubleSide
-  });
-  
-  const roofDarkMaterial = new THREE.MeshStandardMaterial({ 
-    color: 0x654321,
-    roughness: 0.6, 
-    metalness: 0.0,
-    side: THREE.DoubleSide
-  });
-  
-  const doorMaterial = new THREE.MeshStandardMaterial({ 
-    color: 0x654321,
-    roughness: 0.5, 
-    metalness: 0.1
-  });
-  
-  const windowMaterial = new THREE.MeshStandardMaterial({ 
-    color: 0xFFFFCC,
-    roughness: 0.2, 
-    metalness: 0.0,
-    emissive: 0xFFFF99,
-    emissiveIntensity: 0.3
-  });
-
-  const purpleMaterial = new THREE.MeshStandardMaterial({ 
-    color: 0x4D2783,
-    roughness: 0.5, 
-    metalness: 0.1
-  });
-
-  const goldMaterial = new THREE.MeshStandardMaterial({ 
-    color: 0xFFBD32,
-    roughness: 0.3, 
-    metalness: 0.6
-  });
+  // No need to create material objects in R3F - use JSX directly
 
   // House dimensions
   const houseWidth = 2;
@@ -137,41 +86,49 @@ export function House1_R3F({ isPulsing = false }: House1_R3FProps) {
       {/* Main house body */}
       <mesh position={[0, houseHeight / 2, 0]}>
         <boxGeometry args={[houseWidth, houseHeight, houseDepth]} />
-        {[wallSideMaterial, wallMaterial, wallMaterial, wallMaterial, wallMaterial, wallMaterial]}
+        <meshStandardMaterial color={0xD2691E} roughness={0.7} metalness={0.0} />
       </mesh>
 
       {/* Left roof slope */}
-      <mesh geometry={leftRoofGeo} material={roofMaterial} />
+      <mesh geometry={leftRoofGeo}>
+        <meshStandardMaterial color={0x8B4513} roughness={0.6} metalness={0.0} side={THREE.DoubleSide} />
+      </mesh>
       
       {/* Right roof slope */}
-      <mesh geometry={rightRoofGeo} material={roofDarkMaterial} />
+      <mesh geometry={rightRoofGeo}>
+        <meshStandardMaterial color={0x654321} roughness={0.6} metalness={0.0} side={THREE.DoubleSide} />
+      </mesh>
 
       {/* Front gable */}
-      <mesh geometry={gableGeometry} material={wallMaterial} position={[0, houseHeight, houseDepth / 2 + 0.01]} />
+      <mesh geometry={gableGeometry} position={[0, houseHeight, houseDepth / 2 + 0.01]}>
+        <meshStandardMaterial color={0xD2691E} roughness={0.7} metalness={0.0} />
+      </mesh>
       
       {/* Back gable */}
-      <mesh geometry={gableGeometry} material={wallSideMaterial} position={[0, houseHeight, -houseDepth / 2 - 0.01]} rotation={[0, Math.PI, 0]} />
+      <mesh geometry={gableGeometry} position={[0, houseHeight, -houseDepth / 2 - 0.01]} rotation={[0, Math.PI, 0]}>
+        <meshStandardMaterial color={0xA0522D} roughness={0.7} metalness={0.0} />
+      </mesh>
 
       {/* Top hat logo */}
       <group position={[0, houseHeight + roofHeight * 0.35, houseDepth / 2 + 0.03]}>
         <mesh position={[0, 0.175, 0]}>
           <boxGeometry args={[0.3, 0.35, 0.06]} />
-          <primitive object={purpleMaterial} />
+          <meshStandardMaterial color={0x4D2783} roughness={0.5} metalness={0.1} />
         </mesh>
         <mesh position={[0, 0, 0]}>
           <boxGeometry args={[0.48, 0.05, 0.06]} />
-          <primitive object={purpleMaterial} />
+          <meshStandardMaterial color={0x4D2783} roughness={0.5} metalness={0.1} />
         </mesh>
         <mesh position={[0, 0.1, 0]}>
           <boxGeometry args={[0.32, 0.08, 0.07]} />
-          <primitive object={goldMaterial} />
+          <meshStandardMaterial color={0xFFBD32} roughness={0.3} metalness={0.6} />
         </mesh>
       </group>
 
       {/* Door */}
       <mesh position={[0, 0.35, houseDepth / 2 + 0.04]}>
         <boxGeometry args={[0.4, 0.7, 0.08]} />
-        <primitive object={doorMaterial} />
+        <meshStandardMaterial color={0x654321} roughness={0.5} metalness={0.1} />
       </mesh>
 
       {/* Windows */}
@@ -183,7 +140,13 @@ export function House1_R3F({ isPulsing = false }: House1_R3FProps) {
           </mesh>
           <mesh>
             <boxGeometry args={[0.3, 0.3, 0.06]} />
-            <primitive object={windowMaterial} />
+            <meshStandardMaterial 
+              color={0xFFFFCC} 
+              roughness={0.2} 
+              metalness={0.0} 
+              emissive={0xFFFF99}
+              emissiveIntensity={0.3}
+            />
           </mesh>
         </group>
       ))}

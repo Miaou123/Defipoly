@@ -1,6 +1,6 @@
 'use client';
 
-import { View3D } from './SharedCanvas';
+import { LazyView3D } from './LazyView3D';
 import { Bank3D_R3F } from './r3f/Bank3D_R3F';
 import { PerspectiveCamera } from '@react-three/drei';
 
@@ -21,7 +21,7 @@ export function Bank3D_View({
   onCollect 
 }: Bank3D_ViewProps) {
   return (
-    <View3D 
+    <LazyView3D 
       className="flex items-center justify-center cursor-pointer" 
       style={{ width: size, height: size }}
       onClick={onCollect}
@@ -32,6 +32,6 @@ export function Bank3D_View({
         rewardsAmount={rewardsAmount}
         profilePicture={profilePicture}
       />
-    </View3D>
+    </LazyView3D>
   );
 }

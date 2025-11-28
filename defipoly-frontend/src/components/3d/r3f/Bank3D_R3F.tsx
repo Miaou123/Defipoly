@@ -55,25 +55,7 @@ export function Bank3D_R3F({
     }
   }, [profilePicture]);
 
-  // Materials
-  const purpleMaterial = new THREE.MeshStandardMaterial({ 
-    color: 0x5D3A9B, roughness: 0.4, metalness: 0.1
-  });
-  const darkPurpleMaterial = new THREE.MeshStandardMaterial({ 
-    color: 0x3D2570, roughness: 0.5, metalness: 0.1
-  });
-  const goldMaterial = new THREE.MeshStandardMaterial({ 
-    color: 0xFFBD32, roughness: 0.2, metalness: 0.7
-  });
-  const lightPurpleMaterial = new THREE.MeshStandardMaterial({ 
-    color: 0x8B6BC4, roughness: 0.3, metalness: 0.2
-  });
-  const whiteMaterial = new THREE.MeshStandardMaterial({ 
-    color: 0xE8E0F0, roughness: 0.3, metalness: 0.1
-  });
-  const doorMaterial = new THREE.MeshStandardMaterial({ 
-    color: 0x1a0a2e, roughness: 0.4, metalness: 0.1
-  });
+  // No need to create material objects in R3F - use JSX directly
 
   const buildingWidth = 18;
   const buildingHeight = 8;
@@ -131,17 +113,17 @@ export function Bank3D_R3F({
       {/* Base platform */}
       <mesh position={[0, 0.4, 0]}>
         <boxGeometry args={[20, 0.8, 12]} />
-        <primitive object={lightPurpleMaterial} />
+        <meshStandardMaterial color={0x8B6BC4} roughness={0.3} metalness={0.2} />
       </mesh>
       <mesh position={[0, 0.1, 0]}>
         <boxGeometry args={[20.4, 0.3, 12.4]} />
-        <primitive object={darkPurpleMaterial} />
+        <meshStandardMaterial color={0x3D2570} roughness={0.5} metalness={0.1} />
       </mesh>
 
       {/* Main building */}
       <mesh position={[0, 4.8, 0]}>
         <boxGeometry args={[buildingWidth, buildingHeight, buildingDepth]} />
-        <primitive object={purpleMaterial} />
+        <meshStandardMaterial color={0x5D3A9B} roughness={0.4} metalness={0.1} />
       </mesh>
 
       {/* Columns */}
@@ -149,15 +131,15 @@ export function Bank3D_R3F({
         <group key={i} position={[xPos, 0, buildingDepth/2 + 0.2]}>
           <mesh position={[0, 4.4, 0]}>
             <cylinderGeometry args={[0.56, 0.5, 7.2, 16]} />
-            <primitive object={whiteMaterial} />
+            <meshStandardMaterial color={0xE8E0F0} roughness={0.3} metalness={0.1} />
           </mesh>
           <mesh position={[0, 1.0, 0]}>
             <boxGeometry args={[1.2, 0.5, 1.2]} />
-            <primitive object={lightPurpleMaterial} />
+            <meshStandardMaterial color={0x8B6BC4} roughness={0.3} metalness={0.2} />
           </mesh>
           <mesh position={[0, 8.4, 0]}>
             <boxGeometry args={[1.1, 0.36, 1.1]} />
-            <primitive object={lightPurpleMaterial} />
+            <meshStandardMaterial color={0x8B6BC4} roughness={0.3} metalness={0.2} />
           </mesh>
         </group>
       ))}
@@ -165,29 +147,29 @@ export function Bank3D_R3F({
       {/* Roof beam */}
       <mesh position={[0, 9.25, 0]}>
         <boxGeometry args={[buildingWidth + 1.2, 0.9, buildingDepth + 1.2]} />
-        <primitive object={purpleMaterial} />
+        <meshStandardMaterial color={0x5D3A9B} roughness={0.4} metalness={0.1} />
       </mesh>
       <mesh position={[0, 9.0, buildingDepth/2 + 0.76]}>
         <boxGeometry args={[buildingWidth + 1.4, 0.24, 0.3]} />
-        <primitive object={goldMaterial} />
+        <meshStandardMaterial color={0xFFBD32} roughness={0.2} metalness={0.7} />
       </mesh>
 
       {/* Dentils */}
       {Array.from({ length: 17 }, (_, i) => -8.4 + i * 1.0).map((x, i) => (
         <mesh key={i} position={[x, 8.7, buildingDepth/2 + 0.5]}>
           <boxGeometry args={[0.36, 0.36, 0.36]} />
-          <primitive object={darkPurpleMaterial} />
+          <meshStandardMaterial color={0x3D2570} roughness={0.5} metalness={0.1} />
         </mesh>
       ))}
 
       {/* Counter section */}
       <mesh position={[0, counterSectionY, 0]}>
         <boxGeometry args={[counterSectionWidth, counterSectionHeight, counterSectionDepth]} />
-        <primitive object={purpleMaterial} />
+        <meshStandardMaterial color={0x5D3A9B} roughness={0.4} metalness={0.1} />
       </mesh>
       <mesh position={[0, counterSectionY + counterSectionHeight/2 + 0.1, counterSectionDepth/2 + 0.16]}>
         <boxGeometry args={[counterSectionWidth + 0.3, 0.2, 0.24]} />
-        <primitive object={goldMaterial} />
+        <meshStandardMaterial color={0xFFBD32} roughness={0.2} metalness={0.7} />
       </mesh>
 
       {/* Counter display */}
@@ -211,7 +193,9 @@ export function Bank3D_R3F({
       </group>
 
       {/* Triangular roof */}
-      <mesh geometry={roofGeometry} material={purpleMaterial} position={[0, roofBaseY, 0]} />
+      <mesh geometry={roofGeometry} position={[0, roofBaseY, 0]}>
+        <meshStandardMaterial color={0x5D3A9B} roughness={0.4} metalness={0.1} />
+      </mesh>
 
       {/* Profile picture circle */}
       <group position={[0, roofBaseY + peakHeight * 0.40, roofDepth/2 + 0.2]}>
@@ -225,32 +209,32 @@ export function Bank3D_R3F({
         </mesh>
         <mesh position={[0, 0, 0.04]}>
           <torusGeometry args={[2.35, 0.18, 16, 32]} />
-          <primitive object={goldMaterial} />
+          <meshStandardMaterial color={0xFFBD32} roughness={0.2} metalness={0.7} />
         </mesh>
       </group>
 
       {/* Door */}
       <mesh position={[0, 4.0, frontZ + 0.1]}>
         <boxGeometry args={[3.6, 6.4, 0.7]} />
-        <primitive object={darkPurpleMaterial} />
+        <meshStandardMaterial color={0x3D2570} roughness={0.5} metalness={0.1} />
       </mesh>
       <mesh position={[0, 3.6, frontZ + 0.36]}>
         <boxGeometry args={[2.8, 5.6, 0.24]} />
-        <primitive object={doorMaterial} />
+        <meshStandardMaterial color={0x1a0a2e} roughness={0.4} metalness={0.1} />
       </mesh>
       <mesh position={[0, 3.6, frontZ + 0.44]}>
         <boxGeometry args={[0.08, 5.6, 0.28]} />
-        <primitive object={darkPurpleMaterial} />
+        <meshStandardMaterial color={0x3D2570} roughness={0.5} metalness={0.1} />
       </mesh>
       
       {/* Door handles */}
       <mesh position={[-0.6, 3.4, frontZ + 0.6]}>
-        <sphereGeometry args={[0.16, 8, 8]} />
-        <primitive object={goldMaterial} />
+        <sphereGeometry args={[0.16, 6, 6]} />
+        <meshStandardMaterial color={0xFFBD32} roughness={0.2} metalness={0.7} />
       </mesh>
       <mesh position={[0.6, 3.4, frontZ + 0.6]}>
-        <sphereGeometry args={[0.16, 8, 8]} />
-        <primitive object={goldMaterial} />
+        <sphereGeometry args={[0.16, 6, 6]} />
+        <meshStandardMaterial color={0xFFBD32} roughness={0.2} metalness={0.7} />
       </mesh>
     </group>
   );

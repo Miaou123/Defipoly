@@ -12,24 +12,7 @@ export function Logo3D_R3F() {
     groupRef.current.rotation.y += 0.008;
   });
 
-  // Materials
-  const purpleMaterial = new THREE.MeshStandardMaterial({ 
-    color: 0x4D2783,
-    roughness: 0.7,
-    metalness: 0.0
-  });
-
-  const goldMaterial = new THREE.MeshStandardMaterial({ 
-    color: 0xFFBD32,
-    roughness: 0.2,
-    metalness: 0.8
-  });
-
-  const innerMaterial = new THREE.MeshStandardMaterial({ 
-    color: 0x2a1548,
-    roughness: 0.4,
-    metalness: 0.1
-  });
+  // No need to create material objects in R3F - use JSX directly
 
   // Crown dimensions
   const crownHeight = 1.8;
@@ -53,48 +36,48 @@ export function Logo3D_R3F() {
 
       {/* Crown */}
       <mesh position={[0, crownHeight / 2 + 0.15, 0]}>
-        <cylinderGeometry args={[crownRadiusTop, crownRadius, crownHeight, 64]} />
-        <primitive object={purpleMaterial} />
+        <cylinderGeometry args={[crownRadiusTop, crownRadius, crownHeight, 24]} />
+        <meshStandardMaterial color={0x4D2783} roughness={0.7} metalness={0.0} />
       </mesh>
 
       {/* Flat top */}
       <mesh position={[0, crownHeight + 0.15, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-        <circleGeometry args={[crownRadiusTop, 64]} />
-        <primitive object={purpleMaterial} />
+        <circleGeometry args={[crownRadiusTop, 24]} />
+        <meshStandardMaterial color={0x4D2783} roughness={0.7} metalness={0.0} />
       </mesh>
 
       {/* Inner crown */}
       <mesh position={[0, 0.1, 0]}>
-        <cylinderGeometry args={[crownRadius - 0.05, crownRadius - 0.05, 0.5, 64, 1, true]} />
-        <primitive object={innerMaterial} />
+        <cylinderGeometry args={[crownRadius - 0.05, crownRadius - 0.05, 0.5, 24, 1, true]} />
+        <meshStandardMaterial color={0x2a1548} roughness={0.4} metalness={0.1} />
       </mesh>
 
       {/* Brim */}
       <mesh position={[0, 0.15, 0]}>
-        <latheGeometry args={[brimPoints, 64]} />
-        <primitive object={purpleMaterial} />
+        <latheGeometry args={[brimPoints, 24]} />
+        <meshStandardMaterial color={0x4D2783} roughness={0.7} metalness={0.0} />
       </mesh>
 
       {/* Gold band */}
       <mesh position={[0, 0.375, 0]}>
-        <cylinderGeometry args={[crownRadius + 0.025, crownRadius + 0.025, 0.35, 64, 1, true]} />
-        <primitive object={goldMaterial} />
+        <cylinderGeometry args={[crownRadius + 0.025, crownRadius + 0.025, 0.35, 24, 1, true]} />
+        <meshStandardMaterial color={0xFFBD32} roughness={0.2} metalness={0.8} />
       </mesh>
 
       {/* Band edges */}
       <mesh position={[0, 0.55, 0]} rotation={[Math.PI / 2, 0, 0]}>
-        <torusGeometry args={[crownRadius + 0.025, 0.02, 8, 64]} />
-        <primitive object={goldMaterial} />
+        <torusGeometry args={[crownRadius + 0.025, 0.02, 8, 24]} />
+        <meshStandardMaterial color={0xFFBD32} roughness={0.2} metalness={0.8} />
       </mesh>
       <mesh position={[0, 0.2, 0]} rotation={[Math.PI / 2, 0, 0]}>
-        <torusGeometry args={[crownRadius + 0.025, 0.02, 8, 64]} />
-        <primitive object={goldMaterial} />
+        <torusGeometry args={[crownRadius + 0.025, 0.02, 8, 24]} />
+        <meshStandardMaterial color={0xFFBD32} roughness={0.2} metalness={0.8} />
       </mesh>
 
       {/* Small knot */}
       <mesh position={[0, 0.38, crownRadius + 0.05]}>
         <boxGeometry args={[0.15, 0.2, 0.08]} />
-        <primitive object={goldMaterial} />
+        <meshStandardMaterial color={0xFFBD32} roughness={0.2} metalness={0.8} />
       </mesh>
     </group>
   );
