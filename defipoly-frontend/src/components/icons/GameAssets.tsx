@@ -2,7 +2,7 @@
 // Visual assets for the game board - buildings, location pins, etc.
 
 import React from 'react';
-import { House1_3D } from '../3d/House1_3D';
+import { House1_3D_View } from '../3d/House1_3D_View';
 
 interface LocationPinProps {
   color: string; // Tailwind color class like 'bg-amber-900'
@@ -91,7 +91,7 @@ export const getBuildingComponent = (level: number, isPulsing: boolean = false):
     case 0:
       return <></>;
     case 1:
-      return <House1_3D size={120} isPulsing={isPulsing} />;
+      return <House1_3D_View size={120} isPulsing={isPulsing} />;
     case 2:
       return (
         // Larger House with Chimney

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, ReactNode } from 'react';
 import { Providers } from './Providers';
+import { SharedCanvasProvider } from './3d/SharedCanvas';
 
 interface AppShellProps {
   children: ReactNode;
@@ -29,5 +30,11 @@ export function AppShell({ children }: AppShellProps) {
     );
   }
 
-  return <Providers>{children}</Providers>;
+  return (
+    <Providers>
+      <SharedCanvasProvider>
+        {children}
+      </SharedCanvasProvider>
+    </Providers>
+  );
 }

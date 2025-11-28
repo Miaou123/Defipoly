@@ -16,8 +16,8 @@ import { PROGRAM_ID, TOKEN_TICKER } from '@/utils/constants';
 import { BorshCoder, EventParser } from '@coral-xyz/anchor';
 import idl from '@/idl/defipoly_program.json';
 import { BuildingIcon, WalletIcon, GiftIcon, TargetIcon, ShieldIcon } from './icons/UIIcons';
-import { Bank3D } from './3d/Bank3D';
-import { Logo3D } from './3d/Logo3D';
+import { Bank3D_View } from './3d/Bank3D_View';
+import { Logo3D_View } from './3d/Logo3D_View';
 import { getProfile, ProfileData } from '@/utils/profileStorage';
 
 interface Floater {
@@ -255,7 +255,7 @@ export function RewardsPanel({ incomeArrived = null, scaleFactor = 1 }: RewardsP
       <div className="relative space-y-6 px-4 max-w-md w-full" style={{ transform: 'translateY(-40px)' }}>
         <div className="text-center space-y-4">
           <div className="flex justify-center">
-            <Logo3D size={160} />
+            <Logo3D_View size={160} />
           </div>
           <p className="font-orbitron text-4xl font-bold bg-gradient-to-r from-purple-400 via-cyan-400 to-purple-400 bg-[length:200%_auto] bg-clip-text text-transparent animate-shimmer">
             Defipoly
@@ -372,7 +372,7 @@ export function RewardsPanel({ incomeArrived = null, scaleFactor = 1 }: RewardsP
             className="relative z-30"
             style={{ width: `${bankWidth}px`, height: `${bankHeight}px` }}
           >
-            <Bank3D 
+            <Bank3D_View 
               isPulsing={isPulsing} 
               size={bankWidth}
               rewardsAmount={displayedRewards}
