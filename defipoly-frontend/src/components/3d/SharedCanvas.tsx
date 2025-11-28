@@ -66,17 +66,21 @@ interface View3DProps {
 }
 
 export function View3D({ children, className, style, onClick }: View3DProps & { onClick?: () => void }) {
-  const ref = useRef<HTMLDivElement>(null);
-  const renderCount = useRef(0);
-  
-  renderCount.current++;
-  if (renderCount.current > 5) {
-    console.log(`🔄 View3D render #${renderCount.current} - INFINITE LOOP DETECTED!`);
-  }
+  const localRef = useRef<HTMLDivElement>(null!);
   
   return (
-    <div ref={ref} className={className} style={style} onClick={onClick}>
-      Simple div - no 3D
+    <div 
+      ref={localRef} 
+      className={className} 
+      style={{ ...style, position: 'relative' }}  // Ensure position context
+      onClick={onClick}
+    >
+      <View track={localRef} style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}>
+        <SharedLighting />
+        <Suspense fallback={null}>
+          {children}
+        </Suspense>
+      </View>
     </div>
   );
 }
