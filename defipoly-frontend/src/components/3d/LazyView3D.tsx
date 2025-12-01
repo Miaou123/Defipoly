@@ -1,7 +1,20 @@
 'use client';
 
-import { useState, useEffect, useRef, ReactNode, memo } from 'react';
+import { useState, useEffect, useRef, ReactNode, memo, Suspense } from 'react';
+import { Canvas } from '@react-three/fiber';
 import { View3D } from './SharedCanvas';
+
+// Shared lighting config
+function SharedLighting() {
+  return (
+    <>
+      <ambientLight intensity={1.2} />
+      <directionalLight position={[5, 10, 7]} intensity={1.5} />
+      <directionalLight position={[-5, 5, -5]} intensity={0.5} color="#ffeedd" />
+      <directionalLight position={[0, -5, 5]} intensity={0.3} />
+    </>
+  );
+}
 
 interface LazyView3DProps {
   children: ReactNode;
@@ -10,6 +23,7 @@ interface LazyView3DProps {
   onClick?: () => void;
   rootMargin?: string;
   threshold?: number;
+  inModal?: boolean;
 }
 
 function LazyView3DComponent({ 
@@ -18,7 +32,8 @@ function LazyView3DComponent({
   style, 
   onClick,
   rootMargin = '50px',
-  threshold = 0.1
+  threshold = 0.1,
+  inModal = false
 }: LazyView3DProps) {
   const [isVisible, setIsVisible] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -52,8 +67,29 @@ function LazyView3DComponent({
 
     observer.observe(element);
     return () => observer.disconnect();
-  }, []);
+  }, [rootMargin, threshold]);
 
+  // For modal context, use inline Canvas (renders above modal backdrop)
+  if (inModal) {
+    return (
+      <div ref={ref} className={className} style={style} onClick={onClick}>
+        {isVisible && (
+          <Canvas
+            style={{ width: '100%', height: '100%' }}
+            gl={{ antialias: true, alpha: true, powerPreference: 'default' }}
+            flat
+          >
+            <SharedLighting />
+            <Suspense fallback={null}>
+              {children}
+            </Suspense>
+          </Canvas>
+        )}
+      </div>
+    );
+  }
+
+  // For normal context, use shared View3D (global canvas at z-10)
   return (
     <div ref={ref} className={className} style={style} onClick={onClick}>
       {isVisible ? (

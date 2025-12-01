@@ -22,15 +22,13 @@ export function House5_R3F({ isPulsing = false }: House5_R3FProps) {
     groupRef.current.rotation.y = Math.sin(Date.now() * 0.0003) * 0.15 + 0.4;
   });
 
-  // No need to create material objects in R3F - use JSX directly
-
   // Luxury hotel skyscraper
   const buildingWidth = 3.2;
   const buildingHeight = 5.5;
   const buildingDepth = 3.0;
   
   return (
-    <group ref={groupRef} position={[0, -0.05, 0]} scale={0.45}>
+    <group ref={groupRef} position={[0, 0.55, 0]} scale={0.45}>
       {/* Base/Ground */}
       <mesh position={[0, -0.05, 0]}>
         <boxGeometry args={[buildingWidth + 1.0, 0.2, buildingDepth + 1.0]} />
@@ -49,25 +47,9 @@ export function House5_R3F({ isPulsing = false }: House5_R3FProps) {
         <meshStandardMaterial color={0xFFD700} roughness={0.1} metalness={0.8} />
       </mesh>
 
-      {/* Top hat logo on roof - larger for hotel */}
-      <group position={[0, buildingHeight + 0.8, buildingDepth / 2 + 0.2]}>
-        <mesh position={[0, 0.4, 0]}>
-          <boxGeometry args={[0.7, 0.8, 0.15]} />
-          <meshStandardMaterial color={0x4D2783} roughness={0.5} metalness={0.1} />
-        </mesh>
-        <mesh position={[0, 0, 0]}>
-          <boxGeometry args={[1.0, 0.12, 0.15]} />
-          <meshStandardMaterial color={0x4D2783} roughness={0.5} metalness={0.1} />
-        </mesh>
-        <mesh position={[0, 0.25, 0]}>
-          <boxGeometry args={[0.72, 0.18, 0.16]} />
-          <meshStandardMaterial color={0xFFBD32} roughness={0.1} metalness={0.9} />
-        </mesh>
-      </group>
-
       {/* Windows - 4 columns × 6 rows for luxury feel */}
-      {[0, 1, 2, 3, 4, 5].map(floor => 
-        [-1.0, -0.35, 0.35, 1.0].map((x, col) => (
+      {([0, 1, 2, 3, 4, 5] as number[]).map(floor => 
+        ([-1.0, -0.35, 0.35, 1.0] as number[]).map((x, col) => (
           <group key={`${floor}-${col}`} position={[x, 0.7 + floor * 0.8, buildingDepth / 2 + 0.05]}>
             <mesh position={[0, 0, -0.02]}>
               <boxGeometry args={[0.28, 0.28, 0.04]} />
@@ -152,7 +134,7 @@ export function House5_R3F({ isPulsing = false }: House5_R3FProps) {
       </group>
 
       {/* Luxury entrance columns */}
-      {[-0.8, 0.8].map((x, i) => (
+      {([-0.8, 0.8] as number[]).map((x, i) => (
         <mesh key={i} position={[x, 1.5, buildingDepth / 2 + 0.03]}>
           <cylinderGeometry args={[0.08, 0.08, 3.0]} />
           <meshStandardMaterial color={0xE8E8E8} roughness={0.2} metalness={0.3} />

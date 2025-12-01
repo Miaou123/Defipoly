@@ -23,15 +23,55 @@ export function House2_R3F({ isPulsing = false }: House2_R3FProps) {
     groupRef.current.rotation.y = Math.sin(Date.now() * 0.0003) * 0.15 + 0.4;
   });
 
-  // No need to create material objects in R3F - use JSX directly
-
   // House 2 dimensions - larger than house 1
   const houseWidth = 2.5;
   const houseHeight = 2.0;
   const houseDepth = 2.2;
+
+  // Roof dimensions
+  const roofHeight = 0.8;
+  const roofOverhang = 0.15;
+  const hw = houseWidth / 2 + roofOverhang;
+  const hd = houseDepth / 2 + roofOverhang;
+  const baseY = houseHeight;
+  const peakY = houseHeight + roofHeight;
+
+  // Left roof slope
+  const leftRoofGeo = new THREE.BufferGeometry();
+  const leftRoofVerts = new Float32Array([
+    0,   peakY, -hd,
+    0,   peakY, hd,
+    -hw, baseY, hd,
+    0,   peakY, -hd,
+    -hw, baseY, hd,
+    -hw, baseY, -hd,
+  ]);
+  leftRoofGeo.setAttribute('position', new THREE.BufferAttribute(leftRoofVerts, 3));
+  leftRoofGeo.computeVertexNormals();
+
+  // Right roof slope
+  const rightRoofGeo = new THREE.BufferGeometry();
+  const rightRoofVerts = new Float32Array([
+    0,  peakY, hd,
+    0,  peakY, -hd,
+    hw, baseY, -hd,
+    0,  peakY, hd,
+    hw, baseY, -hd,
+    hw, baseY, hd,
+  ]);
+  rightRoofGeo.setAttribute('position', new THREE.BufferAttribute(rightRoofVerts, 3));
+  rightRoofGeo.computeVertexNormals();
+
+  // Gable geometry (triangular front/back)
+  const gableShape = new THREE.Shape();
+  gableShape.moveTo(-houseWidth / 2, 0);
+  gableShape.lineTo(houseWidth / 2, 0);
+  gableShape.lineTo(0, roofHeight);
+  gableShape.closePath();
+  const gableGeometry = new THREE.ShapeGeometry(gableShape);
   
   return (
-    <group ref={groupRef} position={[0, -0.05, 0]} scale={0.7}>
+    <group ref={groupRef} position={[0, 0.3, 0]} scale={0.7}>
       {/* Base/Ground */}
       <mesh position={[0, -0.05, 0]}>
         <boxGeometry args={[houseWidth + 0.5, 0.1, houseDepth + 0.5]} />
@@ -45,44 +85,36 @@ export function House2_R3F({ isPulsing = false }: House2_R3FProps) {
       </mesh>
 
       {/* Chimney */}
-      <group position={[-0.6, 1.3, -0.8]}>
+      <group position={[-0.7, 2.0, -0.5]}>
         <mesh position={[0, 0.5, 0]}>
-          <boxGeometry args={[0.4, 1.0, 0.4]} />
+          <boxGeometry args={[0.4, 1.2, 0.4]} />
           <meshStandardMaterial color={0x8B4513} roughness={0.6} metalness={0.0} />
         </mesh>
-        <mesh position={[0, 1.0, 0]}>
-          <boxGeometry args={[0.5, 0.2, 0.5]} />
+        <mesh position={[0, 1.1, 0]}>
+          <boxGeometry args={[0.5, 0.15, 0.5]} />
           <meshStandardMaterial color={0x654321} roughness={0.6} metalness={0.0} />
         </mesh>
       </group>
 
-      {/* Roof - simple pitched */}
-      <group position={[0, houseHeight + 0.3, 0]}>
-        <mesh position={[0, 0.3, 0]} rotation={[0, 0, Math.PI / 6]}>
-          <boxGeometry args={[houseWidth + 0.4, 0.1, houseDepth + 0.4]} />
-          <meshStandardMaterial color={0x8B4513} roughness={0.6} metalness={0.0} />
-        </mesh>
-        <mesh position={[0, 0.3, 0]} rotation={[0, 0, -Math.PI / 6]}>
-          <boxGeometry args={[houseWidth + 0.4, 0.1, houseDepth + 0.4]} />
-          <meshStandardMaterial color={0x654321} roughness={0.6} metalness={0.0} />
-        </mesh>
-      </group>
+      {/* Left roof slope */}
+      <mesh geometry={leftRoofGeo}>
+        <meshStandardMaterial color={0x8B4513} roughness={0.6} metalness={0.0} side={THREE.DoubleSide} />
+      </mesh>
+      
+      {/* Right roof slope */}
+      <mesh geometry={rightRoofGeo}>
+        <meshStandardMaterial color={0x654321} roughness={0.6} metalness={0.0} side={THREE.DoubleSide} />
+      </mesh>
 
-      {/* Top hat logo */}
-      <group position={[0, houseHeight + 0.5, houseDepth / 2 + 0.05]}>
-        <mesh position={[0, 0.2, 0]}>
-          <boxGeometry args={[0.35, 0.4, 0.08]} />
-          <meshStandardMaterial color={0x4D2783} roughness={0.5} metalness={0.1} />
-        </mesh>
-        <mesh position={[0, 0, 0]}>
-          <boxGeometry args={[0.55, 0.06, 0.08]} />
-          <meshStandardMaterial color={0x4D2783} roughness={0.5} metalness={0.1} />
-        </mesh>
-        <mesh position={[0, 0.12, 0]}>
-          <boxGeometry args={[0.37, 0.1, 0.09]} />
-          <meshStandardMaterial color={0xFFBD32} roughness={0.3} metalness={0.6} />
-        </mesh>
-      </group>
+      {/* Front gable */}
+      <mesh geometry={gableGeometry} position={[0, houseHeight, houseDepth / 2 + 0.01]}>
+        <meshStandardMaterial color={0xD2691E} roughness={0.7} metalness={0.0} />
+      </mesh>
+      
+      {/* Back gable */}
+      <mesh geometry={gableGeometry} position={[0, houseHeight, -houseDepth / 2 - 0.01]} rotation={[0, Math.PI, 0]}>
+        <meshStandardMaterial color={0xA0522D} roughness={0.7} metalness={0.0} />
+      </mesh>
 
       {/* Door - centered */}
       <mesh position={[0, 0.5, houseDepth / 2 + 0.05]}>
@@ -95,10 +127,10 @@ export function House2_R3F({ isPulsing = false }: House2_R3FProps) {
       </mesh>
 
       {/* Windows - 4 windows, symmetrical */}
-      {[
-        [-0.7, 0.7], [0.7, 0.7],  // Upper windows
-        [-0.7, 0.2], [0.7, 0.2]   // Lower windows  
-      ].map(([x, y], i) => (
+      {([
+        [-0.7, 0.85], [0.7, 0.85],  // Upper windows
+        [-0.7, 0.45], [0.7, 0.45]   // Lower windows  
+      ] as [number, number][]).map(([x, y], i) => (
         <group key={i} position={[x, houseHeight * y, houseDepth / 2 + 0.05]}>
           <mesh position={[0, 0, -0.02]}>
             <boxGeometry args={[0.42, 0.42, 0.04]} />

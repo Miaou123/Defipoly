@@ -285,7 +285,7 @@ export function IncomeFlowOverlay({ enabled = true, onParticleArrive }: IncomeFl
   if (!enabled || ownedPropertiesWithIncome.length === 0) return null;
 
   return (
-    <div ref={containerRef} className="absolute inset-0 pointer-events-none overflow-hidden z-20">
+    <div ref={containerRef} className="absolute inset-0 pointer-events-none overflow-hidden z-30">
       {particles.map(p => {
         const pos = getPosition(p);
         // Fade in quickly, stay fully opaque, only fade out at very end

@@ -8,13 +8,19 @@ import { PerspectiveCamera } from '@react-three/drei';
 interface Pin3D_ViewProps {
   size?: number;
   color?: string;
+  inModal?: boolean;
 }
 
-function Pin3D_ViewComponent({ size = 80, color = 'bg-purple-500' }: Pin3D_ViewProps) {
+function Pin3D_ViewComponent({ 
+  size = 80, 
+  color = 'bg-purple-500',
+  inModal = false 
+}: Pin3D_ViewProps) {
   return (
     <LazyView3D 
       className="flex items-center justify-center" 
       style={{ width: size, height: size }}
+      inModal={inModal}
     >
       <PerspectiveCamera makeDefault position={[0, 1, 4]} fov={45} />
       <Pin3D_R3F color={color} />

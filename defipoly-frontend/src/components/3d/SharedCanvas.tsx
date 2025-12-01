@@ -23,7 +23,7 @@ interface View3DProps {
   children: ReactNode;
   className?: string;
   style?: React.CSSProperties;
-  onClick?: () => void;  // Add ? here
+  onClick?: () => void;
 }
 
 export function SharedCanvasProvider({ children }: SharedCanvasProviderProps) {
@@ -40,7 +40,7 @@ export function SharedCanvasProvider({ children }: SharedCanvasProviderProps) {
           width: '100%',
           height: '100%',
           pointerEvents: 'none',
-          zIndex: 50,
+          zIndex: 10,  // Lower than modals (z-50)
         }}
         eventSource={containerRef}
         eventPrefix="client"
@@ -56,13 +56,6 @@ export function SharedCanvasProvider({ children }: SharedCanvasProviderProps) {
       </Canvas>
     </div>
   );
-}
-
-interface View3DProps {
-  children: ReactNode;
-  className?: string;
-  style?: React.CSSProperties;
-  onClick?: () => void;
 }
 
 function View3DComponent({ 

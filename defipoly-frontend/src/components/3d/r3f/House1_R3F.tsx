@@ -76,7 +76,7 @@ export function House1_R3F({ isPulsing = false }: House1_R3FProps) {
   const gableGeometry = new THREE.ShapeGeometry(gableShape);
 
   return (
-    <group ref={groupRef} position={[0, -0.05, 0]} scale={0.8}>
+    <group ref={groupRef} position={[0, 0.2, 0]} scale={0.8}>
       {/* Base/Ground */}
       <mesh position={[0, -0.05, 0]}>
         <boxGeometry args={[houseWidth + 0.4, 0.1, houseDepth + 0.4]} />

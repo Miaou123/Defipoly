@@ -365,30 +365,32 @@ export function PropertyCard({
         </div>
 
         <div 
-          className="flex-1 flex items-center justify-center min-h-0"
+          className="flex-1 flex items-start justify-center min-h-0"
           style={{
             padding: `0 ${Math.round(4 * scaleFactor)}px`,
+            paddingTop: modalView ? '5%' : '5%',
+            minHeight: modalView ? '160px' : undefined,
           }}
         >
-          
+                  
 
-          {buildingLevel === 0 ? (
-            <div className="w-full h-full flex items-center justify-center">
-              <div style={{ transform: modalView ? 'scale(0.5)' : `scale(${iconScale})` }}>
-                <div className={isHovered || modalView ? 'animate-bounce-pin' : ''}>
-                  <Pin3D_View size={80} color={property.color} />
-                </div>
+        {buildingLevel === 0 ? (
+          <div className="w-full h-full flex items-start justify-center" style={{ paddingTop: '5%' }}>
+            <div style={{ transform: modalView ? 'scale(1)' : `scale(${iconScale})` }}>
+              <div className={isHovered || modalView ? 'animate-bounce-pin' : ''}>
+                <Pin3D_View size={modalView ? 120 : 80} color={property.color} inModal={modalView} />
               </div>
             </div>
-          ) : (
-            <div className="w-full h-full flex items-center justify-center">
-              {buildingLevel === 1 && <House1_3D_View size={60} isPulsing={buildingPulse} />}
-              {buildingLevel === 2 && <House2_3D_View size={60} isPulsing={buildingPulse} />}
-              {buildingLevel === 3 && <House3_3D_View size={60} isPulsing={buildingPulse} />}
-              {buildingLevel === 4 && <House4_3D_View size={60} isPulsing={buildingPulse} />}
-              {buildingLevel === 5 && <House5_3D_View size={60} isPulsing={buildingPulse} />}
-            </div>
-          )}
+          </div>
+        ) : (
+          <div className="w-full h-full flex items-start justify-center" style={{ paddingTop: '5%' }}>
+            {buildingLevel === 1 && <House1_3D_View size={modalView ? 160 : 60} isPulsing={buildingPulse} inModal={modalView} />}
+            {buildingLevel === 2 && <House2_3D_View size={modalView ? 160 : 60} isPulsing={buildingPulse} inModal={modalView} />}
+            {buildingLevel === 3 && <House3_3D_View size={modalView ? 160 : 60} isPulsing={buildingPulse} inModal={modalView} />}
+            {buildingLevel === 4 && <House4_3D_View size={modalView ? 160 : 60} isPulsing={buildingPulse} inModal={modalView} />}
+            {buildingLevel === 5 && <House5_3D_View size={modalView ? 160 : 60} isPulsing={buildingPulse} inModal={modalView} />}
+          </div>
+        )}
         </div>
         <div 
           className="flex items-center justify-between flex-shrink-0"

@@ -22,15 +22,13 @@ export function House4_R3F({ isPulsing = false }: House4_R3FProps) {
     groupRef.current.rotation.y = Math.sin(Date.now() * 0.0003) * 0.15 + 0.4;
   });
 
-  // No need to create material objects in R3F - use JSX directly
-
   // 5-story office building
   const buildingWidth = 2.8;
   const buildingHeight = 4.5;
   const buildingDepth = 2.5;
   
   return (
-    <group ref={groupRef} position={[0, -0.05, 0]} scale={0.5}>
+    <group ref={groupRef} position={[0, 0.5, 0]} scale={0.5}>
       {/* Base/Ground */}
       <mesh position={[0, -0.05, 0]}>
         <boxGeometry args={[buildingWidth + 0.8, 0.15, buildingDepth + 0.8]} />
@@ -49,25 +47,9 @@ export function House4_R3F({ isPulsing = false }: House4_R3FProps) {
         <meshStandardMaterial color={0x808080} roughness={0.4} metalness={0.3} />
       </mesh>
 
-      {/* Top hat logo on roof */}
-      <group position={[0, buildingHeight + 0.7, buildingDepth / 2 + 0.15]}>
-        <mesh position={[0, 0.3, 0]}>
-          <boxGeometry args={[0.5, 0.6, 0.12]} />
-          <meshStandardMaterial color={0x4D2783} roughness={0.5} metalness={0.1} />
-        </mesh>
-        <mesh position={[0, 0, 0]}>
-          <boxGeometry args={[0.75, 0.1, 0.12]} />
-          <meshStandardMaterial color={0x4D2783} roughness={0.5} metalness={0.1} />
-        </mesh>
-        <mesh position={[0, 0.18, 0]}>
-          <boxGeometry args={[0.52, 0.15, 0.13]} />
-          <meshStandardMaterial color={0xFFBD32} roughness={0.3} metalness={0.6} />
-        </mesh>
-      </group>
-
       {/* Windows - 5 floors, 4 columns each */}
-      {[0, 1, 2, 3, 4].map(floor => 
-        [-0.8, -0.3, 0.3, 0.8].map((x, col) => (
+      {([0, 1, 2, 3, 4] as number[]).map(floor => 
+        ([-0.8, -0.3, 0.3, 0.8] as number[]).map((x, col) => (
           <group key={`${floor}-${col}`} position={[x, 0.6 + floor * 0.8, buildingDepth / 2 + 0.05]}>
             <mesh position={[0, 0, -0.02]}>
               <boxGeometry args={[0.25, 0.25, 0.04]} />
