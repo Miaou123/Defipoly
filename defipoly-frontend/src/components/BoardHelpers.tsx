@@ -1,5 +1,7 @@
 'use client';
 
+import { THEME_CONSTANTS } from '@/utils/themeConstants';
+
 export interface CornerSquareProps {
   icon: string;
   label: string;
@@ -55,7 +57,7 @@ export function CornerSquare({ icon, label, bgColor, profilePicture, cornerSquar
       }
     }
     // Default dark theme
-    return `linear-gradient(to bottom right, rgba(31, 41, 55, 0.95), rgba(17, 24, 39, 0.9))`;
+    return THEME_CONSTANTS.DEFAULT_BOARD_BACKGROUND;
   };
 
   return (

@@ -3,8 +3,7 @@
 import { PROPERTIES } from '@/utils/constants';
 import { PropertyCard } from './PropertyCard';
 import { useGameState } from '@/contexts/GameStateContext';
-
-const DEFAULT_BACKGROUND = 'linear-gradient(135deg, rgba(31, 41, 55, 0.95), rgba(17, 24, 39, 0.9))';
+import { THEME_CONSTANTS } from '@/utils/themeConstants';
 
 interface MobileBoardProps {
   onSelectProperty: (propertyId: number) => void;
@@ -81,7 +80,7 @@ export function MobileBoard({
             style={{
               background: customBoardBackground 
                 ? `url(${customBoardBackground}) center/cover no-repeat`
-                : DEFAULT_BACKGROUND,
+                : THEME_CONSTANTS.DEFAULT_BOARD_BACKGROUND,
               boxShadow: 'inset 0 0 20px rgba(0, 0, 0, 0.3)',
             }}
           >

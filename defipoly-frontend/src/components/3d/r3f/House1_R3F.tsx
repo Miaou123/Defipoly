@@ -13,7 +13,7 @@ export function House1_R3F({ isPulsing = false }: House1_R3FProps) {
   const scaleRef = useRef({ current: 1, target: 1 });
 
   // Handle pulsing animation
-  useFrame(() => {
+  useFrame((state) => {
     if (!groupRef.current) return;
     
     // Update target scale based on isPulsing
@@ -24,7 +24,7 @@ export function House1_R3F({ isPulsing = false }: House1_R3FProps) {
     groupRef.current.scale.setScalar(scaleRef.current.current);
     
     // Gentle rotation
-    groupRef.current.rotation.y = Math.sin(Date.now() * 0.0003) * 0.15 + 0.4;
+    groupRef.current.rotation.y = Math.sin(state.clock.elapsedTime * 0.3) * 0.15 + 0.4;
   });
 
   // No need to create material objects in R3F - use JSX directly

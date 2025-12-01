@@ -13,8 +13,7 @@ import { Pin3D_View } from './3d/Pin3D_View';
 import { usePropertySpawnTime } from '@/contexts/ParticleSpawnContext';
 
 import { PROPERTIES } from '@/utils/constants';
-
-const DEFAULT_BACKGROUND = 'linear-gradient(135deg, rgba(31, 41, 55, 0.95), rgba(17, 24, 39, 0.9))';
+import { THEME_CONSTANTS } from '@/utils/themeConstants';
 
 // Helper function for formatting numbers without hydration issues
 const formatNumber = (num: number): string => {
@@ -66,7 +65,7 @@ export function PropertyCard({
         style={{
           background: customPropertyCardBackground 
             ? `url(${customPropertyCardBackground}) center/cover`
-            : 'linear-gradient(to bottom right, rgba(31, 41, 55, 0.95), rgba(17, 24, 39, 0.9))',
+            : THEME_CONSTANTS.DEFAULT_PROPERTY_CARD_BACKGROUND,
           border: '1px solid rgba(139, 92, 246, 0.5)',
           gridColumn: gridColumn,
           gridRow: gridRow,
@@ -239,7 +238,7 @@ export function PropertyCard({
       if (hasCustomBg) {
         styles.background = `url(${customPropertyCardBackground}) center/cover no-repeat`;
       } else {
-        styles.background = DEFAULT_BACKGROUND;
+        styles.background = THEME_CONSTANTS.DEFAULT_PROPERTY_CARD_BACKGROUND;
       }
 
       if (!hasCustomBg) {
@@ -250,7 +249,7 @@ export function PropertyCard({
     } catch (error) {
       console.warn('PropertyCard style error:', error);
       return {
-        background: DEFAULT_BACKGROUND,
+        background: THEME_CONSTANTS.DEFAULT_PROPERTY_CARD_BACKGROUND,
         border: '1px solid #6b7280',
         borderRadius: '16px',
         transition: 'all 0.3s ease',
@@ -378,17 +377,39 @@ export function PropertyCard({
           <div className="w-full h-full flex items-start justify-center" style={{ paddingTop: '5%' }}>
             <div style={{ transform: modalView ? 'scale(1)' : `scale(${iconScale})` }}>
               <div className={isHovered || modalView ? 'animate-bounce-pin' : ''}>
-                <Pin3D_View size={modalView ? 120 : 80} color={property.color} inModal={modalView} />
+                <div style={{ transform: 'translateZ(15px)', transformStyle: 'preserve-3d' }}>
+                  <Pin3D_View size={modalView ? 120 : 80} color={property.color} inModal={modalView} />
+                </div>
               </div>
             </div>
           </div>
         ) : (
-          <div className="w-full h-full flex items-start justify-center" style={{ paddingTop: '5%' }}>
-            {buildingLevel === 1 && <House1_3D_View size={modalView ? 160 : 60} isPulsing={buildingPulse} inModal={modalView} />}
-            {buildingLevel === 2 && <House2_3D_View size={modalView ? 160 : 60} isPulsing={buildingPulse} inModal={modalView} />}
-            {buildingLevel === 3 && <House3_3D_View size={modalView ? 160 : 60} isPulsing={buildingPulse} inModal={modalView} />}
-            {buildingLevel === 4 && <House4_3D_View size={modalView ? 160 : 60} isPulsing={buildingPulse} inModal={modalView} />}
-            {buildingLevel === 5 && <House5_3D_View size={modalView ? 160 : 60} isPulsing={buildingPulse} inModal={modalView} />}
+          <div 
+            style={{ 
+              position: 'relative',
+              width: '100%',
+              height: '100%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}
+          >
+            <div style={{ 
+              position: 'absolute',
+              width: modalView ? 160 : 60,
+              height: modalView ? 160 : 60,
+              top: '50%',
+              left: '50%',
+              transform: 'translate(-50%, -50%)'
+            }}>
+              <div style={{ transform: 'translateZ(15px)', transformStyle: 'preserve-3d' }}>
+                {buildingLevel === 1 && <House1_3D_View size={modalView ? 160 : 60} isPulsing={buildingPulse} inModal={modalView} />}
+                {buildingLevel === 2 && <House2_3D_View size={modalView ? 160 : 60} isPulsing={buildingPulse} inModal={modalView} />}
+                {buildingLevel === 3 && <House3_3D_View size={modalView ? 160 : 60} isPulsing={buildingPulse} inModal={modalView} />}
+                {buildingLevel === 4 && <House4_3D_View size={modalView ? 160 : 60} isPulsing={buildingPulse} inModal={modalView} />}
+                {buildingLevel === 5 && <House5_3D_View size={modalView ? 160 : 60} isPulsing={buildingPulse} inModal={modalView} />}
+              </div>
+            </div>
           </div>
         )}
         </div>

@@ -371,13 +371,15 @@ export function RewardsPanel({ incomeArrived = null, scaleFactor = 1 }: RewardsP
             className="relative z-30"
             style={{ width: `${bankWidth}px`, height: `${bankHeight}px` }}
           >
-            <Bank3D_View 
-              isPulsing={isPulsing} 
-              size={bankWidth}
-              rewardsAmount={displayedRewards}
-              profilePicture={profilePicture}
-              onCollect={handleClaimRewards}
-            />
+            <div style={{ transform: 'translateZ(20px)', transformStyle: 'preserve-3d' }}>
+              <Bank3D_View 
+                isPulsing={isPulsing} 
+                size={bankWidth}
+                rewardsAmount={displayedRewards}
+                profilePicture={profilePicture}
+                onCollect={handleClaimRewards}
+              />
+            </div>
             
             {/* Floating +X numbers */}
             {floaters.map(floater => (

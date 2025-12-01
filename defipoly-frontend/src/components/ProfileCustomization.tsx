@@ -8,8 +8,7 @@ import { PropertyThemeModal } from '@/components/modals/PropertyThemeModal';
 import { clearProfileCache } from '@/utils/profileStorage';
 import { Edit3, Camera } from 'lucide-react';
 import { authenticatedFetch } from '@/contexts/AuthContext';
-
-const DEFAULT_BACKGROUND = 'linear-gradient(135deg, rgba(31, 41, 55, 0.95), rgba(17, 24, 39, 0.9))';
+import { THEME_CONSTANTS } from '@/utils/themeConstants';
 
 interface ProfileCustomizationProps {
   // Profile picture props
@@ -124,7 +123,7 @@ export function ProfileCustomization({
     if (customBoardBackground) {
       return `url(${customBoardBackground})`;
     }
-    return DEFAULT_BACKGROUND;
+    return THEME_CONSTANTS.DEFAULT_BOARD_BACKGROUND;
   };
 
   // Get preview background for property cards
@@ -132,7 +131,7 @@ export function ProfileCustomization({
     if (customPropertyCardBackground) {
       return `url(${customPropertyCardBackground})`;
     }
-    return DEFAULT_BACKGROUND;
+    return THEME_CONSTANTS.DEFAULT_PROPERTY_CARD_BACKGROUND;
   };
 
   return (

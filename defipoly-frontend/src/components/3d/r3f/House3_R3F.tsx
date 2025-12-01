@@ -12,14 +12,14 @@ export function House3_R3F({ isPulsing = false }: House3_R3FProps) {
   const groupRef = useRef<THREE.Group>(null);
   const scaleRef = useRef({ current: 1, target: 1 });
 
-  useFrame(() => {
+  useFrame((state) => {
     if (!groupRef.current) return;
     
     scaleRef.current.target = isPulsing ? 1.15 : 1;
     scaleRef.current.current += (scaleRef.current.target - scaleRef.current.current) * 0.15;
     groupRef.current.scale.setScalar(scaleRef.current.current);
     
-    groupRef.current.rotation.y = Math.sin(Date.now() * 0.0003) * 0.15 + 0.4;
+    groupRef.current.rotation.y = Math.sin(state.clock.elapsedTime * 0.3) * 0.15 + 0.4;
   });
 
   // 3-story apartment building - taller and thinner
