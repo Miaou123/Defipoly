@@ -12,11 +12,17 @@ import { House3_R3F } from './r3f/House3_R3F';
 import { House4_R3F } from './r3f/House4_R3F';
 import { House5_R3F } from './r3f/House5_R3F';
 import { useMemo, useEffect, useRef, useState, Suspense, useCallback } from 'react';
+import * as THREE from 'three';
+import { ResetViewIcon, ZoomInIcon, ZoomOutIcon } from '../icons/UIIcons';
 
 interface Board3DSceneProps {
   onSelectProperty: (propertyId: number) => void;
   spectatorMode?: boolean;
   spectatorOwnerships?: any[];
+}
+
+interface SceneProps extends Board3DSceneProps {
+  cameraControlsRef: React.RefObject<any>;
 }
 
 // EXACT DIMENSIONS TO MATCH PROTOTYPE
@@ -128,7 +134,7 @@ function PropertyTile({ position, width, depth, property, side, buildingLevel, o
       <mesh castShadow receiveShadow>
         <boxGeometry args={[width, tileThickness, depth]} />
         <meshStandardMaterial 
-          color="#1a1025" 
+          color="#3a2a4a" 
           roughness={0.7}
           emissive={hovered ? colorHex : '#000000'}
           emissiveIntensity={hovered ? 0.15 : 0}
@@ -196,7 +202,7 @@ function CornerTile({ position, cornerType }: { position: [number, number, numbe
       <mesh castShadow receiveShadow>
         <boxGeometry args={[size, tileThickness, size]} />
         <meshStandardMaterial 
-          color="#4c1d95" 
+          color="#6d28d9" 
           roughness={0.5} 
           metalness={0.3}
           emissive={hovered ? '#7c3aed' : '#000000'}
@@ -281,7 +287,7 @@ function HouseOnTile({ buildingLevel, side }: { buildingLevel: number; side: 'to
   );
 }
 
-function Scene({ onSelectProperty, spectatorMode, spectatorOwnerships }: Board3DSceneProps) {
+function Scene({ onSelectProperty, spectatorMode, spectatorOwnerships, cameraControlsRef }: SceneProps) {
   const gameState = useGameState();
   const ownerships = gameState?.ownerships || [];
   
@@ -341,6 +347,7 @@ function Scene({ onSelectProperty, spectatorMode, spectatorOwnerships }: Board3D
       <directionalLight position={[-5, 10, -5]} intensity={0.3} color="#9333ea" />
       
       <OrbitControls
+        ref={cameraControlsRef}
         enablePan={false}
         minPolarAngle={Math.PI / 6}
         maxPolarAngle={Math.PI / 2.2}
@@ -351,13 +358,13 @@ function Scene({ onSelectProperty, spectatorMode, spectatorOwnerships }: Board3D
       {/* Board base */}
       <mesh position={[0, boardThickness/2, 0]} receiveShadow>
         <boxGeometry args={[boardWidth, boardThickness, boardHeight]} />
-        <meshStandardMaterial color="#0f0618" roughness={0.8} metalness={0.1} />
+        <meshStandardMaterial color="#2a1a3a" roughness={0.8} metalness={0.1} />
       </mesh>
       
       {/* Board edge highlight */}
       <mesh position={[0, boardThickness + 0.01, 0]}>
         <boxGeometry args={[boardWidth + 0.05, 0.02, boardHeight + 0.05]} />
-        <meshStandardMaterial color="#2d1b4e" roughness={0.5} metalness={0.2} />
+        <meshStandardMaterial color="#4c3b6e" roughness={0.5} metalness={0.2} />
       </mesh>
       
       {/* ===== CORNERS ===== */}
@@ -455,10 +462,40 @@ function Scene({ onSelectProperty, spectatorMode, spectatorOwnerships }: Board3D
 export function Board3DScene({ onSelectProperty, spectatorMode, spectatorOwnerships }: Board3DSceneProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [mounted, setMounted] = useState(false);
+  const cameraControlsRef = useRef<any>(null);
 
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  // Camera control functions
+  const resetView = () => {
+    if (cameraControlsRef.current) {
+      cameraControlsRef.current.reset();
+    }
+  };
+
+  const zoomIn = () => {
+    if (cameraControlsRef.current) {
+      const camera = cameraControlsRef.current.object;
+      const direction = new THREE.Vector3();
+      camera.getWorldDirection(direction);
+      const newPosition = camera.position.clone().add(direction.multiplyScalar(1));
+      camera.position.copy(newPosition);
+      cameraControlsRef.current.update();
+    }
+  };
+
+  const zoomOut = () => {
+    if (cameraControlsRef.current) {
+      const camera = cameraControlsRef.current.object;
+      const direction = new THREE.Vector3();
+      camera.getWorldDirection(direction);
+      const newPosition = camera.position.clone().add(direction.multiplyScalar(-1));
+      camera.position.copy(newPosition);
+      cameraControlsRef.current.update();
+    }
+  };
 
   if (!mounted) {
     return (
@@ -481,6 +518,79 @@ export function Board3DScene({ onSelectProperty, spectatorMode, spectatorOwnersh
       ref={containerRef}
       style={{ width: '100%', height: '100%', position: 'relative' }}
     >
+      {/* Camera Controls */}
+      <div 
+        style={{
+          position: 'absolute',
+          top: '10px',
+          right: '10px',
+          zIndex: 100,
+          display: 'flex',
+          gap: '8px',
+          background: 'rgba(0, 0, 0, 0.7)',
+          padding: '8px',
+          borderRadius: '8px',
+        }}
+      >
+        <button
+          onClick={resetView}
+          title="Reset View"
+          style={{
+            background: '#6d28d9',
+            color: 'white',
+            border: 'none',
+            padding: '8px',
+            borderRadius: '4px',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+          onMouseOver={(e) => e.target.style.background = '#7c3aed'}
+          onMouseOut={(e) => e.target.style.background = '#6d28d9'}
+        >
+          <ResetViewIcon size={16} />
+        </button>
+        <button
+          onClick={zoomIn}
+          title="Zoom In"
+          style={{
+            background: '#6d28d9',
+            color: 'white',
+            border: 'none',
+            padding: '8px',
+            borderRadius: '4px',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+          onMouseOver={(e) => e.target.style.background = '#7c3aed'}
+          onMouseOut={(e) => e.target.style.background = '#6d28d9'}
+        >
+          <ZoomInIcon size={16} />
+        </button>
+        <button
+          onClick={zoomOut}
+          title="Zoom Out"
+          style={{
+            background: '#6d28d9',
+            color: 'white',
+            border: 'none',
+            padding: '8px',
+            borderRadius: '4px',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+          onMouseOver={(e) => e.target.style.background = '#7c3aed'}
+          onMouseOut={(e) => e.target.style.background = '#6d28d9'}
+        >
+          <ZoomOutIcon size={16} />
+        </button>
+      </div>
+
       {containerRef.current && (
         <Canvas
           camera={{ 
@@ -503,6 +613,7 @@ export function Board3DScene({ onSelectProperty, spectatorMode, spectatorOwnersh
             onSelectProperty={onSelectProperty}
             spectatorMode={spectatorMode}
             spectatorOwnerships={spectatorOwnerships}
+            cameraControlsRef={cameraControlsRef}
           />
         </Canvas>
       )}
