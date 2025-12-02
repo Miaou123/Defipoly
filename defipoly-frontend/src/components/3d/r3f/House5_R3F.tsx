@@ -1,26 +1,12 @@
 'use client';
 
 import { useRef } from 'react';
-import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 
-interface House5_R3FProps {
-  isPulsing?: boolean;
-}
+interface House5_R3FProps {}
 
-export function House5_R3F({ isPulsing = false }: House5_R3FProps) {
+export function House5_R3F({}: House5_R3FProps) {
   const groupRef = useRef<THREE.Group>(null);
-  const scaleRef = useRef({ current: 1, target: 1 });
-
-  useFrame((state) => {
-    if (!groupRef.current) return;
-    
-    scaleRef.current.target = isPulsing ? 1.15 : 1;
-    scaleRef.current.current += (scaleRef.current.target - scaleRef.current.current) * 0.15;
-    groupRef.current.scale.setScalar(scaleRef.current.current);
-    
-    groupRef.current.rotation.y = 0;
-  });
 
   // Luxury hotel skyscraper
   const buildingWidth = 3.2;

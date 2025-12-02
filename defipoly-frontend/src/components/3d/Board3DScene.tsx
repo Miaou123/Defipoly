@@ -11,10 +11,12 @@ import { House2_R3F } from './r3f/House2_R3F';
 import { House3_R3F } from './r3f/House3_R3F';
 import { House4_R3F } from './r3f/House4_R3F';
 import { House5_R3F } from './r3f/House5_R3F';
+import { Pin3D_R3F } from './r3f/Pin3D_R3F';
 import { useMemo, useEffect, useRef, useState, Suspense, useCallback } from 'react';
 import * as THREE from 'three';
 import { ResetViewIcon, ZoomInIcon, ZoomOutIcon } from '../icons/UIIcons';
 import { InteractiveBank3D } from './InteractiveBank3D';
+import { IncomeFlow3D } from './IncomeFlow3D';
 
 
 interface Board3DSceneProps {
@@ -275,8 +277,12 @@ function PropertyTile({ position, width, depth, property, side, buildingLevel, h
         </Text>
       </Suspense>
       
-      {/* 3D House */}
-      <HouseOnTile buildingLevel={buildingLevel} side={side} />
+      {/* 3D House or Pin */}
+      {buildingLevel > 0 ? (
+        <HouseOnTile buildingLevel={buildingLevel} side={side} />
+      ) : (
+        <PinOnTile propertyId={property.id} side={side} />
+      )}
       
       {/* Rising income particles for complete sets */}
       {hasCompleteSet && buildingLevel > 0 && <RisingIncomeParticles side={side} />}
@@ -336,6 +342,42 @@ function CornerTile({ position, cornerType }: { position: [number, number, numbe
   );
 }
 
+function PinOnTile({ propertyId, side }: { propertyId: number; side: 'top' | 'bottom' | 'left' | 'right' }) {
+  const property = PROPERTIES.find(p => p.id === propertyId);
+  if (!property) return null;
+  
+  // Pin rotation based on tile side - face outward from board center
+  const pinRotation: [number, number, number] = {
+    top: [0, Math.PI, 0],      // Face outward (toward viewer from top)
+    bottom: [0, 0, 0],         // Face outward (toward viewer from bottom)
+    left: [0, -Math.PI/2, 0],  // Face outward (toward viewer from left)
+    right: [0, Math.PI/2, 0],  // Face outward (toward viewer from right)
+  }[side];
+  
+  // Position pin on tile surface (higher than houses)
+  const pinY = tileThickness/2 + 0.1;
+  
+  // Scale - pins should be smaller on the board
+  const pinScale = 0.075;
+  
+  // Position pin away from property name based on tile side (same as houses)
+  let pinXOffset = 0;
+  let pinZOffset = 0;
+  
+  if (side === 'top') pinZOffset = -0.15;        // Move toward back of tile
+  else if (side === 'bottom') pinZOffset = 0.15; // Move toward front of tile
+  else if (side === 'left') pinXOffset = -0.15;  // Move toward left of tile
+  else if (side === 'right') pinXOffset = 0.15;  // Move toward right of tile
+
+  return (
+    <group position={[pinXOffset, pinY, pinZOffset]} rotation={pinRotation} scale={pinScale}>
+      <Suspense fallback={null}>
+        <Pin3D_R3F color={property.color} />
+      </Suspense>
+    </group>
+  );
+}
+
 function HouseOnTile({ buildingLevel, side }: { buildingLevel: number; side: 'top' | 'bottom' | 'left' | 'right' }) {
   console.log(`[3D House] Rendering house with level: ${buildingLevel}, side: ${side}`);
   if (buildingLevel <= 0) {
@@ -354,8 +396,16 @@ function HouseOnTile({ buildingLevel, side }: { buildingLevel: number; side: 'to
   // Position house on tile surface (lower)
   const houseY = tileThickness/2 - 0.02;
   
-  // Scale - adjust based on how big your house models are
-  const houseScale = 0.08;
+  // Individual house scales - adjust each house size independently
+  const houseScales = {
+    1: 0.08,
+    2: 0.08, 
+    3: 0.12,
+    4: 0.06,
+    5: 0.08,
+  };
+  
+  const houseScale = houseScales[buildingLevel as keyof typeof houseScales] || 0.08;
   
   const HouseComponent = {
     1: House1_R3F,
@@ -377,7 +427,7 @@ function HouseOnTile({ buildingLevel, side }: { buildingLevel: number; side: 'to
   return (
     <group position={[houseXOffset, houseY, houseZOffset]} rotation={houseRotation} scale={houseScale}>
       <Suspense fallback={null}>
-        <HouseComponent isPulsing={false} />
+        <HouseComponent />
       </Suspense>
     </group>
   );
@@ -455,9 +505,12 @@ function Scene({ onSelectProperty, spectatorMode, spectatorOwnerships, cameraCon
   return (
     <>
       {/* Lighting */}
-      <ambientLight intensity={0.6} />
-      <directionalLight position={[10, 20, 10]} intensity={1.0} castShadow />
-      <directionalLight position={[-5, 10, -5]} intensity={0.3} color="#9333ea" />
+      <ambientLight intensity={0.8} />
+      <directionalLight position={[10, 20, 10]} intensity={1.2} castShadow />
+      <directionalLight position={[-5, 10, -5]} intensity={0.5} color="#9333ea" />
+      <directionalLight position={[0, 15, 0]} intensity={0.4} color="#ffffff" />
+      <pointLight position={[5, 8, 5]} intensity={0.3} color="#facc15" />
+      <pointLight position={[-5, 8, -5]} intensity={0.3} color="#22c55e" />
       
       <OrbitControls
         ref={cameraControlsRef}
@@ -568,6 +621,16 @@ function Scene({ onSelectProperty, spectatorMode, spectatorOwnerships, cameraCon
       
       {/* ===== BANK ===== */}
       <InteractiveBank3D position={[0, 0.8, 0]} scale={0.084} />
+      
+      {/* ===== 3D INCOME FLOW ===== */}
+      {!spectatorMode && (
+        <IncomeFlow3D 
+          enabled={true}
+          onParticleArrive={() => {
+            // Optional: trigger bank pulse animation
+          }}
+        />
+      )}
     </>
   );
 }

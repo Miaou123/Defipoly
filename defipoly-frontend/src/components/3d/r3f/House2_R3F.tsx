@@ -1,27 +1,12 @@
 'use client';
 
 import { useRef } from 'react';
-import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 
-interface House2_R3FProps {
-  isPulsing?: boolean;
-}
+interface House2_R3FProps {}
 
-export function House2_R3F({ isPulsing = false }: House2_R3FProps) {
+export function House2_R3F({}: House2_R3FProps) {
   const groupRef = useRef<THREE.Group>(null);
-  const scaleRef = useRef({ current: 1, target: 1 });
-
-  // Handle pulsing animation
-  useFrame((state) => {
-    if (!groupRef.current) return;
-    
-    scaleRef.current.target = isPulsing ? 1.15 : 1;
-    scaleRef.current.current += (scaleRef.current.target - scaleRef.current.current) * 0.15;
-    groupRef.current.scale.setScalar(scaleRef.current.current);
-    
-    groupRef.current.rotation.y = 0;
-  });
 
   // House 2 dimensions - larger than house 1
   const houseWidth = 2.5;

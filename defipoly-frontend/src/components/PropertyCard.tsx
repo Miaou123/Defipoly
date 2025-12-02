@@ -10,7 +10,6 @@ import { House3_3D_View } from './3d/House3_3D_View';
 import { House4_3D_View } from './3d/House4_3D_View';
 import { House5_3D_View } from './3d/House5_3D_View';
 import { Pin3D_View } from './3d/Pin3D_View';
-import { usePropertySpawnTime } from '@/contexts/ParticleSpawnContext';
 
 import { PROPERTIES } from '@/utils/constants';
 import { THEME_CONSTANTS } from '@/utils/themeConstants';
@@ -96,19 +95,6 @@ export function PropertyCard({
   const [shieldActive, setShieldActive] = useState(false);
   const [hasCompleteSet, setHasCompleteSet] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
-
-  const [buildingPulse, setBuildingPulse] = useState(false);
-  const lastSpawnTime = usePropertySpawnTime(propertyId);
-
-  // Trigger pulse when particle spawns
-  useEffect(() => {
-    if (lastSpawnTime > 0 && buildingLevel > 0 && !disableAnimations) {
-      setBuildingPulse(true);
-      const timer = setTimeout(() => setBuildingPulse(false), 300);
-      return () => clearTimeout(timer);
-    }
-    return undefined;
-  }, [lastSpawnTime, buildingLevel, disableAnimations]);
 
   const property = PROPERTIES.find(p => p.id === propertyId);
   if (!property) return null;
@@ -376,7 +362,7 @@ export function PropertyCard({
         {buildingLevel === 0 ? (
           <div className="w-full h-full flex items-start justify-center" style={{ paddingTop: '5%' }}>
             <div style={{ transform: modalView ? 'scale(1)' : `scale(${iconScale})` }}>
-              <div className={isHovered || modalView ? 'animate-bounce-pin' : ''}>
+              <div>
                 <div style={{ transform: 'translateZ(15px)', transformStyle: 'preserve-3d' }}>
                   <Pin3D_View size={modalView ? 120 : 80} color={property.color} inModal={modalView} />
                 </div>
@@ -403,11 +389,11 @@ export function PropertyCard({
               transform: 'translate(-50%, -50%)'
             }}>
               <div style={{ transform: 'translateZ(15px)', transformStyle: 'preserve-3d' }}>
-                {buildingLevel === 1 && <House1_3D_View size={modalView ? 160 : 60} isPulsing={buildingPulse} inModal={modalView} />}
-                {buildingLevel === 2 && <House2_3D_View size={modalView ? 160 : 60} isPulsing={buildingPulse} inModal={modalView} />}
-                {buildingLevel === 3 && <House3_3D_View size={modalView ? 160 : 60} isPulsing={buildingPulse} inModal={modalView} />}
-                {buildingLevel === 4 && <House4_3D_View size={modalView ? 160 : 60} isPulsing={buildingPulse} inModal={modalView} />}
-                {buildingLevel === 5 && <House5_3D_View size={modalView ? 160 : 60} isPulsing={buildingPulse} inModal={modalView} />}
+                {buildingLevel === 1 && <House1_3D_View size={modalView ? 160 : 60} inModal={modalView} />}
+                {buildingLevel === 2 && <House2_3D_View size={modalView ? 160 : 60} inModal={modalView} />}
+                {buildingLevel === 3 && <House3_3D_View size={modalView ? 160 : 60} inModal={modalView} />}
+                {buildingLevel === 4 && <House4_3D_View size={modalView ? 160 : 60} inModal={modalView} />}
+                {buildingLevel === 5 && <House5_3D_View size={modalView ? 160 : 60} inModal={modalView} />}
               </div>
             </div>
           </div>
@@ -499,18 +485,7 @@ export function PropertyCard({
           }
         }
 
-        @keyframes bounce-pin {
-          0%, 100% {
-            transform: translateY(0);
-          }
-          50% {
-            transform: translateY(-6px);
-          }
-        }
 
-        :global(.animate-bounce-pin) {
-          animation: bounce-pin 1s ease-in-out infinite;
-        }
       `}</style>
     </button>
   );

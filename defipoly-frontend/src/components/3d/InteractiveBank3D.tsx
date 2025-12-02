@@ -26,7 +26,6 @@ export function InteractiveBank3D({ position = [0, 0.8, 0], scale = 0.084 }: Int
   
   const [claiming, setClaiming] = useState(false);
   const [displayedRewards, setDisplayedRewards] = useState<number>(0);
-  const [isPulsing, setIsPulsing] = useState(false);
   const claimingRef = useRef(false);
   const lastClickTimeRef = useRef(0);
   const initializedRef = useRef(false);
@@ -145,7 +144,6 @@ export function InteractiveBank3D({ position = [0, 0.8, 0], scale = 0.084 }: Int
     >
       <Suspense fallback={null}>
         <Bank3D_V2 
-          isPulsing={isPulsing} 
           rewardsAmount={displayedRewards} 
           profilePicture={gameState?.profile?.profilePicture || null}
         />

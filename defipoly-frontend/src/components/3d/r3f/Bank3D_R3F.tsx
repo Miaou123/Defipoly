@@ -1,12 +1,10 @@
 'use client';
 
 import { useRef, Suspense } from 'react';
-import { useFrame } from '@react-three/fiber';
 import { Text, useTexture } from '@react-three/drei';
 import * as THREE from 'three';
 
 interface Bank3D_V2Props {
-  isPulsing?: boolean;
   rewardsAmount?: number;
   profilePicture?: string | null;
 }
@@ -36,24 +34,10 @@ function LogoFallback() {
 }
 
 export function Bank3D_V2({ 
-  isPulsing = false, 
   rewardsAmount = 0,
   profilePicture = null
 }: Bank3D_V2Props) {
   const groupRef = useRef<THREE.Group>(null);
-  const scaleRef = useRef({ current: 1, target: 1 });
-
-  useFrame(() => {
-    if (!groupRef.current) return;
-    
-    scaleRef.current.target = isPulsing ? 1.12 : 1;
-    scaleRef.current.current += (scaleRef.current.target - scaleRef.current.current) * 0.15;
-    groupRef.current.scale.setScalar(scaleRef.current.current);
-    
-    groupRef.current.rotation.y = 0;
-    groupRef.current.position.y = -6.5;
-    groupRef.current.rotation.x = 0;
-  });
 
   const buildingWidth = 18;
   const buildingHeight = 8;

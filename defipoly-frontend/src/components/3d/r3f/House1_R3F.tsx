@@ -1,31 +1,12 @@
 'use client';
 
 import { useRef } from 'react';
-import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 
-interface House1_R3FProps {
-  isPulsing?: boolean;
-}
+interface House1_R3FProps {}
 
-export function House1_R3F({ isPulsing = false }: House1_R3FProps) {
+export function House1_R3F({}: House1_R3FProps) {
   const groupRef = useRef<THREE.Group>(null);
-  const scaleRef = useRef({ current: 1, target: 1 });
-
-  // Handle pulsing animation
-  useFrame((state) => {
-    if (!groupRef.current) return;
-    
-    // Update target scale based on isPulsing
-    scaleRef.current.target = isPulsing ? 1.15 : 1;
-    
-    // Smoothly interpolate scale
-    scaleRef.current.current += (scaleRef.current.target - scaleRef.current.current) * 0.15;
-    groupRef.current.scale.setScalar(scaleRef.current.current);
-    
-    // Keep house straight - no rotation
-    groupRef.current.rotation.y = 0;
-  });
 
   // No need to create material objects in R3F - use JSX directly
 

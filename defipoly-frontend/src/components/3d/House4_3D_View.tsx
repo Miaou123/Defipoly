@@ -7,13 +7,11 @@ import { PerspectiveCamera } from '@react-three/drei';
 
 interface House4_3D_ViewProps {
   size?: number;
-  isPulsing?: boolean;
   inModal?: boolean;
 }
 
 export const House4_3D_View = memo(function House4_3D_View({ 
   size = 120, 
-  isPulsing = false,
   inModal = false 
 }: House4_3D_ViewProps) {
   return (
@@ -24,7 +22,7 @@ export const House4_3D_View = memo(function House4_3D_View({
     >
       <PerspectiveCamera makeDefault position={[3, 2, 3]} fov={60} lookAt={[3, 1.5, 0]} />
       <group position={[3, 1.5, 0]} scale={0.3}>
-        <House4_R3F isPulsing={isPulsing} />
+        <House4_R3F />
       </group>
     </LazyView3D>
   );
