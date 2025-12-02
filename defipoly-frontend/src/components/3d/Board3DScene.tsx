@@ -5,7 +5,7 @@ import { OrbitControls } from '@react-three/drei';
 import { useGameState } from '@/contexts/GameStateContext';
 import { PROPERTIES } from '@/utils/constants';
 import { Bank3D_R3F } from './r3f/Bank3D_R3F';
-import { useMemo, useEffect, useRef, useState } from 'react';
+import { useMemo, useEffect, useRef, useState, Suspense } from 'react';
 
 interface Board3DSceneProps {
   onSelectProperty: (propertyId: number) => void;
@@ -201,7 +201,9 @@ function Scene({ onSelectProperty, spectatorMode, spectatorOwnerships }: Board3D
 
       {/* Bank in Center - Using actual Bank3D_R3F with proper scaling */}
       <group position={[0, 1.5, 0]} scale={0.25}>
-        <Bank3D_R3F isPulsing={false} rewardsAmount={0} />
+        <Suspense fallback={null}>
+          <Bank3D_R3F isPulsing={false} rewardsAmount={0} />
+        </Suspense>
       </group>
     </>
   );
