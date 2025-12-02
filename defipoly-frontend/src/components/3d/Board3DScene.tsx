@@ -199,9 +199,9 @@ function Scene({ onSelectProperty, spectatorMode, spectatorOwnerships }: Board3D
         />
       </mesh>
 
-      {/* Bank in Center - Using Bank3D_R3F component */}
-      <group position={[0, 0.5, 0]}>
-        <Bank3D_R3F />
+      {/* Bank in Center - Using actual Bank3D_R3F with proper scaling */}
+      <group position={[0, 1.5, 0]} scale={0.25}>
+        <Bank3D_R3F isPulsing={false} rewardsAmount={0} />
       </group>
     </>
   );
