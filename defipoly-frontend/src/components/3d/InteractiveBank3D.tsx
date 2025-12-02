@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState, useEffect, useCallback, Suspense } from 'react';
+import { useRef, useState, useEffect, useCallback, Suspense, forwardRef, useImperativeHandle } from 'react';
 import { useWallet, useConnection } from '@solana/wallet-adapter-react';
 import { useRewards } from '@/contexts/RewardsContext';
 import { useDefipoly } from '@/contexts/DefipolyContext';
@@ -14,9 +14,10 @@ import { Bank3D_V2 } from './r3f/Bank3D_R3F';
 interface InteractiveBank3DProps {
   position?: [number, number, number];
   scale?: number;
+  onParticleArrive?: () => void;
 }
 
-export function InteractiveBank3D({ position = [0, 0.8, 0], scale = 0.084 }: InteractiveBank3DProps) {
+export const InteractiveBank3D = forwardRef<{ handleParticleArrive: () => void }, InteractiveBank3DProps>(function InteractiveBank3D({ position = [0, 0.8, 0], scale = 0.084, onParticleArrive }, ref) {
   const { connected, publicKey } = useWallet();
   const { connection } = useConnection();
   const { unclaimedRewards, loading: rewardsLoading } = useRewards();
@@ -26,6 +27,7 @@ export function InteractiveBank3D({ position = [0, 0.8, 0], scale = 0.084 }: Int
   
   const [claiming, setClaiming] = useState(false);
   const [displayedRewards, setDisplayedRewards] = useState<number>(0);
+  const [animatedRewards, setAnimatedRewards] = useState<number>(0);
   const claimingRef = useRef(false);
   const lastClickTimeRef = useRef(0);
   const initializedRef = useRef(false);
@@ -34,6 +36,7 @@ export function InteractiveBank3D({ position = [0, 0.8, 0], scale = 0.084 }: Int
   useEffect(() => {
     if (!initializedRef.current && unclaimedRewards > 0 && !claimingRef.current) {
       setDisplayedRewards(unclaimedRewards);
+      setAnimatedRewards(unclaimedRewards);
       initializedRef.current = true;
     }
   }, [unclaimedRewards]);
@@ -43,13 +46,28 @@ export function InteractiveBank3D({ position = [0, 0.8, 0], scale = 0.084 }: Int
     if (unclaimedRewards === 0 && initializedRef.current && !claimingRef.current) {
       initializedRef.current = false;
       setDisplayedRewards(0);
+      setAnimatedRewards(0);
     }
   }, [unclaimedRewards]);
+
+  // Handle particle arrival and increment animated counter
+  const handleParticleArrive = useCallback(() => {
+    // Simple increment - each particle represents a small reward increment
+    const incrementAmount = Math.max(1, Math.floor(Math.random() * 10) + 5); // Random small increment
+    
+    setAnimatedRewards(prev => prev + incrementAmount);
+    onParticleArrive?.();
+  }, [onParticleArrive]);
+
+  // Expose handleParticleArrive to parent via ref
+  useImperativeHandle(ref, () => ({
+    handleParticleArrive
+  }), [handleParticleArrive]);
 
   // Handle bank click to claim rewards
   const handleBankClick = useCallback(async () => {
     const now = Date.now();
-    if (!connected || !publicKey || claiming || claimingRef.current || rewardsLoading || displayedRewards === 0 || (now - lastClickTimeRef.current < 1000)) {
+    if (!connected || !publicKey || claiming || claimingRef.current || rewardsLoading || animatedRewards === 0 || (now - lastClickTimeRef.current < 1000)) {
       if (now - lastClickTimeRef.current < 1000) {
         console.log('🏦 Bank click ignored - too soon after last click');
       }
@@ -62,7 +80,7 @@ export function InteractiveBank3D({ position = [0, 0.8, 0], scale = 0.084 }: Int
     setClaiming(true);
     
     // Store the amount before resetting
-    const amountToClaim = displayedRewards;
+    const amountToClaim = animatedRewards;
     
     try {
       const signature = await claimRewards();
@@ -70,6 +88,7 @@ export function InteractiveBank3D({ position = [0, 0.8, 0], scale = 0.084 }: Int
       if (signature) {
         // Reset immediately on successful signature
         setDisplayedRewards(0);
+        setAnimatedRewards(0);
         initializedRef.current = false;
         
         try {
@@ -120,6 +139,7 @@ export function InteractiveBank3D({ position = [0, 0.8, 0], scale = 0.084 }: Int
           errorMessage.includes('AlreadyProcessed')) {
         showSuccess('Rewards Claimed!', 'Rewards have been claimed!');
         setDisplayedRewards(0);
+        setAnimatedRewards(0);
         initializedRef.current = false;
       } else {
         showError('Claim Failed', 'Failed to claim rewards. Please try again.');
@@ -129,7 +149,7 @@ export function InteractiveBank3D({ position = [0, 0.8, 0], scale = 0.084 }: Int
       setClaiming(false);
       claimingRef.current = false;
     }
-  }, [connected, publicKey, claiming, claimingRef, rewardsLoading, displayedRewards, claimRewards, connection, showSuccess, showError]);
+  }, [connected, publicKey, claiming, claimingRef, rewardsLoading, animatedRewards, claimRewards, connection, showSuccess, showError]);
 
   return (
     <group 
@@ -144,10 +164,10 @@ export function InteractiveBank3D({ position = [0, 0.8, 0], scale = 0.084 }: Int
     >
       <Suspense fallback={null}>
         <Bank3D_V2 
-          rewardsAmount={displayedRewards} 
+          rewardsAmount={animatedRewards} 
           profilePicture={gameState?.profile?.profilePicture || null}
         />
       </Suspense>
     </group>
   );
-}
+});

@@ -321,10 +321,11 @@ function quadraticBezier(start: THREE.Vector3, control: THREE.Vector3, end: THRE
 
 interface IncomeFlow3DProps {
   enabled?: boolean;
+  particlesVisible?: boolean;
   onParticleArrive?: () => void;
 }
 
-export function IncomeFlow3D({ enabled = true, onParticleArrive }: IncomeFlow3DProps) {
+export function IncomeFlow3D({ enabled = true, particlesVisible = true, onParticleArrive }: IncomeFlow3DProps) {
   const { ownerships } = useGameState();
   const { triggerSpawn } = useParticleSpawn();
   const { camera } = useThree();
@@ -546,10 +547,14 @@ export function IncomeFlow3D({ enabled = true, onParticleArrive }: IncomeFlow3DP
       const scale = 1 - particle.progress * 0.4;
       tempScale.setScalar(scale);
       
-      // Opacity
-      const fadeIn = Math.min(1, particle.progress * 5);
-      const fadeOut = 1 - Math.max(0, (particle.progress - 0.8) / 0.2);
-      billOpacities.setX(i, fadeIn * fadeOut);
+      // Opacity - hide if particlesVisible is false
+      if (particlesVisible) {
+        const fadeIn = Math.min(1, particle.progress * 5);
+        const fadeOut = 1 - Math.max(0, (particle.progress - 0.8) / 0.2);
+        billOpacities.setX(i, fadeIn * fadeOut);
+      } else {
+        billOpacities.setX(i, 0); // Completely hidden
+      }
       
       // Build matrix
       tempMatrix.compose(tempPosition, tempQuaternion, tempScale);
@@ -589,10 +594,14 @@ export function IncomeFlow3D({ enabled = true, onParticleArrive }: IncomeFlow3DP
       const scale = 1 - particle.progress * 0.4;
       tempScale.setScalar(scale);
       
-      // Opacity
-      const fadeIn = Math.min(1, particle.progress * 5);
-      const fadeOut = 1 - Math.max(0, (particle.progress - 0.8) / 0.2);
-      diamondOpacities.setX(i, fadeIn * fadeOut);
+      // Opacity - hide if particlesVisible is false
+      if (particlesVisible) {
+        const fadeIn = Math.min(1, particle.progress * 5);
+        const fadeOut = 1 - Math.max(0, (particle.progress - 0.8) / 0.2);
+        diamondOpacities.setX(i, fadeIn * fadeOut);
+      } else {
+        diamondOpacities.setX(i, 0); // Completely hidden
+      }
       
       // Build matrix
       tempMatrix.compose(tempPosition, tempQuaternion, tempScale);

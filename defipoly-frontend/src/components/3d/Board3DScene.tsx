@@ -3,6 +3,7 @@
 import { Canvas, useFrame } from '@react-three/fiber';
 import { OrbitControls, Text } from '@react-three/drei';
 import { useGameState } from '@/contexts/GameStateContext';
+import { useWallet } from '@solana/wallet-adapter-react';
 import { PROPERTIES } from '@/utils/constants';
 import { Bank3D_R3F } from './r3f/Bank3D_R3F';
 import { Logo3D_R3F } from './r3f/Logo3D_R3F';
@@ -14,7 +15,7 @@ import { House5_R3F } from './r3f/House5_R3F';
 import { Pin3D_R3F } from './r3f/Pin3D_R3F';
 import { useMemo, useEffect, useRef, useState, Suspense, useCallback } from 'react';
 import * as THREE from 'three';
-import { ResetViewIcon, ZoomInIcon, ZoomOutIcon } from '../icons/UIIcons';
+import { ResetViewIcon, ZoomInIcon, ZoomOutIcon, HideIcon } from '../icons/UIIcons';
 import { InteractiveBank3D } from './InteractiveBank3D';
 import { IncomeFlow3D } from './IncomeFlow3D';
 
@@ -27,6 +28,7 @@ interface Board3DSceneProps {
 
 interface SceneProps extends Board3DSceneProps {
   cameraControlsRef: React.RefObject<any>;
+  particlesVisible: boolean;
 }
 
 // EXACT DIMENSIONS TO MATCH PROTOTYPE
@@ -41,7 +43,7 @@ const colorStripThickness = 0.16;
 const colorStripWidth = 0.15;
 
 // Rising income particles for complete sets
-function RisingIncomeParticles({ side }: { side: 'top' | 'bottom' | 'left' | 'right' }) {
+function RisingIncomeParticles({ side, visible = true }: { side: 'top' | 'bottom' | 'left' | 'right'; visible?: boolean }) {
   const particlesRef = useRef<THREE.Group>(null);
   const particleCount = 8;
   
@@ -95,10 +97,10 @@ function RisingIncomeParticles({ side }: { side: 'top' | 'bottom' | 'left' | 'ri
         opacity = (1 - progress) / 0.3;
       }
       
-      // Update material opacity
+      // Update material opacity - hide if not visible
       particle.traverse((child) => {
         if (child instanceof THREE.Mesh && child.material) {
-          (child.material as THREE.MeshBasicMaterial).opacity = opacity * 0.85;
+          (child.material as THREE.MeshBasicMaterial).opacity = visible ? opacity * 0.85 : 0;
         }
       });
       
@@ -138,10 +140,11 @@ interface PropertyTileProps {
   side: 'top' | 'bottom' | 'left' | 'right';
   buildingLevel: number;
   hasCompleteSet: boolean;
+  particlesVisible: boolean;
   onClick: () => void;
 }
 
-function PropertyTile({ position, width, depth, property, side, buildingLevel, hasCompleteSet, onClick }: PropertyTileProps) {
+function PropertyTile({ position, width, depth, property, side, buildingLevel, hasCompleteSet, particlesVisible, onClick }: PropertyTileProps) {
   const [hovered, setHovered] = useState(false);
   
   // Get hex color from color class
@@ -285,7 +288,7 @@ function PropertyTile({ position, width, depth, property, side, buildingLevel, h
       )}
       
       {/* Rising income particles for complete sets */}
-      {hasCompleteSet && buildingLevel > 0 && <RisingIncomeParticles side={side} />}
+      {hasCompleteSet && buildingLevel > 0 && <RisingIncomeParticles side={side} visible={particlesVisible} />}
     </group>
   );
 }
@@ -354,8 +357,8 @@ function PinOnTile({ propertyId, side }: { propertyId: number; side: 'top' | 'bo
     right: [0, Math.PI/2, 0],  // Face outward (toward viewer from right)
   }[side];
   
-  // Position pin on tile surface (higher than houses)
-  const pinY = tileThickness/2 + 0.1;
+  // Position pin on tile surface (lower than before)
+  const pinY = tileThickness/2 + 0.02;
   
   // Scale - pins should be smaller on the board
   const pinScale = 0.075;
@@ -433,9 +436,10 @@ function HouseOnTile({ buildingLevel, side }: { buildingLevel: number; side: 'to
   );
 }
 
-function Scene({ onSelectProperty, spectatorMode, spectatorOwnerships, cameraControlsRef }: SceneProps) {
+function Scene({ onSelectProperty, spectatorMode, spectatorOwnerships, cameraControlsRef, particlesVisible }: SceneProps) {
   const gameState = useGameState();
   const ownerships = gameState?.ownerships || [];
+  const bankRef = useRef<any>(null);
   
   // Force re-render when ownerships changes
   const gameStateLoaded = !spectatorMode ? ownerships.length > 0 : true;
@@ -517,8 +521,8 @@ function Scene({ onSelectProperty, spectatorMode, spectatorOwnerships, cameraCon
         enablePan={false}
         minPolarAngle={Math.PI / 6}
         maxPolarAngle={Math.PI / 2.2}
-        minDistance={8}
-        maxDistance={20}
+        minDistance={5}
+        maxDistance={25}
       />
       
       {/* Board base */}
@@ -554,6 +558,7 @@ function Scene({ onSelectProperty, spectatorMode, spectatorOwnerships, cameraCon
             side="top"
             buildingLevel={getBuildingLevel(id)}
             hasCompleteSet={isPropertyInCompleteSet(id)}
+            particlesVisible={particlesVisible}
             onClick={() => onSelectProperty(id)}
           />
         );
@@ -574,6 +579,7 @@ function Scene({ onSelectProperty, spectatorMode, spectatorOwnerships, cameraCon
             side="bottom"
             buildingLevel={getBuildingLevel(id)}
             hasCompleteSet={isPropertyInCompleteSet(id)}
+            particlesVisible={particlesVisible}
             onClick={() => onSelectProperty(id)}
           />
         );
@@ -594,6 +600,7 @@ function Scene({ onSelectProperty, spectatorMode, spectatorOwnerships, cameraCon
             side="left"
             buildingLevel={getBuildingLevel(id)}
             hasCompleteSet={isPropertyInCompleteSet(id)}
+            particlesVisible={particlesVisible}
             onClick={() => onSelectProperty(id)}
           />
         );
@@ -614,20 +621,29 @@ function Scene({ onSelectProperty, spectatorMode, spectatorOwnerships, cameraCon
             side="right"
             buildingLevel={getBuildingLevel(id)}
             hasCompleteSet={isPropertyInCompleteSet(id)}
+            particlesVisible={particlesVisible}
             onClick={() => onSelectProperty(id)}
           />
         );
       })}
       
       {/* ===== BANK ===== */}
-      <InteractiveBank3D position={[0, 0.8, 0]} scale={0.084} />
+      <InteractiveBank3D 
+        ref={bankRef}
+        position={[0, 0.8, 0]} 
+        scale={0.084}
+      />
       
       {/* ===== 3D INCOME FLOW ===== */}
       {!spectatorMode && (
         <IncomeFlow3D 
           enabled={true}
+          particlesVisible={particlesVisible}
           onParticleArrive={() => {
-            // Optional: trigger bank pulse animation
+            // Trigger bank counter increment via ref
+            if (bankRef.current?.handleParticleArrive) {
+              bankRef.current.handleParticleArrive();
+            }
           }}
         />
       )}
@@ -638,7 +654,13 @@ function Scene({ onSelectProperty, spectatorMode, spectatorOwnerships, cameraCon
 export function Board3DScene({ onSelectProperty, spectatorMode, spectatorOwnerships }: Board3DSceneProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [mounted, setMounted] = useState(false);
+  const [particlesVisible, setParticlesVisible] = useState(true);
+  const [showClaimHint, setShowClaimHint] = useState(false);
   const cameraControlsRef = useRef<any>(null);
+  const { publicKey } = useWallet();
+  const gameState = useGameState();
+  const hasTriggeredHintRef = useRef(false);
+  const previousOwnershipsCountRef = useRef(0);
 
   useEffect(() => {
     setMounted(true);
@@ -709,6 +731,25 @@ export function Board3DScene({ onSelectProperty, spectatorMode, spectatorOwnersh
         }}
       >
         <button
+          onClick={() => setParticlesVisible(!particlesVisible)}
+          title={particlesVisible ? "Hide Particles" : "Show Particles"}
+          style={{
+            background: particlesVisible ? '#6d28d9' : '#374151',
+            color: 'white',
+            border: 'none',
+            padding: '8px',
+            borderRadius: '4px',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+          onMouseOver={(e) => e.target.style.background = particlesVisible ? '#7c3aed' : '#4b5563'}
+          onMouseOut={(e) => e.target.style.background = particlesVisible ? '#6d28d9' : '#374151'}
+        >
+          <HideIcon size={16} />
+        </button>
+        <button
           onClick={resetView}
           title="Reset View"
           style={{
@@ -770,7 +811,7 @@ export function Board3DScene({ onSelectProperty, spectatorMode, spectatorOwnersh
       {containerRef.current && (
         <Canvas
           camera={{ 
-            position: [0, 12, 10],  // More centered, looking down at board
+            position: [0, 8, 6],  // Closer initial view - zoomed in more
             fov: 50,
             far: 1000,
             near: 0.1
@@ -790,6 +831,7 @@ export function Board3DScene({ onSelectProperty, spectatorMode, spectatorOwnersh
             spectatorMode={spectatorMode}
             spectatorOwnerships={spectatorOwnerships}
             cameraControlsRef={cameraControlsRef}
+            particlesVisible={particlesVisible}
           />
         </Canvas>
       )}
