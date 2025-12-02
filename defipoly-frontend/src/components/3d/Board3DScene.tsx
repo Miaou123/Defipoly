@@ -1,7 +1,7 @@
 'use client';
 
 import { Canvas } from '@react-three/fiber';
-import { OrbitControls } from '@react-three/drei';
+import { OrbitControls, Text } from '@react-three/drei';
 import { useGameState } from '@/contexts/GameStateContext';
 import { PROPERTIES } from '@/utils/constants';
 import { Bank3D_R3F } from './r3f/Bank3D_R3F';
@@ -13,54 +13,31 @@ interface Board3DSceneProps {
   spectatorOwnerships?: any[];
 }
 
-// Board dimensions (scaled by 0.01 for Three.js)
-const scale = 0.01;
-const cornerSize = 96 * scale;  // 0.96
-const tileLong = 78 * scale;    // 0.78
-const tileShort = 96 * scale;   // 0.96
-const boardW = 6.6;             // cornerSize * 2 + tileLong * 6
-const boardH = 5.82;            // cornerSize * 2 + tileLong * 5
+// EXACT DIMENSIONS TO MATCH PROTOTYPE
+const cornerSize = 1.0;           // Corner tiles are square: 1.0 x 1.0
+const tileLong = 0.82;            // Side along board edge (the wider side)
+const tileShort = 1.0;            // Side toward center (matches corner height)
+const boardWidth = cornerSize * 2 + tileLong * 6;   // ~6.92 units
+const boardHeight = cornerSize * 2 + tileLong * 5;  // ~6.1 units (5 tiles on sides, not 6)
+const boardThickness = 0.25;
+const tileThickness = 0.15;
+const colorStripThickness = 0.16;
+const colorStripWidth = 0.15;
 
-// Board surface positions
-const boardY = 0.1;             // Top of board
-const tileY = boardY + 0.06;    // Tiles sit on top
-
-function PropertyTile3D({ 
-  position, 
-  width, 
-  depth, 
-  property, 
-  side,
-  onClick 
-}: {
+interface PropertyTileProps {
   position: [number, number, number];
-  width: number;
-  depth: number;
+  width: number;  // tileLong for top/bottom, tileShort for left/right
+  depth: number;  // tileShort for top/bottom, tileLong for left/right
   property: typeof PROPERTIES[0];
   side: 'top' | 'bottom' | 'left' | 'right';
+  buildingLevel: number;
   onClick: () => void;
-}) {
-  const [hovered, setHovered] = useState(false);
-  const tileHeight = 0.12;
-  const colorStripHeight = 0.13;
-  const colorStripThickness = 0.13;
-  
-  // Color strip position based on side (faces center)
-  const stripOffset = {
-    top: [0, 0, (depth/2) - colorStripThickness/2],      
-    bottom: [0, 0, -(depth/2) + colorStripThickness/2],  
-    left: [(width/2) - colorStripThickness/2, 0, 0],     
-    right: [-(width/2) + colorStripThickness/2, 0, 0],   
-  }[side];
-  
-  const stripSize = {
-    top: [width - 0.02, colorStripHeight, colorStripThickness],
-    bottom: [width - 0.02, colorStripHeight, colorStripThickness],
-    left: [colorStripThickness, colorStripHeight, depth - 0.02],
-    right: [colorStripThickness, colorStripHeight, depth - 0.02],
-  }[side];
+}
 
-  // Get color from property
+function PropertyTile({ position, width, depth, property, side, buildingLevel, onClick }: PropertyTileProps) {
+  const [hovered, setHovered] = useState(false);
+  
+  // Get hex color from color class
   const getColorHex = (colorClass: string) => {
     const colorMap: { [key: string]: string } = {
       'bg-amber-900': '#78350f',
@@ -74,165 +51,287 @@ function PropertyTile3D({
     };
     return colorMap[colorClass] || '#8b5cf6';
   };
+  
+  const colorHex = getColorHex(property.color);
+  
+  // Calculate color strip position based on side (faces center)
+  let stripPosition: [number, number, number] = [0, 0, 0];
+  let stripSize: [number, number, number] = [0, 0, 0];
+  
+  if (side === 'top') {
+    // Strip on back edge (+Z, toward center)
+    stripPosition = [0, tileThickness/2 + colorStripThickness/2, depth/2 - colorStripWidth/2 - 0.02];
+    stripSize = [width - 0.04, colorStripThickness, colorStripWidth];
+  } else if (side === 'bottom') {
+    // Strip on front edge (-Z, toward center)
+    stripPosition = [0, tileThickness/2 + colorStripThickness/2, -depth/2 + colorStripWidth/2 + 0.02];
+    stripSize = [width - 0.04, colorStripThickness, colorStripWidth];
+  } else if (side === 'left') {
+    // Strip on right edge (+X, toward center)
+    stripPosition = [width/2 - colorStripWidth/2 - 0.02, tileThickness/2 + colorStripThickness/2, 0];
+    stripSize = [colorStripWidth, colorStripThickness, depth - 0.04];
+  } else if (side === 'right') {
+    // Strip on left edge (-X, toward center)
+    stripPosition = [-width/2 + colorStripWidth/2 + 0.02, tileThickness/2 + colorStripThickness/2, 0];
+    stripSize = [colorStripWidth, colorStripThickness, depth - 0.04];
+  }
+  
+  // Text rotation based on side (readable from outside board)
+  const textRotation: [number, number, number] = {
+    top: [-Math.PI/2, 0, Math.PI],      // Rotated to face away from center
+    bottom: [-Math.PI/2, 0, 0],         // Normal orientation
+    left: [-Math.PI/2, 0, Math.PI/2],   // Rotated 90deg
+    right: [-Math.PI/2, 0, -Math.PI/2], // Rotated -90deg
+  }[side];
+
+  // Hover lift
+  const hoverY = hovered ? 0.08 : 0;
 
   return (
     <group 
-      position={position}
+      position={[position[0], position[1] + hoverY, position[2]]}
       onPointerOver={() => setHovered(true)}
       onPointerOut={() => setHovered(false)}
       onClick={onClick}
     >
       {/* Tile base */}
-      <mesh position={[0, hovered ? 0.05 : 0, 0]}>
-        <boxGeometry args={[width, tileHeight, depth]} />
-        <meshStandardMaterial color="#1a1025" />
-      </mesh>
-      
-      {/* Color strip - slightly raised */}
-      <mesh position={[
-        stripOffset[0], 
-        tileHeight/2 + colorStripHeight/2 + (hovered ? 0.05 : 0), 
-        stripOffset[2]
-      ]}>
-        <boxGeometry args={stripSize} />
+      <mesh castShadow receiveShadow>
+        <boxGeometry args={[width, tileThickness, depth]} />
         <meshStandardMaterial 
-          color={getColorHex(property.color)} 
-          emissive={getColorHex(property.color)}
-          emissiveIntensity={hovered ? 0.3 : 0.1}
+          color="#1a1025" 
+          roughness={0.7}
+          emissive={hovered ? colorHex : '#000000'}
+          emissiveIntensity={hovered ? 0.15 : 0}
         />
       </mesh>
+      
+      {/* Color strip */}
+      <mesh position={stripPosition} castShadow>
+        <boxGeometry args={stripSize} />
+        <meshStandardMaterial 
+          color={colorHex}
+          emissive={colorHex}
+          emissiveIntensity={hovered ? 0.4 : 0.15}
+          roughness={0.3}
+          metalness={0.2}
+        />
+      </mesh>
+      
+      {/* Property name text */}
+      <Text
+        position={[0, tileThickness/2 + 0.01, side === 'top' ? -0.1 : side === 'bottom' ? 0.1 : 0]}
+        rotation={textRotation}
+        fontSize={0.08}
+        color="white"
+        anchorX="center"
+        anchorY="middle"
+        maxWidth={width * 0.9}
+      >
+        {property.name}
+      </Text>
+      
+      {/* Price text */}
+      <Text
+        position={[0, tileThickness/2 + 0.01, side === 'top' ? 0.2 : side === 'bottom' ? -0.2 : 0]}
+        rotation={textRotation}
+        fontSize={0.1}
+        color="#facc15"
+        anchorX="center"
+        anchorY="middle"
+      >
+        ${property.price.toLocaleString()}
+      </Text>
+      
+      {/* Building indicator */}
+      {buildingLevel > 0 && (
+        <mesh position={[0, tileThickness/2 + 0.15 + (buildingLevel * 0.1), 0]} castShadow>
+          <boxGeometry args={[0.2, 0.15 * buildingLevel, 0.2]} />
+          <meshStandardMaterial 
+            color={buildingLevel >= 4 ? '#FFD700' : '#22c55e'}
+            emissive={buildingLevel >= 4 ? '#FFD700' : '#22c55e'}
+            emissiveIntensity={0.3}
+          />
+        </mesh>
+      )}
     </group>
   );
 }
 
-function CornerTile3D({ position }: { position: [number, number, number] }) {
+function CornerTile({ position, label }: { position: [number, number, number]; label: string }) {
   const [hovered, setHovered] = useState(false);
   const size = cornerSize;
-  const height = 0.12;
-  
+
   return (
-    <mesh 
-      position={[position[0], position[1] + (hovered ? 0.05 : 0), position[2]]}
+    <group 
+      position={[position[0], position[1] + (hovered ? 0.08 : 0), position[2]]}
       onPointerOver={() => setHovered(true)}
       onPointerOut={() => setHovered(false)}
     >
-      <boxGeometry args={[size, height, size]} />
-      <meshStandardMaterial color="#4c1d95" />
-    </mesh>
+      <mesh castShadow receiveShadow>
+        <boxGeometry args={[size, tileThickness, size]} />
+        <meshStandardMaterial 
+          color="#4c1d95" 
+          roughness={0.5} 
+          metalness={0.3}
+          emissive={hovered ? '#7c3aed' : '#000000'}
+          emissiveIntensity={hovered ? 0.3 : 0}
+        />
+      </mesh>
+      
+      {/* Accent glow on top */}
+      <mesh position={[0, tileThickness/2 + 0.01, 0]}>
+        <boxGeometry args={[size - 0.1, 0.02, size - 0.1]} />
+        <meshStandardMaterial 
+          color="#7c3aed"
+          emissive="#7c3aed"
+          emissiveIntensity={0.2}
+        />
+      </mesh>
+      
+      <Text
+        position={[0, tileThickness/2 + 0.02, 0]}
+        rotation={[-Math.PI/2, 0, 0]}
+        fontSize={0.15}
+        color="white"
+        anchorX="center"
+        anchorY="middle"
+        fontWeight="bold"
+      >
+        {label}
+      </Text>
+    </group>
   );
 }
 
 function Scene({ onSelectProperty, spectatorMode, spectatorOwnerships }: Board3DSceneProps) {
   const { gameState } = useGameState();
   
-  // Tile positioning
-  const topZ = -boardH/2 + tileShort/2;
-  const bottomZ = boardH/2 - tileShort/2;
-  const leftX = -boardW/2 + tileShort/2;
-  const rightX = boardW/2 - tileShort/2;
-
-  // Top row tiles: ids 11-16, from left to right
-  const topRowTiles = [11, 12, 13, 14, 15, 16].map((id, i) => ({
-    id,
-    position: [-boardW/2 + cornerSize + tileLong/2 + i * tileLong, tileY, topZ] as [number, number, number],
-    width: tileLong,
-    depth: tileShort,
-    side: 'top' as const
-  }));
-
-  // Right column tiles: ids 17-21, from top to bottom
-  const rightColumnTiles = [17, 18, 19, 20, 21].map((id, i) => ({
-    id,
-    position: [rightX, tileY, topZ - cornerSize - tileShort/2 - i * tileLong] as [number, number, number],
-    width: tileShort,
-    depth: tileLong,
-    side: 'right' as const
-  }));
-
-  // Bottom row tiles: ids 0-5, from right to left
-  const bottomRowTiles = [0, 1, 2, 3, 4, 5].map((id, i) => ({
-    id,
-    position: [boardW/2 - cornerSize - tileLong/2 - i * tileLong, tileY, bottomZ] as [number, number, number],
-    width: tileLong,
-    depth: tileShort,
-    side: 'bottom' as const
-  }));
-
-  // Left column tiles: ids 6-10, from bottom to top
-  const leftColumnTiles = [6, 7, 8, 9, 10].map((id, i) => ({
-    id,
-    position: [leftX, tileY, bottomZ + cornerSize + tileShort/2 + i * tileLong] as [number, number, number],
-    width: tileShort,
-    depth: tileLong,
-    side: 'left' as const
-  }));
-
-  // Corner positions
-  const corners = [
-    { position: [-boardW/2 + cornerSize/2, tileY, topZ] as [number, number, number] },      // Top-left
-    { position: [boardW/2 - cornerSize/2, tileY, topZ] as [number, number, number] },       // Top-right
-    { position: [boardW/2 - cornerSize/2, tileY, bottomZ] as [number, number, number] },    // Bottom-right
-    { position: [-boardW/2 + cornerSize/2, tileY, bottomZ] as [number, number, number] },   // Bottom-left
-  ];
-
-  const allTiles = [...topRowTiles, ...rightColumnTiles, ...bottomRowTiles, ...leftColumnTiles];
+  // Dimensions
+  const tileY = boardThickness + tileThickness/2; // Tiles sit on top of board
+  
+  const halfW = boardWidth / 2;
+  const halfH = boardHeight / 2;
+  
+  // Get building level for a property
+  const getBuildingLevel = (propertyId: number) => {
+    if (spectatorMode && spectatorOwnerships) {
+      const ownership = spectatorOwnerships.find((o: any) => o.propertyId === propertyId);
+      return ownership?.buildingLevel || 0;
+    }
+    return gameState?.ownerships.find(o => o.propertyId === propertyId)?.buildingLevel || 0;
+  };
   
   return (
     <>
-      {/* Enhanced Lighting */}
-      <ambientLight intensity={0.8} />
-      <directionalLight 
-        position={[10, 20, 10]} 
-        intensity={1.2}
-      />
-      <directionalLight 
-        position={[-10, 10, -10]} 
-        intensity={0.4} 
-        color="#9333ea" 
-      />
-
-      {/* Camera Controls */}
+      {/* Lighting */}
+      <ambientLight intensity={0.6} />
+      <directionalLight position={[10, 20, 10]} intensity={1.0} castShadow />
+      <directionalLight position={[-5, 10, -5]} intensity={0.3} color="#9333ea" />
+      
       <OrbitControls
         enablePan={false}
         minPolarAngle={Math.PI / 6}
         maxPolarAngle={Math.PI / 2.2}
         minDistance={8}
-        maxDistance={25}
-        autoRotate={false}
+        maxDistance={20}
       />
-
-      {/* Board Base - Proper MonoFi dimensions */}
-      <mesh position={[0, 0, 0]}>
-        <boxGeometry args={[boardW, 0.2, boardH]} />
-        <meshStandardMaterial color="#0f0618" />
+      
+      {/* Board base */}
+      <mesh position={[0, boardThickness/2, 0]} receiveShadow>
+        <boxGeometry args={[boardWidth, boardThickness, boardHeight]} />
+        <meshStandardMaterial color="#0f0618" roughness={0.8} metalness={0.1} />
       </mesh>
-
-      {/* Render all property tiles */}
-      {allTiles.map(({ id, position, width, depth, side }) => {
-        const property = PROPERTIES[id];
+      
+      {/* Board edge highlight */}
+      <mesh position={[0, boardThickness + 0.01, 0]}>
+        <boxGeometry args={[boardWidth + 0.05, 0.02, boardHeight + 0.05]} />
+        <meshStandardMaterial color="#2d1b4e" roughness={0.5} metalness={0.2} />
+      </mesh>
+      
+      {/* ===== CORNERS ===== */}
+      <CornerTile position={[-halfW + cornerSize/2, tileY, -halfH + cornerSize/2]} label="DEFI" />
+      <CornerTile position={[halfW - cornerSize/2, tileY, -halfH + cornerSize/2]} label="POLY" />
+      <CornerTile position={[-halfW + cornerSize/2, tileY, halfH - cornerSize/2]} label="DEFI" />
+      <CornerTile position={[halfW - cornerSize/2, tileY, halfH - cornerSize/2]} label="POLY" />
+      
+      {/* ===== TOP ROW (properties 11-16) ===== */}
+      {[11, 12, 13, 14, 15, 16].map((id, i) => {
+        const prop = PROPERTIES.find(p => p.id === id)!;
+        const x = -halfW + cornerSize + tileLong/2 + i * tileLong;
+        const z = -halfH + tileShort/2;
         return (
-          <PropertyTile3D
+          <PropertyTile
             key={id}
-            position={position}
-            width={width}
-            depth={depth}
-            property={property}
-            side={side}
+            position={[x, tileY, z]}
+            width={tileLong}
+            depth={tileShort}
+            property={prop}
+            side="top"
+            buildingLevel={getBuildingLevel(id)}
             onClick={() => onSelectProperty(id)}
           />
         );
       })}
-
-      {/* Render corner tiles */}
-      {corners.map((corner, i) => (
-        <CornerTile3D
-          key={`corner-${i}`}
-          position={corner.position}
-        />
-      ))}
-
-      {/* Bank in Center - Using actual Bank3D_R3F with proper scaling */}
-      <group position={[0, 1.2, 0]} scale={0.18}>
+      
+      {/* ===== BOTTOM ROW (properties 5, 4, 3, 2, 1, 0) ===== */}
+      {[5, 4, 3, 2, 1, 0].map((id, i) => {
+        const prop = PROPERTIES.find(p => p.id === id)!;
+        const x = -halfW + cornerSize + tileLong/2 + i * tileLong;
+        const z = halfH - tileShort/2;
+        return (
+          <PropertyTile
+            key={id}
+            position={[x, tileY, z]}
+            width={tileLong}
+            depth={tileShort}
+            property={prop}
+            side="bottom"
+            buildingLevel={getBuildingLevel(id)}
+            onClick={() => onSelectProperty(id)}
+          />
+        );
+      })}
+      
+      {/* ===== LEFT COLUMN (properties 10, 9, 8, 7, 6) ===== */}
+      {[10, 9, 8, 7, 6].map((id, i) => {
+        const prop = PROPERTIES.find(p => p.id === id)!;
+        const x = -halfW + tileShort/2;
+        const z = -halfH + cornerSize + tileLong/2 + i * tileLong;
+        return (
+          <PropertyTile
+            key={id}
+            position={[x, tileY, z]}
+            width={tileShort}
+            depth={tileLong}
+            property={prop}
+            side="left"
+            buildingLevel={getBuildingLevel(id)}
+            onClick={() => onSelectProperty(id)}
+          />
+        );
+      })}
+      
+      {/* ===== RIGHT COLUMN (properties 17, 18, 19, 20, 21) ===== */}
+      {[17, 18, 19, 20, 21].map((id, i) => {
+        const prop = PROPERTIES.find(p => p.id === id)!;
+        const x = halfW - tileShort/2;
+        const z = -halfH + cornerSize + tileLong/2 + i * tileLong;
+        return (
+          <PropertyTile
+            key={id}
+            position={[x, tileY, z]}
+            width={tileShort}
+            depth={tileLong}
+            property={prop}
+            side="right"
+            buildingLevel={getBuildingLevel(id)}
+            onClick={() => onSelectProperty(id)}
+          />
+        );
+      })}
+      
+      {/* ===== BANK (keep existing) ===== */}
+      <group position={[0, 0.5, 0]} scale={0.12}>
         <Suspense fallback={null}>
           <Bank3D_R3F isPulsing={false} rewardsAmount={gameState?.bankBalance || 0} />
         </Suspense>
@@ -273,11 +372,12 @@ export function Board3DScene({ onSelectProperty, spectatorMode, spectatorOwnersh
       {containerRef.current && (
         <Canvas
           camera={{ 
-            position: [15, 25, 15], 
-            fov: 60,
+            position: [0, 12, 10],  // More centered, looking down at board
+            fov: 50,
             far: 1000,
             near: 0.1
           }}
+          shadows
           style={{ 
             background: 'linear-gradient(180deg, #0a0015 0%, #1a0a2e 50%, #0a0015 100%)',
             width: '100%',
