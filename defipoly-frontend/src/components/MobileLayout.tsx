@@ -41,7 +41,14 @@ function MobileRewardsCard() {
       }
     } catch (error) {
       console.error('Error claiming rewards:', error);
-      showError('Claim Failed', 'Failed to claim rewards. Please try again.');
+      
+      const errorMessage = String(error instanceof Error ? error.message : error);
+      if (errorMessage.includes('User rejected') || errorMessage.includes('rejected the request')) {
+        // User canceled the transaction - don't show an error
+        console.log('User canceled the claim transaction');
+      } else {
+        showError('Claim Failed', 'Failed to claim rewards. Please try again.');
+      }
     } finally {
       setClaiming(false);
       claimingRef.current = false;

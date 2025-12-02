@@ -1,6 +1,7 @@
 'use client';
 
 import { Board } from '@/components/Board';
+import { RewardsPanel } from '@/components/RewardsPanel';
 import { Portfolio } from '@/components/Portfolio';
 import { Leaderboard } from '@/components/Leaderboard';
 import { LiveFeed } from '@/components/LiveFeed';

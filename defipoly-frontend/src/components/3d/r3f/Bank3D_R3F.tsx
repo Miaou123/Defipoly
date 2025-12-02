@@ -5,7 +5,7 @@ import { useFrame } from '@react-three/fiber';
 import { Text, useTexture } from '@react-three/drei';
 import * as THREE from 'three';
 
-interface Bank3D_R3FProps {
+interface Bank3D_V2Props {
   isPulsing?: boolean;
   rewardsAmount?: number;
   profilePicture?: string | null;
@@ -35,22 +35,21 @@ function LogoFallback() {
   );
 }
 
-export function Bank3D_R3F({ 
+export function Bank3D_V2({ 
   isPulsing = false, 
   rewardsAmount = 0,
   profilePicture = null
-}: Bank3D_R3FProps) {
+}: Bank3D_V2Props) {
   const groupRef = useRef<THREE.Group>(null);
   const scaleRef = useRef({ current: 1, target: 1 });
 
-  useFrame((state, delta) => {
+  useFrame(() => {
     if (!groupRef.current) return;
     
     scaleRef.current.target = isPulsing ? 1.12 : 1;
     scaleRef.current.current += (scaleRef.current.target - scaleRef.current.current) * 0.15;
     groupRef.current.scale.setScalar(scaleRef.current.current);
     
-    // Remove rotation animations - keep bank straight
     groupRef.current.rotation.y = 0;
     groupRef.current.position.y = -6.5;
     groupRef.current.rotation.x = 0;
@@ -58,42 +57,44 @@ export function Bank3D_R3F({
 
   const buildingWidth = 18;
   const buildingHeight = 8;
-  const buildingDepth = 10;
-  const frontZ = buildingDepth/2;
+  const buildingDepth = 16;
+  const frontZ = buildingDepth / 2;
 
-  const roofGeometry = new THREE.BufferGeometry();
   const counterSectionHeight = 3.6;
   const counterSectionWidth = buildingWidth + 1.2;
   const counterSectionDepth = buildingDepth + 1.0;
-  const counterSectionY = 9.7 + counterSectionHeight/2;
-  const roofBaseY = counterSectionY + counterSectionHeight/2 + 0.1;
+  const counterSectionY = 9.7 + counterSectionHeight / 2;
+  const roofBaseY = counterSectionY + counterSectionHeight / 2 + 0.1;
   const peakHeight = 5.6;
   const roofHalfWidth = counterSectionWidth / 2 + 0.1;
   const roofDepth = counterSectionDepth + 0.1;
 
+  const roofGeometry = new THREE.BufferGeometry();
   const roofVertices = new Float32Array([
-    -roofHalfWidth, 0, roofDepth/2, roofHalfWidth, 0, roofDepth/2, 0, peakHeight, roofDepth/2,
-    roofHalfWidth, 0, -roofDepth/2, -roofHalfWidth, 0, -roofDepth/2, 0, peakHeight, -roofDepth/2,
-    -roofHalfWidth, 0, roofDepth/2, 0, peakHeight, roofDepth/2, 0, peakHeight, -roofDepth/2,
-    0, peakHeight, -roofDepth/2, -roofHalfWidth, 0, -roofDepth/2, -roofHalfWidth, 0, roofDepth/2,
-    roofHalfWidth, 0, roofDepth/2, roofHalfWidth, 0, -roofDepth/2, 0, peakHeight, -roofDepth/2,
-    0, peakHeight, -roofDepth/2, 0, peakHeight, roofDepth/2, roofHalfWidth, 0, roofDepth/2,
-    -roofHalfWidth, 0, roofDepth/2, -roofHalfWidth, 0, -roofDepth/2, roofHalfWidth, 0, -roofDepth/2,
-    roofHalfWidth, 0, -roofDepth/2, roofHalfWidth, 0, roofDepth/2, -roofHalfWidth, 0, roofDepth/2,
+    -roofHalfWidth, 0, roofDepth / 2, roofHalfWidth, 0, roofDepth / 2, 0, peakHeight, roofDepth / 2,
+    roofHalfWidth, 0, -roofDepth / 2, -roofHalfWidth, 0, -roofDepth / 2, 0, peakHeight, -roofDepth / 2,
+    -roofHalfWidth, 0, roofDepth / 2, 0, peakHeight, roofDepth / 2, 0, peakHeight, -roofDepth / 2,
+    0, peakHeight, -roofDepth / 2, -roofHalfWidth, 0, -roofDepth / 2, -roofHalfWidth, 0, roofDepth / 2,
+    roofHalfWidth, 0, roofDepth / 2, roofHalfWidth, 0, -roofDepth / 2, 0, peakHeight, -roofDepth / 2,
+    0, peakHeight, -roofDepth / 2, 0, peakHeight, roofDepth / 2, roofHalfWidth, 0, roofDepth / 2,
+    -roofHalfWidth, 0, roofDepth / 2, -roofHalfWidth, 0, -roofDepth / 2, roofHalfWidth, 0, -roofDepth / 2,
+    roofHalfWidth, 0, -roofDepth / 2, roofHalfWidth, 0, roofDepth / 2, -roofHalfWidth, 0, roofDepth / 2,
   ]);
-
   roofGeometry.setAttribute('position', new THREE.BufferAttribute(roofVertices, 3));
   roofGeometry.computeVertexNormals();
+
+  const roofEdgeLength = Math.sqrt(roofHalfWidth * roofHalfWidth + peakHeight * peakHeight);
+  const roofAngle = Math.atan2(peakHeight, roofHalfWidth);
 
   return (
     <group ref={groupRef} position={[0, -6.5, 0]} scale={1}>
       {/* Base platform */}
       <mesh position={[0, 0.4, 0]}>
-        <boxGeometry args={[20, 0.8, 12]} />
+        <boxGeometry args={[20, 0.8, buildingDepth + 4]} />
         <meshStandardMaterial color={0x8B6BC4} roughness={0.3} metalness={0.2} />
       </mesh>
       <mesh position={[0, 0.1, 0]}>
-        <boxGeometry args={[20.4, 0.3, 12.4]} />
+        <boxGeometry args={[20.4, 0.3, buildingDepth + 4.4]} />
         <meshStandardMaterial color={0x3D2570} roughness={0.5} metalness={0.1} />
       </mesh>
 
@@ -103,9 +104,9 @@ export function Bank3D_R3F({
         <meshStandardMaterial color={0x5D3A9B} roughness={0.4} metalness={0.1} />
       </mesh>
 
-      {/* Columns */}
+      {/* Front columns */}
       {[-8, -6, -4, 4, 6, 8].map((xPos, i) => (
-        <group key={i} position={[xPos, 0, buildingDepth/2 + 0.2]}>
+        <group key={i} position={[xPos, 0, frontZ + 0.2]}>
           <mesh position={[0, 4.4, 0]}>
             <cylinderGeometry args={[0.56, 0.5, 7.2, 16]} />
             <meshStandardMaterial color={0xE8E0F0} roughness={0.3} metalness={0.1} />
@@ -121,22 +122,100 @@ export function Bank3D_R3F({
         </group>
       ))}
 
+      {/* Side columns - Left */}
+      {[-5, 0, 5].map((zPos, i) => (
+        <group key={`left-${i}`} position={[-buildingWidth / 2 - 0.3, 0, zPos]}>
+          <mesh position={[0, 4.4, 0]}>
+            <cylinderGeometry args={[0.45, 0.4, 7.2, 16]} />
+            <meshStandardMaterial color={0xE8E0F0} roughness={0.3} metalness={0.1} />
+          </mesh>
+          <mesh position={[0, 1.0, 0]}>
+            <boxGeometry args={[1.0, 0.4, 1.0]} />
+            <meshStandardMaterial color={0x8B6BC4} roughness={0.3} metalness={0.2} />
+          </mesh>
+          <mesh position={[0, 8.2, 0]}>
+            <boxGeometry args={[0.9, 0.3, 0.9]} />
+            <meshStandardMaterial color={0x8B6BC4} roughness={0.3} metalness={0.2} />
+          </mesh>
+        </group>
+      ))}
+
+      {/* Side columns - Right */}
+      {[-5, 0, 5].map((zPos, i) => (
+        <group key={`right-${i}`} position={[buildingWidth / 2 + 0.3, 0, zPos]}>
+          <mesh position={[0, 4.4, 0]}>
+            <cylinderGeometry args={[0.45, 0.4, 7.2, 16]} />
+            <meshStandardMaterial color={0xE8E0F0} roughness={0.3} metalness={0.1} />
+          </mesh>
+          <mesh position={[0, 1.0, 0]}>
+            <boxGeometry args={[1.0, 0.4, 1.0]} />
+            <meshStandardMaterial color={0x8B6BC4} roughness={0.3} metalness={0.2} />
+          </mesh>
+          <mesh position={[0, 8.2, 0]}>
+            <boxGeometry args={[0.9, 0.3, 0.9]} />
+            <meshStandardMaterial color={0x8B6BC4} roughness={0.3} metalness={0.2} />
+          </mesh>
+        </group>
+      ))}
+
+      {/* Back pilasters */}
+      {[-6, -2, 2, 6].map((xPos, i) => (
+        <mesh key={`bp-${i}`} position={[xPos, 4.8, -frontZ - 0.3]}>
+          <boxGeometry args={[1.2, 7.5, 0.6]} />
+          <meshStandardMaterial color={0x4D2A8B} roughness={0.4} metalness={0.1} />
+        </mesh>
+      ))}
+
+      {/* Back panels */}
+      {[-4, 0, 4].map((xPos, i) => (
+        <group key={`bpanel-${i}`} position={[xPos, 4.8, -frontZ - 0.1]}>
+          <mesh>
+            <boxGeometry args={[2.8, 5.5, 0.15]} />
+            <meshStandardMaterial color={0x3D2570} roughness={0.5} metalness={0.1} />
+          </mesh>
+          <mesh position={[0, 0, 0.1]}>
+            <boxGeometry args={[2.2, 4.8, 0.1]} />
+            <meshStandardMaterial color={0x2a1548} roughness={0.4} metalness={0.1} />
+          </mesh>
+        </group>
+      ))}
+
+      {/* Side and back gold trim */}
+      <mesh position={[-buildingWidth / 2 - 0.15, 8.5, 0]}>
+        <boxGeometry args={[0.2, 0.25, buildingDepth + 0.5]} />
+        <meshStandardMaterial color={0xFFBD32} roughness={0.2} metalness={0.7} />
+      </mesh>
+      <mesh position={[buildingWidth / 2 + 0.15, 8.5, 0]}>
+        <boxGeometry args={[0.2, 0.25, buildingDepth + 0.5]} />
+        <meshStandardMaterial color={0xFFBD32} roughness={0.2} metalness={0.7} />
+      </mesh>
+      <mesh position={[0, 8.5, -frontZ - 0.2]}>
+        <boxGeometry args={[buildingWidth + 0.5, 0.3, 0.4]} />
+        <meshStandardMaterial color={0xFFBD32} roughness={0.2} metalness={0.7} />
+      </mesh>
+
       {/* Roof beam */}
       <mesh position={[0, 9.25, 0]}>
         <boxGeometry args={[buildingWidth + 1.2, 0.9, buildingDepth + 1.2]} />
         <meshStandardMaterial color={0x5D3A9B} roughness={0.4} metalness={0.1} />
       </mesh>
-      <mesh position={[0, 9.0, buildingDepth/2 + 0.76]}>
+      <mesh position={[0, 9.0, frontZ + 0.76]}>
         <boxGeometry args={[buildingWidth + 1.4, 0.24, 0.3]} />
         <meshStandardMaterial color={0xFFBD32} roughness={0.2} metalness={0.7} />
       </mesh>
 
-      {/* Dentils */}
+      {/* Dentils - front and back */}
       {Array.from({ length: 17 }, (_, i) => -8.4 + i * 1.0).map((x, i) => (
-        <mesh key={i} position={[x, 8.7, buildingDepth/2 + 0.5]}>
-          <boxGeometry args={[0.36, 0.36, 0.36]} />
-          <meshStandardMaterial color={0x3D2570} roughness={0.5} metalness={0.1} />
-        </mesh>
+        <group key={`dentil-${i}`}>
+          <mesh position={[x, 8.7, frontZ + 0.5]}>
+            <boxGeometry args={[0.36, 0.36, 0.36]} />
+            <meshStandardMaterial color={0x3D2570} roughness={0.5} metalness={0.1} />
+          </mesh>
+          <mesh position={[x, 8.7, -frontZ - 0.5]}>
+            <boxGeometry args={[0.36, 0.36, 0.36]} />
+            <meshStandardMaterial color={0x3D2570} roughness={0.5} metalness={0.1} />
+          </mesh>
+        </group>
       ))}
 
       {/* Counter section */}
@@ -144,13 +223,13 @@ export function Bank3D_R3F({
         <boxGeometry args={[counterSectionWidth, counterSectionHeight, counterSectionDepth]} />
         <meshStandardMaterial color={0x5D3A9B} roughness={0.4} metalness={0.1} />
       </mesh>
-      <mesh position={[0, counterSectionY + counterSectionHeight/2 + 0.1, counterSectionDepth/2 + 0.16]}>
+      <mesh position={[0, counterSectionY + counterSectionHeight / 2 + 0.1, counterSectionDepth / 2 + 0.16]}>
         <boxGeometry args={[counterSectionWidth + 0.3, 0.2, 0.24]} />
         <meshStandardMaterial color={0xFFBD32} roughness={0.2} metalness={0.7} />
       </mesh>
 
       {/* Counter display */}
-      <group position={[0, counterSectionY, counterSectionDepth/2 + 0.2]}>
+      <group position={[0, counterSectionY, counterSectionDepth / 2 + 0.2]}>
         <mesh>
           <planeGeometry args={[17.0, 3.2]} />
           <meshBasicMaterial color={0x050515} transparent opacity={0.95} />
@@ -174,40 +253,69 @@ export function Bank3D_R3F({
         <meshStandardMaterial color={0x5D3A9B} roughness={0.4} metalness={0.1} />
       </mesh>
 
-      {/* Gold roof edge trim - left */}
-      <mesh position={[-roofHalfWidth/2, roofBaseY + peakHeight/2 + 0.1, roofDepth/2 + 0.15]} rotation={[0, 0, Math.atan2(peakHeight, roofHalfWidth)]}>
-        <boxGeometry args={[Math.sqrt(roofHalfWidth * roofHalfWidth + peakHeight * peakHeight), 0.15, 0.15]} />
-        <meshStandardMaterial color={0xFFBD32} roughness={0.2} metalness={0.7} />
-      </mesh>
-      
-      {/* Gold roof edge trim - right */}
-      <mesh position={[roofHalfWidth/2, roofBaseY + peakHeight/2 + 0.1, roofDepth/2 + 0.15]} rotation={[0, 0, -Math.atan2(peakHeight, roofHalfWidth)]}>
-        <boxGeometry args={[Math.sqrt(roofHalfWidth * roofHalfWidth + peakHeight * peakHeight), 0.15, 0.15]} />
+      {/* Roof ridge */}
+      <mesh position={[0, roofBaseY + peakHeight - 0.1, 0]}>
+        <boxGeometry args={[0.35, 0.35, roofDepth + 0.5]} />
         <meshStandardMaterial color={0xFFBD32} roughness={0.2} metalness={0.7} />
       </mesh>
 
-      {/* Gold finial at roof peak */}
-      <mesh position={[0, roofBaseY + peakHeight + 0.3, roofDepth/2]}>
-        <sphereGeometry args={[0.4, 16, 16]} />
+      {/* Gold roof edge trims */}
+      <mesh position={[-roofHalfWidth / 2, roofBaseY + peakHeight / 2 + 0.1, roofDepth / 2 + 0.15]} rotation={[0, 0, roofAngle]}>
+        <boxGeometry args={[roofEdgeLength, 0.18, 0.18]} />
         <meshStandardMaterial color={0xFFBD32} roughness={0.2} metalness={0.7} />
       </mesh>
-      <mesh position={[0, roofBaseY + peakHeight + 0.8, roofDepth/2]}>
-        <coneGeometry args={[0.25, 0.6, 16]} />
+      <mesh position={[roofHalfWidth / 2, roofBaseY + peakHeight / 2 + 0.1, roofDepth / 2 + 0.15]} rotation={[0, 0, -roofAngle]}>
+        <boxGeometry args={[roofEdgeLength, 0.18, 0.18]} />
+        <meshStandardMaterial color={0xFFBD32} roughness={0.2} metalness={0.7} />
+      </mesh>
+      <mesh position={[-roofHalfWidth / 2, roofBaseY + peakHeight / 2 + 0.1, -roofDepth / 2 - 0.15]} rotation={[0, 0, roofAngle]}>
+        <boxGeometry args={[roofEdgeLength, 0.18, 0.18]} />
+        <meshStandardMaterial color={0xFFBD32} roughness={0.2} metalness={0.7} />
+      </mesh>
+      <mesh position={[roofHalfWidth / 2, roofBaseY + peakHeight / 2 + 0.1, -roofDepth / 2 - 0.15]} rotation={[0, 0, -roofAngle]}>
+        <boxGeometry args={[roofEdgeLength, 0.18, 0.18]} />
         <meshStandardMaterial color={0xFFBD32} roughness={0.2} metalness={0.7} />
       </mesh>
 
-      {/* Gold corner accents on roof base */}
-      <mesh position={[-roofHalfWidth, roofBaseY + 0.15, roofDepth/2]}>
-        <sphereGeometry args={[0.25, 12, 12]} />
+      {/* Side edge trims */}
+      <mesh position={[-roofHalfWidth - 0.1, roofBaseY + 0.1, 0]}>
+        <boxGeometry args={[0.18, 0.18, roofDepth + 0.3]} />
         <meshStandardMaterial color={0xFFBD32} roughness={0.2} metalness={0.7} />
       </mesh>
-      <mesh position={[roofHalfWidth, roofBaseY + 0.15, roofDepth/2]}>
-        <sphereGeometry args={[0.25, 12, 12]} />
+      <mesh position={[roofHalfWidth + 0.1, roofBaseY + 0.1, 0]}>
+        <boxGeometry args={[0.18, 0.18, roofDepth + 0.3]} />
         <meshStandardMaterial color={0xFFBD32} roughness={0.2} metalness={0.7} />
       </mesh>
+
+      {/* Corner accents */}
+      {[
+        [-roofHalfWidth, roofDepth / 2],
+        [roofHalfWidth, roofDepth / 2],
+        [-roofHalfWidth, -roofDepth / 2],
+        [roofHalfWidth, -roofDepth / 2],
+      ].map(([x, z], i) => (
+        <mesh key={`corner-${i}`} position={[x, roofBaseY + 0.15, z]}>
+          <sphereGeometry args={[0.28, 12, 12]} />
+          <meshStandardMaterial color={0xFFBD32} roughness={0.2} metalness={0.7} />
+        </mesh>
+      ))}
+
+      {/* Peak finials */}
+      {[roofDepth / 2, -roofDepth / 2].map((z, i) => (
+        <group key={`finial-${i}`} position={[0, roofBaseY + peakHeight, z]}>
+          <mesh position={[0, 0.3, 0]}>
+            <sphereGeometry args={[0.4, 16, 16]} />
+            <meshStandardMaterial color={0xFFBD32} roughness={0.2} metalness={0.7} />
+          </mesh>
+          <mesh position={[0, 0.8, 0]}>
+            <coneGeometry args={[0.25, 0.6, 16]} />
+            <meshStandardMaterial color={0xFFBD32} roughness={0.2} metalness={0.7} />
+          </mesh>
+        </group>
+      ))}
 
       {/* Profile picture circle */}
-      <group position={[0, roofBaseY + peakHeight * 0.40, roofDepth/2 + 1.0]}>
+      <group position={[0, roofBaseY + peakHeight * 0.48, roofDepth / 2 + 0.3]}>
         <Suspense fallback={
           <mesh>
             <circleGeometry args={[2.0, 32]} />
@@ -319,7 +427,7 @@ export function Bank3D_R3F({
       </mesh>
 
       {/* Dark purple carpet */}
-      <mesh position={[0, 0.32, frontZ + 1.2]} rotation={[-Math.PI/2, 0, 0]}>
+      <mesh position={[0, 0.32, frontZ + 1.2]} rotation={[-Math.PI / 2, 0, 0]}>
         <planeGeometry args={[3, 1.5]} />
         <meshStandardMaterial color={0x2a1548} roughness={0.8} metalness={0} />
       </mesh>

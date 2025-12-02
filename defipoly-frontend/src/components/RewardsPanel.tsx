@@ -215,7 +215,10 @@ export function RewardsPanel({ incomeArrived = null, scaleFactor = 1 }: RewardsP
       console.error('Error claiming rewards:', error);
       
       const errorMessage = String(error instanceof Error ? error.message : error);
-      if (errorMessage.includes('already been processed') || 
+      if (errorMessage.includes('User rejected') || errorMessage.includes('rejected the request')) {
+        // User canceled the transaction - don't show an error
+        console.log('User canceled the claim transaction');
+      } else if (errorMessage.includes('already been processed') || 
           errorMessage.includes('AlreadyProcessed')) {
         showSuccess('Rewards Claimed!', 'Rewards have been claimed!');
         setDisplayedRewards(0);

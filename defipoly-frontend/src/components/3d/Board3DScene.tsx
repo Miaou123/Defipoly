@@ -1,6 +1,6 @@
 'use client';
 
-import { Canvas } from '@react-three/fiber';
+import { Canvas, useFrame } from '@react-three/fiber';
 import { OrbitControls, Text } from '@react-three/drei';
 import { useGameState } from '@/contexts/GameStateContext';
 import { PROPERTIES } from '@/utils/constants';
@@ -14,6 +14,8 @@ import { House5_R3F } from './r3f/House5_R3F';
 import { useMemo, useEffect, useRef, useState, Suspense, useCallback } from 'react';
 import * as THREE from 'three';
 import { ResetViewIcon, ZoomInIcon, ZoomOutIcon } from '../icons/UIIcons';
+import { InteractiveBank3D } from './InteractiveBank3D';
+
 
 interface Board3DSceneProps {
   onSelectProperty: (propertyId: number) => void;
@@ -36,6 +38,96 @@ const tileThickness = 0.15;
 const colorStripThickness = 0.16;
 const colorStripWidth = 0.15;
 
+// Rising income particles for complete sets
+function RisingIncomeParticles({ side }: { side: 'top' | 'bottom' | 'left' | 'right' }) {
+  const particlesRef = useRef<THREE.Group>(null);
+  const particleCount = 8;
+  
+  // Position particles above the house based on tile side
+  const getParticleOffset = () => {
+    switch (side) {
+      case 'top': return { x: 0, z: -0.15 }; // Back of tile (where house is)
+      case 'bottom': return { x: 0, z: 0.15 }; // Front of tile (where house is)
+      case 'left': return { x: -0.15, z: 0 }; // Left of tile (where house is)
+      case 'right': return { x: 0.15, z: 0 }; // Right of tile (where house is)
+    }
+  };
+
+  const offset = getParticleOffset();
+
+  // Create particle data once
+  const particleData = useMemo(() => {
+    return Array.from({ length: particleCount }, (_, i) => ({
+      startX: offset.x + (Math.random() - 0.5) * 0.15, // Centered on house position with small spread
+      startZ: offset.z + (Math.random() - 0.5) * 0.15, // Centered on house position with small spread
+      speed: 0.4 + Math.random() * 0.3,
+      delay: (i / particleCount) * 3,
+      rotSpeed: (Math.random() - 0.5) * 4,
+      isPlus: true, // All particles are plus signs now
+    }));
+  }, [offset.x, offset.z]);
+
+  useFrame((state) => {
+    if (!particlesRef.current) return;
+    const time = state.clock.elapsedTime;
+    
+    particlesRef.current.children.forEach((particle, i) => {
+      const data = particleData[i];
+      const cycleTime = (time * data.speed + data.delay) % 3; // 3 second cycle
+      const progress = cycleTime / 3;
+      
+      // Rise up (reduced height)
+      particle.position.y = progress * 0.8;
+      
+      // Slight horizontal drift
+      particle.position.x = data.startX + Math.sin(time + data.delay) * 0.08;
+      particle.position.z = data.startZ + Math.cos(time + data.delay) * 0.08;
+      
+      // No rotation needed since all particles are plus signs
+      
+      // Fade in and out
+      let opacity = 1;
+      if (progress < 0.15) {
+        opacity = progress / 0.15;
+      } else if (progress > 0.7) {
+        opacity = (1 - progress) / 0.3;
+      }
+      
+      // Update material opacity
+      particle.traverse((child) => {
+        if (child instanceof THREE.Mesh && child.material) {
+          (child.material as THREE.MeshBasicMaterial).opacity = opacity * 0.85;
+        }
+      });
+      
+      // Scale based on progress
+      const scale = 0.7 + Math.sin(progress * Math.PI) * 0.3;
+      particle.scale.setScalar(scale);
+    });
+  });
+
+  return (
+    <group ref={particlesRef} position={[0, tileThickness / 2 + 0.05, 0]}>
+      {particleData.map((data, i) => (
+        <group key={i} position={[data.startX, 0, data.startZ]}>
+          {/* Green plus sign */}
+          <group>
+            <mesh>
+              <boxGeometry args={[0.08, 0.02, 0.02]} />
+              <meshBasicMaterial color="#22c55e" transparent opacity={0} />
+            </mesh>
+            <mesh>
+              <boxGeometry args={[0.02, 0.08, 0.02]} />
+              <meshBasicMaterial color="#22c55e" transparent opacity={0} />
+            </mesh>
+          </group>
+        </group>
+      ))}
+    </group>
+  );
+}
+
+
 interface PropertyTileProps {
   position: [number, number, number];
   width: number;  // tileLong for top/bottom, tileShort for left/right
@@ -43,10 +135,11 @@ interface PropertyTileProps {
   property: typeof PROPERTIES[0];
   side: 'top' | 'bottom' | 'left' | 'right';
   buildingLevel: number;
+  hasCompleteSet: boolean;
   onClick: () => void;
 }
 
-function PropertyTile({ position, width, depth, property, side, buildingLevel, onClick }: PropertyTileProps) {
+function PropertyTile({ position, width, depth, property, side, buildingLevel, hasCompleteSet, onClick }: PropertyTileProps) {
   const [hovered, setHovered] = useState(false);
   
   // Get hex color from color class
@@ -184,6 +277,9 @@ function PropertyTile({ position, width, depth, property, side, buildingLevel, o
       
       {/* 3D House */}
       <HouseOnTile buildingLevel={buildingLevel} side={side} />
+      
+      {/* Rising income particles for complete sets */}
+      {hasCompleteSet && buildingLevel > 0 && <RisingIncomeParticles side={side} />}
     </group>
   );
 }
@@ -339,6 +435,23 @@ function Scene({ onSelectProperty, spectatorMode, spectatorOwnerships, cameraCon
     return Math.min(level, 5);
   }, [ownerships, spectatorMode, spectatorOwnerships]);
   
+  // Check if a property is part of a complete set
+  const isPropertyInCompleteSet = useCallback((propertyId: number): boolean => {
+    const property = PROPERTIES.find(p => p.id === propertyId);
+    if (!property) return false;
+    
+    const propertiesInSet = PROPERTIES.filter(p => p.setId === property.setId);
+    const requiredProps = property.setId === 0 || property.setId === 7 ? 2 : 3;
+    
+    const ownerships = spectatorMode ? spectatorOwnerships : gameState?.ownerships || [];
+    
+    const ownedInSet = ownerships.filter(o => 
+      propertiesInSet.some(p => p.id === o.propertyId) && o.slotsOwned > 0
+    ).length;
+    
+    return ownedInSet >= requiredProps;
+  }, [gameState?.ownerships, spectatorMode, spectatorOwnerships]);
+  
   return (
     <>
       {/* Lighting */}
@@ -387,6 +500,7 @@ function Scene({ onSelectProperty, spectatorMode, spectatorOwnerships, cameraCon
             property={prop}
             side="top"
             buildingLevel={getBuildingLevel(id)}
+            hasCompleteSet={isPropertyInCompleteSet(id)}
             onClick={() => onSelectProperty(id)}
           />
         );
@@ -406,6 +520,7 @@ function Scene({ onSelectProperty, spectatorMode, spectatorOwnerships, cameraCon
             property={prop}
             side="bottom"
             buildingLevel={getBuildingLevel(id)}
+            hasCompleteSet={isPropertyInCompleteSet(id)}
             onClick={() => onSelectProperty(id)}
           />
         );
@@ -425,6 +540,7 @@ function Scene({ onSelectProperty, spectatorMode, spectatorOwnerships, cameraCon
             property={prop}
             side="left"
             buildingLevel={getBuildingLevel(id)}
+            hasCompleteSet={isPropertyInCompleteSet(id)}
             onClick={() => onSelectProperty(id)}
           />
         );
@@ -444,17 +560,14 @@ function Scene({ onSelectProperty, spectatorMode, spectatorOwnerships, cameraCon
             property={prop}
             side="right"
             buildingLevel={getBuildingLevel(id)}
+            hasCompleteSet={isPropertyInCompleteSet(id)}
             onClick={() => onSelectProperty(id)}
           />
         );
       })}
       
       {/* ===== BANK ===== */}
-      <group position={[0, 0.8, 0]} scale={0.084}>
-        <Suspense fallback={null}>
-          <Bank3D_R3F isPulsing={false} rewardsAmount={gameState?.bankBalance || 0} />
-        </Suspense>
-      </group>
+      <InteractiveBank3D position={[0, 0.8, 0]} scale={0.084} />
     </>
   );
 }
