@@ -5,6 +5,12 @@ import { OrbitControls, Text } from '@react-three/drei';
 import { useGameState } from '@/contexts/GameStateContext';
 import { PROPERTIES } from '@/utils/constants';
 import { Bank3D_R3F } from './r3f/Bank3D_R3F';
+import { Logo3D_R3F } from './r3f/Logo3D_R3F';
+import { House1_R3F } from './r3f/House1_R3F';
+import { House2_R3F } from './r3f/House2_R3F';
+import { House3_R3F } from './r3f/House3_R3F';
+import { House4_R3F } from './r3f/House4_R3F';
+import { House5_R3F } from './r3f/House5_R3F';
 import { useMemo, useEffect, useRef, useState, Suspense } from 'react';
 
 interface Board3DSceneProps {
@@ -78,11 +84,35 @@ function PropertyTile({ position, width, depth, property, side, buildingLevel, o
   
   // Text rotation based on side (readable from outside board)
   const textRotation: [number, number, number] = {
-    top: [-Math.PI/2, 0, Math.PI],      // Rotated to face away from center
-    bottom: [-Math.PI/2, 0, 0],         // Normal orientation
-    left: [-Math.PI/2, 0, Math.PI/2],   // Rotated 90deg
-    right: [-Math.PI/2, 0, -Math.PI/2], // Rotated -90deg
+    top: [-Math.PI/2, 0, Math.PI],      // 180° - faces outward/up
+    bottom: [-Math.PI/2, 0, 0],         // 0° - faces outward/down
+    left: [-Math.PI/2, 0, -Math.PI/2],  // -90° - faces left (corrected)
+    right: [-Math.PI/2, 0, Math.PI/2],  // +90° - faces right (corrected)
   }[side];
+
+  // Text positions based on side
+  // Property NAME: toward CENTER (near color strip)
+  // Property PRICE: toward OUTSIDE (away from color strip)
+  let namePosition: [number, number, number] = [0, 0, 0];
+  let pricePosition: [number, number, number] = [0, 0, 0];
+  
+  if (side === 'top') {
+    // Color strip is at +Z (back), name near strip, price away from strip
+    namePosition = [0, tileThickness/2 + 0.01, depth/2 - 0.35];  // Moved further from color strip
+    pricePosition = [0, tileThickness/2 + 0.01, -depth/2 + 0.1]; // Away from color strip (toward outside)
+  } else if (side === 'bottom') {
+    // Color strip is at -Z (front), name near strip, price away from strip  
+    namePosition = [0, tileThickness/2 + 0.01, -depth/2 + 0.35]; // Moved further from color strip
+    pricePosition = [0, tileThickness/2 + 0.01, depth/2 - 0.1];  // Away from color strip (toward outside)
+  } else if (side === 'left') {
+    // Color strip is at +X (right), name near strip, price away from strip
+    namePosition = [width/2 - 0.35, tileThickness/2 + 0.01, 0];  // Moved further from color strip
+    pricePosition = [-width/2 + 0.1, tileThickness/2 + 0.01, 0]; // Away from color strip (toward outside)
+  } else if (side === 'right') {
+    // Color strip is at -X (left), name near strip, price away from strip
+    namePosition = [-width/2 + 0.35, tileThickness/2 + 0.01, 0]; // Moved further from color strip
+    pricePosition = [width/2 - 0.1, tileThickness/2 + 0.01, 0];  // Away from color strip (toward outside)
+  }
 
   // Hover lift
   const hoverY = hovered ? 0.08 : 0;
@@ -117,49 +147,52 @@ function PropertyTile({ position, width, depth, property, side, buildingLevel, o
         />
       </mesh>
       
-      {/* Property name text */}
-      <Text
-        position={[0, tileThickness/2 + 0.01, side === 'top' ? -0.1 : side === 'bottom' ? 0.1 : 0]}
-        rotation={textRotation}
-        fontSize={0.08}
-        color="white"
-        anchorX="center"
-        anchorY="middle"
-        maxWidth={width * 0.9}
-      >
-        {property.name}
-      </Text>
+      {/* Property name text - near color strip (toward center) */}
+      <Suspense fallback={null}>
+        <Text
+          position={namePosition}
+          rotation={textRotation}
+          fontSize={0.08}
+          color="white"
+          anchorX="center"
+          anchorY="middle"
+          maxWidth={width * 0.9}
+        >
+          {property.name}
+        </Text>
+      </Suspense>
       
-      {/* Price text */}
-      <Text
-        position={[0, tileThickness/2 + 0.01, side === 'top' ? 0.2 : side === 'bottom' ? -0.2 : 0]}
-        rotation={textRotation}
-        fontSize={0.1}
-        color="#facc15"
-        anchorX="center"
-        anchorY="middle"
-      >
-        ${property.price.toLocaleString()}
-      </Text>
+      {/* Price text - away from color strip (toward outside) */}
+      <Suspense fallback={null}>
+        <Text
+          position={pricePosition}
+          rotation={textRotation}
+          fontSize={0.1}
+          color="#facc15"
+          anchorX="center"
+          anchorY="middle"
+        >
+          ${property.price.toLocaleString()}
+        </Text>
+      </Suspense>
       
-      {/* Building indicator */}
-      {buildingLevel > 0 && (
-        <mesh position={[0, tileThickness/2 + 0.15 + (buildingLevel * 0.1), 0]} castShadow>
-          <boxGeometry args={[0.2, 0.15 * buildingLevel, 0.2]} />
-          <meshStandardMaterial 
-            color={buildingLevel >= 4 ? '#FFD700' : '#22c55e'}
-            emissive={buildingLevel >= 4 ? '#FFD700' : '#22c55e'}
-            emissiveIntensity={0.3}
-          />
-        </mesh>
-      )}
+      {/* 3D House */}
+      <HouseOnTile buildingLevel={buildingLevel} side={side} />
     </group>
   );
 }
 
-function CornerTile({ position, label }: { position: [number, number, number]; label: string }) {
+function CornerTile({ position, cornerType }: { position: [number, number, number]; cornerType: 'topLeft' | 'topRight' | 'bottomLeft' | 'bottomRight' }) {
   const [hovered, setHovered] = useState(false);
   const size = cornerSize;
+
+  // Determine corner content based on position
+  const cornerContent = {
+    topLeft: { logo: true },
+    topRight: { logo: false },
+    bottomLeft: { logo: false },
+    bottomRight: { logo: true }
+  }[cornerType];
 
   return (
     <group 
@@ -167,6 +200,7 @@ function CornerTile({ position, label }: { position: [number, number, number]; l
       onPointerOver={() => setHovered(true)}
       onPointerOut={() => setHovered(false)}
     >
+      {/* Base tile */}
       <mesh castShadow receiveShadow>
         <boxGeometry args={[size, tileThickness, size]} />
         <meshStandardMaterial 
@@ -177,28 +211,76 @@ function CornerTile({ position, label }: { position: [number, number, number]; l
           emissiveIntensity={hovered ? 0.3 : 0}
         />
       </mesh>
+
+      {/* 3D Logo for logo corners */}
+      {cornerContent.logo && (
+        <group position={[0, tileThickness/2 + 0.4, 0]} scale={0.3}>
+          <Suspense fallback={null}>
+            <Logo3D_R3F />
+          </Suspense>
+        </group>
+      )}
       
-      {/* Accent glow on top */}
-      <mesh position={[0, tileThickness/2 + 0.01, 0]}>
-        <boxGeometry args={[size - 0.1, 0.02, size - 0.1]} />
-        <meshStandardMaterial 
-          color="#7c3aed"
-          emissive="#7c3aed"
-          emissiveIntensity={0.2}
-        />
-      </mesh>
-      
-      <Text
-        position={[0, tileThickness/2 + 0.02, 0]}
-        rotation={[-Math.PI/2, 0, 0]}
-        fontSize={0.15}
-        color="white"
-        anchorX="center"
-        anchorY="middle"
-        fontWeight="bold"
-      >
-        {label}
-      </Text>
+      {/* "DEFIPOLY" text - positioned higher to avoid overlap */}
+      <Suspense fallback={null}>
+        <Text
+          position={[0, tileThickness/2 + 0.05, 0]}
+          rotation={[-Math.PI/2, 0, 0]}
+          fontSize={0.1}
+          color="#facc15"
+          anchorX="center"
+          anchorY="middle"
+          fontWeight="bold"
+        >
+          DEFIPOLY
+        </Text>
+      </Suspense>
+
+      {/* Decorative corner accents */}
+      {[-0.35, 0.35].map((offset, i) => (
+        <mesh key={`accent-${i}`} position={[offset, tileThickness/2 + 0.03, offset]} castShadow>
+          <boxGeometry args={[0.05, 0.02, 0.05]} />
+          <meshStandardMaterial 
+            color="#facc15"
+            emissive="#facc15"
+            emissiveIntensity={0.3}
+          />
+        </mesh>
+      ))}
+    </group>
+  );
+}
+
+function HouseOnTile({ buildingLevel, side }: { buildingLevel: number; side: 'top' | 'bottom' | 'left' | 'right' }) {
+  if (buildingLevel <= 0) return null;
+  
+  // House rotation based on tile side (face outward from board center)
+  const houseRotation: [number, number, number] = {
+    top: [0, Math.PI, 0],      // Face outward (toward negative Z)
+    bottom: [0, 0, 0],         // Face outward (toward positive Z)
+    left: [0, -Math.PI/2, 0],  // Face outward (toward negative X)
+    right: [0, Math.PI/2, 0],  // Face outward (toward positive X)
+  }[side];
+  
+  // Position house above tile surface
+  const houseY = tileThickness/2 + 0.05;
+  
+  // Scale - adjust based on how big your house models are
+  const houseScale = 0.08;
+  
+  const HouseComponent = {
+    1: House1_R3F,
+    2: House2_R3F,
+    3: House3_R3F,
+    4: House4_R3F,
+    5: House5_R3F,
+  }[buildingLevel] || House1_R3F;
+
+  return (
+    <group position={[0, houseY, 0]} rotation={houseRotation} scale={houseScale}>
+      <Suspense fallback={null}>
+        <HouseComponent isPulsing={false} />
+      </Suspense>
     </group>
   );
 }
@@ -249,10 +331,10 @@ function Scene({ onSelectProperty, spectatorMode, spectatorOwnerships }: Board3D
       </mesh>
       
       {/* ===== CORNERS ===== */}
-      <CornerTile position={[-halfW + cornerSize/2, tileY, -halfH + cornerSize/2]} label="DEFI" />
-      <CornerTile position={[halfW - cornerSize/2, tileY, -halfH + cornerSize/2]} label="POLY" />
-      <CornerTile position={[-halfW + cornerSize/2, tileY, halfH - cornerSize/2]} label="DEFI" />
-      <CornerTile position={[halfW - cornerSize/2, tileY, halfH - cornerSize/2]} label="POLY" />
+      <CornerTile position={[-halfW + cornerSize/2, tileY, -halfH + cornerSize/2]} cornerType="topLeft" />
+      <CornerTile position={[halfW - cornerSize/2, tileY, -halfH + cornerSize/2]} cornerType="topRight" />
+      <CornerTile position={[-halfW + cornerSize/2, tileY, halfH - cornerSize/2]} cornerType="bottomLeft" />
+      <CornerTile position={[halfW - cornerSize/2, tileY, halfH - cornerSize/2]} cornerType="bottomRight" />
       
       {/* ===== TOP ROW (properties 11-16) ===== */}
       {[11, 12, 13, 14, 15, 16].map((id, i) => {
