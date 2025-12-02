@@ -23,8 +23,8 @@ export function House1_R3F({ isPulsing = false }: House1_R3FProps) {
     scaleRef.current.current += (scaleRef.current.target - scaleRef.current.current) * 0.15;
     groupRef.current.scale.setScalar(scaleRef.current.current);
     
-    // Gentle rotation
-    groupRef.current.rotation.y = Math.sin(state.clock.elapsedTime * 0.3) * 0.15 + 0.4;
+    // Keep house straight - no rotation
+    groupRef.current.rotation.y = 0;
   });
 
   // No need to create material objects in R3F - use JSX directly

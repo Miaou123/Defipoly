@@ -50,10 +50,10 @@ export function Bank3D_R3F({
     scaleRef.current.current += (scaleRef.current.target - scaleRef.current.current) * 0.15;
     groupRef.current.scale.setScalar(scaleRef.current.current);
     
-    const time = state.clock.elapsedTime;
-    groupRef.current.rotation.y = Math.sin(time * 0.5) * 0.1;
-    groupRef.current.position.y = -6.5 + Math.sin(time * 0.8) * 0.1;
-    groupRef.current.rotation.x = Math.sin(time * 0.6) * 0.012;
+    // Remove rotation animations - keep bank straight
+    groupRef.current.rotation.y = 0;
+    groupRef.current.position.y = -6.5;
+    groupRef.current.rotation.x = 0;
   });
 
   const buildingWidth = 18;

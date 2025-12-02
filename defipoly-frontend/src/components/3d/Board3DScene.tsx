@@ -241,16 +241,16 @@ function HouseOnTile({ buildingLevel, side }: { buildingLevel: number; side: 'to
     return null;
   }
   
-  // House rotation based on tile side (face outward from board center)
+  // House rotation based on tile side - face outward from board center
   const houseRotation: [number, number, number] = {
-    top: [0, Math.PI, 0],      // Face outward (toward negative Z)
-    bottom: [0, 0, 0],         // Face outward (toward positive Z)
-    left: [0, -Math.PI/2, 0],  // Face outward (toward negative X)
-    right: [0, Math.PI/2, 0],  // Face outward (toward positive X)
+    top: [0, Math.PI, 0],      // Face outward (toward viewer from top)
+    bottom: [0, 0, 0],         // Face outward (toward viewer from bottom)
+    left: [0, -Math.PI/2, 0],  // Face outward (toward viewer from left)
+    right: [0, Math.PI/2, 0],  // Face outward (toward viewer from right)
   }[side];
   
-  // Position house above tile surface
-  const houseY = tileThickness/2 + 0.05;
+  // Position house on tile surface (lower)
+  const houseY = tileThickness/2 - 0.02;
   
   // Scale - adjust based on how big your house models are
   const houseScale = 0.08;
@@ -263,8 +263,17 @@ function HouseOnTile({ buildingLevel, side }: { buildingLevel: number; side: 'to
     5: House5_R3F,
   }[buildingLevel] || House1_R3F;
 
+  // Position house away from property name based on tile side
+  let houseXOffset = 0;
+  let houseZOffset = 0;
+  
+  if (side === 'top') houseZOffset = -0.15;        // Move further toward back of tile
+  else if (side === 'bottom') houseZOffset = 0.15; // Move further toward front of tile
+  else if (side === 'left') houseXOffset = -0.15;  // Move toward left of tile (away from property name)
+  else if (side === 'right') houseXOffset = 0.15;  // Move toward right of tile (away from property name)
+
   return (
-    <group position={[0, houseY, 0]} rotation={houseRotation} scale={houseScale}>
+    <group position={[houseXOffset, houseY, houseZOffset]} rotation={houseRotation} scale={houseScale}>
       <Suspense fallback={null}>
         <HouseComponent isPulsing={false} />
       </Suspense>
@@ -273,11 +282,12 @@ function HouseOnTile({ buildingLevel, side }: { buildingLevel: number; side: 'to
 }
 
 function Scene({ onSelectProperty, spectatorMode, spectatorOwnerships }: Board3DSceneProps) {
-  const { gameState } = useGameState();
+  const gameState = useGameState();
+  const ownerships = gameState?.ownerships || [];
   
-  // Force re-render when gameState changes
-  const gameStateLoaded = !spectatorMode ? !!gameState?.ownerships : true;
-  console.log(`[3D Scene] Re-rendering - gameStateLoaded: ${gameStateLoaded}, ownerships count: ${gameState?.ownerships?.length || 0}`);
+  // Force re-render when ownerships changes
+  const gameStateLoaded = !spectatorMode ? ownerships.length > 0 : true;
+  console.log(`[3D Scene] Re-rendering - gameStateLoaded: ${gameStateLoaded}, ownerships count: ${ownerships.length}, full gameState:`, !!gameState);
   
   // Dimensions
   const tileY = boardThickness + tileThickness/2; // Tiles sit on top of board
@@ -287,10 +297,10 @@ function Scene({ onSelectProperty, spectatorMode, spectatorOwnerships }: Board3D
   
   // Get building level for a property (calculated from slotsOwned using PropertyCard logic)
   const getBuildingLevel = useCallback((propertyId: number): number => {
-    // Wait for game state to load before checking ownerships
-    if (!spectatorMode && !gameState?.ownerships) {
-      console.log(`[3D] Property ${propertyId}: Game state not loaded yet`);
-      return 0; // Return 0 until game state loads
+    // Wait for ownerships to load before checking
+    if (!spectatorMode && ownerships.length === 0) {
+      console.log(`[3D] Property ${propertyId}: Ownerships not loaded yet (length: ${ownerships.length})`);
+      return 0; // Return 0 until ownerships load
     }
     
     let ownership;
@@ -298,7 +308,7 @@ function Scene({ onSelectProperty, spectatorMode, spectatorOwnerships }: Board3D
     if (spectatorMode && spectatorOwnerships) {
       ownership = spectatorOwnerships.find((o: any) => o.propertyId === propertyId);
     } else {
-      ownership = gameState?.ownerships.find(o => o.propertyId === propertyId);
+      ownership = ownerships.find(o => o.propertyId === propertyId);
     }
     
     // No ownership or no slots = no building
@@ -321,7 +331,7 @@ function Scene({ onSelectProperty, spectatorMode, spectatorOwnerships }: Board3D
     console.log(`[3D] Property ${propertyId} (${property.name}): slots=${ownership.slotsOwned}, max=${maxPerPlayer}, ratio=${progressRatio}, level=${level}`);
     
     return Math.min(level, 5);
-  }, [gameState?.ownerships, spectatorMode, spectatorOwnerships]);
+  }, [ownerships, spectatorMode, spectatorOwnerships]);
   
   return (
     <>
@@ -432,8 +442,8 @@ function Scene({ onSelectProperty, spectatorMode, spectatorOwnerships }: Board3D
         );
       })}
       
-      {/* ===== BANK (keep existing) ===== */}
-      <group position={[0, 0.5, 0]} scale={0.12}>
+      {/* ===== BANK ===== */}
+      <group position={[0, 0.8, 0]} scale={0.084}>
         <Suspense fallback={null}>
           <Bank3D_R3F isPulsing={false} rewardsAmount={gameState?.bankBalance || 0} />
         </Suspense>

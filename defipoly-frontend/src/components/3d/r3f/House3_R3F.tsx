@@ -19,7 +19,7 @@ export function House3_R3F({ isPulsing = false }: House3_R3FProps) {
     scaleRef.current.current += (scaleRef.current.target - scaleRef.current.current) * 0.15;
     groupRef.current.scale.setScalar(scaleRef.current.current);
     
-    groupRef.current.rotation.y = Math.sin(state.clock.elapsedTime * 0.3) * 0.15 + 0.4;
+    groupRef.current.rotation.y = 0;
   });
 
   // 3-story apartment building - taller and thinner
