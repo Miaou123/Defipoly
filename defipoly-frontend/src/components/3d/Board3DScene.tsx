@@ -11,7 +11,7 @@ import { House2_R3F } from './r3f/House2_R3F';
 import { House3_R3F } from './r3f/House3_R3F';
 import { House4_R3F } from './r3f/House4_R3F';
 import { House5_R3F } from './r3f/House5_R3F';
-import { useMemo, useEffect, useRef, useState, Suspense } from 'react';
+import { useMemo, useEffect, useRef, useState, Suspense, useCallback } from 'react';
 
 interface Board3DSceneProps {
   onSelectProperty: (propertyId: number) => void;
@@ -186,14 +186,6 @@ function CornerTile({ position, cornerType }: { position: [number, number, numbe
   const [hovered, setHovered] = useState(false);
   const size = cornerSize;
 
-  // Determine corner content based on position
-  const cornerContent = {
-    topLeft: { logo: true },
-    topRight: { logo: false },
-    bottomLeft: { logo: false },
-    bottomRight: { logo: true }
-  }[cornerType];
-
   return (
     <group 
       position={[position[0], position[1] + (hovered ? 0.08 : 0), position[2]]}
@@ -211,17 +203,8 @@ function CornerTile({ position, cornerType }: { position: [number, number, numbe
           emissiveIntensity={hovered ? 0.3 : 0}
         />
       </mesh>
-
-      {/* 3D Logo for logo corners */}
-      {cornerContent.logo && (
-        <group position={[0, tileThickness/2 + 0.4, 0]} scale={0.3}>
-          <Suspense fallback={null}>
-            <Logo3D_R3F />
-          </Suspense>
-        </group>
-      )}
       
-      {/* "DEFIPOLY" text - positioned higher to avoid overlap */}
+      {/* "DEFIPOLY" text */}
       <Suspense fallback={null}>
         <Text
           position={[0, tileThickness/2 + 0.05, 0]}
@@ -252,7 +235,11 @@ function CornerTile({ position, cornerType }: { position: [number, number, numbe
 }
 
 function HouseOnTile({ buildingLevel, side }: { buildingLevel: number; side: 'top' | 'bottom' | 'left' | 'right' }) {
-  if (buildingLevel <= 0) return null;
+  console.log(`[3D House] Rendering house with level: ${buildingLevel}, side: ${side}`);
+  if (buildingLevel <= 0) {
+    console.log(`[3D House] No house - building level is ${buildingLevel}`);
+    return null;
+  }
   
   // House rotation based on tile side (face outward from board center)
   const houseRotation: [number, number, number] = {
@@ -288,20 +275,53 @@ function HouseOnTile({ buildingLevel, side }: { buildingLevel: number; side: 'to
 function Scene({ onSelectProperty, spectatorMode, spectatorOwnerships }: Board3DSceneProps) {
   const { gameState } = useGameState();
   
+  // Force re-render when gameState changes
+  const gameStateLoaded = !spectatorMode ? !!gameState?.ownerships : true;
+  console.log(`[3D Scene] Re-rendering - gameStateLoaded: ${gameStateLoaded}, ownerships count: ${gameState?.ownerships?.length || 0}`);
+  
   // Dimensions
   const tileY = boardThickness + tileThickness/2; // Tiles sit on top of board
   
   const halfW = boardWidth / 2;
   const halfH = boardHeight / 2;
   
-  // Get building level for a property
-  const getBuildingLevel = (propertyId: number) => {
-    if (spectatorMode && spectatorOwnerships) {
-      const ownership = spectatorOwnerships.find((o: any) => o.propertyId === propertyId);
-      return ownership?.buildingLevel || 0;
+  // Get building level for a property (calculated from slotsOwned using PropertyCard logic)
+  const getBuildingLevel = useCallback((propertyId: number): number => {
+    // Wait for game state to load before checking ownerships
+    if (!spectatorMode && !gameState?.ownerships) {
+      console.log(`[3D] Property ${propertyId}: Game state not loaded yet`);
+      return 0; // Return 0 until game state loads
     }
-    return gameState?.ownerships.find(o => o.propertyId === propertyId)?.buildingLevel || 0;
-  };
+    
+    let ownership;
+    
+    if (spectatorMode && spectatorOwnerships) {
+      ownership = spectatorOwnerships.find((o: any) => o.propertyId === propertyId);
+    } else {
+      ownership = gameState?.ownerships.find(o => o.propertyId === propertyId);
+    }
+    
+    // No ownership or no slots = no building
+    if (!ownership || ownership.slotsOwned === 0) {
+      console.log(`[3D] Property ${propertyId}: No ownership or slots (ownership: ${JSON.stringify(ownership)})`);
+      return 0;
+    }
+
+    const property = PROPERTIES.find(p => p.id === propertyId);
+    if (!property) {
+      console.log(`[3D] Property ${propertyId}: Property not found in PROPERTIES`);
+      return 0;
+    }
+
+    // Use the same calculation as PropertyCard.tsx (lines 186-189)
+    const maxPerPlayer = property.maxPerPlayer || 10;
+    const progressRatio = ownership.slotsOwned / maxPerPlayer;
+    const level = Math.ceil(progressRatio * 5);
+    
+    console.log(`[3D] Property ${propertyId} (${property.name}): slots=${ownership.slotsOwned}, max=${maxPerPlayer}, ratio=${progressRatio}, level=${level}`);
+    
+    return Math.min(level, 5);
+  }, [gameState?.ownerships, spectatorMode, spectatorOwnerships]);
   
   return (
     <>
