@@ -40,7 +40,7 @@ export function PropertyActionsBar({
   onOpenHelp,
   isMobile = false
 }: PropertyActionsBarProps) {
-  const [activeAction, setActiveAction] = useState<ActionType>(null);
+  const [activeAction, setActiveAction] = useState<ActionType>('buy');
   const [showTooltipHint, setShowTooltipHint] = useState(false);
 
   // Show tooltip hint for new users who don't own any properties yet

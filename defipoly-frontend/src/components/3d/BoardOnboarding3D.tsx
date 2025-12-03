@@ -5,10 +5,13 @@ import { useFrame } from '@react-three/fiber';
 import { Html } from '@react-three/drei';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { useWalletModal } from '@solana/wallet-adapter-react-ui';
+import { PointerArrowIcon } from '@/components/icons/UIIcons';
 import * as THREE from 'three';
 
 interface BoardOnboarding3DProps {
   hasProperties: boolean;
+  showClaimHint?: boolean;
+  onClaimHintDismiss?: () => void;
 }
 
 /**
@@ -16,14 +19,15 @@ interface BoardOnboarding3DProps {
  * 
  * States:
  * - Not connected: Title + Connect Wallet button (fullscreen centered)
- * - Connected, no properties: "Get Started" hint with property highlight
- * - Has properties: Nothing rendered
+ * - Connected, no properties: Properties will show golden glow (handled in PropertyTile)
+ * - Has properties: Nothing rendered (bank claim handled separately)
  */
-export function BoardOnboarding3D({ hasProperties }: BoardOnboarding3DProps) {
+export function BoardOnboarding3D({ hasProperties, showClaimHint = false, onClaimHintDismiss }: BoardOnboarding3DProps) {
   const { connected } = useWallet();
   const { visible: walletModalVisible, setVisible } = useWalletModal();
   const [showPropertyHint, setShowPropertyHint] = useState(false);
   const [isVisible, setIsVisible] = useState(true);
+  const [hasOpenedModal, setHasOpenedModal] = useState(false);
 
   // Handle visibility transitions
   useEffect(() => {
@@ -35,17 +39,46 @@ export function BoardOnboarding3D({ hasProperties }: BoardOnboarding3DProps) {
     }
   }, [connected]);
 
-  // Show property hint after delay when connected but no properties
+  // Check if user has already opened a property modal
   useEffect(() => {
-    if (connected && !hasProperties) {
+    if (typeof window !== 'undefined') {
+      const hasOpened = localStorage.getItem('hasOpenedPropertyModal') === 'true';
+      setHasOpenedModal(hasOpened);
+      
+      // Listen for storage changes to update immediately
+      const handleStorageChange = () => {
+        const hasOpened = localStorage.getItem('hasOpenedPropertyModal') === 'true';
+        setHasOpenedModal(hasOpened);
+      };
+      
+      window.addEventListener('storage', handleStorageChange);
+      
+      // Also listen for custom event for same-tab updates
+      const handleCustomEvent = () => {
+        const hasOpened = localStorage.getItem('hasOpenedPropertyModal') === 'true';
+        setHasOpenedModal(hasOpened);
+      };
+      
+      window.addEventListener('propertyModalOpened', handleCustomEvent);
+      
+      return () => {
+        window.removeEventListener('storage', handleStorageChange);
+        window.removeEventListener('propertyModalOpened', handleCustomEvent);
+      };
+    }
+  }, []);
+
+  // Show property hint after delay when connected but no properties and hasn't opened modal
+  useEffect(() => {
+    if (connected && !hasProperties && !hasOpenedModal) {
       const timer = setTimeout(() => {
         setShowPropertyHint(true);
-      }, 1500); // Wait for zoom animation
+      }, 5000); // Wait 5 seconds to not feel harassed
       return () => clearTimeout(timer);
     } else {
       setShowPropertyHint(false);
     }
-  }, [connected, hasProperties]);
+  }, [connected, hasProperties, hasOpenedModal]);
 
   // Not connected - show title and connect button
   // BUT hide if wallet modal is open
@@ -149,128 +182,8 @@ export function BoardOnboarding3D({ hasProperties }: BoardOnboarding3DProps) {
     );
   }
 
-  // Connected but no properties - show hint
-  if (connected && !hasProperties && showPropertyHint) {
-    return (
-      <>
-        {/* Floating hint */}
-        <Html
-          center
-          position={[0, 3.2, 0]}
-          style={{
-            pointerEvents: 'none',
-          }}
-        >
-          <div
-            style={{
-              background: 'linear-gradient(135deg, rgba(0,0,0,0.9), rgba(30,20,50,0.95))',
-              border: '2px solid rgba(147, 51, 234, 0.6)',
-              borderRadius: '16px',
-              padding: '16px 24px',
-              color: 'white',
-              textAlign: 'center',
-              boxShadow: '0 0 30px rgba(147, 51, 234, 0.3), 0 4px 20px rgba(0,0,0,0.5)',
-              animation: 'fadeIn 0.5s ease-out',
-            }}
-          >
-            <div style={{ 
-              fontSize: '18px', 
-              fontWeight: 700, 
-              marginBottom: '8px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              justifyContent: 'center',
-            }}>
-              <span>🎯</span>
-              Get Started
-            </div>
-            <div style={{ 
-              fontSize: '14px', 
-              opacity: 0.8,
-              marginBottom: '12px',
-            }}>
-              Pick a property around the board to start earning
-            </div>
-            <div style={{
-              fontSize: '24px',
-              animation: 'bounce 1s ease-in-out infinite',
-            }}>
-              ↓
-            </div>
-          </div>
-
-          <style>{`
-            @keyframes fadeIn {
-              from { opacity: 0; transform: translateY(-10px); }
-              to { opacity: 1; transform: translateY(0); }
-            }
-            @keyframes bounce {
-              0%, 100% { transform: translateY(0); }
-              50% { transform: translateY(8px); }
-            }
-          `}</style>
-        </Html>
-
-        {/* Property highlight ring */}
-        <PropertyHighlight />
-      </>
-    );
-  }
-
+  // For connected users, the hints will be handled by:
+  // - Golden property glow (implemented in PropertyTile component)
+  // - Bank claim hint (handled separately)
   return null;
-}
-
-/**
- * PropertyHighlight - Glowing ring around a property tile
- */
-function PropertyHighlight() {
-  const ringRef = useRef<THREE.Mesh>(null);
-  
-  // Board dimensions from Board3DScene
-  const cornerSize = 1.0;
-  const tileLong = 0.82;
-  const tileShort = 1.0;
-  const boardWidth = cornerSize * 2 + tileLong * 6;
-  const boardHeight = cornerSize * 2 + tileLong * 5;
-  const halfW = boardWidth / 2;
-  const halfH = boardHeight / 2;
-  
-  // Property 2 position (bottom row, center-ish)
-  const propX = halfW - cornerSize - tileLong / 2 - 3 * tileLong;
-  const propZ = halfH - tileShort / 2;
-  
-  const highlightPosition: [number, number, number] = [propX, 0.45, propZ];
-
-  useFrame((state) => {
-    if (!ringRef.current) return;
-    
-    const time = state.clock.elapsedTime;
-    const pulse = 1 + Math.sin(time * 2.5) * 0.12;
-    ringRef.current.scale.setScalar(pulse);
-    ringRef.current.rotation.z = time * 0.4;
-  });
-
-  return (
-    <group position={highlightPosition}>
-      <mesh ref={ringRef} rotation={[-Math.PI / 2, 0, 0]}>
-        <ringGeometry args={[0.45, 0.55, 32]} />
-        <meshBasicMaterial 
-          color={0xa855f7} 
-          transparent 
-          opacity={0.7}
-          side={THREE.DoubleSide}
-        />
-      </mesh>
-      
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.01, 0]}>
-        <circleGeometry args={[0.45, 32]} />
-        <meshBasicMaterial 
-          color={0xa855f7} 
-          transparent 
-          opacity={0.12}
-        />
-      </mesh>
-    </group>
-  );
 }

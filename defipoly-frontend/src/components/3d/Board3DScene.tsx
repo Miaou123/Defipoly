@@ -1,7 +1,7 @@
 'use client';
 
 import { Canvas, useFrame } from '@react-three/fiber';
-import { OrbitControls, Text, PerspectiveCamera } from '@react-three/drei';
+import { OrbitControls, Text, PerspectiveCamera, Html } from '@react-three/drei';
 import { useGameState } from '@/contexts/GameStateContext';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { PROPERTIES } from '@/utils/constants';
@@ -14,7 +14,7 @@ import { House5_R3F } from './r3f/House5_R3F';
 import { Pin3D_R3F } from './r3f/Pin3D_R3F';
 import { useMemo, useEffect, useRef, useState, Suspense, useCallback } from 'react';
 import * as THREE from 'three';
-import { ResetViewIcon, ZoomInIcon, ZoomOutIcon, HideIcon } from '../icons/UIIcons';
+import { ResetViewIcon, ZoomInIcon, ZoomOutIcon, HideIcon, PointerArrowIcon } from '../icons/UIIcons';
 import { InteractiveBank3D } from './InteractiveBank3D';
 import { IncomeFlow3D } from './IncomeFlow3D';
 import { BoardOnboarding3D } from './BoardOnboarding3D';
@@ -243,11 +243,11 @@ interface PropertyTileProps {
   particlesVisible: boolean;
   onClick: () => void;
   interactive?: boolean;
+  showPropertyHint?: boolean;
 }
 
-function PropertyTile({ position, width, depth, property, side, buildingLevel, hasCompleteSet, particlesVisible, onClick, interactive = true }: PropertyTileProps) {
+function PropertyTile({ position, width, depth, property, side, buildingLevel, hasCompleteSet, particlesVisible, onClick, interactive = true, showPropertyHint = false }: PropertyTileProps) {
   const [hovered, setHovered] = useState(false);
-  
   const getColorHex = (colorClass: string) => {
     const colorMap: { [key: string]: string } = {
       'bg-amber-900': '#78350f',
@@ -255,7 +255,7 @@ function PropertyTile({ position, width, depth, property, side, buildingLevel, h
       'bg-pink-400': '#f472b6',
       'bg-orange-500': '#f97316',
       'bg-red-600': '#dc2626',
-      'bg-yellow-400': '#facc15',
+      'bg-yellow-500': '#eab308',
       'bg-green-600': '#16a34a',
       'bg-blue-900': '#1e3a8a',
     };
@@ -337,6 +337,7 @@ function PropertyTile({ position, width, depth, property, side, buildingLevel, h
         />
       </mesh>
       
+      
       {/* Property name text */}
       <Suspense fallback={null}>
         <Text
@@ -370,7 +371,7 @@ function PropertyTile({ position, width, depth, property, side, buildingLevel, h
       {buildingLevel > 0 ? (
         <HouseOnTile buildingLevel={buildingLevel} side={side} propertyId={property.id} />
       ) : (
-        <PinOnTile propertyId={property.id} side={side} />
+        <PinOnTile propertyId={property.id} side={side} showHint={showPropertyHint} />
       )}
       
       {/* Rising income particles for complete sets */}
@@ -428,9 +429,29 @@ function CornerTile({ position, cornerType }: { position: [number, number, numbe
   );
 }
 
-function PinOnTile({ propertyId, side }: { propertyId: number; side: 'top' | 'bottom' | 'left' | 'right' }) {
+function PinOnTile({ propertyId, side, showHint = false }: { propertyId: number; side: 'top' | 'bottom' | 'left' | 'right'; showHint?: boolean }) {
   const property = PROPERTIES.find(p => p.id === propertyId);
   if (!property) return null;
+  
+  const arrowRef = useRef<any>(null);
+  
+  // Debug logging
+  useEffect(() => {
+    if (showHint) {
+      console.log(`🏠 Pin ${propertyId} showing hint arrow!`);
+    }
+  }, [showHint, propertyId]);
+
+  // Animate the golden hint arrow
+  useFrame((state) => {
+    if (arrowRef.current && showHint) {
+      const t = state.clock.elapsedTime;
+      const pulse = Math.sin(t * 2.5) * 0.4 + 0.8; // Oscillates between 0.4 and 1.2
+      const float = Math.sin(t * 1.5) * 3; // Gentle up/down float
+      arrowRef.current.style.opacity = pulse;
+      arrowRef.current.style.transform = `translateY(${float}px) rotate(90deg)`;
+    }
+  });
   
   const pinRotation: [number, number, number] = {
     top: [0, Math.PI, 0],
@@ -452,6 +473,30 @@ function PinOnTile({ propertyId, side }: { propertyId: number; side: 'top' | 'bo
 
   return (
     <group position={[pinXOffset, pinY, pinZOffset]} rotation={pinRotation} scale={pinScale}>
+      {/* Golden hint arrow */}
+      {showHint && (
+        <Html
+          center
+          position={[0, 6, 0]}
+          style={{
+            pointerEvents: 'none',
+            zIndex: 5,
+          }}
+        >
+          <div
+            ref={arrowRef}
+            style={{
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center',
+              pointerEvents: 'none',
+            }}
+          >
+            <PointerArrowIcon className="w-6 h-6 text-yellow-400 drop-shadow-[0_0_10px_rgba(250,204,21,0.9)]" />
+          </div>
+        </Html>
+      )}
+      
       <Suspense fallback={null}>
         <Pin3D_R3F color={property.color} />
       </Suspense>
@@ -536,6 +581,47 @@ function Scene({
   const gameState = useGameState();
   const ownerships = gameState?.ownerships || [];
   const bankRef = useRef<any>(null);
+  
+  // Check if we should show property hint (connected but no properties and hasn't opened modal yet)
+  const [hasOpenedModal, setHasOpenedModal] = useState(false);
+  const [showPropertyHint, setShowPropertyHint] = useState(false);
+  
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const hasOpened = localStorage.getItem('hasOpenedPropertyModal') === 'true';
+      setHasOpenedModal(hasOpened);
+      
+      const handleStorageChange = () => {
+        setHasOpenedModal(localStorage.getItem('hasOpenedPropertyModal') === 'true');
+      };
+      
+      window.addEventListener('storage', handleStorageChange);
+      window.addEventListener('propertyModalOpened', handleStorageChange);
+      
+      return () => {
+        window.removeEventListener('storage', handleStorageChange);
+        window.removeEventListener('propertyModalOpened', handleStorageChange);
+      };
+    }
+  }, []);
+
+  useEffect(() => {
+    console.log('🏠 Property hint check:', { connected, hasProperties, hasOpenedModal });
+    
+    if (connected && !hasProperties && !hasOpenedModal) {
+      console.log('🏠 Starting property hint timer (5 seconds)...');
+      const timer = setTimeout(() => {
+        console.log('🏠 Showing property hint arrows!');
+        setShowPropertyHint(true);
+      }, 5000); // Wait 5 seconds
+      return () => clearTimeout(timer);
+    } else {
+      console.log('🏠 Property hint disabled:', { 
+        reason: !connected ? 'not connected' : hasProperties ? 'has properties' : 'modal opened' 
+      });
+      setShowPropertyHint(false);
+    }
+  }, [connected, hasProperties, hasOpenedModal]);
   
   const tileY = boardThickness + tileThickness/2;
   const halfW = boardWidth / 2;
@@ -646,6 +732,7 @@ function Scene({
             particlesVisible={particlesVisible}
             onClick={() => onSelectProperty(id)}
             interactive={connected}
+            showPropertyHint={showPropertyHint}
           />
         );
       })}
@@ -668,6 +755,7 @@ function Scene({
             particlesVisible={particlesVisible}
             onClick={() => onSelectProperty(id)}
             interactive={connected}
+            showPropertyHint={showPropertyHint}
           />
         );
       })}
@@ -690,6 +778,7 @@ function Scene({
             particlesVisible={particlesVisible}
             onClick={() => onSelectProperty(id)}
             interactive={connected}
+            showPropertyHint={showPropertyHint}
           />
         );
       })}
@@ -712,6 +801,7 @@ function Scene({
             particlesVisible={particlesVisible}
             onClick={() => onSelectProperty(id)}
             interactive={connected}
+            showPropertyHint={showPropertyHint}
           />
         );
       })}
@@ -728,16 +818,20 @@ function Scene({
       )}
       
       {/* ===== ONBOARDING OVERLAY ===== */}
-      <BoardOnboarding3D hasProperties={hasProperties} />
+      <BoardOnboarding3D 
+        hasProperties={hasProperties} 
+        showClaimHint={showClaimHint}
+        onClaimHintDismiss={handleClaimHintDismiss}
+      />
       
       {/* ===== 3D INCOME FLOW (only when connected and has properties) ===== */}
       {!spectatorMode && connected && hasProperties && (
         <IncomeFlow3D 
           enabled={true}
           particlesVisible={particlesVisible}
-          onParticleArrive={() => {
+          onParticleArrive={(incomeValue) => {
             if (bankRef.current?.handleParticleArrive) {
-              bankRef.current.handleParticleArrive();
+              bankRef.current.handleParticleArrive(incomeValue);
             }
           }}
         />
@@ -776,20 +870,37 @@ export function Board3DScene({ onSelectProperty, spectatorMode, spectatorOwnersh
     const walletKey = publicKey.toBase58();
     const storageKey = `hasSeenClaimHint_${walletKey}`;
     
+    console.log('🏦 Bank hint check:', {
+      hasSeenHint: localStorage.getItem(storageKey) === 'true',
+      storageKey,
+      spectatorMode
+    });
+    
     if (localStorage.getItem(storageKey) === 'true') return;
     
     const currentCount = spectatorMode 
       ? (spectatorOwnerships?.filter(o => o.slotsOwned > 0).length || 0)
       : (gameState?.ownerships?.filter(o => o.slotsOwned > 0).length || 0);
     
+    console.log('🏦 Ownership counts:', {
+      previousCount: previousOwnershipsCountRef.current,
+      currentCount,
+      hasTriggered: hasTriggeredHintRef.current
+    });
+    
     if (previousOwnershipsCountRef.current === 0 && currentCount > 0 && !hasTriggeredHintRef.current) {
+      console.log('🏦 First purchase detected! Starting 60s timer...');
       hasTriggeredHintRef.current = true;
       
       const timer = setTimeout(() => {
+        console.log('🏦 Timer finished, checking if should show hint...');
         if (localStorage.getItem(storageKey) !== 'true') {
+          console.log('🏦 Showing bank claim hint!');
           setShowClaimHint(true);
+        } else {
+          console.log('🏦 Hint already seen, not showing');
         }
-      }, 60000);
+      }, 30000); // 30 seconds after first purchase
       
       return () => clearTimeout(timer);
     }
@@ -805,9 +916,16 @@ export function Board3DScene({ onSelectProperty, spectatorMode, spectatorOwnersh
     localStorage.setItem(storageKey, 'true');
   }, [publicKey]);
 
+
   const resetView = () => {
     if (cameraControlsRef.current) {
-      cameraControlsRef.current.reset();
+      // Reset to the appropriate view based on connection state
+      const targetConfig = connected ? CAMERA_POSITIONS.ZOOMED_IN : CAMERA_POSITIONS.ZOOMED_OUT;
+      
+      // Set camera position and target
+      cameraControlsRef.current.object.position.copy(targetConfig.position);
+      cameraControlsRef.current.target.copy(targetConfig.lookAt);
+      cameraControlsRef.current.update();
     }
   };
 
@@ -861,7 +979,7 @@ export function Board3DScene({ onSelectProperty, spectatorMode, spectatorOwnersh
             position: 'absolute',
             top: '10px',
             right: '10px',
-            zIndex: 100,
+            zIndex: 10,
             display: 'flex',
             gap: '8px',
             background: 'rgba(0, 0, 0, 0.7)',

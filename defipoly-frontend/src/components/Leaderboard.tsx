@@ -67,8 +67,14 @@ export function Leaderboard({ scaleFactor = 1 }: LeaderboardProps) {
   // Check if we should show the spectator hint
   useEffect(() => {
     const hasUsedSpectator = localStorage.getItem('hasUsedSpectator');
+    console.log('🏆 Leaderboard spectator hint check:', {
+      hasUsedSpectator,
+      totalSlotsOwned,
+      shouldShow: !hasUsedSpectator && totalSlotsOwned > 0
+    });
     // Show hint if: user owns at least 1 property AND hasn't used spectator yet
     if (!hasUsedSpectator && totalSlotsOwned > 0) {
+      console.log('🏆 Showing leaderboard spectator hint!');
       setShowSpectatorHint(true);
     }
   }, [totalSlotsOwned]);

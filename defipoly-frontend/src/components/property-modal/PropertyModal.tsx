@@ -65,6 +65,15 @@ export function PropertyModal({ propertyId, onClose }: PropertyModalProps) {
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
   
+  // Mark that user has opened a property modal
+  useEffect(() => {
+    if (propertyId !== null) {
+      localStorage.setItem('hasOpenedPropertyModal', 'true');
+      // Dispatch custom event to notify other components immediately
+      window.dispatchEvent(new Event('propertyModalOpened'));
+    }
+  }, [propertyId]);
+  
   // Fetch property state from API (only when needed)
   useEffect(() => {
     if (propertyId === null || !connected || !property) {

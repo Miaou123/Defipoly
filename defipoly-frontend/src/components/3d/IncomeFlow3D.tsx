@@ -42,6 +42,7 @@ interface ParticleData {
   rotSpeedX: number;
   rotSpeedY: number;
   rotSpeedZ: number;
+  incomeValue: number;
 }
 
 interface PropertyIncomeData {
@@ -322,7 +323,7 @@ function quadraticBezier(start: THREE.Vector3, control: THREE.Vector3, end: THRE
 interface IncomeFlow3DProps {
   enabled?: boolean;
   particlesVisible?: boolean;
-  onParticleArrive?: () => void;
+  onParticleArrive?: (incomeValue: number) => void;
 }
 
 export function IncomeFlow3D({ enabled = true, particlesVisible = true, onParticleArrive }: IncomeFlow3DProps) {
@@ -378,6 +379,7 @@ export function IncomeFlow3D({ enabled = true, particlesVisible = true, onPartic
       rotSpeedX: 0,
       rotSpeedY: 0,
       rotSpeedZ: 0,
+      incomeValue: 0,
     }));
     
     diamondDataRef.current = Array.from({ length: MAX_DIAMONDS }, () => ({
@@ -392,6 +394,7 @@ export function IncomeFlow3D({ enabled = true, particlesVisible = true, onPartic
       rotSpeedX: 0,
       rotSpeedY: 0,
       rotSpeedZ: 0,
+      incomeValue: 0,
     }));
   }, []);
 
@@ -427,7 +430,7 @@ export function IncomeFlow3D({ enabled = true, particlesVisible = true, onPartic
   }, [ownerships]);
 
   // Spawn a particle
-  const spawnParticle = useCallback((propData: PropertyIncomeData) => {
+  const spawnParticle = useCallback((propData: PropertyIncomeData, intervalUsed: number) => {
     const isBill = propData.tier.symbol === 'bill';
     const dataPool = isBill ? billDataRef.current : diamondDataRef.current;
     
@@ -440,6 +443,9 @@ export function IncomeFlow3D({ enabled = true, particlesVisible = true, onPartic
     particle.startPos.copy(propData.position);
     particle.targetPos.copy(BANK_TARGET);
     particle.progress = 0;
+    
+    // Calculate income value for this particle
+    particle.incomeValue = (propData.income / 86400) * (intervalUsed / 1000);
     
     // Random bezier control point
     const midX = (propData.position.x + BANK_TARGET.x) / 2 + (Math.random() - 0.5) * 2;
@@ -477,7 +483,7 @@ export function IncomeFlow3D({ enabled = true, particlesVisible = true, onPartic
       const interval = propData.tier.intervalMs * (0.8 + Math.random() * 0.4);
       const timer = setTimeout(() => {
         if (!isActive) return;
-        spawnParticle(propData);
+        spawnParticle(propData, interval);
         scheduleSpawn(propData);
       }, interval);
       
@@ -489,7 +495,7 @@ export function IncomeFlow3D({ enabled = true, particlesVisible = true, onPartic
       const initialDelay = index * 100 + Math.random() * propData.tier.intervalMs * 0.3;
       const timer = setTimeout(() => {
         if (!isActive) return;
-        spawnParticle(propData);
+        spawnParticle(propData, initialDelay);
         scheduleSpawn(propData);
       }, initialDelay);
       spawnTimersRef.current.set(propData.propertyId, timer);
@@ -528,7 +534,7 @@ export function IncomeFlow3D({ enabled = true, particlesVisible = true, onPartic
       if (particle.progress >= 1) {
         particle.active = false;
         billOpacities.setX(i, 0);
-        onParticleArrive?.();
+        onParticleArrive?.(particle.incomeValue);
         return;
       }
       
@@ -576,7 +582,7 @@ export function IncomeFlow3D({ enabled = true, particlesVisible = true, onPartic
       if (particle.progress >= 1) {
         particle.active = false;
         diamondOpacities.setX(i, 0);
-        onParticleArrive?.();
+        onParticleArrive?.(particle.incomeValue);
         return;
       }
       

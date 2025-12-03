@@ -380,14 +380,6 @@ export function House5_R3F({ isPulsing = false, color = 'bg-purple-500' }: House
         <meshStandardMaterial color={0x2A2A2A} metalness={0.7} roughness={0.4} />
       </mesh>
 
-      {/* ========== GRAND STAIRCASE ========== */}
-      {[0, 1, 2, 3, 4].map((i) => (
-        <mesh key={`step-${i}`} position={[0, 0.05 + i * 0.1, mainDepth/2 + entranceDepth + 0.5 + (4-i) * 0.28]}>
-          <boxGeometry args={[2.2 - i * 0.1, 0.1, 0.28]} />
-          <meshStandardMaterial color={0xA0A0A0} roughness={0.7} />
-        </mesh>
-      ))}
-
       {/* ========== MAIN WINDOWS ========== */}
       {windowPositions.map((wp, i) => (
         <group key={`window-${i}`}>

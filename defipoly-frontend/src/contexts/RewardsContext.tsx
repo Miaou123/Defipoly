@@ -33,7 +33,7 @@ export function RewardsProvider({ children }: { children: React.ReactNode }) {
   const { ownerships: apiOwnerships, loading: ownershipLoading, stats } = useGameState();
   
   const [unclaimedRewards, setUnclaimedRewards] = useState(0);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true); // Start as loading
   const [initialFetchDone, setInitialFetchDone] = useState(false);
   const lastFetchTime = useRef<number>(0);
   const incomePerSecondRef = useRef<number>(0);
@@ -68,9 +68,9 @@ export function RewardsProvider({ children }: { children: React.ReactNode }) {
       
       
       if (timeElapsed > 0 && totalBaseDailyIncome > 0) {
-        const minutesElapsed = timeElapsed / 60;
-        const incomePerMinute = totalBaseDailyIncome / 1440; // 1440 minutes per day
-        const timeBasedRewards = incomePerMinute * minutesElapsed;
+        const secondsElapsed = timeElapsed;
+        const incomePerSecond = totalBaseDailyIncome / 86400; // 86400 seconds per day
+        const timeBasedRewards = incomePerSecond * secondsElapsed;
         
         const totalRewards = storedRewards + timeBasedRewards;
         
@@ -98,6 +98,7 @@ export function RewardsProvider({ children }: { children: React.ReactNode }) {
       setInitialFetchDone(false);
       lastFetchTime.current = 0;
       incomePerSecondRef.current = 0;
+      setLoading(false); // Not loading when no wallet
     }
   }, [publicKey]);
 
@@ -203,7 +204,7 @@ export function RewardsProvider({ children }: { children: React.ReactNode }) {
   const value = {
     ownerships: apiOwnerships, // Still return for compatibility
     dailyIncome: stats.dailyIncome, // Use backend calculated daily income with set bonuses
-    unclaimedRewards: Math.floor(unclaimedRewards), // Display as whole DEFI tokens (already converted from lamports)
+    unclaimedRewards: unclaimedRewards, // Keep full precision for proper initialization
     loading: loading || ownershipLoading,
     resetRewards,
   };

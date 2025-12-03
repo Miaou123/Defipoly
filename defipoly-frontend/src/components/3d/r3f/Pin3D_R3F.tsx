@@ -16,7 +16,7 @@ function getColorHex(colorClass: string): number {
     'bg-pink-400': 0xf472b6,
     'bg-orange-500': 0xf97316,
     'bg-red-600': 0xdc2626,
-    'bg-yellow-400': 0xfacc15,
+    'bg-yellow-500': 0xeab308,
     'bg-green-600': 0x16a34a,
     'bg-blue-900': 0x1e3a8a,
   };

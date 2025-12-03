@@ -12,12 +12,13 @@ import idl from '@/idl/defipoly_program.json';
 import { Bank3D_V2 } from './r3f/Bank3D_R3F';
 import { Html } from '@react-three/drei';
 import { useFrame } from '@react-three/fiber';
+import { PointerArrowIcon } from '@/components/icons/UIIcons';
 import * as THREE from 'three';
 
 interface InteractiveBank3DProps {
   position?: [number, number, number];
   scale?: number;
-  onParticleArrive?: () => void;
+  onParticleArrive?: (incomeValue?: number) => void;
   showClaimHint?: boolean;
   onClaimHintDismiss?: () => void;
 }
@@ -131,7 +132,7 @@ function ClaimHintLabel({ visible }: { visible: boolean }) {
   );
 }
 
-export const InteractiveBank3D = forwardRef<{ handleParticleArrive: () => void }, InteractiveBank3DProps>(function InteractiveBank3D({ 
+export const InteractiveBank3D = forwardRef<{ handleParticleArrive: (incomeValue?: number) => void }, InteractiveBank3DProps>(function InteractiveBank3D({ 
   position = [0, 0.8, 0], 
   scale = 0.084, 
   onParticleArrive,
@@ -148,32 +149,42 @@ export const InteractiveBank3D = forwardRef<{ handleParticleArrive: () => void }
   const [claiming, setClaiming] = useState(false);
   const [displayedRewards, setDisplayedRewards] = useState<number>(0);
   const [animatedRewards, setAnimatedRewards] = useState<number>(0);
+  const [isHovered, setIsHovered] = useState(false);
   const claimingRef = useRef(false);
   const lastClickTimeRef = useRef(0);
   const initializedRef = useRef(false);
+  const justClaimedRef = useRef(false);
+  const arrowRef = useRef<any>(null);
+  const bankGroupRef = useRef<any>(null);
+
 
   // Initialize displayedRewards from blockchain value
   useEffect(() => {
-    if (!initializedRef.current && unclaimedRewards > 0 && !claimingRef.current) {
+    // Only initialize if we haven't yet AND we're not loading AND we have rewards AND we're not claiming AND didn't just claim
+    if (!initializedRef.current && unclaimedRewards > 0 && !claimingRef.current && !justClaimedRef.current && !rewardsLoading) {
       setDisplayedRewards(unclaimedRewards);
       setAnimatedRewards(unclaimedRewards);
       initializedRef.current = true;
     }
-  }, [unclaimedRewards]);
+  }, [unclaimedRewards, rewardsLoading]);
 
   // Sync with blockchain when rewards go to 0 (claimed on-chain)
   useEffect(() => {
     if (unclaimedRewards === 0 && initializedRef.current && !claimingRef.current) {
       initializedRef.current = false;
+      justClaimedRef.current = false;
       setDisplayedRewards(0);
       setAnimatedRewards(0);
     }
   }, [unclaimedRewards]);
 
   // Handle particle arrival and increment animated counter
-  const handleParticleArrive = useCallback(() => {
-    // Simple increment - each particle represents a small reward increment
-    const incrementAmount = Math.max(1, Math.floor(Math.random() * 10) + 5); // Random small increment
+  const handleParticleArrive = useCallback((incomeValue?: number) => {
+    // Don't add income if we just claimed
+    if (justClaimedRef.current) return;
+    
+    // Use the exact income value from the particle, just like RewardsPanel does
+    const incrementAmount = incomeValue || 0;
     
     setAnimatedRewards(prev => prev + incrementAmount);
     onParticleArrive?.();
@@ -187,7 +198,18 @@ export const InteractiveBank3D = forwardRef<{ handleParticleArrive: () => void }
   // Handle bank click to claim rewards
   const handleBankClick = useCallback(async () => {
     const now = Date.now();
-    if (!connected || !publicKey || claiming || claimingRef.current || rewardsLoading || animatedRewards === 0 || (now - lastClickTimeRef.current < 1000)) {
+    
+    // Check if user has any properties first
+    const hasProperties = gameState?.ownerships?.some(o => o.slotsOwned > 0) || false;
+    
+    if (!connected || !publicKey) return;
+    
+    if (!hasProperties) {
+      showError('No Properties Owned', 'You need to buy a property first before you can claim rewards.');
+      return;
+    }
+    
+    if (claiming || claimingRef.current || rewardsLoading || animatedRewards === 0 || (now - lastClickTimeRef.current < 1000)) {
       if (now - lastClickTimeRef.current < 1000) {
         console.log('🏦 Bank click ignored - too soon after last click');
       }
@@ -210,6 +232,12 @@ export const InteractiveBank3D = forwardRef<{ handleParticleArrive: () => void }
         setDisplayedRewards(0);
         setAnimatedRewards(0);
         initializedRef.current = false;
+        justClaimedRef.current = true;
+        
+        // Reset justClaimed after 10 seconds to allow re-initialization
+        setTimeout(() => {
+          justClaimedRef.current = false;
+        }, 10000);
         
         try {
           const tx = await connection.getTransaction(signature, {
@@ -261,6 +289,10 @@ export const InteractiveBank3D = forwardRef<{ handleParticleArrive: () => void }
         setDisplayedRewards(0);
         setAnimatedRewards(0);
         initializedRef.current = false;
+        justClaimedRef.current = true;
+        setTimeout(() => {
+          justClaimedRef.current = false;
+        }, 10000);
       } else {
         showError('Claim Failed', 'Failed to claim rewards. Please try again.');
       }
@@ -271,9 +303,10 @@ export const InteractiveBank3D = forwardRef<{ handleParticleArrive: () => void }
     }
   }, [connected, publicKey, claiming, claimingRef, rewardsLoading, animatedRewards, claimRewards, connection, showSuccess, showError]);
 
-  // Handle hover to dismiss hint
+  // Handle hover to dismiss hint and scale bank
   const handlePointerOver = useCallback(() => {
     document.body.style.cursor = 'pointer';
+    setIsHovered(true);
     
     // Dismiss claim hint on hover
     if (showClaimHint && onClaimHintDismiss) {
@@ -281,8 +314,35 @@ export const InteractiveBank3D = forwardRef<{ handleParticleArrive: () => void }
     }
   }, [showClaimHint, onClaimHintDismiss]);
 
+  const handlePointerOut = useCallback(() => {
+    document.body.style.cursor = 'auto';
+    setIsHovered(false);
+  }, []);
+
+  // Animate the golden claim arrow and bank scaling
+  useFrame((state, delta) => {
+    // Arrow animation
+    if (arrowRef.current && showClaimHint) {
+      const t = state.clock.elapsedTime;
+      const pulse = Math.sin(t * 2.5) * 0.4 + 0.8; // Oscillates between 0.4 and 1.2
+      const float = Math.sin(t * 1.5) * 0.5; // Gentle up/down float
+      arrowRef.current.style.opacity = pulse;
+      arrowRef.current.style.transform = `translateY(${float}px) rotate(90deg)`;
+    }
+
+    // Bank scaling animation
+    if (bankGroupRef.current) {
+      const hoverMultiplier = isHovered ? 1.1 : 1.0;
+      const targetScale = scale * hoverMultiplier; // Multiply by original scale prop
+      const currentScale = bankGroupRef.current.scale.x;
+      const newScale = currentScale + (targetScale - currentScale) * delta * 8; // Smooth transition
+      bankGroupRef.current.scale.setScalar(newScale);
+    }
+  });
+
   return (
     <group 
+      ref={bankGroupRef}
       position={position} 
       scale={scale}
       onClick={(e) => {
@@ -290,13 +350,31 @@ export const InteractiveBank3D = forwardRef<{ handleParticleArrive: () => void }
         handleBankClick();
       }}
       onPointerOver={handlePointerOver}
-      onPointerOut={() => document.body.style.cursor = 'auto'}
+      onPointerOut={handlePointerOut}
     >
-      {/* Claim Hint Glow Ring */}
-      <ClaimHintGlow visible={showClaimHint} />
-      
-      {/* Claim Hint Floating Label */}
-      <ClaimHintLabel visible={showClaimHint} />
+      {/* Golden claim hint arrow */}
+      {showClaimHint && (
+        <Html
+          center
+          position={[0, 15, 0]}
+          style={{
+            pointerEvents: 'none',
+            zIndex: 5,
+          }}
+        >
+          <div
+            ref={arrowRef}
+            style={{
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center',
+              pointerEvents: 'none',
+            }}
+          >
+            <PointerArrowIcon className="w-8 h-8 text-yellow-400 drop-shadow-[0_0_12px_rgba(250,204,21,0.9)]" />
+          </div>
+        </Html>
+      )}
       
       <Suspense fallback={null}>
         <Bank3D_V2 
