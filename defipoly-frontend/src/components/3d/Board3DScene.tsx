@@ -18,6 +18,7 @@ import * as THREE from 'three';
 import { ResetViewIcon, ZoomInIcon, ZoomOutIcon, HideIcon } from '../icons/UIIcons';
 import { InteractiveBank3D } from './InteractiveBank3D';
 import { IncomeFlow3D } from './IncomeFlow3D';
+import { BoardOnboarding3D } from './BoardOnboarding3D';
 
 
 interface Board3DSceneProps {
@@ -29,6 +30,8 @@ interface Board3DSceneProps {
 interface SceneProps extends Board3DSceneProps {
   cameraControlsRef: React.RefObject<any>;
   particlesVisible: boolean;
+  showClaimHint: boolean;
+  handleClaimHintDismiss: () => void;
 }
 
 // EXACT DIMENSIONS TO MATCH PROTOTYPE
@@ -77,6 +80,7 @@ function RisingIncomeParticles({ side, visible = true }: { side: 'top' | 'bottom
     
     particlesRef.current.children.forEach((particle, i) => {
       const data = particleData[i];
+      if (!data) return;
       const cycleTime = (time * data.speed + data.delay) % 3; // 3 second cycle
       const progress = cycleTime / 3;
       
@@ -142,9 +146,21 @@ interface PropertyTileProps {
   hasCompleteSet: boolean;
   particlesVisible: boolean;
   onClick: () => void;
+  interactive?: boolean;  // NEW
 }
 
-function PropertyTile({ position, width, depth, property, side, buildingLevel, hasCompleteSet, particlesVisible, onClick }: PropertyTileProps) {
+function PropertyTile({ 
+  position, 
+  width, 
+  depth, 
+  property, 
+  side, 
+  buildingLevel, 
+  hasCompleteSet, 
+  particlesVisible, 
+  onClick,
+  interactive = true  // Default true for backwards compatibility
+}: PropertyTileProps) {
   const [hovered, setHovered] = useState(false);
   
   // Get hex color from color class
@@ -187,12 +203,14 @@ function PropertyTile({ position, width, depth, property, side, buildingLevel, h
   }
   
   // Text rotation based on side (readable from outside board)
-  const textRotation: [number, number, number] = {
-    top: [-Math.PI/2, 0, Math.PI],      // 180° - faces outward/up
-    bottom: [-Math.PI/2, 0, 0],         // 0° - faces outward/down
-    left: [-Math.PI/2, 0, -Math.PI/2],  // -90° - faces left (corrected)
-    right: [-Math.PI/2, 0, Math.PI/2],  // +90° - faces right (corrected)
-  }[side];
+  const textRotation: [number, number, number] = (() => {
+    switch (side) {
+      case 'top': return [-Math.PI/2, 0, Math.PI];      // 180° - faces outward/up
+      case 'bottom': return [-Math.PI/2, 0, 0];         // 0° - faces outward/down
+      case 'left': return [-Math.PI/2, 0, -Math.PI/2];  // -90° - faces left (corrected)
+      case 'right': return [-Math.PI/2, 0, Math.PI/2];  // +90° - faces right (corrected)
+    }
+  })();
 
   // Text positions based on side
   // Property NAME: toward CENTER (near color strip)
@@ -218,24 +236,22 @@ function PropertyTile({ position, width, depth, property, side, buildingLevel, h
     pricePosition = [width/2 - 0.1, tileThickness/2 + 0.01, 0];  // Away from color strip (toward outside)
   }
 
-  // Hover lift
-  const hoverY = hovered ? 0.08 : 0;
-
   return (
     <group 
-      position={[position[0], position[1] + hoverY, position[2]]}
-      onPointerOver={() => setHovered(true)}
+      position={[position[0], position[1] + (hovered && interactive ? 0.08 : 0), position[2]]}
+      onPointerOver={() => interactive && setHovered(true)}
       onPointerOut={() => setHovered(false)}
-      onClick={onClick}
+      onClick={() => interactive && onClick()}
     >
       {/* Tile base */}
       <mesh castShadow receiveShadow>
         <boxGeometry args={[width, tileThickness, depth]} />
         <meshStandardMaterial 
-          color="#3a2a4a" 
+          color={interactive ? "#3a2a4a" : "#2a1f2f"} 
           roughness={0.7}
-          emissive={hovered ? colorHex : '#000000'}
-          emissiveIntensity={hovered ? 0.15 : 0}
+          metalness={0.15}
+          emissive={hovered && interactive ? colorHex : '#000000'}
+          emissiveIntensity={hovered && interactive ? 0.15 : 0}
         />
       </mesh>
       
@@ -245,7 +261,7 @@ function PropertyTile({ position, width, depth, property, side, buildingLevel, h
         <meshStandardMaterial 
           color={colorHex}
           emissive={colorHex}
-          emissiveIntensity={hovered ? 0.4 : 0.15}
+          emissiveIntensity={interactive ? (hovered ? 0.4 : 0.15) : 0.08}
           roughness={0.3}
           metalness={0.2}
         />
@@ -282,7 +298,7 @@ function PropertyTile({ position, width, depth, property, side, buildingLevel, h
       
       {/* 3D House or Pin */}
       {buildingLevel > 0 ? (
-        <HouseOnTile buildingLevel={buildingLevel} side={side} />
+        <HouseOnTile buildingLevel={buildingLevel} side={side} propertyColor={property.color} />
       ) : (
         <PinOnTile propertyId={property.id} side={side} />
       )}
@@ -350,12 +366,14 @@ function PinOnTile({ propertyId, side }: { propertyId: number; side: 'top' | 'bo
   if (!property) return null;
   
   // Pin rotation based on tile side - face outward from board center
-  const pinRotation: [number, number, number] = {
-    top: [0, Math.PI, 0],      // Face outward (toward viewer from top)
-    bottom: [0, 0, 0],         // Face outward (toward viewer from bottom)
-    left: [0, -Math.PI/2, 0],  // Face outward (toward viewer from left)
-    right: [0, Math.PI/2, 0],  // Face outward (toward viewer from right)
-  }[side];
+  const pinRotation: [number, number, number] = (() => {
+    switch (side) {
+      case 'top': return [0, Math.PI, 0];      // Face outward (toward viewer from top)
+      case 'bottom': return [0, 0, 0];         // Face outward (toward viewer from bottom)
+      case 'left': return [0, -Math.PI/2, 0];  // Face outward (toward viewer from left)
+      case 'right': return [0, Math.PI/2, 0];  // Face outward (toward viewer from right)
+    }
+  })();
   
   // Position pin on tile surface (lower than before)
   const pinY = tileThickness/2 + 0.02;
@@ -381,7 +399,11 @@ function PinOnTile({ propertyId, side }: { propertyId: number; side: 'top' | 'bo
   );
 }
 
-function HouseOnTile({ buildingLevel, side }: { buildingLevel: number; side: 'top' | 'bottom' | 'left' | 'right' }) {
+function HouseOnTile({ buildingLevel, side, propertyColor }: { 
+  buildingLevel: number; 
+  side: 'top' | 'bottom' | 'left' | 'right'; 
+  propertyColor?: string 
+}) {
   console.log(`[3D House] Rendering house with level: ${buildingLevel}, side: ${side}`);
   if (buildingLevel <= 0) {
     console.log(`[3D House] No house - building level is ${buildingLevel}`);
@@ -389,12 +411,14 @@ function HouseOnTile({ buildingLevel, side }: { buildingLevel: number; side: 'to
   }
   
   // House rotation based on tile side - face outward from board center
-  const houseRotation: [number, number, number] = {
-    top: [0, Math.PI, 0],      // Face outward (toward viewer from top)
-    bottom: [0, 0, 0],         // Face outward (toward viewer from bottom)
-    left: [0, -Math.PI/2, 0],  // Face outward (toward viewer from left)
-    right: [0, Math.PI/2, 0],  // Face outward (toward viewer from right)
-  }[side];
+  const houseRotation: [number, number, number] = (() => {
+    switch (side) {
+      case 'top': return [0, Math.PI, 0];      // Face outward (toward viewer from top)
+      case 'bottom': return [0, 0, 0];         // Face outward (toward viewer from bottom)
+      case 'left': return [0, -Math.PI/2, 0];  // Face outward (toward viewer from left)
+      case 'right': return [0, Math.PI/2, 0];  // Face outward (toward viewer from right)
+    }
+  })();
   
   // Position house on tile surface (lower)
   const houseY = tileThickness/2 - 0.02;
@@ -405,7 +429,7 @@ function HouseOnTile({ buildingLevel, side }: { buildingLevel: number; side: 'to
     2: 0.08, 
     3: 0.12,
     4: 0.06,
-    5: 0.08,
+    5: 0.06,  // Made châteaux smaller
   };
   
   const houseScale = houseScales[buildingLevel as keyof typeof houseScales] || 0.08;
@@ -430,16 +454,23 @@ function HouseOnTile({ buildingLevel, side }: { buildingLevel: number; side: 'to
   return (
     <group position={[houseXOffset, houseY, houseZOffset]} rotation={houseRotation} scale={houseScale}>
       <Suspense fallback={null}>
-        <HouseComponent />
+        <HouseComponent isPulsing={false} color={propertyColor} />
       </Suspense>
     </group>
   );
 }
 
-function Scene({ onSelectProperty, spectatorMode, spectatorOwnerships, cameraControlsRef, particlesVisible }: SceneProps) {
+function Scene({ onSelectProperty, spectatorMode, spectatorOwnerships, cameraControlsRef, particlesVisible, showClaimHint, handleClaimHintDismiss }: SceneProps) {
   const gameState = useGameState();
+  const { connected } = useWallet();
   const ownerships = gameState?.ownerships || [];
   const bankRef = useRef<any>(null);
+  
+  // Calculate if user has any properties
+  const hasProperties = useMemo(() => {
+    const currentOwnerships = spectatorMode ? spectatorOwnerships : gameState?.ownerships || [];
+    return currentOwnerships.some(o => o.slotsOwned > 0);
+  }, [spectatorMode, spectatorOwnerships, gameState?.ownerships]);
   
   // Force re-render when ownerships changes
   const gameStateLoaded = !spectatorMode ? ownerships.length > 0 : true;
@@ -560,6 +591,7 @@ function Scene({ onSelectProperty, spectatorMode, spectatorOwnerships, cameraCon
             hasCompleteSet={isPropertyInCompleteSet(id)}
             particlesVisible={particlesVisible}
             onClick={() => onSelectProperty(id)}
+            interactive={connected}
           />
         );
       })}
@@ -581,6 +613,7 @@ function Scene({ onSelectProperty, spectatorMode, spectatorOwnerships, cameraCon
             hasCompleteSet={isPropertyInCompleteSet(id)}
             particlesVisible={particlesVisible}
             onClick={() => onSelectProperty(id)}
+            interactive={connected}
           />
         );
       })}
@@ -602,6 +635,7 @@ function Scene({ onSelectProperty, spectatorMode, spectatorOwnerships, cameraCon
             hasCompleteSet={isPropertyInCompleteSet(id)}
             particlesVisible={particlesVisible}
             onClick={() => onSelectProperty(id)}
+            interactive={connected}
           />
         );
       })}
@@ -623,19 +657,35 @@ function Scene({ onSelectProperty, spectatorMode, spectatorOwnerships, cameraCon
             hasCompleteSet={isPropertyInCompleteSet(id)}
             particlesVisible={particlesVisible}
             onClick={() => onSelectProperty(id)}
+            interactive={connected}
           />
         );
       })}
       
-      {/* ===== BANK ===== */}
-      <InteractiveBank3D 
-        ref={bankRef}
-        position={[0, 0.8, 0]} 
-        scale={0.084}
-      />
+      {/* ===== CENTER CONTENT ===== */}
+      {!connected ? (
+        // Not connected: Show spinning logo
+        <group position={[0, 1.0, 0]} scale={0.45}>
+          <Suspense fallback={null}>
+            <Logo3D_R3F />
+          </Suspense>
+        </group>
+      ) : (
+        // Connected (with or without properties): Show bank
+        <InteractiveBank3D 
+          ref={bankRef}
+          position={[0, 0.8, 0]} 
+          scale={0.084}
+          showClaimHint={showClaimHint}
+          onClaimHintDismiss={handleClaimHintDismiss}
+        />
+      )}
+      
+      {/* ===== ONBOARDING OVERLAYS ===== */}
+      <BoardOnboarding3D hasProperties={hasProperties} />
       
       {/* ===== 3D INCOME FLOW ===== */}
-      {!spectatorMode && (
+      {!spectatorMode && hasProperties && (
         <IncomeFlow3D 
           enabled={true}
           particlesVisible={particlesVisible}
@@ -665,6 +715,48 @@ export function Board3DScene({ onSelectProperty, spectatorMode, spectatorOwnersh
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  // Check for first purchase and trigger hint
+  useEffect(() => {
+    if (!publicKey) return;
+    
+    const walletKey = publicKey.toBase58();
+    const storageKey = `hasSeenClaimHint_${walletKey}`;
+    
+    // Already seen hint
+    if (localStorage.getItem(storageKey) === 'true') return;
+    
+    // Get current ownership count
+    const currentCount = spectatorMode 
+      ? (spectatorOwnerships?.filter(o => o.slotsOwned > 0).length || 0)
+      : (gameState?.ownerships?.filter(o => o.slotsOwned > 0).length || 0);
+    
+    // Detect first purchase (0 -> 1+)
+    if (previousOwnershipsCountRef.current === 0 && currentCount > 0 && !hasTriggeredHintRef.current) {
+      hasTriggeredHintRef.current = true;
+      
+      // Show hint after 1 minute
+      const timer = setTimeout(() => {
+        // Double-check they haven't seen it (e.g., page refresh during wait)
+        if (localStorage.getItem(storageKey) !== 'true') {
+          setShowClaimHint(true);
+        }
+      }, 60000); // 1 minute
+      
+      return () => clearTimeout(timer);
+    }
+    
+    previousOwnershipsCountRef.current = currentCount;
+  }, [publicKey, gameState?.ownerships, spectatorMode, spectatorOwnerships]);
+
+  // Callback when hint is dismissed (on hover)
+  const handleClaimHintDismiss = useCallback(() => {
+    if (!publicKey) return;
+    
+    setShowClaimHint(false);
+    const storageKey = `hasSeenClaimHint_${publicKey.toBase58()}`;
+    localStorage.setItem(storageKey, 'true');
+  }, [publicKey]);
 
   // Camera control functions
   const resetView = () => {
@@ -832,6 +924,8 @@ export function Board3DScene({ onSelectProperty, spectatorMode, spectatorOwnersh
             spectatorOwnerships={spectatorOwnerships}
             cameraControlsRef={cameraControlsRef}
             particlesVisible={particlesVisible}
+            showClaimHint={showClaimHint}
+            handleClaimHintDismiss={handleClaimHintDismiss}
           />
         </Canvas>
       )}

@@ -10,14 +10,134 @@ import { PROGRAM_ID } from '@/utils/constants';
 import { BorshCoder, EventParser } from '@coral-xyz/anchor';
 import idl from '@/idl/defipoly_program.json';
 import { Bank3D_V2 } from './r3f/Bank3D_R3F';
+import { Html } from '@react-three/drei';
+import { useFrame } from '@react-three/fiber';
+import * as THREE from 'three';
 
 interface InteractiveBank3DProps {
   position?: [number, number, number];
   scale?: number;
   onParticleArrive?: () => void;
+  showClaimHint?: boolean;
+  onClaimHintDismiss?: () => void;
 }
 
-export const InteractiveBank3D = forwardRef<{ handleParticleArrive: () => void }, InteractiveBank3DProps>(function InteractiveBank3D({ position = [0, 0.8, 0], scale = 0.084, onParticleArrive }, ref) {
+function ClaimHintGlow({ visible }: { visible: boolean }) {
+  const ringRef = useRef<THREE.Mesh>(null);
+  const [opacity, setOpacity] = useState(0);
+  
+  // Fade in
+  useEffect(() => {
+    if (visible) {
+      const timer = setTimeout(() => setOpacity(1), 100);
+      return () => clearTimeout(timer);
+    } else {
+      setOpacity(0);
+    }
+  }, [visible]);
+  
+  // Pulse animation
+  useFrame((state) => {
+    if (!ringRef.current || !visible) return;
+    
+    const t = state.clock.elapsedTime;
+    // Gentle pulse: scale between 1.0 and 1.15
+    const pulse = 1.0 + Math.sin(t * 2) * 0.075;
+    ringRef.current.scale.setScalar(pulse);
+    
+    // Rotate slowly
+    ringRef.current.rotation.z = t * 0.3;
+  });
+  
+  if (!visible) return null;
+  
+  return (
+    <mesh ref={ringRef} position={[0, 12, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+      <ringGeometry args={[18, 22, 32]} />
+      <meshBasicMaterial 
+        color={0xFFD700} 
+        transparent 
+        opacity={opacity * 0.6}
+        side={THREE.DoubleSide}
+      />
+    </mesh>
+  );
+}
+
+function ClaimHintLabel({ visible }: { visible: boolean }) {
+  const [show, setShow] = useState(false);
+  
+  // Fade in after glow appears
+  useEffect(() => {
+    if (visible) {
+      const timer = setTimeout(() => setShow(true), 300);
+      return () => clearTimeout(timer);
+    } else {
+      setShow(false);
+    }
+  }, [visible]);
+  
+  if (!visible) return null;
+  
+  return (
+    <Html
+      position={[0, 20, 12]}
+      center
+      style={{
+        opacity: show ? 1 : 0,
+        transition: 'opacity 0.4s ease-out',
+        pointerEvents: 'none',
+      }}
+    >
+      <div
+        style={{
+          background: 'linear-gradient(135deg, rgba(0,0,0,0.85), rgba(30,20,50,0.9))',
+          border: '2px solid #FFD700',
+          borderRadius: '12px',
+          padding: '10px 18px',
+          color: 'white',
+          fontFamily: '-apple-system, BlinkMacSystemFont, sans-serif',
+          fontSize: '15px',
+          fontWeight: 600,
+          whiteSpace: 'nowrap',
+          boxShadow: '0 0 20px rgba(255, 215, 0, 0.4), 0 4px 15px rgba(0,0,0,0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          animation: 'float 2s ease-in-out infinite',
+        }}
+      >
+        <span style={{ color: '#FFD700' }}>💰</span>
+        Claim
+        <span style={{ 
+          color: '#FFD700',
+          animation: 'bounce 1s ease-in-out infinite',
+        }}>
+          →
+        </span>
+        
+        <style>{`
+          @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-5px); }
+          }
+          @keyframes bounce {
+            0%, 100% { transform: translateX(0); }
+            50% { transform: translateX(4px); }
+          }
+        `}</style>
+      </div>
+    </Html>
+  );
+}
+
+export const InteractiveBank3D = forwardRef<{ handleParticleArrive: () => void }, InteractiveBank3DProps>(function InteractiveBank3D({ 
+  position = [0, 0.8, 0], 
+  scale = 0.084, 
+  onParticleArrive,
+  showClaimHint = false,
+  onClaimHintDismiss,
+}, ref) {
   const { connected, publicKey } = useWallet();
   const { connection } = useConnection();
   const { unclaimedRewards, loading: rewardsLoading } = useRewards();
@@ -151,6 +271,16 @@ export const InteractiveBank3D = forwardRef<{ handleParticleArrive: () => void }
     }
   }, [connected, publicKey, claiming, claimingRef, rewardsLoading, animatedRewards, claimRewards, connection, showSuccess, showError]);
 
+  // Handle hover to dismiss hint
+  const handlePointerOver = useCallback(() => {
+    document.body.style.cursor = 'pointer';
+    
+    // Dismiss claim hint on hover
+    if (showClaimHint && onClaimHintDismiss) {
+      onClaimHintDismiss();
+    }
+  }, [showClaimHint, onClaimHintDismiss]);
+
   return (
     <group 
       position={position} 
@@ -159,9 +289,15 @@ export const InteractiveBank3D = forwardRef<{ handleParticleArrive: () => void }
         e.stopPropagation();
         handleBankClick();
       }}
-      onPointerOver={() => document.body.style.cursor = 'pointer'}
+      onPointerOver={handlePointerOver}
       onPointerOut={() => document.body.style.cursor = 'auto'}
     >
+      {/* Claim Hint Glow Ring */}
+      <ClaimHintGlow visible={showClaimHint} />
+      
+      {/* Claim Hint Floating Label */}
+      <ClaimHintLabel visible={showClaimHint} />
+      
       <Suspense fallback={null}>
         <Bank3D_V2 
           rewardsAmount={animatedRewards} 
