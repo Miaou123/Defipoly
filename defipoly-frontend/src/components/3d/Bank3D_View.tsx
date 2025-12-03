@@ -3,7 +3,7 @@
 import { memo, Suspense } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { PerspectiveCamera } from '@react-three/drei';
-import { Bank3D_R3F } from './r3f/Bank3D_R3F';
+import { Bank3D_V2 } from './r3f/Bank3D_R3F';
 
 // Lighting for inline canvas
 function BankLighting() {
@@ -46,8 +46,7 @@ function Bank3D_ViewComponent({
         <BankLighting />
         <PerspectiveCamera makeDefault position={[0, 5, 40]} fov={45} />
         <Suspense fallback={null}>
-          <Bank3D_R3F 
-            isPulsing={isPulsing} 
+          <Bank3D_V2 
             rewardsAmount={rewardsAmount}
             profilePicture={profilePicture}
           />

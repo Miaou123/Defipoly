@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { Html } from '@react-three/drei';
 import { useWallet } from '@solana/wallet-adapter-react';
@@ -12,39 +12,57 @@ interface BoardOnboarding3DProps {
 }
 
 /**
- * BoardOnboarding3D - Floating overlays for onboarding
+ * BoardOnboarding3D - Foreground UI overlays for onboarding
  * 
  * States:
- * - Not connected: "Connect Wallet" button floating above center
- * - Connected, no properties: Arrow pointing to a property + hint text
+ * - Not connected: Title + Connect Wallet button (fullscreen centered)
+ * - Connected, no properties: "Get Started" hint with property highlight
  * - Has properties: Nothing rendered
  */
 export function BoardOnboarding3D({ hasProperties }: BoardOnboarding3DProps) {
   const { connected } = useWallet();
-  const { setVisible } = useWalletModal();
+  const { visible: walletModalVisible, setVisible } = useWalletModal();
   const [showPropertyHint, setShowPropertyHint] = useState(false);
+  const [isVisible, setIsVisible] = useState(true);
 
-  // Show property hint after a short delay when connected but no properties
+  // Handle visibility transitions
+  useEffect(() => {
+    if (connected) {
+      // Fade out the connect UI
+      setIsVisible(false);
+    } else {
+      setIsVisible(true);
+    }
+  }, [connected]);
+
+  // Show property hint after delay when connected but no properties
   useEffect(() => {
     if (connected && !hasProperties) {
       const timer = setTimeout(() => {
         setShowPropertyHint(true);
-      }, 500);
+      }, 1500); // Wait for zoom animation
       return () => clearTimeout(timer);
     } else {
       setShowPropertyHint(false);
     }
   }, [connected, hasProperties]);
 
-  // Not connected - show wallet button
-  if (!connected) {
+  // Not connected - show title and connect button
+  // BUT hide if wallet modal is open
+  if (!connected && !walletModalVisible) {
     return (
       <Html
-        center
-        position={[0, 2.2, 0.5]}
+        fullscreen
         style={{
-          width: '300px',
-          pointerEvents: 'auto',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'flex-start',
+          paddingTop: '8vh',
+          height: '100%',
+          pointerEvents: 'none',
+          opacity: isVisible ? 1 : 0,
+          transition: 'opacity 0.8s ease',
         }}
       >
         <div
@@ -53,22 +71,21 @@ export function BoardOnboarding3D({ hasProperties }: BoardOnboarding3DProps) {
             flexDirection: 'column',
             alignItems: 'center',
             gap: '20px',
-            animation: 'fadeIn 0.5s ease-out',
+            pointerEvents: 'auto',
           }}
         >
           {/* Title */}
           <div
             style={{
               fontFamily: 'Orbitron, sans-serif',
-              fontSize: '32px',
+              fontSize: 'clamp(36px, 8vw, 64px)',
               fontWeight: 800,
               background: 'linear-gradient(135deg, #a855f7, #06b6d4, #a855f7)',
               backgroundSize: '200% auto',
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent',
               animation: 'shimmer 3s linear infinite',
-              textAlign: 'center',
-              textShadow: '0 0 30px rgba(168, 85, 247, 0.5)',
+              filter: 'drop-shadow(0 0 20px rgba(168, 85, 247, 0.8)) drop-shadow(0 0 40px rgba(6, 182, 212, 0.5))',
             }}
           >
             DEFIPOLY
@@ -77,9 +94,10 @@ export function BoardOnboarding3D({ hasProperties }: BoardOnboarding3DProps) {
           {/* Subtitle */}
           <div
             style={{
-              color: 'rgba(255,255,255,0.7)',
-              fontSize: '15px',
-              textAlign: 'center',
+              fontSize: 'clamp(14px, 2vw, 18px)',
+              color: 'rgba(255,255,255,0.8)',
+              marginTop: '-10px',
+              textShadow: '0 2px 10px rgba(0,0,0,0.8)',
             }}
           >
             Connect your wallet to start playing
@@ -91,25 +109,25 @@ export function BoardOnboarding3D({ hasProperties }: BoardOnboarding3DProps) {
             style={{
               background: 'linear-gradient(135deg, #9333ea, #7c3aed, #db2777)',
               border: '2px solid rgba(168, 85, 247, 0.5)',
-              borderRadius: '16px',
-              padding: '16px 36px',
+              borderRadius: '20px',
+              padding: '18px 40px',
               color: 'white',
-              fontSize: '18px',
+              fontSize: 'clamp(16px, 2vw, 20px)',
               fontWeight: 700,
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
-              gap: '12px',
-              boxShadow: '0 0 30px rgba(147, 51, 234, 0.5), 0 4px 20px rgba(0,0,0,0.4)',
+              gap: '14px',
+              boxShadow: '0 0 40px rgba(147, 51, 234, 0.5), 0 8px 30px rgba(0,0,0,0.4)',
               transition: 'all 0.3s ease',
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.transform = 'scale(1.05)';
-              e.currentTarget.style.boxShadow = '0 0 40px rgba(147, 51, 234, 0.7), 0 6px 25px rgba(0,0,0,0.5)';
+              e.currentTarget.style.transform = 'scale(1.08)';
+              e.currentTarget.style.boxShadow = '0 0 60px rgba(147, 51, 234, 0.7), 0 12px 40px rgba(0,0,0,0.5)';
             }}
             onMouseLeave={(e) => {
               e.currentTarget.style.transform = 'scale(1)';
-              e.currentTarget.style.boxShadow = '0 0 30px rgba(147, 51, 234, 0.5), 0 4px 20px rgba(0,0,0,0.4)';
+              e.currentTarget.style.boxShadow = '0 0 40px rgba(147, 51, 234, 0.5), 0 8px 30px rgba(0,0,0,0.4)';
             }}
           >
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
@@ -119,27 +137,23 @@ export function BoardOnboarding3D({ hasProperties }: BoardOnboarding3DProps) {
             </svg>
             Connect Wallet
           </button>
-
-          <style>{`
-            @keyframes fadeIn {
-              from { opacity: 0; transform: translateY(10px); }
-              to { opacity: 1; transform: translateY(0); }
-            }
-            @keyframes shimmer {
-              0% { background-position: 0% center; }
-              100% { background-position: 200% center; }
-            }
-          `}</style>
         </div>
+
+        <style>{`
+          @keyframes shimmer {
+            0% { background-position: 0% center; }
+            100% { background-position: 200% center; }
+          }
+        `}</style>
       </Html>
     );
   }
 
   // Connected but no properties - show hint
-  if (!hasProperties && showPropertyHint) {
+  if (connected && !hasProperties && showPropertyHint) {
     return (
       <>
-        {/* Floating hint above bank */}
+        {/* Floating hint */}
         <Html
           center
           position={[0, 3.2, 0]}
@@ -198,7 +212,7 @@ export function BoardOnboarding3D({ hasProperties }: BoardOnboarding3DProps) {
           `}</style>
         </Html>
 
-        {/* Glowing ring on a property tile */}
+        {/* Property highlight ring */}
         <PropertyHighlight />
       </>
     );
@@ -208,13 +222,12 @@ export function BoardOnboarding3D({ hasProperties }: BoardOnboarding3DProps) {
 }
 
 /**
- * PropertyHighlight - Glowing ring around a starter property tile
- * Targets bottom row, center-ish tile (property 2)
+ * PropertyHighlight - Glowing ring around a property tile
  */
 function PropertyHighlight() {
   const ringRef = useRef<THREE.Mesh>(null);
   
-  // Board dimensions (from Board3DScene)
+  // Board dimensions from Board3DScene
   const cornerSize = 1.0;
   const tileLong = 0.82;
   const tileShort = 1.0;
@@ -223,28 +236,23 @@ function PropertyHighlight() {
   const halfW = boardWidth / 2;
   const halfH = boardHeight / 2;
   
-  // Property 2 position (bottom row, 3rd from right)
-  // From Board3DScene: [5, 4, 3, 2, 1, 0].map((id, i) => ...)
-  // Property 2 is at index 3, so: x = halfW - cornerSize - tileLong/2 - 3 * tileLong
+  // Property 2 position (bottom row, center-ish)
   const propX = halfW - cornerSize - tileLong / 2 - 3 * tileLong;
   const propZ = halfH - tileShort / 2;
   
-  const highlightPosition: [number, number, number] = [propX, 0.4, propZ];
+  const highlightPosition: [number, number, number] = [propX, 0.45, propZ];
 
   useFrame((state) => {
     if (!ringRef.current) return;
     
-    // Pulse scale
-    const pulse = 1 + Math.sin(state.clock.elapsedTime * 2.5) * 0.12;
+    const time = state.clock.elapsedTime;
+    const pulse = 1 + Math.sin(time * 2.5) * 0.12;
     ringRef.current.scale.setScalar(pulse);
-    
-    // Slow rotation
-    ringRef.current.rotation.z = state.clock.elapsedTime * 0.4;
+    ringRef.current.rotation.z = time * 0.4;
   });
 
   return (
     <group position={highlightPosition}>
-      {/* Outer glowing ring */}
       <mesh ref={ringRef} rotation={[-Math.PI / 2, 0, 0]}>
         <ringGeometry args={[0.45, 0.55, 32]} />
         <meshBasicMaterial 
@@ -255,7 +263,6 @@ function PropertyHighlight() {
         />
       </mesh>
       
-      {/* Inner subtle glow */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.01, 0]}>
         <circleGeometry args={[0.45, 32]} />
         <meshBasicMaterial 

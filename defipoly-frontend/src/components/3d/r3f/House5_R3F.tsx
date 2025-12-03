@@ -17,11 +17,16 @@ function getSetIdFromColor(colorClass: string): number {
     'bg-pink-400': 2,    // Pink
     'bg-orange-500': 3,  // Orange
     'bg-red-600': 4,     // Red
-    'bg-yellow-400': 5,  // Yellow
+    'bg-yellow-400': 5,  // Yellow (original)
+    'bg-yellow-500': 5,  // Yellow (actual property color)
     'bg-green-600': 6,   // Green
     'bg-blue-900': 7,    // Dark Blue
   };
-  return colorToSetMap[colorClass] ?? 0; // Default to brown if not found
+  
+  const result = colorToSetMap[colorClass] ?? 0;
+  console.log(`[getSetIdFromColor] Input: "${colorClass}" -> SetId: ${result}, found in map: ${colorClass in colorToSetMap}`);
+  
+  return result;
 }
 
 // Color schemes for each property set
@@ -40,8 +45,12 @@ export function House5_R3F({ isPulsing = false, color = 'bg-purple-500' }: House
   const groupRef = useRef<THREE.Group>(null);
   const scaleRef = useRef({ current: 1, target: 1 });
 
+  console.log(`[House5_R3F] Received color prop: ${color}`);
+
   // Get colors based on property color (convert to setId first)
   const setId = getSetIdFromColor(color);
+  console.log(`[House5_R3F] Converted color ${color} to setId: ${setId}`);
+  
   const colors = SET_COLOR_SCHEMES[setId] ?? SET_COLOR_SCHEMES[0] ?? {
     wall: 0xE8D4B8, 
     roof: 0x78350f, 
@@ -49,6 +58,8 @@ export function House5_R3F({ isPulsing = false, color = 'bg-purple-500' }: House
     door: 0x4A2409, 
     accent: 0x8B4513
   };
+  
+  console.log(`[House5_R3F] Using color scheme for setId ${setId}:`, colors);
 
   useFrame(() => {
     if (!groupRef.current) return;
