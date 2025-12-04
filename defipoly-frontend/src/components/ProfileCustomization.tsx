@@ -69,6 +69,33 @@ export function ProfileCustomization({
   
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Profile picture removal
+  const handleRemoveProfilePicture = async () => {
+    if (!publicKey) return;
+    
+    try {
+      // Delete from backend
+      const response = await authenticatedFetch(`${API_BASE_URL}/api/profile/${publicKey.toString()}/picture`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+      });
+
+      if (response.ok) {
+        setProfilePicture(null);
+        // Clear profile cache so other components refresh
+        clearProfileCache(publicKey.toString());
+        // Trigger profile update event for other components
+        window.dispatchEvent(new Event('profileUpdated'));
+        showSuccess('Removed', 'Profile picture removed');
+      } else {
+        showError('Remove Failed', 'Failed to remove profile picture');
+      }
+    } catch (error) {
+      console.error('Error removing profile picture:', error);
+      showError('Remove Error', 'Error removing profile picture');
+    }
+  };
+
   // Profile picture handlers
   const handleProfilePictureUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     if (!publicKey) return;
@@ -157,6 +184,17 @@ export function ProfileCustomization({
           >
             <Camera size={20} className="text-white" />
           </div>
+          
+          {/* Remove Button */}
+          {profilePicture && (
+            <button
+              onClick={handleRemoveProfilePicture}
+              className="absolute -bottom-1 -right-1 w-6 h-6 bg-red-600 hover:bg-red-500 rounded-full flex items-center justify-center transition-colors border-2 border-purple-900"
+              title="Remove Profile Picture"
+            >
+              <span className="text-white text-xs">✕</span>
+            </button>
+          )}
         </div>
 
         <input

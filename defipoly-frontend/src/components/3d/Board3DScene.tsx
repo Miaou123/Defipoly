@@ -1,7 +1,7 @@
 'use client';
 
 import { Canvas, useFrame } from '@react-three/fiber';
-import { OrbitControls, Text, PerspectiveCamera, Html, useTexture } from '@react-three/drei';
+import { OrbitControls, Text, PerspectiveCamera, Html } from '@react-three/drei';
 import { useGameState } from '@/contexts/GameStateContext';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { PROPERTIES } from '@/utils/constants';
@@ -12,6 +12,7 @@ import { House3_R3F } from './r3f/House3_R3F';
 import { House4_R3F } from './r3f/House4_R3F';
 import { House5_R3F } from './r3f/House5_R3F';
 import { Pin3D_R3F } from './r3f/Pin3D_R3F';
+import { CornerTile3D } from './CornerTile3D';
 import { useMemo, useEffect, useRef, useState, Suspense, useCallback } from 'react';
 import * as THREE from 'three';
 import { ResetViewIcon, ZoomInIcon, ZoomOutIcon, HideIcon, PointerArrowIcon, ShieldIcon, ShieldCooldownIcon, HourglassIcon, TargetIcon } from '../icons/UIIcons';
@@ -128,7 +129,7 @@ function CooldownIndicators3D({
   isPropertyOnCooldown: (id: number) => boolean;
   isStealOnCooldown: (id: number) => boolean;
   spectatorMode: boolean;
-  cameraDistance?: number;
+  cameraDistance?: number | undefined;
 }) {
   // Don't show in spectator mode
   if (spectatorMode) return null;
@@ -379,6 +380,8 @@ function RisingIncomeParticles({ side, visible = true }: { side: 'top' | 'bottom
     
     particlesRef.current.children.forEach((particle, i) => {
       const data = particleData[i];
+      if (!data) return; // Skip if no particle data exists for this index
+      
       const cycleTime = (time * data.speed + data.delay) % 3;
       const progress = cycleTime / 3;
       
@@ -497,11 +500,11 @@ function PropertyTile({
   }
   
   const textRotation: [number, number, number] = {
-    top: [-Math.PI/2, 0, Math.PI],
-    bottom: [-Math.PI/2, 0, 0],
-    left: [-Math.PI/2, 0, -Math.PI/2],
-    right: [-Math.PI/2, 0, Math.PI/2],
-  }[side];
+    top: [-Math.PI/2, 0, Math.PI] as const,
+    bottom: [-Math.PI/2, 0, 0] as const,
+    left: [-Math.PI/2, 0, -Math.PI/2] as const,
+    right: [-Math.PI/2, 0, Math.PI/2] as const,
+  }[side] as [number, number, number];
 
   let namePosition: [number, number, number] = [0, 0, 0];
   let pricePosition: [number, number, number] = [0, 0, 0];
@@ -606,54 +609,6 @@ function PropertyTile({
   );
 }
 
-function CornerTile({ position, cornerType }: { position: [number, number, number]; cornerType: 'topLeft' | 'topRight' | 'bottomLeft' | 'bottomRight' }) {
-  const [hovered, setHovered] = useState(false);
-  const size = cornerSize;
-
-  return (
-    <group 
-      position={[position[0], position[1] + (hovered ? 0.08 : 0), position[2]]}
-      onPointerOver={() => setHovered(true)}
-      onPointerOut={() => setHovered(false)}
-    >
-      <mesh castShadow receiveShadow>
-        <boxGeometry args={[size, tileThickness, size]} />
-        <meshStandardMaterial 
-          color="#6d28d9" 
-          roughness={0.5} 
-          metalness={0.3}
-          emissive={hovered ? '#7c3aed' : '#000000'}
-          emissiveIntensity={hovered ? 0.3 : 0}
-        />
-      </mesh>
-      
-      <Suspense fallback={null}>
-        <Text
-          position={[0, tileThickness/2 + 0.05, 0]}
-          rotation={[-Math.PI/2, 0, 0]}
-          fontSize={0.1}
-          color="#facc15"
-          anchorX="center"
-          anchorY="middle"
-          fontWeight="bold"
-        >
-          DEFIPOLY
-        </Text>
-      </Suspense>
-
-      {[-0.35, 0.35].map((offset, i) => (
-        <mesh key={`accent-${i}`} position={[offset, tileThickness/2 + 0.03, offset]} castShadow>
-          <boxGeometry args={[0.05, 0.02, 0.05]} />
-          <meshStandardMaterial 
-            color="#facc15"
-            emissive="#facc15"
-            emissiveIntensity={0.3}
-          />
-        </mesh>
-      ))}
-    </group>
-  );
-}
 
 function PinOnTile({ propertyId, side, showHint = false }: { propertyId: number; side: 'top' | 'bottom' | 'left' | 'right'; showHint?: boolean }) {
   const property = PROPERTIES.find(p => p.id === propertyId);
@@ -931,11 +886,12 @@ function Scene({
       {/* Board surface with custom background support */}
       <BoardSurface customBackground={customBoardBackground} />
       
+      
       {/* ===== CORNERS ===== */}
-      <CornerTile position={[-halfW + cornerSize/2, tileY, -halfH + cornerSize/2]} cornerType="topLeft" />
-      <CornerTile position={[halfW - cornerSize/2, tileY, -halfH + cornerSize/2]} cornerType="topRight" />
-      <CornerTile position={[-halfW + cornerSize/2, tileY, halfH - cornerSize/2]} cornerType="bottomLeft" />
-      <CornerTile position={[halfW - cornerSize/2, tileY, halfH - cornerSize/2]} cornerType="bottomRight" />
+      <CornerTile3D position={[-halfW + cornerSize/2, tileY, -halfH + cornerSize/2]} cornerType="go" size={cornerSize} />
+      <CornerTile3D position={[halfW - cornerSize/2, tileY, -halfH + cornerSize/2]} cornerType="jail" size={cornerSize} />
+      <CornerTile3D position={[-halfW + cornerSize/2, tileY, halfH - cornerSize/2]} cornerType="parking" size={cornerSize} />
+      <CornerTile3D position={[halfW - cornerSize/2, tileY, halfH - cornerSize/2]} cornerType="gotojail" size={cornerSize} />
       
       {/* ===== TOP ROW (properties 11-16) ===== */}
       {[11, 12, 13, 14, 15, 16].map((id, i) => {
@@ -1089,6 +1045,7 @@ export function Board3DScene({ onSelectProperty, spectatorMode, spectatorOwnersh
   const [mounted, setMounted] = useState(false);
   const [particlesVisible, setParticlesVisible] = useState(true);
   const [showClaimHint, setShowClaimHint] = useState(false);
+  const [webglError, setWebglError] = useState<string | null>(null);
   const cameraControlsRef = useRef<any>(null);
   const { publicKey, connected } = useWallet();
   const gameState = useGameState();
@@ -1192,6 +1149,45 @@ export function Board3DScene({ onSelectProperty, spectatorMode, spectatorOwnersh
         color: 'white'
       }}>
         Loading 3D Scene...
+      </div>
+    );
+  }
+
+  if (webglError) {
+    return (
+      <div style={{
+        width: '100%',
+        height: '100%',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        background: 'linear-gradient(180deg, #0a0015 0%, #1a0a2e 50%, #0a0015 100%)',
+        color: '#ffffff',
+        fontSize: '16px',
+        fontFamily: 'system-ui, sans-serif',
+        padding: '20px',
+        textAlign: 'center'
+      }}>
+        <h3 style={{ color: '#ff6b6b', marginBottom: '10px' }}>3D Scene Error</h3>
+        <p style={{ marginBottom: '20px' }}>{webglError}</p>
+        <button 
+          onClick={() => window.location.reload()}
+          style={{
+            padding: '10px 20px',
+            background: '#6366f1',
+            color: 'white',
+            border: 'none',
+            borderRadius: '6px',
+            cursor: 'pointer',
+            fontSize: '14px'
+          }}
+        >
+          Refresh Page
+        </button>
+        <p style={{ marginTop: '15px', fontSize: '12px', opacity: 0.7 }}>
+          Your browser may not support WebGL or the graphics driver needs updating.
+        </p>
       </div>
     );
   }
@@ -1308,9 +1304,43 @@ export function Board3DScene({ onSelectProperty, spectatorMode, spectatorOwnersh
           width: '100%',
           height: '100%'
         }}
-        onCreated={({ camera }) => {
-          // Set initial lookAt to ZOOMED_OUT lookAt
-          camera.lookAt(0, 5, 0);
+        onCreated={(state) => {
+          try {
+            // Set initial lookAt to ZOOMED_OUT lookAt
+            state.camera.lookAt(0, 5, 0);
+            
+            // Add WebGL context loss handling
+            const canvas = state.gl.domElement;
+            
+            canvas.addEventListener('webglcontextlost', (event) => {
+              console.warn('WebGL context lost, preventing default behavior');
+              event.preventDefault();
+              setWebglError('WebGL context lost. Please refresh the page.');
+            });
+            
+            canvas.addEventListener('webglcontextrestored', () => {
+              console.log('WebGL context restored');
+              setWebglError(null);
+            });
+            
+            // Test WebGL context
+            const gl = state.gl.getContext();
+            if (!gl || gl.isContextLost()) {
+              throw new Error('WebGL context is not available or lost');
+            }
+            
+          } catch (error) {
+            console.error('Failed to setup WebGL context:', error);
+            setWebglError(error instanceof Error ? error.message : 'Unknown WebGL error');
+          }
+        }}
+        gl={{
+          antialias: true,
+          alpha: true,
+          powerPreference: "default",
+          failIfMajorPerformanceCaveat: false,
+          preserveDrawingBuffer: false,
+          stencil: false
         }}
       >
         <Scene 

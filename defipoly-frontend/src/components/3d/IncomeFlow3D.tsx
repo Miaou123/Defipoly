@@ -1,7 +1,7 @@
 'use client';
 
 import { useRef, useMemo, useEffect, useCallback } from 'react';
-import { useFrame, useThree } from '@react-three/fiber';
+import { useFrame } from '@react-three/fiber';
 import { useGameState } from '@/contexts/GameStateContext';
 import { useParticleSpawn } from '@/contexts/ParticleSpawnContext';
 import { PROPERTIES } from '@/utils/constants';
@@ -11,7 +11,7 @@ import * as THREE from 'three';
 // CONSTANTS
 // ============================================================
 
-const MAX_BILLS = 60;
+const MAX_COINS = 60;
 const MAX_DIAMONDS = 40;
 const PARTICLE_SPEED = 0.6;
 
@@ -24,7 +24,7 @@ const boardHeight = cornerSize * 2 + tileLong * 5;
 const halfW = boardWidth / 2;
 const halfH = boardHeight / 2;
 
-const BANK_TARGET = new THREE.Vector3(0, 2.1, 0); // Higher target to match pipe entrance
+const BANK_TARGET = new THREE.Vector3(0, 1.95, 0);
 
 // ============================================================
 // TYPES
@@ -49,7 +49,7 @@ interface PropertyIncomeData {
   propertyId: number;
   position: THREE.Vector3;
   income: number;
-  tier: { symbol: 'bill' | 'diamond'; intervalMs: number };
+  tier: { symbol: 'coin' | 'diamond'; intervalMs: number };
 }
 
 // ============================================================
@@ -57,44 +57,35 @@ interface PropertyIncomeData {
 // ============================================================
 
 /**
- * Creates merged geometry for Bill V3 (Stack Bill)
- * - 4 stacked bill layers
- * - Gold $ symbol on top
- * Scale: ~0.12 units wide (appropriate for board scale)
+ * Creates a thick gold coin geometry
  */
-function createBillGeometry(): THREE.BufferGeometry {
+function createCoinGeometry(): THREE.BufferGeometry {
+  const scale = 0.25; // Increased from 0.15
+  const radius = 0.5 * scale;
+  const thickness = 0.2 * scale; // Thicker
+  const bevelSize = 0.02 * scale;
+  
   const geometries: THREE.BufferGeometry[] = [];
-  const scale = 0.08; // Scale down for board
   
-  const stackCount = 4;
-  const stackSpacing = 0.03 * scale;
+  // Main coin body
+  const coinGeo = new THREE.CylinderGeometry(radius, radius, thickness, 32);
+  geometries.push(coinGeo);
   
-  // Bill stack layers
-  for (let i = 0; i < stackCount; i++) {
-    const billGeo = new THREE.BoxGeometry(1.4 * scale, 0.05 * scale, 0.7 * scale);
-    billGeo.translate(
-      (Math.random() - 0.5) * 0.02 * scale,
-      i * stackSpacing,
-      (Math.random() - 0.5) * 0.02 * scale
-    );
-    geometries.push(billGeo);
-  }
+  // Top edge bevel
+  const topBevelGeo = new THREE.TorusGeometry(radius - bevelSize, bevelSize, 8, 32);
+  topBevelGeo.rotateX(Math.PI / 2);
+  topBevelGeo.translate(0, thickness / 2, 0);
+  geometries.push(topBevelGeo);
   
-  // Top frame
-  const frameGeo = new THREE.BoxGeometry(1.2 * scale, 0.02 * scale, 0.5 * scale);
-  frameGeo.translate(0, stackCount * stackSpacing + 0.02 * scale, 0);
-  geometries.push(frameGeo);
+  // Bottom edge bevel
+  const bottomBevelGeo = new THREE.TorusGeometry(radius - bevelSize, bevelSize, 8, 32);
+  bottomBevelGeo.rotateX(Math.PI / 2);
+  bottomBevelGeo.translate(0, -thickness / 2, 0);
+  geometries.push(bottomBevelGeo);
   
-  // $ Symbol - simplified as small box for performance
-  const dollarGeo = new THREE.BoxGeometry(0.08 * scale, 0.03 * scale, 0.25 * scale);
-  dollarGeo.translate(0, stackCount * stackSpacing + 0.04 * scale, 0);
-  geometries.push(dollarGeo);
-  
-  // Merge all
   const merged = mergeBufferGeometries(geometries);
   merged.center();
   
-  // Cleanup
   geometries.forEach(g => g.dispose());
   
   return merged;
@@ -102,11 +93,6 @@ function createBillGeometry(): THREE.BufferGeometry {
 
 /**
  * Creates merged geometry for Diamond V2 (Brilliant Cut)
- * - Flat table top
- * - Crown (angled top section)
- * - Girdle (middle band)
- * - Pavilion (bottom cone)
- * Scale: ~0.12 units tall
  */
 function createDiamondGeometry(): THREE.BufferGeometry {
   const geometries: THREE.BufferGeometry[] = [];
@@ -117,22 +103,18 @@ function createDiamondGeometry(): THREE.BufferGeometry {
   const crownRadius = 0.5 * scale;
   const pavilionHeight = 0.6 * scale;
   
-  // Table (flat top)
   const tableGeo = new THREE.CylinderGeometry(tableRadius, tableRadius, 0.02 * scale, 8);
   tableGeo.translate(0, crownHeight, 0);
   geometries.push(tableGeo);
   
-  // Crown
   const crownGeo = new THREE.CylinderGeometry(tableRadius, crownRadius, crownHeight, 8);
   crownGeo.translate(0, crownHeight / 2, 0);
   geometries.push(crownGeo);
   
-  // Girdle
   const girdleGeo = new THREE.CylinderGeometry(crownRadius, crownRadius, 0.05 * scale, 8);
   girdleGeo.translate(0, 0, 0);
   geometries.push(girdleGeo);
   
-  // Pavilion (inverted cone)
   const pavilionGeo = new THREE.ConeGeometry(crownRadius, pavilionHeight, 8);
   pavilionGeo.rotateX(Math.PI);
   pavilionGeo.translate(0, -pavilionHeight / 2, 0);
@@ -151,11 +133,11 @@ function createDiamondGeometry(): THREE.BufferGeometry {
  */
 function mergeBufferGeometries(geometries: THREE.BufferGeometry[]): THREE.BufferGeometry {
   let totalVertices = 0;
-  let totalIndices = 0;
   
   geometries.forEach(geo => {
-    totalVertices += geo.attributes.position.count;
-    if (geo.index) totalIndices += geo.index.count;
+    if (geo.attributes.position) {
+      totalVertices += geo.attributes.position.count;
+    }
   });
   
   const positions = new Float32Array(totalVertices * 3);
@@ -163,7 +145,6 @@ function mergeBufferGeometries(geometries: THREE.BufferGeometry[]): THREE.Buffer
   const indices: number[] = [];
   
   let vertexOffset = 0;
-  let indexOffset = 0;
   
   geometries.forEach(geo => {
     const pos = geo.attributes.position;
@@ -204,15 +185,87 @@ function mergeBufferGeometries(geometries: THREE.BufferGeometry[]): THREE.Buffer
 }
 
 // ============================================================
-// CUSTOM SHADER MATERIAL (supports per-instance opacity)
+// CUSTOM SHADER MATERIALS
 // ============================================================
 
-function createInstancedMaterial(color: THREE.Color, emissive: THREE.Color, emissiveIntensity: number): THREE.ShaderMaterial {
+function createCoinMaterial(): THREE.ShaderMaterial {
   return new THREE.ShaderMaterial({
     uniforms: {
-      uColor: { value: color },
-      uEmissive: { value: emissive },
-      uEmissiveIntensity: { value: emissiveIntensity },
+      uGoldColor: { value: new THREE.Color(0xFFBD32) },
+      uGoldDark: { value: new THREE.Color(0xD4A020) },
+      uEmissive: { value: new THREE.Color(0xFFBD32) },
+      uEmissiveIntensity: { value: 0.3 },
+      uPurpleColor: { value: new THREE.Color(0x9333ea) },
+    },
+    vertexShader: `
+      attribute float instanceOpacity;
+      varying float vOpacity;
+      varying vec3 vNormal;
+      varying vec2 vUv;
+      
+      void main() {
+        vOpacity = instanceOpacity;
+        vNormal = normalize(normalMatrix * normal);
+        vUv = uv;
+        gl_Position = projectionMatrix * modelViewMatrix * instanceMatrix * vec4(position, 1.0);
+      }
+    `,
+    fragmentShader: `
+      uniform vec3 uGoldColor;
+      uniform vec3 uGoldDark;
+      uniform vec3 uEmissive;
+      uniform float uEmissiveIntensity;
+      uniform vec3 uPurpleColor;
+      varying float vOpacity;
+      varying vec3 vNormal;
+      varying vec2 vUv;
+      
+      void main() {
+        vec3 light = normalize(vec3(1.0, 2.0, 1.0));
+        float diff = max(dot(vNormal, light), 0.0) * 0.6 + 0.4;
+        
+        vec3 finalColor;
+        
+        // Top and bottom faces - add purple rectangles
+        if (abs(vNormal.y) > 0.8) {
+          vec3 goldBase = mix(uGoldColor, uGoldDark, step(0.0, -vNormal.y)) * diff;
+          
+          // Purple rectangles on each side
+          float rectWidth = 0.2;
+          float rectHeight = 0.6;
+          float rectOffset = 0.3;
+          
+          bool inLeftRect = (vUv.x > rectOffset - rectWidth/2.0 && vUv.x < rectOffset + rectWidth/2.0) && 
+                           (vUv.y > 0.5 - rectHeight/2.0 && vUv.y < 0.5 + rectHeight/2.0);
+          bool inRightRect = (vUv.x > 1.0 - rectOffset - rectWidth/2.0 && vUv.x < 1.0 - rectOffset + rectWidth/2.0) && 
+                            (vUv.y > 0.5 - rectHeight/2.0 && vUv.y < 0.5 + rectHeight/2.0);
+          
+          if (inLeftRect || inRightRect) {
+            finalColor = uPurpleColor;
+          } else {
+            finalColor = goldBase;
+          }
+        }
+        // Side/rim - slightly darker gold
+        else {
+          finalColor = mix(uGoldColor, uGoldDark, 0.3) * diff;
+        }
+        
+        finalColor += uEmissive * uEmissiveIntensity;
+        gl_FragColor = vec4(finalColor, vOpacity);
+      }
+    `,
+    transparent: true,
+    side: THREE.DoubleSide,
+  });
+}
+
+function createDiamondMaterial(): THREE.ShaderMaterial {
+  return new THREE.ShaderMaterial({
+    uniforms: {
+      uColor: { value: new THREE.Color(0x60a5fa) },
+      uEmissive: { value: new THREE.Color(0x3b82f6) },
+      uEmissiveIntensity: { value: 0.4 },
     },
     vertexShader: `
       attribute float instanceOpacity;
@@ -233,7 +286,6 @@ function createInstancedMaterial(color: THREE.Color, emissive: THREE.Color, emis
       varying vec3 vNormal;
       
       void main() {
-        // Simple lighting
         vec3 light = normalize(vec3(1.0, 2.0, 1.0));
         float diff = max(dot(vNormal, light), 0.0) * 0.5 + 0.5;
         
@@ -251,9 +303,8 @@ function createInstancedMaterial(color: THREE.Color, emissive: THREE.Color, emis
 // ============================================================
 
 function getPropertyPosition(propertyId: number): THREE.Vector3 | null {
-  const tileY = 0.5; // Spawn slightly above tiles
+  const tileY = 0.5;
   
-  // BOTTOM ROW: properties [5, 4, 3, 2, 1, 0] (left to right order)
   if (propertyId >= 0 && propertyId <= 5) {
     const bottomRowIds = [5, 4, 3, 2, 1, 0];
     const i = bottomRowIds.indexOf(propertyId);
@@ -263,7 +314,6 @@ function getPropertyPosition(propertyId: number): THREE.Vector3 | null {
     return new THREE.Vector3(x, tileY, z);
   }
   
-  // LEFT COLUMN: properties [10, 9, 8, 7, 6] (top to bottom order)
   if (propertyId >= 6 && propertyId <= 10) {
     const leftColIds = [10, 9, 8, 7, 6];
     const i = leftColIds.indexOf(propertyId);
@@ -273,7 +323,6 @@ function getPropertyPosition(propertyId: number): THREE.Vector3 | null {
     return new THREE.Vector3(x, tileY, z);
   }
   
-  // TOP ROW: properties [11, 12, 13, 14, 15, 16] (left to right order)
   if (propertyId >= 11 && propertyId <= 16) {
     const topRowIds = [11, 12, 13, 14, 15, 16];
     const i = topRowIds.indexOf(propertyId);
@@ -283,7 +332,6 @@ function getPropertyPosition(propertyId: number): THREE.Vector3 | null {
     return new THREE.Vector3(x, tileY, z);
   }
   
-  // RIGHT COLUMN: properties [17, 18, 19, 20, 21] (top to bottom order)
   if (propertyId >= 17 && propertyId <= 21) {
     const rightColIds = [17, 18, 19, 20, 21];
     const i = rightColIds.indexOf(propertyId);
@@ -297,11 +345,11 @@ function getPropertyPosition(propertyId: number): THREE.Vector3 | null {
 }
 
 function getIncomeTier(income: number) {
-  if (income < 500)    return { symbol: 'bill' as const,    intervalMs: 1250 };
-  if (income < 2000)   return { symbol: 'bill' as const,    intervalMs: 1000 };
-  if (income < 5000)   return { symbol: 'bill' as const,    intervalMs: 750 };
-  if (income < 10000)  return { symbol: 'bill' as const,    intervalMs: 500 };
-  if (income < 20000)  return { symbol: 'bill' as const,    intervalMs: 250 };
+  if (income < 500)    return { symbol: 'coin' as const,    intervalMs: 1250 };
+  if (income < 2000)   return { symbol: 'coin' as const,    intervalMs: 1000 };
+  if (income < 5000)   return { symbol: 'coin' as const,    intervalMs: 750 };
+  if (income < 10000)  return { symbol: 'coin' as const,    intervalMs: 500 };
+  if (income < 20000)  return { symbol: 'coin' as const,    intervalMs: 250 };
   if (income < 50000)  return { symbol: 'diamond' as const, intervalMs: 1000 };
   if (income < 100000) return { symbol: 'diamond' as const, intervalMs: 750 };
   if (income < 150000) return { symbol: 'diamond' as const, intervalMs: 500 };
@@ -329,48 +377,41 @@ interface IncomeFlow3DProps {
 export function IncomeFlow3D({ enabled = true, particlesVisible = true, onParticleArrive }: IncomeFlow3DProps) {
   const { ownerships } = useGameState();
   const { triggerSpawn } = useParticleSpawn();
-  const { camera } = useThree();
   
   // Refs for instanced meshes
-  const billMeshRef = useRef<THREE.InstancedMesh>(null);
+  const coinMeshRef = useRef<THREE.InstancedMesh>(null);
   const diamondMeshRef = useRef<THREE.InstancedMesh>(null);
   
+  // Logo texture removed - no longer needed
+  
   // Particle data pools
-  const billDataRef = useRef<ParticleData[]>([]);
+  const coinDataRef = useRef<ParticleData[]>([]);
   const diamondDataRef = useRef<ParticleData[]>([]);
   
   // Spawn timers
   const spawnTimersRef = useRef<Map<number, NodeJS.Timeout>>(new Map());
   
-  // Bank counter timers (separate from particle spawning)
+  // Bank counter timers
   const bankTimersRef = useRef<Map<number, NodeJS.Timeout>>(new Map());
   
-  // Temp objects for matrix calculations (avoid GC)
+  // Temp objects for matrix calculations
   const tempMatrix = useMemo(() => new THREE.Matrix4(), []);
   const tempPosition = useMemo(() => new THREE.Vector3(), []);
   const tempQuaternion = useMemo(() => new THREE.Quaternion(), []);
   const tempScale = useMemo(() => new THREE.Vector3(), []);
   const tempEuler = useMemo(() => new THREE.Euler(), []);
 
-  // Create geometries and materials once
-  const billGeometry = useMemo(() => createBillGeometry(), []);
+  // Create geometries and materials
+  const coinGeometry = useMemo(() => createCoinGeometry(), []);
   const diamondGeometry = useMemo(() => createDiamondGeometry(), []);
+  const coinMaterial = useMemo(() => createCoinMaterial(), []);
+  const diamondMaterial = useMemo(() => createDiamondMaterial(), []);
   
-  const billMaterial = useMemo(() => createInstancedMaterial(
-    new THREE.Color(0x22c55e),
-    new THREE.Color(0x15803d),
-    0.2
-  ), []);
-  
-  const diamondMaterial = useMemo(() => createInstancedMaterial(
-    new THREE.Color(0x60a5fa),
-    new THREE.Color(0x3b82f6),
-    0.4
-  ), []);
+  // Coin material no longer needs texture updates
 
   // Initialize particle pools
   useEffect(() => {
-    billDataRef.current = Array.from({ length: MAX_BILLS }, () => ({
+    coinDataRef.current = Array.from({ length: MAX_COINS }, () => ({
       active: false,
       startPos: new THREE.Vector3(),
       controlPos: new THREE.Vector3(),
@@ -401,11 +442,11 @@ export function IncomeFlow3D({ enabled = true, particlesVisible = true, onPartic
     }));
   }, []);
 
-  // Initialize opacity attributes when meshes are ready
+  // Initialize opacity attributes
   useEffect(() => {
-    if (billMeshRef.current && !billMeshRef.current.geometry.getAttribute('instanceOpacity')) {
-      const opacities = new Float32Array(MAX_BILLS).fill(0);
-      billMeshRef.current.geometry.setAttribute('instanceOpacity', new THREE.InstancedBufferAttribute(opacities, 1));
+    if (coinMeshRef.current && !coinMeshRef.current.geometry.getAttribute('instanceOpacity')) {
+      const opacities = new Float32Array(MAX_COINS).fill(0);
+      coinMeshRef.current.geometry.setAttribute('instanceOpacity', new THREE.InstancedBufferAttribute(opacities, 1));
     }
     if (diamondMeshRef.current && !diamondMeshRef.current.geometry.getAttribute('instanceOpacity')) {
       const opacities = new Float32Array(MAX_DIAMONDS).fill(0);
@@ -434,28 +475,24 @@ export function IncomeFlow3D({ enabled = true, particlesVisible = true, onPartic
 
   // Spawn a particle
   const spawnParticle = useCallback((propData: PropertyIncomeData, intervalUsed: number) => {
-    const isBill = propData.tier.symbol === 'bill';
-    const dataPool = isBill ? billDataRef.current : diamondDataRef.current;
+    const isCoin = propData.tier.symbol === 'coin';
+    const dataPool = isCoin ? coinDataRef.current : diamondDataRef.current;
     
-    // Find inactive slot
     const slot = dataPool.findIndex(p => !p.active);
-    if (slot === -1) return; // Pool full
+    if (slot === -1) return;
     
-    const particle = dataPool[slot];
+    const particle = dataPool[slot]!;
     particle.active = true;
     particle.startPos.copy(propData.position);
     particle.targetPos.copy(BANK_TARGET);
     particle.progress = 0;
     
-    // Calculate income value for this particle
     particle.incomeValue = (propData.income / 86400) * (intervalUsed / 1000);
     
-    // Random bezier control point
     const midX = (propData.position.x + BANK_TARGET.x) / 2 + (Math.random() - 0.5) * 2;
     const midZ = (propData.position.z + BANK_TARGET.z) / 2 + (Math.random() - 0.5) * 2;
     particle.controlPos.set(midX, 2.0 + Math.random() * 1.0, midZ);
     
-    // Random rotation speeds
     particle.rotationX = Math.random() * Math.PI * 2;
     particle.rotationY = Math.random() * Math.PI * 2;
     particle.rotationZ = Math.random() * Math.PI * 2;
@@ -463,11 +500,10 @@ export function IncomeFlow3D({ enabled = true, particlesVisible = true, onPartic
     particle.rotSpeedY = (Math.random() - 0.5) * 4;
     particle.rotSpeedZ = (Math.random() - 0.5) * 2;
     
-    // Trigger property pulse
     triggerSpawn(propData.propertyId);
   }, [triggerSpawn]);
 
-  // Bank counter timer (always runs when enabled, regardless of particle visibility)
+  // Bank counter timer
   const scheduleBankUpdate = useCallback((propData: PropertyIncomeData) => {
     if (!enabled) return;
     
@@ -476,13 +512,13 @@ export function IncomeFlow3D({ enabled = true, particlesVisible = true, onPartic
     
     const timer = setTimeout(() => {
       onParticleArrive?.(incomeValue);
-      scheduleBankUpdate(propData); // Schedule next update
+      scheduleBankUpdate(propData);
     }, interval);
     
     bankTimersRef.current.set(propData.propertyId, timer);
   }, [enabled, onParticleArrive]);
 
-  // Spawn timer management (only when particles are visible)
+  // Spawn timer management
   useEffect(() => {
     if (!enabled || !particlesVisible) {
       spawnTimersRef.current.forEach(timer => clearTimeout(timer));
@@ -508,7 +544,6 @@ export function IncomeFlow3D({ enabled = true, particlesVisible = true, onPartic
       spawnTimersRef.current.set(propData.propertyId, timer);
     };
     
-    // Stagger initial spawns
     ownedProperties.forEach((propData, index) => {
       const initialDelay = index * 100 + Math.random() * propData.tier.intervalMs * 0.3;
       const timer = setTimeout(() => {
@@ -526,7 +561,7 @@ export function IncomeFlow3D({ enabled = true, particlesVisible = true, onPartic
     };
   }, [enabled, ownedProperties, spawnParticle, particlesVisible]);
 
-  // Bank counter timer management (always runs when enabled)
+  // Bank counter timer management
   useEffect(() => {
     if (!enabled) {
       bankTimersRef.current.forEach(timer => clearTimeout(timer));
@@ -537,7 +572,6 @@ export function IncomeFlow3D({ enabled = true, particlesVisible = true, onPartic
     bankTimersRef.current.forEach(timer => clearTimeout(timer));
     bankTimersRef.current.clear();
     
-    // Only start bank timers if particles are hidden (otherwise particles handle it)
     if (!particlesVisible) {
       ownedProperties.forEach((propData, index) => {
         const initialDelay = index * 100 + Math.random() * propData.tier.intervalMs * 0.3;
@@ -553,24 +587,23 @@ export function IncomeFlow3D({ enabled = true, particlesVisible = true, onPartic
     };
   }, [enabled, ownedProperties, scheduleBankUpdate, particlesVisible]);
 
-  // Animation loop (only runs when particles are visible)
+  // Animation loop
   useFrame((state, delta) => {
     if (!enabled || !particlesVisible) return;
     
-    const billMesh = billMeshRef.current;
+    const coinMesh = coinMeshRef.current;
     const diamondMesh = diamondMeshRef.current;
-    if (!billMesh || !diamondMesh) return;
+    if (!coinMesh || !diamondMesh) return;
     
-    const billOpacities = billMesh.geometry.getAttribute('instanceOpacity') as THREE.InstancedBufferAttribute;
+    const coinOpacities = coinMesh.geometry.getAttribute('instanceOpacity') as THREE.InstancedBufferAttribute;
     const diamondOpacities = diamondMesh.geometry.getAttribute('instanceOpacity') as THREE.InstancedBufferAttribute;
     
-    // Early return if attributes aren't ready yet
-    if (!billOpacities || !diamondOpacities) return;
+    if (!coinOpacities || !diamondOpacities) return;
     
-    // Update bills
-    billDataRef.current.forEach((particle, i) => {
+    // Update coins
+    coinDataRef.current.forEach((particle, i) => {
       if (!particle.active) {
-        billOpacities.setX(i, 0);
+        coinOpacities.setX(i, 0);
         return;
       }
       
@@ -578,38 +611,33 @@ export function IncomeFlow3D({ enabled = true, particlesVisible = true, onPartic
       
       if (particle.progress >= 1) {
         particle.active = false;
-        billOpacities.setX(i, 0);
+        coinOpacities.setX(i, 0);
         onParticleArrive?.(particle.incomeValue);
         return;
       }
       
-      // Position along bezier
       const pos = quadraticBezier(particle.startPos, particle.controlPos, particle.targetPos, particle.progress);
       tempPosition.copy(pos);
       
-      // Bills rotate freely in 3D (removed billboard effect)
       particle.rotationX += particle.rotSpeedX * delta;
       particle.rotationY += particle.rotSpeedY * delta;
       particle.rotationZ += particle.rotSpeedZ * delta;
       tempEuler.set(particle.rotationX, particle.rotationY, particle.rotationZ);
       tempQuaternion.setFromEuler(tempEuler);
       
-      // Scale down as approaching
       const scale = 1 - particle.progress * 0.4;
       tempScale.setScalar(scale);
       
-      // Opacity
       const fadeIn = Math.min(1, particle.progress * 5);
       const fadeOut = 1 - Math.max(0, (particle.progress - 0.8) / 0.2);
-      billOpacities.setX(i, fadeIn * fadeOut);
+      coinOpacities.setX(i, fadeIn * fadeOut);
       
-      // Build matrix
       tempMatrix.compose(tempPosition, tempQuaternion, tempScale);
-      billMesh.setMatrixAt(i, tempMatrix);
+      coinMesh.setMatrixAt(i, tempMatrix);
     });
     
-    billMesh.instanceMatrix.needsUpdate = true;
-    billOpacities.needsUpdate = true;
+    coinMesh.instanceMatrix.needsUpdate = true;
+    coinOpacities.needsUpdate = true;
     
     // Update diamonds
     diamondDataRef.current.forEach((particle, i) => {
@@ -627,26 +655,21 @@ export function IncomeFlow3D({ enabled = true, particlesVisible = true, onPartic
         return;
       }
       
-      // Position
       const pos = quadraticBezier(particle.startPos, particle.controlPos, particle.targetPos, particle.progress);
       tempPosition.copy(pos);
       
-      // Rotation (diamonds spin freely)
       particle.rotationX += particle.rotSpeedX * delta;
       particle.rotationY += particle.rotSpeedY * delta;
       tempEuler.set(particle.rotationX, particle.rotationY, 0);
       tempQuaternion.setFromEuler(tempEuler);
       
-      // Scale
       const scale = 1 - particle.progress * 0.4;
       tempScale.setScalar(scale);
       
-      // Opacity
       const fadeIn = Math.min(1, particle.progress * 5);
       const fadeOut = 1 - Math.max(0, (particle.progress - 0.8) / 0.2);
       diamondOpacities.setX(i, fadeIn * fadeOut);
       
-      // Build matrix
       tempMatrix.compose(tempPosition, tempQuaternion, tempScale);
       diamondMesh.setMatrixAt(i, tempMatrix);
     });
@@ -658,23 +681,21 @@ export function IncomeFlow3D({ enabled = true, particlesVisible = true, onPartic
   // Cleanup
   useEffect(() => {
     return () => {
-      billGeometry.dispose();
+      coinGeometry.dispose();
       diamondGeometry.dispose();
-      billMaterial.dispose();
+      coinMaterial.dispose();
       diamondMaterial.dispose();
     };
-  }, [billGeometry, diamondGeometry, billMaterial, diamondMaterial]);
+  }, [coinGeometry, diamondGeometry, coinMaterial, diamondMaterial]);
 
   if (!enabled || ownedProperties.length === 0) return null;
-  
-  // Only render meshes when particles are visible
   if (!particlesVisible) return null;
 
   return (
     <group>
       <instancedMesh
-        ref={billMeshRef}
-        args={[billGeometry, billMaterial, MAX_BILLS]}
+        ref={coinMeshRef}
+        args={[coinGeometry, coinMaterial, MAX_COINS]}
         frustumCulled={false}
       />
       <instancedMesh

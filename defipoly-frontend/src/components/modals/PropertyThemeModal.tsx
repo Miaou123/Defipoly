@@ -175,8 +175,11 @@ export function PropertyThemeModal({
   };
 
   const handleRemoveCustom = async () => {
-    if (customBackground && customBackground.startsWith('/uploads/') && publicKey) {
-      try {
+    if (!publicKey) return;
+    
+    try {
+      // Delete the file from server if it's an upload
+      if (customBackground && customBackground.startsWith('/uploads/')) {
         await authenticatedFetch(`${process.env['NEXT_PUBLIC_API_BASE_URL'] || 'http://localhost:3101'}/api/profile/upload/delete`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -185,14 +188,35 @@ export function PropertyThemeModal({
             fileUrl: customBackground,
           }),
         });
-      } catch (error) {
-        console.error('Error deleting property card background:', error);
       }
+      
+      // Save to backend - set customPropertyCardBackground to null
+      const response = await authenticatedFetch(`${process.env['NEXT_PUBLIC_API_BASE_URL'] || 'http://localhost:3101'}/api/profile`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          wallet: publicKey.toString(),
+          customPropertyCardBackground: null
+        }),
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to remove background from backend');
+      }
+      
+      // Clear cache and trigger updates
+      clearProfileCache(publicKey.toString());
+      window.dispatchEvent(new Event('profileUpdated'));
+      
+      // Update local state
+      onCustomBackgroundChange(null);
+      onThemeChange('dark');
+      showSuccess('Removed', 'Custom background removed');
+      
+    } catch (error) {
+      console.error('Error removing property card background:', error);
+      showError('Remove Failed', 'Failed to remove custom background');
     }
-    
-    onCustomBackgroundChange(null);
-    onThemeChange('dark');
-    showSuccess('Removed', 'Custom background removed');
   };
 
   if (!isOpen) return null;

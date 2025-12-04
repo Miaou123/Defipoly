@@ -10,7 +10,7 @@ import { ProfileWallet } from '@/components/ProfileWallet';
 import { MobileLayout } from '@/components/MobileLayout';
 import { useState, useEffect } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
-import { getProfile } from '@/utils/profileStorage';
+import { getProfile, clearProfileCache } from '@/utils/profileStorage';
 
 export default function Home() {
   const { publicKey } = useWallet();
@@ -50,6 +50,8 @@ export default function Home() {
   // Load profile picture
   useEffect(() => {
     if (publicKey) {
+      // Clear cache to force fresh API call
+      clearProfileCache(publicKey.toString());
       getProfile(publicKey.toString())
         .then(profile => {
           console.log('🔍 [MAIN PAGE] Loaded profile for main game:', profile);
@@ -69,6 +71,8 @@ export default function Home() {
       // Listen for profile updates
       const handleProfileUpdate = async () => {
         try {
+          // Clear cache to force fresh API call
+          clearProfileCache(publicKey.toString());
           const updatedProfile = await getProfile(publicKey.toString());
           setProfilePicture(updatedProfile.profilePicture);
           setCornerSquareStyle(updatedProfile.cornerSquareStyle || 'property');

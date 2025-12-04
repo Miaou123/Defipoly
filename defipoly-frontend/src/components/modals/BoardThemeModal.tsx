@@ -6,6 +6,7 @@ import { X } from 'lucide-react';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { useNotification } from '@/contexts/NotificationContext';
 import { authenticatedFetch } from '@/contexts/AuthContext';
+import { clearProfileCache } from '@/utils/profileStorage';
 
 interface BoardThemeModalProps {
   isOpen: boolean;
@@ -102,8 +103,11 @@ export function BoardThemeModal({
   };
 
   const handleRemoveCustom = async () => {
-    if (customBackground && customBackground.startsWith('/uploads/') && publicKey) {
-      try {
+    if (!publicKey) return;
+    
+    try {
+      // Delete the file from server if it's an upload
+      if (customBackground && customBackground.startsWith('/uploads/')) {
         await authenticatedFetch(`${process.env['NEXT_PUBLIC_API_BASE_URL'] || 'http://localhost:3101'}/api/profile/upload/delete`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -112,14 +116,35 @@ export function BoardThemeModal({
             fileUrl: customBackground,
           }),
         });
-      } catch (error) {
-        console.error('Error deleting board background:', error);
       }
+      
+      // Save to backend - set customBoardBackground to null
+      const response = await authenticatedFetch(`${process.env['NEXT_PUBLIC_API_BASE_URL'] || 'http://localhost:3101'}/api/profile`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          wallet: publicKey.toString(),
+          customBoardBackground: null
+        }),
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to remove background from backend');
+      }
+      
+      // Clear cache and trigger updates
+      clearProfileCache(publicKey.toString());
+      window.dispatchEvent(new Event('profileUpdated'));
+      
+      // Update local state
+      onCustomBackgroundChange(null);
+      onThemeChange('default');
+      showSuccess('Removed', 'Custom board theme removed');
+      
+    } catch (error) {
+      console.error('Error removing board background:', error);
+      showError('Remove Failed', 'Failed to remove custom background');
     }
-    
-    onCustomBackgroundChange(null);
-    onThemeChange('default');
-    showSuccess('Removed', 'Custom board theme removed');
   };
 
   if (!isOpen) return null;

@@ -70,9 +70,6 @@ export function Bank3D_V2({
   const roofEdgeLength = Math.sqrt(roofHalfWidth * roofHalfWidth + peakHeight * peakHeight);
   const roofAngle = Math.atan2(peakHeight, roofHalfWidth);
 
-  // Pipe position
-  const pipeY = roofBaseY + peakHeight + 1.5;
-
   return (
     <group ref={groupRef} position={[0, -6.5, 0]} scale={1}>
       {/* Base platform */}
@@ -450,7 +447,7 @@ export function Bank3D_V2({
       ))}
 
       {/* ============ MARIO PIPE ON TOP ============ */}
-      <group position={[0, pipeY, 0]}>
+      <group position={[0, roofBaseY + peakHeight - 0.5, 0]}>
         {/* Main body */}
         <mesh>
           <cylinderGeometry args={[3.6, 3.6, 3.5, 32]} />
@@ -501,18 +498,6 @@ export function Bank3D_V2({
             </mesh>
           );
         })}
-
-        {/* Base flange */}
-        <mesh position={[0, -1.9, 0]}>
-          <cylinderGeometry args={[4.4, 5.0, 0.4, 32]} />
-          <meshStandardMaterial color={0x4D2A8B} roughness={0.4} metalness={0.1} />
-        </mesh>
-
-        {/* Gold base ring */}
-        <mesh position={[0, -2.05, 0]} rotation={[Math.PI / 2, 0, 0]}>
-          <torusGeometry args={[5.0, 0.2, 16, 32]} />
-          <meshStandardMaterial color={0xFFBD32} roughness={0.2} metalness={0.7} />
-        </mesh>
       </group>
     </group>
   );
