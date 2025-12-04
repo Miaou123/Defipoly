@@ -17,18 +17,18 @@ export function Board({
   onSelectProperty, 
   spectatorMode = false, 
   spectatorOwnerships = [],
+  customBoardBackground,
 }: BoardProps) {
-  console.log('Board component rendering', { spectatorMode, spectatorOwnerships });
 
   return (
     <div className="w-full h-full relative">
-      {console.log('Board wrapper div rendered')}
       
       {/* 3D Board Scene with integrated IncomeFlow3D */}
       <Board3DScene 
         onSelectProperty={onSelectProperty}
         spectatorMode={spectatorMode}
         spectatorOwnerships={spectatorOwnerships}
+        customBoardBackground={customBoardBackground}
       />
     </div>
   );

@@ -24,7 +24,7 @@ const boardHeight = cornerSize * 2 + tileLong * 5;
 const halfW = boardWidth / 2;
 const halfH = boardHeight / 2;
 
-const BANK_TARGET = new THREE.Vector3(0, 1.8, 0);
+const BANK_TARGET = new THREE.Vector3(0, 2.1, 0); // Higher target to match pipe entrance
 
 // ============================================================
 // TYPES
@@ -342,6 +342,9 @@ export function IncomeFlow3D({ enabled = true, particlesVisible = true, onPartic
   // Spawn timers
   const spawnTimersRef = useRef<Map<number, NodeJS.Timeout>>(new Map());
   
+  // Bank counter timers (separate from particle spawning)
+  const bankTimersRef = useRef<Map<number, NodeJS.Timeout>>(new Map());
+  
   // Temp objects for matrix calculations (avoid GC)
   const tempMatrix = useMemo(() => new THREE.Matrix4(), []);
   const tempPosition = useMemo(() => new THREE.Vector3(), []);
@@ -464,9 +467,24 @@ export function IncomeFlow3D({ enabled = true, particlesVisible = true, onPartic
     triggerSpawn(propData.propertyId);
   }, [triggerSpawn]);
 
-  // Spawn timer management
+  // Bank counter timer (always runs when enabled, regardless of particle visibility)
+  const scheduleBankUpdate = useCallback((propData: PropertyIncomeData) => {
+    if (!enabled) return;
+    
+    const interval = propData.tier.intervalMs * (0.8 + Math.random() * 0.4);
+    const incomeValue = (propData.income / 86400) * (interval / 1000);
+    
+    const timer = setTimeout(() => {
+      onParticleArrive?.(incomeValue);
+      scheduleBankUpdate(propData); // Schedule next update
+    }, interval);
+    
+    bankTimersRef.current.set(propData.propertyId, timer);
+  }, [enabled, onParticleArrive]);
+
+  // Spawn timer management (only when particles are visible)
   useEffect(() => {
-    if (!enabled) {
+    if (!enabled || !particlesVisible) {
       spawnTimersRef.current.forEach(timer => clearTimeout(timer));
       spawnTimersRef.current.clear();
       return;
@@ -506,11 +524,38 @@ export function IncomeFlow3D({ enabled = true, particlesVisible = true, onPartic
       spawnTimersRef.current.forEach(timer => clearTimeout(timer));
       spawnTimersRef.current.clear();
     };
-  }, [enabled, ownedProperties, spawnParticle]);
+  }, [enabled, ownedProperties, spawnParticle, particlesVisible]);
 
-  // Animation loop
+  // Bank counter timer management (always runs when enabled)
+  useEffect(() => {
+    if (!enabled) {
+      bankTimersRef.current.forEach(timer => clearTimeout(timer));
+      bankTimersRef.current.clear();
+      return;
+    }
+    
+    bankTimersRef.current.forEach(timer => clearTimeout(timer));
+    bankTimersRef.current.clear();
+    
+    // Only start bank timers if particles are hidden (otherwise particles handle it)
+    if (!particlesVisible) {
+      ownedProperties.forEach((propData, index) => {
+        const initialDelay = index * 100 + Math.random() * propData.tier.intervalMs * 0.3;
+        setTimeout(() => {
+          scheduleBankUpdate(propData);
+        }, initialDelay);
+      });
+    }
+    
+    return () => {
+      bankTimersRef.current.forEach(timer => clearTimeout(timer));
+      bankTimersRef.current.clear();
+    };
+  }, [enabled, ownedProperties, scheduleBankUpdate, particlesVisible]);
+
+  // Animation loop (only runs when particles are visible)
   useFrame((state, delta) => {
-    if (!enabled) return;
+    if (!enabled || !particlesVisible) return;
     
     const billMesh = billMeshRef.current;
     const diamondMesh = diamondMeshRef.current;
@@ -553,14 +598,10 @@ export function IncomeFlow3D({ enabled = true, particlesVisible = true, onPartic
       const scale = 1 - particle.progress * 0.4;
       tempScale.setScalar(scale);
       
-      // Opacity - hide if particlesVisible is false
-      if (particlesVisible) {
-        const fadeIn = Math.min(1, particle.progress * 5);
-        const fadeOut = 1 - Math.max(0, (particle.progress - 0.8) / 0.2);
-        billOpacities.setX(i, fadeIn * fadeOut);
-      } else {
-        billOpacities.setX(i, 0); // Completely hidden
-      }
+      // Opacity
+      const fadeIn = Math.min(1, particle.progress * 5);
+      const fadeOut = 1 - Math.max(0, (particle.progress - 0.8) / 0.2);
+      billOpacities.setX(i, fadeIn * fadeOut);
       
       // Build matrix
       tempMatrix.compose(tempPosition, tempQuaternion, tempScale);
@@ -600,14 +641,10 @@ export function IncomeFlow3D({ enabled = true, particlesVisible = true, onPartic
       const scale = 1 - particle.progress * 0.4;
       tempScale.setScalar(scale);
       
-      // Opacity - hide if particlesVisible is false
-      if (particlesVisible) {
-        const fadeIn = Math.min(1, particle.progress * 5);
-        const fadeOut = 1 - Math.max(0, (particle.progress - 0.8) / 0.2);
-        diamondOpacities.setX(i, fadeIn * fadeOut);
-      } else {
-        diamondOpacities.setX(i, 0); // Completely hidden
-      }
+      // Opacity
+      const fadeIn = Math.min(1, particle.progress * 5);
+      const fadeOut = 1 - Math.max(0, (particle.progress - 0.8) / 0.2);
+      diamondOpacities.setX(i, fadeIn * fadeOut);
       
       // Build matrix
       tempMatrix.compose(tempPosition, tempQuaternion, tempScale);
@@ -629,6 +666,9 @@ export function IncomeFlow3D({ enabled = true, particlesVisible = true, onPartic
   }, [billGeometry, diamondGeometry, billMaterial, diamondMaterial]);
 
   if (!enabled || ownedProperties.length === 0) return null;
+  
+  // Only render meshes when particles are visible
+  if (!particlesVisible) return null;
 
   return (
     <group>

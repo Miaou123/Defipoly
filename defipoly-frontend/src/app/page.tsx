@@ -17,6 +17,7 @@ export default function Home() {
   const [selectedProperty, setSelectedProperty] = useState<number | null>(null);
   const [profilePicture, setProfilePicture] = useState<string | null>(null);
   const [cornerSquareStyle, setCornerSquareStyle] = useState<'property' | 'profile'>('property');
+  const [customBoardBackground, setCustomBoardBackground] = useState<string | null>(null);
   const [isMobile, setIsMobile] = useState(false);
   const [sideColumnWidth, setSideColumnWidth] = useState(400);
   
@@ -54,9 +55,11 @@ export default function Home() {
           console.log('🔍 [MAIN PAGE] Loaded profile for main game:', profile);
           setProfilePicture(profile.profilePicture);
           setCornerSquareStyle(profile.cornerSquareStyle || 'property');
+          setCustomBoardBackground(profile.customBoardBackground || null);
           console.log('🔍 [MAIN PAGE] Set state:', {
             profilePicture: profile.profilePicture,
-            cornerSquareStyle: profile.cornerSquareStyle || 'property'
+            cornerSquareStyle: profile.cornerSquareStyle || 'property',
+            customBoardBackground: profile.customBoardBackground || null
           });
         })
         .catch(error => {
@@ -69,6 +72,7 @@ export default function Home() {
           const updatedProfile = await getProfile(publicKey.toString());
           setProfilePicture(updatedProfile.profilePicture);
           setCornerSquareStyle(updatedProfile.cornerSquareStyle || 'property');
+          setCustomBoardBackground(updatedProfile.customBoardBackground || null);
         } catch (error) {
           console.error('Error updating profile:', error);
         }
@@ -93,6 +97,7 @@ export default function Home() {
           onSelectProperty={setSelectedProperty}
           profilePicture={profilePicture}
           cornerSquareStyle={cornerSquareStyle}
+          customBoardBackground={customBoardBackground}
         />
         {selectedProperty !== null && (
           <PropertyModal 
@@ -138,7 +143,7 @@ export default function Home() {
 
         {/* CENTER: Board */}
         <div className="flex items-center justify-center overflow-hidden">
-          <Board onSelectProperty={setSelectedProperty} profilePicture={profilePicture} cornerSquareStyle={cornerSquareStyle} />
+          <Board onSelectProperty={setSelectedProperty} profilePicture={profilePicture} cornerSquareStyle={cornerSquareStyle} customBoardBackground={customBoardBackground} />
         </div>
         
         {/* RIGHT COLUMN: Profile/Wallet + Leaderboard + Live Feed */}

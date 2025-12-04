@@ -1,7 +1,7 @@
 'use client';
 
 import { Canvas, useFrame } from '@react-three/fiber';
-import { OrbitControls, Text, PerspectiveCamera, Html } from '@react-three/drei';
+import { OrbitControls, Text, PerspectiveCamera, Html, useTexture } from '@react-three/drei';
 import { useGameState } from '@/contexts/GameStateContext';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { PROPERTIES } from '@/utils/constants';
@@ -14,7 +14,7 @@ import { House5_R3F } from './r3f/House5_R3F';
 import { Pin3D_R3F } from './r3f/Pin3D_R3F';
 import { useMemo, useEffect, useRef, useState, Suspense, useCallback } from 'react';
 import * as THREE from 'three';
-import { ResetViewIcon, ZoomInIcon, ZoomOutIcon, HideIcon, PointerArrowIcon } from '../icons/UIIcons';
+import { ResetViewIcon, ZoomInIcon, ZoomOutIcon, HideIcon, PointerArrowIcon, ShieldIcon, ShieldCooldownIcon, HourglassIcon, TargetIcon } from '../icons/UIIcons';
 import { InteractiveBank3D } from './InteractiveBank3D';
 import { IncomeFlow3D } from './IncomeFlow3D';
 import { BoardOnboarding3D } from './BoardOnboarding3D';
@@ -24,6 +24,7 @@ interface Board3DSceneProps {
   onSelectProperty: (propertyId: number) => void;
   spectatorMode?: boolean;
   spectatorOwnerships?: any[];
+  customBoardBackground?: string | null;
 }
 
 interface SceneProps extends Board3DSceneProps {
@@ -33,6 +34,7 @@ interface SceneProps extends Board3DSceneProps {
   handleClaimHintDismiss: () => void;
   connected: boolean;
   hasProperties: boolean;
+  customBoardBackground?: string | null;
 }
 
 // EXACT DIMENSIONS TO MATCH PROTOTYPE
@@ -45,6 +47,197 @@ const boardThickness = 0.25;
 const tileThickness = 0.15;
 const colorStripThickness = 0.16;
 const colorStripWidth = 0.15;
+
+// Board surface with custom texture
+function BoardSurfaceWithTexture({ customBackground }: { customBackground: string }) {
+  const texture = useTexture(customBackground);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  texture.wrapS = texture.wrapT = THREE.ClampToEdgeWrapping;
+  texture.repeat.set(1, 1);
+  texture.offset.set(0, 0);
+  
+  // Create 80% scaled dimensions for the textured plane
+  const texturedWidth = boardWidth * 0.72;
+  const texturedHeight = boardHeight * 0.72;
+  
+  return (
+    <>
+      {/* Board base without texture */}
+      <mesh position={[0, boardThickness/2, 0]} receiveShadow>
+        <boxGeometry args={[boardWidth, boardThickness, boardHeight]} />
+        <meshStandardMaterial color="#2a1a3a" roughness={0.8} metalness={0.1} />
+      </mesh>
+      
+      {/* Smaller textured plane on top, centered */}
+      <mesh position={[0, boardThickness + 0.001, 0]} rotation={[-Math.PI/2, 0, 0]} receiveShadow>
+        <planeGeometry args={[texturedWidth, texturedHeight]} />
+        <meshStandardMaterial map={texture} roughness={0.8} metalness={0.1} />
+      </mesh>
+    </>
+  );
+}
+
+// Default board surface without texture
+function DefaultBoardSurface() {
+  return (
+    <>
+      {/* Board base */}
+      <mesh position={[0, boardThickness/2, 0]} receiveShadow>
+        <boxGeometry args={[boardWidth, boardThickness, boardHeight]} />
+        <meshStandardMaterial 
+          color="#2a1a3a"
+          roughness={0.8} 
+          metalness={0.1} 
+        />
+      </mesh>
+      
+      {/* Board edge highlight */}
+      <mesh position={[0, boardThickness + 0.01, 0]}>
+        <boxGeometry args={[boardWidth + 0.05, 0.02, boardHeight + 0.05]} />
+        <meshStandardMaterial color="#4c3b6e" roughness={0.5} metalness={0.2} />
+      </mesh>
+    </>
+  );
+}
+
+// Board surface component with conditional texture loading
+function BoardSurface({ customBackground }: { customBackground?: string | null }) {
+  if (customBackground) {
+    return (
+      <Suspense fallback={<DefaultBoardSurface />}>
+        <BoardSurfaceWithTexture customBackground={customBackground} />
+      </Suspense>
+    );
+  }
+  
+  return <DefaultBoardSurface />;
+}
+
+function CooldownIndicators3D({ 
+  propertyId, 
+  side,
+  ownership,
+  isPropertyOnCooldown,
+  isStealOnCooldown,
+  spectatorMode,
+  cameraDistance
+}: { 
+  propertyId: number;
+  side: 'top' | 'bottom' | 'left' | 'right';
+  ownership: any;
+  isPropertyOnCooldown: (id: number) => boolean;
+  isStealOnCooldown: (id: number) => boolean;
+  spectatorMode: boolean;
+  cameraDistance?: number;
+}) {
+  // Don't show in spectator mode
+  if (spectatorMode) return null;
+
+  // Get property color
+  const property = PROPERTIES.find(p => p.id === propertyId);
+  const getColorHex = (colorClass: string) => {
+    const colorMap: { [key: string]: string } = {
+      'bg-amber-900': '#78350f',
+      'bg-sky-300': '#7dd3fc',
+      'bg-pink-400': '#f472b6',
+      'bg-orange-500': '#f97316',
+      'bg-red-600': '#dc2626',
+      'bg-yellow-400': '#facc15',
+      'bg-green-600': '#16a34a',
+      'bg-blue-900': '#1e3a8a',
+    };
+    return colorMap[colorClass] || '#8b5cf6';
+  };
+  const colorHex = property ? getColorHex(property.color) : '#8b5cf6';
+
+  const now = Math.floor(Date.now() / 1000);
+  
+  // Shield calculations (only for owned properties)
+  const shieldExpiry = ownership?.shieldExpiry?.toNumber() || 0;
+  const slotsShielded = ownership?.slotsShielded || 0;
+  const shieldActive = ownership && ownership.slotsOwned > 0 && slotsShielded > 0 && shieldExpiry > now;
+  
+  const cooldownDuration = ownership?.shieldCooldownDuration?.toNumber() || (12 * 3600);
+  const cooldownEndTime = shieldExpiry + cooldownDuration;
+  const isShieldOnCooldown = ownership && ownership.slotsOwned > 0 && !shieldActive && shieldExpiry > 0 && now < cooldownEndTime;
+  
+  // Cooldown states from GameStateContext
+  const isOnSetCooldown = isPropertyOnCooldown(propertyId);
+  const isOnStealCD = isStealOnCooldown(propertyId);
+
+  
+  // Calculate icon size based on camera distance (smaller when zoomed out)
+  const baseIconSize = 8; // Base size (was 14)
+  const iconSize = cameraDistance ? Math.max(4, Math.min(10, baseIconSize * (15 / Math.max(cameraDistance, 8)))) : baseIconSize;
+  
+  // Build active cooldowns array (same order as PropertyCard)
+  const activeCooldowns: { icon: React.ReactNode; key: string }[] = [];
+  
+  if (shieldActive) {
+    activeCooldowns.push({ 
+      icon: <ShieldIcon size={iconSize} className="text-cyan-400" />,
+      key: 'shield-active'
+    });
+  } else if (isShieldOnCooldown) {
+    activeCooldowns.push({ 
+      icon: <ShieldCooldownIcon size={iconSize} className="text-red-400" />,
+      key: 'shield-cooldown'
+    });
+  }
+  
+  if (isOnSetCooldown) {
+    activeCooldowns.push({ 
+      icon: <HourglassIcon size={iconSize} className="text-yellow-400" />,
+      key: 'set-cooldown'
+    });
+  }
+  
+  if (isOnStealCD) {
+    activeCooldowns.push({ 
+      icon: <TargetIcon size={iconSize} className="text-orange-400" />,
+      key: 'steal-cooldown'
+    });
+  }
+
+  // No cooldowns active, don't render anything
+  if (activeCooldowns.length === 0) return null;
+
+  // Position the indicator based on tile side (offset toward center of board)
+  let offsetX = 0, offsetZ = 0;
+  if (side === 'top') offsetZ = 0.5;
+  else if (side === 'bottom') offsetZ = -0.5;
+  else if (side === 'left') offsetX = 0.5;
+  else if (side === 'right') offsetX = -0.5;
+
+  return (
+    <Html
+      position={[offsetX, 0.4, offsetZ]}
+      center
+      zIndexRange={[10, 0]}  // Forces low z-index to stay below modal
+      style={{ 
+        pointerEvents: 'none'
+      }}
+      distanceFactor={10}
+    >
+      <div 
+        className="cooldown-indicators flex gap-0.5 rounded-full px-1.5 py-1 backdrop-blur-sm border shadow-lg"
+        style={{ 
+          backgroundColor: `rgba(0, 0, 0, 0.85)`, // Dark, almost opaque background
+          borderColor: `${colorHex}`,
+          boxShadow: `0 0 15px ${colorHex}80`,
+          position: 'relative',
+          zIndex: 1
+        }}
+      >
+        {activeCooldowns.map((cd) => (
+          <div key={cd.key} className="drop-shadow-[0_0_6px_currentColor]">
+            {cd.icon}
+          </div>
+        ))}
+      </div>
+    </Html>
+  );
+}
 
 // Camera positions for zoom transition
 const CAMERA_POSITIONS = {
@@ -244,9 +437,31 @@ interface PropertyTileProps {
   onClick: () => void;
   interactive?: boolean;
   showPropertyHint?: boolean;
+  ownership?: any;
+  isPropertyOnCooldown: (id: number) => boolean;
+  isStealOnCooldown: (id: number) => boolean;
+  spectatorMode: boolean;
+  cameraDistance?: number;
 }
 
-function PropertyTile({ position, width, depth, property, side, buildingLevel, hasCompleteSet, particlesVisible, onClick, interactive = true, showPropertyHint = false }: PropertyTileProps) {
+function PropertyTile({ 
+  position, 
+  width, 
+  depth, 
+  property, 
+  side, 
+  buildingLevel, 
+  hasCompleteSet, 
+  particlesVisible, 
+  onClick, 
+  interactive = true, 
+  showPropertyHint = false,
+  ownership,
+  isPropertyOnCooldown,
+  isStealOnCooldown,
+  spectatorMode,
+  cameraDistance
+}: PropertyTileProps) {
   const [hovered, setHovered] = useState(false);
   const getColorHex = (colorClass: string) => {
     const colorMap: { [key: string]: string } = {
@@ -373,6 +588,17 @@ function PropertyTile({ position, width, depth, property, side, buildingLevel, h
       ) : (
         <PinOnTile propertyId={property.id} side={side} showHint={showPropertyHint} />
       )}
+
+      {/* Cooldown indicators floating above tile */}
+      <CooldownIndicators3D
+        propertyId={property.id}
+        side={side}
+        ownership={ownership}
+        isPropertyOnCooldown={isPropertyOnCooldown}
+        isStealOnCooldown={isStealOnCooldown}
+        spectatorMode={spectatorMode}
+        cameraDistance={cameraDistance}
+      />
       
       {/* Rising income particles for complete sets */}
       {hasCompleteSet && buildingLevel > 0 && <RisingIncomeParticles side={side} visible={particlesVisible} />}
@@ -435,12 +661,6 @@ function PinOnTile({ propertyId, side, showHint = false }: { propertyId: number;
   
   const arrowRef = useRef<any>(null);
   
-  // Debug logging
-  useEffect(() => {
-    if (showHint) {
-      console.log(`🏠 Pin ${propertyId} showing hint arrow!`);
-    }
-  }, [showHint, propertyId]);
 
   // Animate the golden hint arrow
   useFrame((state) => {
@@ -478,9 +698,9 @@ function PinOnTile({ propertyId, side, showHint = false }: { propertyId: number;
         <Html
           center
           position={[0, 6, 0]}
+          zIndexRange={[10, 0]}  // Consistent with cooldown indicators
           style={{
             pointerEvents: 'none',
-            zIndex: 5,
           }}
         >
           <div
@@ -514,11 +734,9 @@ function HouseOnTile({ buildingLevel, side, propertyId }: {
   // Look up property info (like PinOnTile does)
   const property = PROPERTIES.find(p => p.id === propertyId);
   if (!property) {
-    console.log(`[HouseOnTile] Property not found for propertyId: ${propertyId}`);
     return null;
   }
   
-  console.log(`[HouseOnTile] Building level ${buildingLevel} house on property ${propertyId} (${property.name}) with color: ${property.color}`);
   
   const houseRotation: [number, number, number] = {
     top: [0, Math.PI, 0],
@@ -555,8 +773,6 @@ function HouseOnTile({ buildingLevel, side, propertyId }: {
   else if (side === 'left') houseXOffset = -0.15;
   else if (side === 'right') houseXOffset = 0.15;
 
-  // Log what we're passing to the house component
-  console.log(`[HouseOnTile] Rendering ${HouseComponent.name} with color prop: ${property.color}`);
   
   return (
     <group position={[houseXOffset, houseY, houseZOffset]} rotation={houseRotation} scale={houseScale}>
@@ -576,11 +792,28 @@ function Scene({
   showClaimHint, 
   handleClaimHintDismiss,
   connected,
-  hasProperties
+  hasProperties,
+  customBoardBackground
 }: SceneProps) {
   const gameState = useGameState();
   const ownerships = gameState?.ownerships || [];
   const bankRef = useRef<any>(null);
+  const [cameraDistance, setCameraDistance] = useState(25);
+
+  // Get cooldown functions from useGameState
+  const { 
+    isPropertyOnCooldown, 
+    isStealOnCooldown, 
+    getOwnership 
+  } = gameState;
+
+  // Create helper to get ownership for a property
+  const getPropertyOwnership = useCallback((propertyId: number) => {
+    if (spectatorMode && spectatorOwnerships) {
+      return spectatorOwnerships.find((o: any) => o.propertyId === propertyId);
+    }
+    return getOwnership ? getOwnership(propertyId) : ownerships.find(o => o.propertyId === propertyId);
+  }, [spectatorMode, spectatorOwnerships, getOwnership, ownerships]);
   
   // Check if we should show property hint (connected but no properties and hasn't opened modal yet)
   const [hasOpenedModal, setHasOpenedModal] = useState(false);
@@ -606,19 +839,12 @@ function Scene({
   }, []);
 
   useEffect(() => {
-    console.log('🏠 Property hint check:', { connected, hasProperties, hasOpenedModal });
-    
     if (connected && !hasProperties && !hasOpenedModal) {
-      console.log('🏠 Starting property hint timer (5 seconds)...');
       const timer = setTimeout(() => {
-        console.log('🏠 Showing property hint arrows!');
         setShowPropertyHint(true);
       }, 5000); // Wait 5 seconds
       return () => clearTimeout(timer);
     } else {
-      console.log('🏠 Property hint disabled:', { 
-        reason: !connected ? 'not connected' : hasProperties ? 'has properties' : 'modal opened' 
-      });
       setShowPropertyHint(false);
     }
   }, [connected, hasProperties, hasOpenedModal]);
@@ -672,6 +898,12 @@ function Scene({
     return ownedInSet >= requiredProps;
   }, [gameState?.ownerships, spectatorMode, spectatorOwnerships]);
   
+  // Track camera distance for icon scaling
+  useFrame(({ camera }) => {
+    const distance = camera.position.length();
+    setCameraDistance(distance);
+  });
+  
   return (
     <>
       {/* Camera Controller */}
@@ -696,17 +928,8 @@ function Scene({
         maxDistance={25}
       />
       
-      {/* Board base */}
-      <mesh position={[0, boardThickness/2, 0]} receiveShadow>
-        <boxGeometry args={[boardWidth, boardThickness, boardHeight]} />
-        <meshStandardMaterial color="#2a1a3a" roughness={0.8} metalness={0.1} />
-      </mesh>
-      
-      {/* Board edge highlight */}
-      <mesh position={[0, boardThickness + 0.01, 0]}>
-        <boxGeometry args={[boardWidth + 0.05, 0.02, boardHeight + 0.05]} />
-        <meshStandardMaterial color="#4c3b6e" roughness={0.5} metalness={0.2} />
-      </mesh>
+      {/* Board surface with custom background support */}
+      <BoardSurface customBackground={customBoardBackground} />
       
       {/* ===== CORNERS ===== */}
       <CornerTile position={[-halfW + cornerSize/2, tileY, -halfH + cornerSize/2]} cornerType="topLeft" />
@@ -733,6 +956,11 @@ function Scene({
             onClick={() => onSelectProperty(id)}
             interactive={connected}
             showPropertyHint={showPropertyHint}
+            ownership={getPropertyOwnership(id)}
+            isPropertyOnCooldown={spectatorMode ? () => false : isPropertyOnCooldown || (() => false)}
+            isStealOnCooldown={spectatorMode ? () => false : isStealOnCooldown || (() => false)}
+            spectatorMode={spectatorMode || false}
+            cameraDistance={cameraDistance}
           />
         );
       })}
@@ -756,6 +984,11 @@ function Scene({
             onClick={() => onSelectProperty(id)}
             interactive={connected}
             showPropertyHint={showPropertyHint}
+            ownership={getPropertyOwnership(id)}
+            isPropertyOnCooldown={spectatorMode ? () => false : isPropertyOnCooldown || (() => false)}
+            isStealOnCooldown={spectatorMode ? () => false : isStealOnCooldown || (() => false)}
+            spectatorMode={spectatorMode || false}
+            cameraDistance={cameraDistance}
           />
         );
       })}
@@ -779,6 +1012,11 @@ function Scene({
             onClick={() => onSelectProperty(id)}
             interactive={connected}
             showPropertyHint={showPropertyHint}
+            ownership={getPropertyOwnership(id)}
+            isPropertyOnCooldown={spectatorMode ? () => false : isPropertyOnCooldown || (() => false)}
+            isStealOnCooldown={spectatorMode ? () => false : isStealOnCooldown || (() => false)}
+            spectatorMode={spectatorMode || false}
+            cameraDistance={cameraDistance}
           />
         );
       })}
@@ -802,16 +1040,21 @@ function Scene({
             onClick={() => onSelectProperty(id)}
             interactive={connected}
             showPropertyHint={showPropertyHint}
+            ownership={getPropertyOwnership(id)}
+            isPropertyOnCooldown={spectatorMode ? () => false : isPropertyOnCooldown || (() => false)}
+            isStealOnCooldown={spectatorMode ? () => false : isStealOnCooldown || (() => false)}
+            spectatorMode={spectatorMode || false}
+            cameraDistance={cameraDistance}
           />
         );
       })}
       
-      {/* ===== BANK (only when connected) ===== */}
-      {connected && (
+      {/* ===== BANK (only when connected and not in spectator mode) ===== */}
+      {connected && !spectatorMode && (
         <InteractiveBank3D 
           ref={bankRef}
           position={[0, 0.8, 0]} 
-          scale={0.084}
+          scale={0.074}
           showClaimHint={showClaimHint}
           onClaimHintDismiss={handleClaimHintDismiss}
         />
@@ -840,7 +1083,8 @@ function Scene({
   );
 }
 
-export function Board3DScene({ onSelectProperty, spectatorMode, spectatorOwnerships }: Board3DSceneProps) {
+export function Board3DScene({ onSelectProperty, spectatorMode, spectatorOwnerships, customBoardBackground }: Board3DSceneProps) {
+  
   const containerRef = useRef<HTMLDivElement>(null);
   const [mounted, setMounted] = useState(false);
   const [particlesVisible, setParticlesVisible] = useState(true);
@@ -870,11 +1114,6 @@ export function Board3DScene({ onSelectProperty, spectatorMode, spectatorOwnersh
     const walletKey = publicKey.toBase58();
     const storageKey = `hasSeenClaimHint_${walletKey}`;
     
-    console.log('🏦 Bank hint check:', {
-      hasSeenHint: localStorage.getItem(storageKey) === 'true',
-      storageKey,
-      spectatorMode
-    });
     
     if (localStorage.getItem(storageKey) === 'true') return;
     
@@ -882,23 +1121,13 @@ export function Board3DScene({ onSelectProperty, spectatorMode, spectatorOwnersh
       ? (spectatorOwnerships?.filter(o => o.slotsOwned > 0).length || 0)
       : (gameState?.ownerships?.filter(o => o.slotsOwned > 0).length || 0);
     
-    console.log('🏦 Ownership counts:', {
-      previousCount: previousOwnershipsCountRef.current,
-      currentCount,
-      hasTriggered: hasTriggeredHintRef.current
-    });
     
     if (previousOwnershipsCountRef.current === 0 && currentCount > 0 && !hasTriggeredHintRef.current) {
-      console.log('🏦 First purchase detected! Starting 60s timer...');
       hasTriggeredHintRef.current = true;
       
       const timer = setTimeout(() => {
-        console.log('🏦 Timer finished, checking if should show hint...');
         if (localStorage.getItem(storageKey) !== 'true') {
-          console.log('🏦 Showing bank claim hint!');
           setShowClaimHint(true);
-        } else {
-          console.log('🏦 Hint already seen, not showing');
         }
       }, 30000); // 30 seconds after first purchase
       
@@ -1094,6 +1323,7 @@ export function Board3DScene({ onSelectProperty, spectatorMode, spectatorOwnersh
           handleClaimHintDismiss={handleClaimHintDismiss}
           connected={connected}
           hasProperties={hasProperties}
+          customBoardBackground={customBoardBackground}
         />
       </Canvas>
     </div>

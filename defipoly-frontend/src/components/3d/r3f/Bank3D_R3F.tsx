@@ -70,6 +70,9 @@ export function Bank3D_V2({
   const roofEdgeLength = Math.sqrt(roofHalfWidth * roofHalfWidth + peakHeight * peakHeight);
   const roofAngle = Math.atan2(peakHeight, roofHalfWidth);
 
+  // Pipe position
+  const pipeY = roofBaseY + peakHeight + 1.5;
+
   return (
     <group ref={groupRef} position={[0, -6.5, 0]} scale={1}>
       {/* Base platform */}
@@ -445,6 +448,72 @@ export function Bank3D_V2({
           </mesh>
         </group>
       ))}
+
+      {/* ============ MARIO PIPE ON TOP ============ */}
+      <group position={[0, pipeY, 0]}>
+        {/* Main body */}
+        <mesh>
+          <cylinderGeometry args={[3.6, 3.6, 3.5, 32]} />
+          <meshStandardMaterial color={0x5D3A9B} roughness={0.4} metalness={0.1} />
+        </mesh>
+
+        {/* Wide rim */}
+        <mesh position={[0, 1.9, 0]}>
+          <cylinderGeometry args={[4.6, 4.6, 0.6, 32]} />
+          <meshStandardMaterial color={0x4D2A8B} roughness={0.4} metalness={0.1} />
+        </mesh>
+
+        {/* Gold ring top */}
+        <mesh position={[0, 2.25, 0]} rotation={[Math.PI / 2, 0, 0]}>
+          <torusGeometry args={[4.6, 0.24, 16, 32]} />
+          <meshStandardMaterial color={0xFFBD32} roughness={0.2} metalness={0.7} />
+        </mesh>
+
+        {/* Gold ring mid */}
+        <mesh position={[0, 1.6, 0]} rotation={[Math.PI / 2, 0, 0]}>
+          <torusGeometry args={[4.0, 0.2, 16, 32]} />
+          <meshStandardMaterial color={0xFFBD32} roughness={0.2} metalness={0.7} />
+        </mesh>
+
+        {/* Dark hole */}
+        <mesh position={[0, 2.22, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+          <circleGeometry args={[3.2, 32]} />
+          <meshBasicMaterial color={0x050515} />
+        </mesh>
+
+        {/* Cyan glow */}
+        <mesh position={[0, 2.21, 0]} rotation={[Math.PI / 2, 0, 0]}>
+          <torusGeometry args={[3.0, 0.2, 16, 32]} />
+          <meshBasicMaterial color={0x22d3ee} transparent opacity={0.5} />
+        </mesh>
+
+        {/* Stripes */}
+        {[0, 1, 2, 3, 4, 5].map((i) => {
+          const angle = (i * 60) * Math.PI / 180;
+          return (
+            <mesh
+              key={`stripe-${i}`}
+              position={[Math.sin(angle) * 3.64, 0, Math.cos(angle) * 3.64]}
+              rotation={[0, -angle, 0]}
+            >
+              <boxGeometry args={[0.3, 3.2, 0.16]} />
+              <meshStandardMaterial color={0x3D2570} roughness={0.5} metalness={0.1} />
+            </mesh>
+          );
+        })}
+
+        {/* Base flange */}
+        <mesh position={[0, -1.9, 0]}>
+          <cylinderGeometry args={[4.4, 5.0, 0.4, 32]} />
+          <meshStandardMaterial color={0x4D2A8B} roughness={0.4} metalness={0.1} />
+        </mesh>
+
+        {/* Gold base ring */}
+        <mesh position={[0, -2.05, 0]} rotation={[Math.PI / 2, 0, 0]}>
+          <torusGeometry args={[5.0, 0.2, 16, 32]} />
+          <meshStandardMaterial color={0xFFBD32} roughness={0.2} metalness={0.7} />
+        </mesh>
+      </group>
     </group>
   );
 }

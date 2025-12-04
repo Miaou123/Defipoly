@@ -335,8 +335,15 @@ export const InteractiveBank3D = forwardRef<{ handleParticleArrive: (incomeValue
       const hoverMultiplier = isHovered ? 1.1 : 1.0;
       const targetScale = scale * hoverMultiplier; // Multiply by original scale prop
       const currentScale = bankGroupRef.current.scale.x;
-      const newScale = currentScale + (targetScale - currentScale) * delta * 8; // Smooth transition
-      bankGroupRef.current.scale.setScalar(newScale);
+      
+      // If scale is very different from target, set it directly (initial setup)
+      if (Math.abs(currentScale - targetScale) > 0.01) {
+        bankGroupRef.current.scale.setScalar(targetScale);
+      } else {
+        // Otherwise animate smoothly
+        const newScale = currentScale + (targetScale - currentScale) * delta * 8;
+        bankGroupRef.current.scale.setScalar(newScale);
+      }
     }
   });
 
@@ -344,7 +351,6 @@ export const InteractiveBank3D = forwardRef<{ handleParticleArrive: (incomeValue
     <group 
       ref={bankGroupRef}
       position={position} 
-      scale={scale}
       onClick={(e) => {
         e.stopPropagation();
         handleBankClick();

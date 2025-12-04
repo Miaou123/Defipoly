@@ -368,3 +368,9 @@ input[type="number"]::-webkit-outer-spin-button:hover {
 .animate-shimmer {
   animation: shimmer 4s linear infinite;
 }
+
+/* Force cooldown indicators behind modals */
+.cooldown-indicators {
+  z-index: 1 !important;
+  position: relative !important;
+}
