@@ -102,7 +102,7 @@ export function PropertyCard({
   // Get everything from GameStateContext
   const gameState = useGameState();
   
-  const ownerships = spectatorMode ? spectatorOwnerships : gameState.ownerships;
+  const ownerships = spectatorMode ? spectatorOwnerships : (gameState.ownerships || []);
   const ownership = ownerships.find(o => o.propertyId === propertyId);
 
   const propertyIncome = ownership && ownership.slotsOwned > 0 
@@ -350,7 +350,7 @@ export function PropertyCard({
         </div>
 
         <div 
-          className="flex-1 flex items-start justify-center min-h-0"
+          className="flex-1 flex items-start justify-center min-h-0 relative z-50"
           style={{
             padding: `0 ${Math.round(4 * scaleFactor)}px`,
             paddingTop: modalView ? '5%' : '5%',

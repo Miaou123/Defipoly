@@ -40,7 +40,7 @@ export function SharedCanvasProvider({ children }: SharedCanvasProviderProps) {
           width: '100%',
           height: '100%',
           pointerEvents: 'none',
-          zIndex: 10,  // Lower than modals (z-50)
+          zIndex: 9999,  // Above modals to show 3D content
         }}
         eventSource={containerRef}
         eventPrefix="client"
