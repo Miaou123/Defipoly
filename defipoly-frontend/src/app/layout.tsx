@@ -11,8 +11,8 @@ const orbitron = Orbitron({
 });
 
 export const metadata: Metadata = {
-  title: "Defipoly - DeFi Monopoly Game",
-  description: "A blockchain-based Monopoly game on Solana",
+  title: "Defipoly",
+  description: "Defipoly is a Monopoly-inspired on-chain property investment game built on Solana.",
   icons: {
     icon: '/logo.svg',
   },
