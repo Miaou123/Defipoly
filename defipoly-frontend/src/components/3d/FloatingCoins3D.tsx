@@ -167,7 +167,7 @@ export function FloatingCoins3D({ rewardsAmount, position = [0, 1.95, 0], onCoin
   }, [rewardsAmount]);
 
   // Check if user reached first threshold for the first time
-  const hasReachedFirstThreshold = rewardsAmount >= ACCUMULATION_TIERS[0]; // 1000
+  const hasReachedFirstThreshold = rewardsAmount >= (ACCUMULATION_TIERS[0] || 0); // 1000
 
   // Hint logic - show arrow when first threshold is reached but user hasn't clicked yet
   useEffect(() => {

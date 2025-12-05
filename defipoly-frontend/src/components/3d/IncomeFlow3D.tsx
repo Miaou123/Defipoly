@@ -133,8 +133,8 @@ function mergeBufferGeometries(geometries: THREE.BufferGeometry[]): THREE.Buffer
   let totalVertices = 0;
   
   geometries.forEach(geo => {
-    if (geo.attributes.position) {
-      totalVertices += geo.attributes.position.count;
+    if (geo.attributes['position']) {
+      totalVertices += geo.attributes['position'].count;
     }
   });
   
@@ -145,8 +145,10 @@ function mergeBufferGeometries(geometries: THREE.BufferGeometry[]): THREE.Buffer
   let vertexOffset = 0;
   
   geometries.forEach(geo => {
-    const pos = geo.attributes.position;
-    const norm = geo.attributes.normal;
+    const pos = geo.attributes['position'];
+    const norm = geo.attributes['normal'];
+    
+    if (!pos) return;
     
     for (let i = 0; i < pos.count; i++) {
       positions[(vertexOffset + i) * 3] = pos.getX(i);

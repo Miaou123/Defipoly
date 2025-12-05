@@ -230,7 +230,9 @@ export function Leaderboard({ scaleFactor = 1 }: LeaderboardProps) {
       boardTheme: 'dark' as const,
       propertyCardTheme: 'dark' as const,
       customBoardBackground: null,
-      customPropertyCardBackground: null
+      customPropertyCardBackground: null,
+      updatedAt: Date.now(),
+      lastUpdated: Date.now()
     };
     
     // Cache with rank information from leaderboard
@@ -275,7 +277,9 @@ export function Leaderboard({ scaleFactor = 1 }: LeaderboardProps) {
             </div>
           ) : !leaderboardData || leaderboardData.leaderboard.length === 0 ? (
             <div className="text-center" style={{ padding: `${headerPadding * 2}px 0` }}>
-              <TrophyIcon size={Math.round(24 * scaleFactor)} className="mx-auto text-yellow-400" style={{ marginBottom: `${Math.round(4 * scaleFactor)}px` }} />
+              <div style={{ marginBottom: `${Math.round(4 * scaleFactor)}px` }}>
+                <TrophyIcon size={Math.round(24 * scaleFactor)} className="mx-auto text-yellow-400" />
+              </div>
               <div className="text-purple-400" style={{ fontSize: `${subtitleSize}px` }}>No players yet</div>
               <div className="text-purple-500" style={{ fontSize: `${Math.round(10 * scaleFactor)}px`, marginTop: `${Math.round(2 * scaleFactor)}px` }}>Be the first!</div>
             </div>

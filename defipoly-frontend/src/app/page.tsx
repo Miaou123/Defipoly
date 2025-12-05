@@ -17,7 +17,7 @@ import { getProfile, clearProfileCache } from '@/utils/profileStorage';
 
 export default function Home() {
   const { publicKey } = useWallet();
-  const { gameState } = useGameState();
+  const gameState = useGameState();
   const { unclaimedRewards } = useRewards();
   
   

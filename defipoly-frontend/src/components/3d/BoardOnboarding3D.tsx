@@ -66,6 +66,7 @@ export function BoardOnboarding3D({ hasProperties, showClaimHint = false, onClai
         window.removeEventListener('propertyModalOpened', handleCustomEvent);
       };
     }
+    return undefined;
   }, []);
 
   // Show property hint after delay when connected but no properties and hasn't opened modal
@@ -77,6 +78,7 @@ export function BoardOnboarding3D({ hasProperties, showClaimHint = false, onClai
       return () => clearTimeout(timer);
     } else {
       setShowPropertyHint(false);
+      return undefined;
     }
   }, [connected, hasProperties, hasOpenedModal]);
 

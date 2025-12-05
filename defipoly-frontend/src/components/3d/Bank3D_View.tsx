@@ -24,7 +24,7 @@ function Bank3D_ViewComponent({
     <View3D 
       className="flex items-center justify-center cursor-pointer" 
       style={{ width: size, height: size }}
-      onClick={onCollect}
+      {...(onCollect && { onClick: onCollect })}
     >
       <PerspectiveCamera makeDefault position={[0, 5, 40]} fov={45} />
       <Bank3D_V2 

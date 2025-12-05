@@ -355,7 +355,7 @@ export function Bank3D_V2({
         [-roofHalfWidth, -roofDepth / 2],
         [roofHalfWidth, -roofDepth / 2],
       ].map(([x, z], i) => (
-        <mesh key={`corner-${i}`} position={[x, roofBaseY + 0.15, z]}>
+        <mesh key={`corner-${i}`} position={[x || 0, roofBaseY + 0.15, z || 0]}>
           <sphereGeometry args={[0.28, 12, 12]} />
           <meshStandardMaterial color={0xFFBD32} roughness={0.2} metalness={0.7} />
         </mesh>

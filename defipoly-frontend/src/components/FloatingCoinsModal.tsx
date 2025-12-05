@@ -37,7 +37,7 @@ export function FloatingCoinsModal({ isOpen, onClose, rewardsAmount }: FloatingC
     for (let i = ACCUMULATION_TIERS.length - 1; i >= 0; i--) {
       const tier = ACCUMULATION_TIERS[i];
       
-      if (tier.threshold > 0 && remaining > tier.threshold) {
+      if (tier && tier.threshold > 0 && remaining > tier.threshold) {
         // Amount in this tier bracket (above this threshold)
         const amountInTier = remaining - tier.threshold;
         const tierBonus = (amountInTier * tier.bonus) / 100;
@@ -97,7 +97,7 @@ export function FloatingCoinsModal({ isOpen, onClose, rewardsAmount }: FloatingC
                   {progressiveBonus === 0 && (
                     <>
                       <br />
-                      Reach ${ACCUMULATION_TIERS[0].threshold.toLocaleString()} to start earning bonus rewards!
+                      Reach ${ACCUMULATION_TIERS[0]?.threshold?.toLocaleString() || 0} to start earning bonus rewards!
                     </>
                   )}
                   {tierCount > 0 && (

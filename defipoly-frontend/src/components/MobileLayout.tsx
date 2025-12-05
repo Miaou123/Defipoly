@@ -18,6 +18,7 @@ interface MobileLayoutProps {
   onSelectProperty: (propertyId: number) => void;
   profilePicture: string | null;
   cornerSquareStyle: 'property' | 'profile';
+  customBoardBackground: string | null;
 }
 
 function MobileRewardsCard() {
@@ -83,7 +84,8 @@ function MobileRewardsCard() {
 export function MobileLayout({ 
   onSelectProperty, 
   profilePicture, 
-  cornerSquareStyle 
+  cornerSquareStyle,
+  customBoardBackground 
 }: MobileLayoutProps) {
   const [activeTab, setActiveTab] = useState<TabType>('board');
   const { publicKey, connected } = useWallet();
@@ -165,6 +167,7 @@ export function MobileLayout({
                 onSelectProperty={onSelectProperty}
                 profilePicture={profilePicture}
                 cornerSquareStyle={cornerSquareStyle}
+                customBoardBackground={customBoardBackground}
               />
             </div>
           </div>

@@ -34,6 +34,7 @@ function ClaimHintGlow({ visible }: { visible: boolean }) {
       return () => clearTimeout(timer);
     } else {
       setOpacity(0);
+      return undefined;
     }
   }, [visible]);
   
@@ -75,6 +76,7 @@ function ClaimHintLabel({ visible }: { visible: boolean }) {
       return () => clearTimeout(timer);
     } else {
       setShow(false);
+      return undefined;
     }
   }, [visible]);
   

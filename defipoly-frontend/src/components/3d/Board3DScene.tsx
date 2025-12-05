@@ -25,13 +25,13 @@ import { BoardOnboarding3D } from './BoardOnboarding3D';
 
 interface Board3DSceneProps {
   onSelectProperty: (propertyId: number) => void;
-  onCoinClick?: () => void;
+  onCoinClick?: (() => void) | undefined;
   spectatorMode?: boolean;
   spectatorOwnerships?: any[];
-  customBoardBackground?: string | null;
-  custom3DPropertyTiles?: string | null;
-  profilePicture?: string | null;
-  cornerSquareStyle?: 'property' | 'profile';
+  customBoardBackground?: string | null | undefined;
+  custom3DPropertyTiles?: string | null | undefined;
+  profilePicture?: string | null | undefined;
+  cornerSquareStyle?: 'property' | 'profile' | undefined;
 }
 
 interface SceneProps extends Board3DSceneProps {
@@ -727,11 +727,11 @@ function PinOnTile({ propertyId, side, showHint = false }: { propertyId: number;
     }
   });
   
-  const pinRotation: [number, number, number] = {
-    top: [0, Math.PI, 0],
-    bottom: [0, 0, 0],
-    left: [0, -Math.PI/2, 0],
-    right: [0, Math.PI/2, 0],
+  const pinRotation = {
+    top: [0, Math.PI, 0] as [number, number, number],
+    bottom: [0, 0, 0] as [number, number, number],
+    left: [0, -Math.PI/2, 0] as [number, number, number],
+    right: [0, Math.PI/2, 0] as [number, number, number],
   }[side];
   
   const pinY = tileThickness/2 + 0.02;
@@ -792,11 +792,11 @@ function HouseOnTile({ buildingLevel, side, propertyId }: {
   }
   
   
-  const houseRotation: [number, number, number] = {
-    top: [0, Math.PI, 0],
-    bottom: [0, 0, 0],
-    left: [0, -Math.PI/2, 0],
-    right: [0, Math.PI/2, 0],
+  const houseRotation = {
+    top: [0, Math.PI, 0] as [number, number, number],
+    bottom: [0, 0, 0] as [number, number, number],
+    left: [0, -Math.PI/2, 0] as [number, number, number],
+    right: [0, Math.PI/2, 0] as [number, number, number],
   }[side];
   
   const houseY = tileThickness/2 - 0.02;
@@ -896,6 +896,7 @@ function Scene({
         window.removeEventListener('propertyModalOpened', handleStorageChange);
       };
     }
+    return undefined;
   }, []);
 
   useEffect(() => {
@@ -906,6 +907,7 @@ function Scene({
       return () => clearTimeout(timer);
     } else {
       setShowPropertyHint(false);
+      return undefined;
     }
   }, [connected, hasProperties, hasOpenedModal]);
   
@@ -949,7 +951,7 @@ function Scene({
     const propertiesInSet = PROPERTIES.filter(p => p.setId === property.setId);
     const requiredProps = property.setId === 0 || property.setId === 7 ? 2 : 3;
     
-    const ownerships = spectatorMode ? spectatorOwnerships : gameState?.ownerships || [];
+    const ownerships = spectatorMode ? (spectatorOwnerships || []) : (gameState?.ownerships || []);
     
     const ownedInSet = ownerships.filter(o => 
       propertiesInSet.some(p => p.id === o.propertyId) && o.slotsOwned > 0
@@ -989,7 +991,7 @@ function Scene({
       />
       
       {/* Board surface with custom background support */}
-      <BoardSurface customBackground={customBoardBackground} />
+      <BoardSurface customBackground={customBoardBackground || null} />
       
       
       {/* ===== CORNERS ===== */}
@@ -997,33 +999,33 @@ function Scene({
         position={[-halfW + cornerSize/2, tileY, -halfH + cornerSize/2]} 
         cornerType="go" 
         size={cornerSize}
-        cornerSquareStyle={cornerSquareStyle}
-        customPropertyCardBackground={custom3DPropertyTiles}
-        profilePicture={profilePicture}
+        cornerSquareStyle={cornerSquareStyle || 'property'}
+        customPropertyCardBackground={custom3DPropertyTiles || null}
+        profilePicture={profilePicture || null}
       />
       <CornerTile3D 
         position={[halfW - cornerSize/2, tileY, -halfH + cornerSize/2]} 
         cornerType="jail" 
         size={cornerSize}
-        cornerSquareStyle={cornerSquareStyle}
-        customPropertyCardBackground={custom3DPropertyTiles}
-        profilePicture={profilePicture}
+        cornerSquareStyle={cornerSquareStyle || 'property'}
+        customPropertyCardBackground={custom3DPropertyTiles || null}
+        profilePicture={profilePicture || null}
       />
       <CornerTile3D 
         position={[-halfW + cornerSize/2, tileY, halfH - cornerSize/2]} 
         cornerType="parking" 
         size={cornerSize}
-        cornerSquareStyle={cornerSquareStyle}
-        customPropertyCardBackground={custom3DPropertyTiles}
-        profilePicture={profilePicture}
+        cornerSquareStyle={cornerSquareStyle || 'property'}
+        customPropertyCardBackground={custom3DPropertyTiles || null}
+        profilePicture={profilePicture || null}
       />
       <CornerTile3D 
         position={[halfW - cornerSize/2, tileY, halfH - cornerSize/2]} 
         cornerType="gotojail" 
         size={cornerSize}
-        cornerSquareStyle={cornerSquareStyle}
-        customPropertyCardBackground={custom3DPropertyTiles}
-        profilePicture={profilePicture}
+        cornerSquareStyle={cornerSquareStyle || 'property'}
+        customPropertyCardBackground={custom3DPropertyTiles || null}
+        profilePicture={profilePicture || null}
       />
       
       {/* ===== PROPERTY TILES WITH SUSPENSE FOR TEXTURE LOADING ===== */}
@@ -1052,7 +1054,7 @@ function Scene({
             isStealOnCooldown={spectatorMode ? () => false : isStealOnCooldown || (() => false)}
             spectatorMode={spectatorMode || false}
             cameraDistance={cameraDistance}
-            customTexture={custom3DPropertyTiles}
+            customTexture={custom3DPropertyTiles || null}
           />
         );
       })}
@@ -1081,7 +1083,7 @@ function Scene({
             isStealOnCooldown={spectatorMode ? () => false : isStealOnCooldown || (() => false)}
             spectatorMode={spectatorMode || false}
             cameraDistance={cameraDistance}
-            customTexture={custom3DPropertyTiles}
+            customTexture={custom3DPropertyTiles || null}
           />
         );
       })}
@@ -1110,7 +1112,7 @@ function Scene({
             isStealOnCooldown={spectatorMode ? () => false : isStealOnCooldown || (() => false)}
             spectatorMode={spectatorMode || false}
             cameraDistance={cameraDistance}
-            customTexture={custom3DPropertyTiles}
+            customTexture={custom3DPropertyTiles || null}
           />
         );
       })}
@@ -1139,7 +1141,7 @@ function Scene({
             isStealOnCooldown={spectatorMode ? () => false : isStealOnCooldown || (() => false)}
             spectatorMode={spectatorMode || false}
             cameraDistance={cameraDistance}
-            customTexture={custom3DPropertyTiles}
+            customTexture={custom3DPropertyTiles || null}
           />
         );
       })}
@@ -1161,7 +1163,7 @@ function Scene({
         <FloatingCoins3D 
           rewardsAmount={unclaimedRewards || 0}
           position={[0, 1.95, 0]}
-          onCoinClick={onCoinClick}
+          {...(onCoinClick && { onCoinClick })}
         />
       )}
       
@@ -1242,6 +1244,7 @@ export function Board3DScene({ onSelectProperty, onCoinClick, spectatorMode, spe
     }
     
     previousOwnershipsCountRef.current = currentCount;
+    return undefined;
   }, [publicKey, gameState?.ownerships, spectatorMode, spectatorOwnerships]);
 
   const handleClaimHintDismiss = useCallback(() => {
@@ -1496,17 +1499,17 @@ export function Board3DScene({ onSelectProperty, onCoinClick, spectatorMode, spe
         <Suspense fallback={null}>
           <Scene 
             onSelectProperty={onSelectProperty}
-            onCoinClick={onCoinClick}
-            spectatorMode={spectatorMode}
-            spectatorOwnerships={spectatorOwnerships}
+            {...(onCoinClick && { onCoinClick })}
+            spectatorMode={spectatorMode || false}
+            spectatorOwnerships={spectatorOwnerships || []}
             cameraControlsRef={cameraControlsRef}
             particlesVisible={particlesVisible}
             showClaimHint={showClaimHint}
             handleClaimHintDismiss={handleClaimHintDismiss}
             connected={connected}
             hasProperties={hasProperties}
-            customBoardBackground={customBoardBackground}
-            custom3DPropertyTiles={custom3DPropertyTiles}
+            customBoardBackground={customBoardBackground || null}
+            custom3DPropertyTiles={custom3DPropertyTiles || null}
             profilePicture={profilePicture || gameState?.profile?.profilePicture}
             cornerSquareStyle={cornerSquareStyle || gameState?.profile?.cornerSquareStyle || 'property'}
           />

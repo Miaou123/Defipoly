@@ -12,6 +12,7 @@ interface MobileBoardProps {
   spectatorOwnerships?: any[];
   profilePicture?: string | null;
   cornerSquareStyle?: 'property' | 'profile';
+  customBoardBackground?: string | null;
 }
 
 export function MobileBoard({ 
@@ -21,12 +22,13 @@ export function MobileBoard({
   spectatorOwnerships = [],
   profilePicture: spectatorProfilePic,
   cornerSquareStyle: spectatorCornerStyle,
+  customBoardBackground: propCustomBoardBackground,
 }: MobileBoardProps) {
   const gameState = useGameState();
   
   const customBoardBackground = spectatorMode 
-    ? null 
-    : gameState.profile.customBoardBackground;
+    ? propCustomBoardBackground 
+    : (propCustomBoardBackground ?? gameState.profile.customBoardBackground);
     
   const customPropertyCardBackground = spectatorMode 
     ? null 

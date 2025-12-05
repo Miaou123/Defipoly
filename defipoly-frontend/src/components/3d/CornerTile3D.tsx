@@ -512,7 +512,7 @@ export function CornerTile3D({
             textureUrl={textureUrl}
             size={size}
             cornerSquareStyle={cornerSquareStyle}
-            profilePicture={profilePicture}
+            profilePicture={profilePicture || null}
           />
         </Suspense>
       )}

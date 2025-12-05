@@ -163,10 +163,8 @@ export function Logo3D({ size = 160 }: Logo3DProps) {
     camera.position.set(0, 1.8, 6);
     camera.lookAt(0, 1, 0);
 
-    let animationId: number;
-
-    const animate = () => {
-      animationId = requestAnimationFrame(animate);
+    const animate = (): void => {
+      const currentAnimationId = requestAnimationFrame(animate);
       
       // Check if renderer context is still valid
       if (!renderer.domElement || renderer.getContext().isContextLost()) {
@@ -179,17 +177,20 @@ export function Logo3D({ size = 160 }: Logo3DProps) {
         renderer.render(scene, camera);
       } catch (error) {
         console.warn('WebGL render error in Logo3D:', error);
-        cancelAnimationFrame(animationId);
+        cancelAnimationFrame(currentAnimationId);
       }
     };
-    animate();
+    
+    const initialAnimationId = requestAnimationFrame(animate);
 
     // Store refs for cleanup
-    sceneRef.current = { renderer, animationId };
+    sceneRef.current = { renderer, animationId: initialAnimationId };
 
     return () => {
       // Cancel animation
-      cancelAnimationFrame(animationId);
+      if (sceneRef.current) {
+        cancelAnimationFrame(sceneRef.current.animationId);
+      }
       
       // Dispose geometries and materials
       hatGroup.traverse((child) => {

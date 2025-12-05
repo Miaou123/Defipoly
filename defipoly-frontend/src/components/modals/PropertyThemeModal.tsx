@@ -102,14 +102,19 @@ export function PropertyThemeModal({
       canvas.width = 100;
       canvas.height = 100;
       const ctx = canvas.getContext('2d');
+      if (!ctx) {
+        throw new Error('Unable to get canvas context');
+      }
       
       // Fill the canvas with the selected color
       ctx.fillStyle = customColor;
       ctx.fillRect(0, 0, 100, 100);
       
       // Convert to PNG blob
-      const blob = await new Promise(resolve => {
-        canvas.toBlob(resolve, 'image/png', 1.0);
+      const blob = await new Promise<Blob>((resolve) => {
+        canvas.toBlob((blob) => {
+          if (blob) resolve(blob);
+        }, 'image/png', 1.0);
       });
       const file = new File([blob], 'color-theme.png', { type: 'image/png' });
       
@@ -139,7 +144,7 @@ export function PropertyThemeModal({
       }
     } catch (error) {
       console.error('Error applying custom color:', error);
-      showError('Error', `Error applying custom color: ${error.message}`);
+      showError('Error', `Error applying custom color: ${error instanceof Error ? error.message : String(error)}`);
     } finally {
       setUploading(false);
     }
