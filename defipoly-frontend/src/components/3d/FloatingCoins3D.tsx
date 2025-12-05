@@ -296,14 +296,8 @@ export function FloatingCoins3D({ rewardsAmount, position = [0, 1.95, 0], onCoin
     const data = Array.from({ length: tierCount }, (_, i) => {
       let angle;
       
-      // When hint is showing, first coin starts at bottom position
-      if (showFirstCoinHint && i === 0) {
-        angle = 3 * Math.PI / 2; // Bottom position (270°)
-      } 
-      // For normal distribution or when hint is not showing
-      else {
-        angle = (i / tierCount) * Math.PI * 2;
-      }
+      // Normal distribution for all coins - let them move naturally
+      angle = (i / tierCount) * Math.PI * 2;
       
       return {
         angle: angle,
@@ -325,8 +319,8 @@ export function FloatingCoins3D({ rewardsAmount, position = [0, 1.95, 0], onCoin
 
     const time = state.clock.elapsedTime;
     
-    // Rotate the entire group slowly (stop when any coin is hovered OR when showing hint)
-    if (hoveredCoin === null && !showFirstCoinHint) {
+    // Rotate the entire group slowly (stop when any coin is hovered)
+    if (hoveredCoin === null) {
       coinsGroupRef.current.rotation.y = time * 0.2;
     }
 
@@ -339,8 +333,8 @@ export function FloatingCoins3D({ rewardsAmount, position = [0, 1.95, 0], onCoin
       const isHintCoin = data.isHintCoin;
 
       // Individual coin rotation and movement 
-      // Stop ALL animations when: any coin hovered OR hint is showing
-      if (hoveredCoin === null && !showFirstCoinHint && !isHintCoin) {
+      // Stop ALL animations when: any coin hovered
+      if (hoveredCoin === null && !isHovered) {
         coinRef.rotation.y = time * 2 + data.phase; // Orbit rotation
         coinRef.rotation.x = Math.sin(time + data.phase) * 0.2; // Slight wobble
         coinRef.rotation.z = time * 3 + data.phase * 2; // Self-rotation (coin spinning)
@@ -350,13 +344,7 @@ export function FloatingCoins3D({ rewardsAmount, position = [0, 1.95, 0], onCoin
         coinRef.position.y = baseY + data.yOffset + Math.sin(time * data.floatSpeed + data.phase) * 0.05;
       }
 
-      // Hint coin stays completely still (no animations)
-      if (isHintCoin) {
-        // Fixed position in front of bank
-        const baseY = -1.4;
-        coinRef.position.y = baseY + data.yOffset;
-        // No rotations for hint coin
-      }
+      // Let hint coin move naturally with others
       
       // Hover scaling animation - more dramatic and responsive
       const targetScale = isHovered ? 1.8 : 1.0;
@@ -414,12 +402,12 @@ export function FloatingCoins3D({ rewardsAmount, position = [0, 1.95, 0], onCoin
               />
               
               {/* Arrow hint for first coin */}
-              {isHintCoin && showFirstCoinHint && (
+              {isHintCoin && showFirstCoinHint && coinRefs.current[i] && (
                 <Html
                   position={[
-                    Math.cos(data.angle) * data.radius - 0.3, // Shifted left
-                    -1.0 + data.yOffset, // Above the coin
-                    Math.sin(data.angle) * data.radius
+                    coinRefs.current[i]!.position.x - 0, // Follow coin X position, shifted left
+                    coinRefs.current[i]!.position.y + 0.5, // Follow coin Y position, shifted up
+                    coinRefs.current[i]!.position.z
                   ]}
                   center
                   style={{
@@ -429,26 +417,9 @@ export function FloatingCoins3D({ rewardsAmount, position = [0, 1.95, 0], onCoin
                     pointerEvents: 'none',
                   }}
                 >
-                  <div style={{ transform: 'rotate(90deg)' }}>
-                    <PointerArrowIcon className="w-8 h-8 text-yellow-400 drop-shadow-[0_0_12px_rgba(250,204,21,0.9)]" 
-                      style={{
-                        animation: 'bounce-vertical 1s infinite'
-                      }}
-                    />
+                  <div style={{ transform: 'rotate(0deg)' }} className="animate-bounce">
+                    <PointerArrowIcon className="w-12 h-12 text-yellow-400 drop-shadow-[0_0_12px_rgba(250,204,21,0.9)]" />
                   </div>
-                  <style jsx>{`
-                    @keyframes bounce-vertical {
-                      0%, 20%, 53%, 80%, 100% {
-                        transform: translateY(0);
-                      }
-                      40%, 43% {
-                        transform: translateY(-10px);
-                      }
-                      70% {
-                        transform: translateY(-5px);
-                      }
-                    }
-                  `}</style>
                 </Html>
               )}
             </group>

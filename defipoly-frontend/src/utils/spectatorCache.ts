@@ -18,6 +18,7 @@ interface CachedSpectatorData {
   profile: ProfileData;
   stats: PlayerStats | null;
   ownerships: any[];
+  rank: number | null;
   timestamp: number;
 }
 
@@ -40,12 +41,14 @@ export function setCachedSpectator(
     wallet: string, 
     profile: ProfileData, 
     stats: PlayerStats | null = null,
-    ownerships: any[] = []  // ✅ ADD THIS
+    ownerships: any[] = [],
+    rank: number | null = null
   ): void {
     spectatorCache.set(wallet, {
       profile,
       stats,
-      ownerships,  // ✅ ADD THIS
+      ownerships,
+      rank,
       timestamp: Date.now()
     });
   }

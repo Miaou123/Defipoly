@@ -215,11 +215,28 @@ export function Leaderboard({ scaleFactor = 1 }: LeaderboardProps) {
     return profile?.username || formatAddress(address);
   };
 
-  const handlePlayerClick = (leader: LeaderboardEntry) => {
+  const handlePlayerClick = async (leader: LeaderboardEntry) => {
     // Dismiss hint on first click
     if (showSpectatorHint) {
       dismissSpectatorHint();
     }
+    
+    // Pre-cache basic spectator data with rank for faster loading
+    const profileData = profiles[leader.walletAddress] || {
+      walletAddress: leader.walletAddress,
+      username: leader.displayName !== `${leader.walletAddress.slice(0, 4)}...${leader.walletAddress.slice(-4)}` ? leader.displayName : null,
+      profilePicture: null,
+      cornerSquareStyle: 'property' as const,
+      boardTheme: 'dark' as const,
+      propertyCardTheme: 'dark' as const,
+      customBoardBackground: null,
+      customPropertyCardBackground: null
+    };
+    
+    // Cache with rank information from leaderboard
+    setCachedSpectator(leader.walletAddress, profileData, null, [], leader.rank);
+    console.log('💾 [LEADERBOARD] Pre-cached spectator data with rank:', leader.rank);
+    
     window.location.href = `/spectator/${leader.walletAddress}`;
   };
 

@@ -77,6 +77,7 @@ export default function SpectatorPage() {
         setProfile(cached.profile);
         setStats(cached.stats);
         setSpectatorOwnerships(cached.ownerships || []); 
+        setLeaderboardRank(cached.rank || null);
         setLoading(false);
         return;
       }
@@ -84,11 +85,12 @@ export default function SpectatorPage() {
       console.log('🔍 [SPECTATOR CACHE MISS] Fetching fresh data (direct URL access)');
       
       try {
-        // Only fetch 2 endpoints in parallel (removed leaderboard call)
-        const [profileResponse, statsResponse, gameStateResponse] = await Promise.all([
+        // Fetch all endpoints in parallel including leaderboard to get rank
+        const [profileResponse, statsResponse, gameStateResponse, leaderboardResponse] = await Promise.all([
           fetch(`${API_BASE_URL}/api/profile/${walletAddress}`),
           fetch(`${API_BASE_URL}/api/stats/${walletAddress}`),
-          fetch(`${API_BASE_URL}/api/game-state/${walletAddress}`) 
+          fetch(`${API_BASE_URL}/api/game-state/${walletAddress}`),
+          fetch(`${API_BASE_URL}/api/leaderboard?limit=1000`) // Get more entries to find user's rank
         ]);
         
         let profileData = null;
@@ -133,12 +135,24 @@ export default function SpectatorPage() {
           console.log('✅ [SPECTATOR] Game state fetched:', ownershipsData.length, 'ownerships');
         }
 
-        setCachedSpectator(walletAddress, profileData, statsData, ownershipsData);
+        // Extract leaderboard rank
+        let userRank = null;
+        if (leaderboardResponse.ok) {
+          const leaderboardData = await leaderboardResponse.json();
+          const userEntry = leaderboardData.leaderboard?.find((entry: any) => 
+            entry.walletAddress === walletAddress
+          );
+          userRank = userEntry?.rank || null;
+          console.log('🏆 [SPECTATOR] User rank found:', userRank);
+        }
+
+        setCachedSpectator(walletAddress, profileData, statsData, ownershipsData, userRank);
         console.log('💾 [SPECTATOR] Data cached for 30s');
         
         setProfile(profileData);
         setStats(statsData);
-        setSpectatorOwnerships(ownershipsData); 
+        setSpectatorOwnerships(ownershipsData);
+        setLeaderboardRank(userRank); 
   
       } catch (error) {
         console.error('❌ [SPECTATOR] Error fetching data:', error);
