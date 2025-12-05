@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useMemo, useEffect, useCallback } from 'react';
+import { useRef, useMemo, useEffect, useCallback, useState } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { useGameState } from '@/contexts/GameStateContext';
 import { useParticleSpawn } from '@/contexts/ParticleSpawnContext';
@@ -11,7 +11,7 @@ import * as THREE from 'three';
 // CONSTANTS
 // ============================================================
 
-const MAX_COINS = 60;
+const MAX_BILLS = 60;
 const MAX_DIAMONDS = 40;
 const PARTICLE_SPEED = 0.6;
 
@@ -49,7 +49,7 @@ interface PropertyIncomeData {
   propertyId: number;
   position: THREE.Vector3;
   income: number;
-  tier: { symbol: 'coin' | 'diamond'; intervalMs: number };
+  tier: { symbol: 'bill' | 'diamond'; intervalMs: number };
 }
 
 // ============================================================
@@ -57,31 +57,29 @@ interface PropertyIncomeData {
 // ============================================================
 
 /**
- * Creates a thick gold coin geometry
+ * Creates complete bill stack - exactly like the debug bill that works
  */
-function createCoinGeometry(): THREE.BufferGeometry {
-  const scale = 0.25; // Increased from 0.15
-  const radius = 0.5 * scale;
-  const thickness = 0.2 * scale; // Thicker
-  const bevelSize = 0.02 * scale;
-  
+function createBillGeometry(): THREE.BufferGeometry {
+  const scale = 0.12;
   const geometries: THREE.BufferGeometry[] = [];
   
-  // Main coin body
-  const coinGeo = new THREE.CylinderGeometry(radius, radius, thickness, 32);
-  geometries.push(coinGeo);
-  
-  // Top edge bevel
-  const topBevelGeo = new THREE.TorusGeometry(radius - bevelSize, bevelSize, 8, 32);
-  topBevelGeo.rotateX(Math.PI / 2);
-  topBevelGeo.translate(0, thickness / 2, 0);
-  geometries.push(topBevelGeo);
-  
-  // Bottom edge bevel
-  const bottomBevelGeo = new THREE.TorusGeometry(radius - bevelSize, bevelSize, 8, 32);
-  bottomBevelGeo.rotateX(Math.PI / 2);
-  bottomBevelGeo.translate(0, -thickness / 2, 0);
-  geometries.push(bottomBevelGeo);
+  // Create the exact same structure as debug bill
+  const offsets = Array.from({ length: 4 }, () => ({
+    x: (Math.random() - 0.5) * 0.02 * scale,
+    z: (Math.random() - 0.5) * 0.02 * scale,
+  }));
+
+  // Green bills
+  offsets.forEach((offset, i) => {
+    const billGeo = new THREE.BoxGeometry(1.4 * scale, 0.05 * scale, 0.7 * scale);
+    billGeo.translate(offset.x, i * 0.03 * scale, offset.z);
+    geometries.push(billGeo);
+  });
+
+  // Gold symbol on top
+  const dollarGeo = new THREE.BoxGeometry(0.3 * scale, 0.03 * scale, 0.5 * scale);
+  dollarGeo.translate(0, 4 * 0.03 * scale + 0.02 * scale, 0);
+  geometries.push(dollarGeo);
   
   const merged = mergeBufferGeometries(geometries);
   merged.center();
@@ -96,7 +94,7 @@ function createCoinGeometry(): THREE.BufferGeometry {
  */
 function createDiamondGeometry(): THREE.BufferGeometry {
   const geometries: THREE.BufferGeometry[] = [];
-  const scale = 0.10;
+  const scale = 0.15; // Increased for bigger diamonds
   
   const crownHeight = 0.25 * scale;
   const tableRadius = 0.25 * scale;
@@ -188,70 +186,96 @@ function mergeBufferGeometries(geometries: THREE.BufferGeometry[]): THREE.Buffer
 // CUSTOM SHADER MATERIALS
 // ============================================================
 
-function createCoinMaterial(): THREE.ShaderMaterial {
+/**
+ * Creates a texture atlas with green bills and gold symbol
+ */
+function createBillAtlas(): THREE.CanvasTexture {
+  const canvas = document.createElement('canvas');
+  canvas.width = 256;
+  canvas.height = 128;
+  const ctx = canvas.getContext('2d')!;
+  
+  // Left half: Medium green bill texture (0.0 - 0.5 UV)
+  ctx.fillStyle = '#1ca049'; // Medium green (between bright and dark)
+  ctx.fillRect(0, 0, 128, 128);
+  
+  // Add some texture to the green part
+  ctx.fillStyle = '#15803d'; // Dark green for accents
+  ctx.fillRect(10, 10, 108, 20);
+  ctx.fillRect(10, 40, 108, 20);
+  ctx.fillRect(10, 70, 108, 20);
+  ctx.fillRect(10, 100, 108, 20);
+  
+  // Right half: Gold symbol texture (0.5 - 1.0 UV)
+  ctx.fillStyle = '#FFBd32'; // Gold
+  ctx.fillRect(128, 0, 128, 128);
+  
+  // Draw $ symbol
+  ctx.fillStyle = '#D4A020'; // Darker gold for contrast
+  ctx.font = '60px Arial';
+  ctx.textAlign = 'center';
+  ctx.fillText('$', 192, 80);
+  
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  texture.wrapS = texture.wrapT = THREE.ClampToEdgeWrapping;
+  return texture;
+}
+
+function createBillMaterial(): THREE.ShaderMaterial {
+  const billAtlas = createBillAtlas();
+  
   return new THREE.ShaderMaterial({
     uniforms: {
-      uGoldColor: { value: new THREE.Color(0xFFBD32) },
-      uGoldDark: { value: new THREE.Color(0xD4A020) },
-      uEmissive: { value: new THREE.Color(0xFFBD32) },
-      uEmissiveIntensity: { value: 0.3 },
-      uPurpleColor: { value: new THREE.Color(0x9333ea) },
+      uBillAtlas: { value: billAtlas },
+      uEmissiveIntensity: { value: 0.2 },
     },
     vertexShader: `
       attribute float instanceOpacity;
       varying float vOpacity;
-      varying vec3 vNormal;
       varying vec2 vUv;
+      varying vec3 vNormal;
+      varying vec3 vLocalPosition;
       
       void main() {
         vOpacity = instanceOpacity;
-        vNormal = normalize(normalMatrix * normal);
         vUv = uv;
+        vNormal = normalize(normalMatrix * normal);
+        vLocalPosition = position;
         gl_Position = projectionMatrix * modelViewMatrix * instanceMatrix * vec4(position, 1.0);
       }
     `,
     fragmentShader: `
-      uniform vec3 uGoldColor;
-      uniform vec3 uGoldDark;
-      uniform vec3 uEmissive;
+      uniform sampler2D uBillAtlas;
       uniform float uEmissiveIntensity;
-      uniform vec3 uPurpleColor;
       varying float vOpacity;
-      varying vec3 vNormal;
       varying vec2 vUv;
+      varying vec3 vNormal;
+      varying vec3 vLocalPosition;
       
       void main() {
         vec3 light = normalize(vec3(1.0, 2.0, 1.0));
         float diff = max(dot(vNormal, light), 0.0) * 0.6 + 0.4;
         
-        vec3 finalColor;
+        // Map UV coordinates to atlas regions
+        vec2 atlasUV = vUv;
         
-        // Top and bottom faces - add purple rectangles
-        if (abs(vNormal.y) > 0.8) {
-          vec3 goldBase = mix(uGoldColor, uGoldDark, step(0.0, -vNormal.y)) * diff;
-          
-          // Purple rectangles on each side
-          float rectWidth = 0.2;
-          float rectHeight = 0.6;
-          float rectOffset = 0.3;
-          
-          bool inLeftRect = (vUv.x > rectOffset - rectWidth/2.0 && vUv.x < rectOffset + rectWidth/2.0) && 
-                           (vUv.y > 0.5 - rectHeight/2.0 && vUv.y < 0.5 + rectHeight/2.0);
-          bool inRightRect = (vUv.x > 1.0 - rectOffset - rectWidth/2.0 && vUv.x < 1.0 - rectOffset + rectWidth/2.0) && 
-                            (vUv.y > 0.5 - rectHeight/2.0 && vUv.y < 0.5 + rectHeight/2.0);
-          
-          if (inLeftRect || inRightRect) {
-            finalColor = uPurpleColor;
-          } else {
-            finalColor = goldBase;
-          }
-        }
-        // Side/rim - slightly darker gold
-        else {
-          finalColor = mix(uGoldColor, uGoldDark, 0.3) * diff;
+        bool isGoldSymbol = vLocalPosition.y > 0.01;
+        
+        if (isGoldSymbol) {
+          // Use right half of texture (gold region: 0.5-1.0)
+          atlasUV.x = vUv.x * 0.5 + 0.5;
+        } else {
+          // Use left half of texture (green region: 0.0-0.5)
+          atlasUV.x = vUv.x * 0.5;
         }
         
-        finalColor += uEmissive * uEmissiveIntensity;
+        vec4 textureColor = texture2D(uBillAtlas, atlasUV);
+        vec3 finalColor = textureColor.rgb * diff;
+        
+        // Add slight emissive glow
+        finalColor += textureColor.rgb * uEmissiveIntensity;
+        
         gl_FragColor = vec4(finalColor, vOpacity);
       }
     `,
@@ -345,11 +369,11 @@ function getPropertyPosition(propertyId: number): THREE.Vector3 | null {
 }
 
 function getIncomeTier(income: number) {
-  if (income < 500)    return { symbol: 'coin' as const,    intervalMs: 1250 };
-  if (income < 2000)   return { symbol: 'coin' as const,    intervalMs: 1000 };
-  if (income < 5000)   return { symbol: 'coin' as const,    intervalMs: 750 };
-  if (income < 10000)  return { symbol: 'coin' as const,    intervalMs: 500 };
-  if (income < 20000)  return { symbol: 'coin' as const,    intervalMs: 250 };
+  if (income < 500)    return { symbol: 'bill' as const,    intervalMs: 1250 };
+  if (income < 2000)   return { symbol: 'bill' as const,    intervalMs: 1000 };
+  if (income < 5000)   return { symbol: 'bill' as const,    intervalMs: 750 };
+  if (income < 10000)  return { symbol: 'bill' as const,    intervalMs: 500 };
+  if (income < 20000)  return { symbol: 'bill' as const,    intervalMs: 250 };
   if (income < 50000)  return { symbol: 'diamond' as const, intervalMs: 1000 };
   if (income < 100000) return { symbol: 'diamond' as const, intervalMs: 750 };
   if (income < 150000) return { symbol: 'diamond' as const, intervalMs: 500 };
@@ -379,13 +403,13 @@ export function IncomeFlow3D({ enabled = true, particlesVisible = true, onPartic
   const { triggerSpawn } = useParticleSpawn();
   
   // Refs for instanced meshes
-  const coinMeshRef = useRef<THREE.InstancedMesh>(null);
+  const billMeshRef = useRef<THREE.InstancedMesh>(null);
   const diamondMeshRef = useRef<THREE.InstancedMesh>(null);
   
-  // Logo texture removed - no longer needed
+  // Logo texture removed - no longer needed for bills
   
   // Particle data pools
-  const coinDataRef = useRef<ParticleData[]>([]);
+  const billDataRef = useRef<ParticleData[]>([]);
   const diamondDataRef = useRef<ParticleData[]>([]);
   
   // Spawn timers
@@ -402,16 +426,16 @@ export function IncomeFlow3D({ enabled = true, particlesVisible = true, onPartic
   const tempEuler = useMemo(() => new THREE.Euler(), []);
 
   // Create geometries and materials
-  const coinGeometry = useMemo(() => createCoinGeometry(), []);
+  const billGeometry = useMemo(() => createBillGeometry(), []);
   const diamondGeometry = useMemo(() => createDiamondGeometry(), []);
-  const coinMaterial = useMemo(() => createCoinMaterial(), []);
+  const billMaterial = useMemo(() => createBillMaterial(), []);
   const diamondMaterial = useMemo(() => createDiamondMaterial(), []);
   
-  // Coin material no longer needs texture updates
+  // Bill material doesn't need texture updates
 
   // Initialize particle pools
   useEffect(() => {
-    coinDataRef.current = Array.from({ length: MAX_COINS }, () => ({
+    billDataRef.current = Array.from({ length: MAX_BILLS }, () => ({
       active: false,
       startPos: new THREE.Vector3(),
       controlPos: new THREE.Vector3(),
@@ -444,9 +468,9 @@ export function IncomeFlow3D({ enabled = true, particlesVisible = true, onPartic
 
   // Initialize opacity attributes
   useEffect(() => {
-    if (coinMeshRef.current && !coinMeshRef.current.geometry.getAttribute('instanceOpacity')) {
-      const opacities = new Float32Array(MAX_COINS).fill(0);
-      coinMeshRef.current.geometry.setAttribute('instanceOpacity', new THREE.InstancedBufferAttribute(opacities, 1));
+    if (billMeshRef.current && !billMeshRef.current.geometry.getAttribute('instanceOpacity')) {
+      const opacities = new Float32Array(MAX_BILLS).fill(0);
+      billMeshRef.current.geometry.setAttribute('instanceOpacity', new THREE.InstancedBufferAttribute(opacities, 1));
     }
     if (diamondMeshRef.current && !diamondMeshRef.current.geometry.getAttribute('instanceOpacity')) {
       const opacities = new Float32Array(MAX_DIAMONDS).fill(0);
@@ -475,8 +499,8 @@ export function IncomeFlow3D({ enabled = true, particlesVisible = true, onPartic
 
   // Spawn a particle
   const spawnParticle = useCallback((propData: PropertyIncomeData, intervalUsed: number) => {
-    const isCoin = propData.tier.symbol === 'coin';
-    const dataPool = isCoin ? coinDataRef.current : diamondDataRef.current;
+    const isBill = propData.tier.symbol === 'bill';
+    const dataPool = isBill ? billDataRef.current : diamondDataRef.current;
     
     const slot = dataPool.findIndex(p => !p.active);
     if (slot === -1) return;
@@ -591,19 +615,19 @@ export function IncomeFlow3D({ enabled = true, particlesVisible = true, onPartic
   useFrame((state, delta) => {
     if (!enabled || !particlesVisible) return;
     
-    const coinMesh = coinMeshRef.current;
+    const billMesh = billMeshRef.current;
     const diamondMesh = diamondMeshRef.current;
-    if (!coinMesh || !diamondMesh) return;
+    if (!billMesh || !diamondMesh) return;
     
-    const coinOpacities = coinMesh.geometry.getAttribute('instanceOpacity') as THREE.InstancedBufferAttribute;
+    const billOpacities = billMesh.geometry.getAttribute('instanceOpacity') as THREE.InstancedBufferAttribute;
     const diamondOpacities = diamondMesh.geometry.getAttribute('instanceOpacity') as THREE.InstancedBufferAttribute;
     
-    if (!coinOpacities || !diamondOpacities) return;
+    if (!billOpacities || !diamondOpacities) return;
     
-    // Update coins
-    coinDataRef.current.forEach((particle, i) => {
+    // Update bills
+    billDataRef.current.forEach((particle, i) => {
       if (!particle.active) {
-        coinOpacities.setX(i, 0);
+        billOpacities.setX(i, 0);
         return;
       }
       
@@ -611,7 +635,7 @@ export function IncomeFlow3D({ enabled = true, particlesVisible = true, onPartic
       
       if (particle.progress >= 1) {
         particle.active = false;
-        coinOpacities.setX(i, 0);
+        billOpacities.setX(i, 0);
         onParticleArrive?.(particle.incomeValue);
         return;
       }
@@ -630,14 +654,14 @@ export function IncomeFlow3D({ enabled = true, particlesVisible = true, onPartic
       
       const fadeIn = Math.min(1, particle.progress * 5);
       const fadeOut = 1 - Math.max(0, (particle.progress - 0.8) / 0.2);
-      coinOpacities.setX(i, fadeIn * fadeOut);
+      billOpacities.setX(i, fadeIn * fadeOut);
       
       tempMatrix.compose(tempPosition, tempQuaternion, tempScale);
-      coinMesh.setMatrixAt(i, tempMatrix);
+      billMesh.setMatrixAt(i, tempMatrix);
     });
     
-    coinMesh.instanceMatrix.needsUpdate = true;
-    coinOpacities.needsUpdate = true;
+    billMesh.instanceMatrix.needsUpdate = true;
+    billOpacities.needsUpdate = true;
     
     // Update diamonds
     diamondDataRef.current.forEach((particle, i) => {
@@ -681,28 +705,29 @@ export function IncomeFlow3D({ enabled = true, particlesVisible = true, onPartic
   // Cleanup
   useEffect(() => {
     return () => {
-      coinGeometry.dispose();
+      billGeometry.dispose();
       diamondGeometry.dispose();
-      coinMaterial.dispose();
+      billMaterial.dispose();
       diamondMaterial.dispose();
     };
-  }, [coinGeometry, diamondGeometry, coinMaterial, diamondMaterial]);
-
-  if (!enabled || ownedProperties.length === 0) return null;
-  if (!particlesVisible) return null;
+  }, [billGeometry, diamondGeometry, billMaterial, diamondMaterial]);
 
   return (
     <group>
-      <instancedMesh
-        ref={coinMeshRef}
-        args={[coinGeometry, coinMaterial, MAX_COINS]}
-        frustumCulled={false}
-      />
-      <instancedMesh
-        ref={diamondMeshRef}
-        args={[diamondGeometry, diamondMaterial, MAX_DIAMONDS]}
-        frustumCulled={false}
-      />
+      {(!enabled || ownedProperties.length === 0 || !particlesVisible) ? null : (
+        <>
+          <instancedMesh
+            ref={billMeshRef}
+            args={[billGeometry, billMaterial, MAX_BILLS]}
+            frustumCulled={false}
+          />
+          <instancedMesh
+            ref={diamondMeshRef}
+            args={[diamondGeometry, diamondMaterial, MAX_DIAMONDS]}
+            frustumCulled={false}
+          />
+        </>
+      )}
     </group>
   );
 }

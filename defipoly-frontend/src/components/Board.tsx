@@ -4,6 +4,7 @@ import { Board3DScene } from './3d/Board3DScene';
 
 interface BoardProps {
   onSelectProperty: (propertyId: number) => void;
+  onCoinClick?: () => void;
   spectatorMode?: boolean;
   spectatorWallet?: string;
   spectatorOwnerships?: any[];
@@ -14,7 +15,8 @@ interface BoardProps {
 }
 
 export function Board({ 
-  onSelectProperty, 
+  onSelectProperty,
+  onCoinClick,
   spectatorMode = false, 
   spectatorOwnerships = [],
   customBoardBackground,
@@ -26,6 +28,7 @@ export function Board({
       {/* 3D Board Scene with integrated IncomeFlow3D */}
       <Board3DScene 
         onSelectProperty={onSelectProperty}
+        onCoinClick={onCoinClick}
         spectatorMode={spectatorMode}
         spectatorOwnerships={spectatorOwnerships}
         customBoardBackground={customBoardBackground}

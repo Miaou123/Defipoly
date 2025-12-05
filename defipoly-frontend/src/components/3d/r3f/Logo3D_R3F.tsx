@@ -42,7 +42,7 @@ export function Logo3D_R3F() {
 
       {/* Flat top */}
       <mesh position={[0, crownHeight + 0.15, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-        <circleGeometry args={[crownRadiusTop, 24]} />
+        <cylinderGeometry args={[crownRadiusTop, crownRadiusTop, 0.01, 24]} />
         <meshStandardMaterial color={0x4D2783} roughness={0.7} metalness={0.0} />
       </mesh>
 

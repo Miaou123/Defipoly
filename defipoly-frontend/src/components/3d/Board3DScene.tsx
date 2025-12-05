@@ -1,8 +1,9 @@
 'use client';
 
 import { Canvas, useFrame } from '@react-three/fiber';
-import { OrbitControls, Text, PerspectiveCamera, Html } from '@react-three/drei';
+import { OrbitControls, Text, PerspectiveCamera, Html, useTexture } from '@react-three/drei';
 import { useGameState } from '@/contexts/GameStateContext';
+import { useRewards } from '@/contexts/RewardsContext';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { PROPERTIES } from '@/utils/constants';
 import { Logo3D_R3F } from './r3f/Logo3D_R3F';
@@ -18,11 +19,13 @@ import * as THREE from 'three';
 import { ResetViewIcon, ZoomInIcon, ZoomOutIcon, HideIcon, PointerArrowIcon, ShieldIcon, ShieldCooldownIcon, HourglassIcon, TargetIcon } from '../icons/UIIcons';
 import { InteractiveBank3D } from './InteractiveBank3D';
 import { IncomeFlow3D } from './IncomeFlow3D';
+import { FloatingCoins3D } from './FloatingCoins3D';
 import { BoardOnboarding3D } from './BoardOnboarding3D';
 
 
 interface Board3DSceneProps {
   onSelectProperty: (propertyId: number) => void;
+  onCoinClick?: () => void;
   spectatorMode?: boolean;
   spectatorOwnerships?: any[];
   customBoardBackground?: string | null;
@@ -86,7 +89,7 @@ function DefaultBoardSurface() {
       <mesh position={[0, boardThickness/2, 0]} receiveShadow>
         <boxGeometry args={[boardWidth, boardThickness, boardHeight]} />
         <meshStandardMaterial 
-          color="#2a1a3a"
+          color="#1A0A2E"
           roughness={0.8} 
           metalness={0.1} 
         />
@@ -95,7 +98,7 @@ function DefaultBoardSurface() {
       {/* Board edge highlight */}
       <mesh position={[0, boardThickness + 0.01, 0]}>
         <boxGeometry args={[boardWidth + 0.05, 0.02, boardHeight + 0.05]} />
-        <meshStandardMaterial color="#4c3b6e" roughness={0.5} metalness={0.2} />
+        <meshStandardMaterial color="#3D2850" roughness={0.5} metalness={0.2} />
       </mesh>
     </>
   );
@@ -536,7 +539,7 @@ function PropertyTile({
       <mesh castShadow receiveShadow>
         <boxGeometry args={[width, tileThickness, depth]} />
         <meshStandardMaterial 
-          color={interactive ? "#3a2a4a" : "#2a1a3a"}
+          color={interactive ? "#4A2C5A" : "#2E1A3A"}
           roughness={0.7}
           emissive={hovered && interactive ? colorHex : '#000000'}
           emissiveIntensity={hovered && interactive ? 0.15 : 0}
@@ -739,7 +742,8 @@ function HouseOnTile({ buildingLevel, side, propertyId }: {
 }
 
 function Scene({ 
-  onSelectProperty, 
+  onSelectProperty,
+  onCoinClick,
   spectatorMode, 
   spectatorOwnerships, 
   cameraControlsRef, 
@@ -751,6 +755,7 @@ function Scene({
   customBoardBackground
 }: SceneProps) {
   const gameState = useGameState();
+  const { unclaimedRewards } = useRewards();
   const ownerships = gameState?.ownerships || [];
   const bankRef = useRef<any>(null);
   const [cameraDistance, setCameraDistance] = useState(25);
@@ -1016,6 +1021,15 @@ function Scene({
         />
       )}
       
+      {/* ===== FLOATING COINS (separate from bank to avoid hover interference) ===== */}
+      {connected && !spectatorMode && (
+        <FloatingCoins3D 
+          rewardsAmount={unclaimedRewards || 0}
+          position={[0, 1.95, 0]}
+          onCoinClick={onCoinClick}
+        />
+      )}
+      
       {/* ===== ONBOARDING OVERLAY ===== */}
       <BoardOnboarding3D 
         hasProperties={hasProperties} 
@@ -1039,7 +1053,7 @@ function Scene({
   );
 }
 
-export function Board3DScene({ onSelectProperty, spectatorMode, spectatorOwnerships, customBoardBackground }: Board3DSceneProps) {
+export function Board3DScene({ onSelectProperty, onCoinClick, spectatorMode, spectatorOwnerships, customBoardBackground }: Board3DSceneProps) {
   
   const containerRef = useRef<HTMLDivElement>(null);
   const [mounted, setMounted] = useState(false);
@@ -1345,6 +1359,7 @@ export function Board3DScene({ onSelectProperty, spectatorMode, spectatorOwnersh
       >
         <Scene 
           onSelectProperty={onSelectProperty}
+          onCoinClick={onCoinClick}
           spectatorMode={spectatorMode}
           spectatorOwnerships={spectatorOwnerships}
           cameraControlsRef={cameraControlsRef}

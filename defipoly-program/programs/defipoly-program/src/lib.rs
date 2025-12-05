@@ -77,6 +77,12 @@ pub mod defipoly_program {
         game_config.accumulation_tier4_bonus_bps = 0;
         game_config.accumulation_tier5_threshold = 0;
         game_config.accumulation_tier5_bonus_bps = 0;
+        game_config.accumulation_tier6_threshold = 0;
+        game_config.accumulation_tier6_bonus_bps = 0;
+        game_config.accumulation_tier7_threshold = 0;
+        game_config.accumulation_tier7_bonus_bps = 0;
+        game_config.accumulation_tier8_threshold = 0;
+        game_config.accumulation_tier8_bonus_bps = 0;
 
         msg!("Game initialized - Phase 1");
         Ok(())
@@ -626,13 +632,8 @@ pub fn steal_property_instant(
         
         require!(base_rewards > 0, ErrorCode::NoRewardsToClaim);
         
-        // Calculate accumulation bonus
-        let bonus_bps = get_accumulation_bonus_bps(base_rewards, game_config);
-        let bonus_amount = (base_rewards as u128)
-            .checked_mul(bonus_bps as u128)
-            .and_then(|r| r.checked_div(10000))
-            .and_then(|r| u64::try_from(r).ok())
-            .ok_or(ErrorCode::Overflow)?;
+        // Calculate progressive accumulation bonus
+        let bonus_amount = calculate_progressive_bonus(base_rewards, game_config)?;
         
         let total_rewards = base_rewards
             .checked_add(bonus_amount)
@@ -643,8 +644,8 @@ pub fn steal_property_instant(
             ErrorCode::InsufficientRewardPool
         );
         
-        msg!("💰 Claiming {} base + {} bonus ({} bps) = {} total", 
-             base_rewards, bonus_amount, bonus_bps, total_rewards);
+        msg!("💰 Claiming {} base + {} bonus (progressive) = {} total", 
+             base_rewards, bonus_amount, total_rewards);
         
         let game_config_key = game_config.key();
         let seeds = &[
@@ -1249,6 +1250,67 @@ pub fn steal_property_instant(
         msg!("Accumulation bonuses updated (5 tiers)");
         Ok(())
     }
+
+    // Admin function to update accumulation bonus tiers (supports 8 tiers)
+    // Recommended configuration:
+    // Tier 1: $10k threshold = 100 bps (1% bonus)
+    // Tier 2: $25k threshold = 250 bps (2.5% bonus)
+    // Tier 3: $50k threshold = 500 bps (5% bonus)
+    // Tier 4: $100k threshold = 1000 bps (10% bonus)
+    // Tier 5: $250k threshold = 1500 bps (15% bonus)
+    // Tier 6: $500k threshold = 2000 bps (20% bonus)
+    // Tier 7: $1M threshold = 2500 bps (25% bonus)
+    // Tier 8: $2.5M threshold = 4000 bps (40% bonus)
+    pub fn admin_update_accumulation_bonus_v2(
+        ctx: Context<AdminUpdateGame>,
+        tier1_threshold: u64,
+        tier1_bonus_bps: u16,
+        tier2_threshold: u64,
+        tier2_bonus_bps: u16,
+        tier3_threshold: u64,
+        tier3_bonus_bps: u16,
+        tier4_threshold: u64,
+        tier4_bonus_bps: u16,
+        tier5_threshold: u64,
+        tier5_bonus_bps: u16,
+        tier6_threshold: u64,
+        tier6_bonus_bps: u16,
+        tier7_threshold: u64,
+        tier7_bonus_bps: u16,
+        tier8_threshold: u64,
+        tier8_bonus_bps: u16,
+    ) -> Result<()> {
+        let game_config = &mut ctx.accounts.game_config;
+        
+        require!(tier1_bonus_bps <= 5000, ErrorCode::InvalidBonus);
+        require!(tier2_bonus_bps <= 5000, ErrorCode::InvalidBonus);
+        require!(tier3_bonus_bps <= 5000, ErrorCode::InvalidBonus);
+        require!(tier4_bonus_bps <= 5000, ErrorCode::InvalidBonus);
+        require!(tier5_bonus_bps <= 5000, ErrorCode::InvalidBonus);
+        require!(tier6_bonus_bps <= 5000, ErrorCode::InvalidBonus);
+        require!(tier7_bonus_bps <= 5000, ErrorCode::InvalidBonus);
+        require!(tier8_bonus_bps <= 5000, ErrorCode::InvalidBonus);
+        
+        game_config.accumulation_tier1_threshold = tier1_threshold;
+        game_config.accumulation_tier1_bonus_bps = tier1_bonus_bps;
+        game_config.accumulation_tier2_threshold = tier2_threshold;
+        game_config.accumulation_tier2_bonus_bps = tier2_bonus_bps;
+        game_config.accumulation_tier3_threshold = tier3_threshold;
+        game_config.accumulation_tier3_bonus_bps = tier3_bonus_bps;
+        game_config.accumulation_tier4_threshold = tier4_threshold;
+        game_config.accumulation_tier4_bonus_bps = tier4_bonus_bps;
+        game_config.accumulation_tier5_threshold = tier5_threshold;
+        game_config.accumulation_tier5_bonus_bps = tier5_bonus_bps;
+        game_config.accumulation_tier6_threshold = tier6_threshold;
+        game_config.accumulation_tier6_bonus_bps = tier6_bonus_bps;
+        game_config.accumulation_tier7_threshold = tier7_threshold;
+        game_config.accumulation_tier7_bonus_bps = tier7_bonus_bps;
+        game_config.accumulation_tier8_threshold = tier8_threshold;
+        game_config.accumulation_tier8_bonus_bps = tier8_bonus_bps;
+        
+        msg!("Accumulation bonuses updated (8 tiers)");
+        Ok(())
+    }
 }
 
 // ========== HELPER FUNCTIONS (OUTSIDE #[program] MODULE) ==========
@@ -1319,25 +1381,51 @@ fn distribute_payment<'info>(
     Ok(())
 }
 
-fn get_accumulation_bonus_bps(pending_rewards: u64, game_config: &GameConfig) -> u16 {
-    if game_config.accumulation_tier5_threshold > 0 
-        && pending_rewards >= game_config.accumulation_tier5_threshold {
-        game_config.accumulation_tier5_bonus_bps
-    } else if game_config.accumulation_tier4_threshold > 0 
-        && pending_rewards >= game_config.accumulation_tier4_threshold {
-        game_config.accumulation_tier4_bonus_bps
-    } else if game_config.accumulation_tier3_threshold > 0 
-        && pending_rewards >= game_config.accumulation_tier3_threshold {
-        game_config.accumulation_tier3_bonus_bps
-    } else if game_config.accumulation_tier2_threshold > 0 
-        && pending_rewards >= game_config.accumulation_tier2_threshold {
-        game_config.accumulation_tier2_bonus_bps
-    } else if game_config.accumulation_tier1_threshold > 0 
-        && pending_rewards >= game_config.accumulation_tier1_threshold {
-        game_config.accumulation_tier1_bonus_bps
-    } else {
-        0
+/// Calculate progressive bonus - each bracket only applies to rewards within that range
+/// Example: 60k pending with tiers at 10k/25k/50k:
+/// - First 10k: 0% bonus
+/// - Next 15k (10k-25k): 1% bonus = 150
+/// - Next 25k (25k-50k): 2.5% bonus = 625
+/// - Last 10k (50k-60k): 5% bonus = 500
+/// Total bonus = 1,275
+fn calculate_progressive_bonus(pending_rewards: u64, game_config: &GameConfig) -> Result<u64> {
+    let mut total_bonus: u128 = 0;
+    let mut remaining = pending_rewards;
+    
+    // Define tiers in descending order (highest first)
+    let tiers = [
+        (game_config.accumulation_tier8_threshold, game_config.accumulation_tier8_bonus_bps),
+        (game_config.accumulation_tier7_threshold, game_config.accumulation_tier7_bonus_bps),
+        (game_config.accumulation_tier6_threshold, game_config.accumulation_tier6_bonus_bps),
+        (game_config.accumulation_tier5_threshold, game_config.accumulation_tier5_bonus_bps),
+        (game_config.accumulation_tier4_threshold, game_config.accumulation_tier4_bonus_bps),
+        (game_config.accumulation_tier3_threshold, game_config.accumulation_tier3_bonus_bps),
+        (game_config.accumulation_tier2_threshold, game_config.accumulation_tier2_bonus_bps),
+        (game_config.accumulation_tier1_threshold, game_config.accumulation_tier1_bonus_bps),
+    ];
+    
+    // Process each tier from highest to lowest
+    for (threshold, bonus_bps) in tiers.iter() {
+        if *threshold > 0 && remaining > *threshold {
+            // Calculate amount in this tier bracket
+            let amount_in_tier = remaining - *threshold;
+            
+            // Apply bonus only to the amount within this bracket
+            let tier_bonus = (amount_in_tier as u128)
+                .checked_mul(*bonus_bps as u128)
+                .and_then(|r| r.checked_div(10000))
+                .ok_or(ErrorCode::Overflow)?;
+                
+            total_bonus = total_bonus.checked_add(tier_bonus).ok_or(ErrorCode::Overflow)?;
+            
+            // Update remaining to process lower tiers
+            remaining = *threshold;
+        }
     }
+    
+    // If there's still remaining amount below tier 1, it gets 0% bonus (no calculation needed)
+    
+    u64::try_from(total_bonus).map_err(|_| ErrorCode::Overflow.into())
 }
 
 // ========== ACCOUNT CONTEXTS ==========
@@ -1842,8 +1930,14 @@ pub struct GameConfig {
     pub accumulation_tier4_bonus_bps: u16,
     pub accumulation_tier5_threshold: u64,
     pub accumulation_tier5_bonus_bps: u16,
+    pub accumulation_tier6_threshold: u64,
+    pub accumulation_tier6_bonus_bps: u16,
+    pub accumulation_tier7_threshold: u64,
+    pub accumulation_tier7_bonus_bps: u16,
+    pub accumulation_tier8_threshold: u64,
+    pub accumulation_tier8_bonus_bps: u16,
     
-    pub padding: [u8; 78], // Reserved for future features
+    pub padding: [u8; 48], // Reserved for future features (reduced by 30 bytes for 3 new tiers)
 }
 
 impl GameConfig {

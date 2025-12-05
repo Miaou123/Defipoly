@@ -37,7 +37,7 @@ export function BuyPropertySection({
 }: BuyPropertySectionProps) {
   const wallet = useWallet();
   const { buyProperty } = useDefipoly();
-  const { showSuccess } = useNotification();
+  const { showSuccess, showError, showInfo } = useNotification();
   const { 
     getOwnership, 
     isPropertyOnCooldown,   
@@ -218,9 +218,13 @@ export function BuyPropertySection({
         errorMessage = `Only ${propertyData?.availableSlots} slot${propertyData?.availableSlots === 1 ? '' : 's'} available`;
       } else if (errorString.includes('insufficient funds')) {
         errorMessage = 'Insufficient balance';
+      } else if (errorString.includes('User rejected') || errorString.includes('rejected the request')) {
+        // Don't show error for user cancellation - just show info
+        showInfo('Transaction Cancelled', 'Request rejected by user');
+        return;
       }
       
-      alert(errorMessage);
+      showError('Purchase Failed', errorMessage);
     } finally {
       setLoading(false);
       setBuyingProgress('');

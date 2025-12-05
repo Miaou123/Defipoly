@@ -11,15 +11,15 @@ const tileThickness = 0.15;
 // Colors from the codebase
 const COLORS = {
   purple: 0x4D2783,
-  purpleDark: 0x2a1a3a,
-  purpleLight: 0x9333ea,
+  purpleDark: 0x1A0A2E,       // was 0x2a1a3a - darker
+  purpleLight: 0x5E3D6E,      // was 0x9333ea - less pink glow
   gold: 0xFFBD32,
   green: 0x22c55e,
   greenDark: 0x15803d,
   blue: 0x60a5fa,
   blueDark: 0x3b82f6,
-  innerPurple: 0x2a1548,
-  tileBase: 0x3a2a4a,
+  innerPurple: 0x1A0A2E,      // was 0x2a1548 - darker
+  tileBase: 0x2E1A3A,         // was 0x3a2a4a - darker corner base
 };
 
 interface CornerTile3DProps {
@@ -46,7 +46,7 @@ function MiniTopHat({ scale = 0.18 }: { scale?: number }) {
 
       {/* Flat top */}
       <mesh position={[0, crownHeight, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-        <circleGeometry args={[crownRadiusTop, 16]} />
+        <circleGeometry args={[crownRadiusTop, 32]} />
         <meshStandardMaterial color={COLORS.purple} roughness={0.7} metalness={0} />
       </mesh>
 
@@ -104,7 +104,7 @@ function BillStack({ scale = 0.12 }: { scale?: number }) {
       {offsets.map((offset, i) => (
         <mesh key={i} position={[offset.x, i * 0.03 * scale, offset.z]}>
           <boxGeometry args={[1.4 * scale, 0.05 * scale, 0.7 * scale]} />
-          <meshStandardMaterial color={COLORS.green} emissive={COLORS.greenDark} emissiveIntensity={0.2} roughness={0.4} metalness={0.2} />
+          <meshStandardMaterial color={0x1ca049} emissive={COLORS.greenDark} emissiveIntensity={0.2} roughness={0.4} metalness={0.2} />
         </mesh>
       ))}
       {/* Gold $ on top */}
@@ -348,27 +348,21 @@ function CornerCombined() {
         <MiniTopHat scale={0.12} />
       </group>
 
-      {/* Orbiting bills and diamonds */}
+      {/* Orbiting diamonds */}
       <group ref={orbitGroupRef}>
-        {Array.from({ length: 6 }, (_, i) => (
+        {Array.from({ length: 5 }, (_, i) => (
           <group
-            key={`orbiter-${i}`}
+            key={`diamond-${i}`}
             position={[
-              Math.cos((i / 6) * Math.PI * 2) * 0.32,
-              0.25,
-              Math.sin((i / 6) * Math.PI * 2) * 0.32
+              Math.cos((i / 5) * Math.PI * 2) * 0.35,
+              0.25 + i * 0.08,
+              Math.sin((i / 5) * Math.PI * 2) * 0.35
             ]}
           >
-            {i % 2 === 0 ? <BillStack scale={0.05} /> : <Diamond scale={0.06} />}
+            <Diamond scale={0.08} />
           </group>
         ))}
       </group>
-
-      {/* Gold ring */}
-      <mesh ref={ringRef} position={[0, 0.25, 0]} rotation={[Math.PI / 2, 0, 0]}>
-        <torusGeometry args={[0.35, 0.015, 8, 32]} />
-        <meshStandardMaterial color={COLORS.gold} emissive={COLORS.gold} emissiveIntensity={0.5} transparent opacity={0.7} />
-      </mesh>
 
       {/* Static sparkles removed */}
     </group>

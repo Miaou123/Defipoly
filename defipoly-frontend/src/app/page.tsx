@@ -6,15 +6,28 @@ import { Portfolio } from '@/components/Portfolio';
 import { Leaderboard } from '@/components/Leaderboard';
 import { LiveFeed } from '@/components/LiveFeed';
 import { PropertyModal } from '@/components/property-modal';
+import { FloatingCoinsModal } from '@/components/3d/FloatingCoins3D';
 import { ProfileWallet } from '@/components/ProfileWallet';
 import { MobileLayout } from '@/components/MobileLayout';
 import { useState, useEffect } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
+import { useGameState } from '@/contexts/GameStateContext';
+import { useRewards } from '@/contexts/RewardsContext';
 import { getProfile, clearProfileCache } from '@/utils/profileStorage';
 
 export default function Home() {
   const { publicKey } = useWallet();
+  const { gameState } = useGameState();
+  const { unclaimedRewards } = useRewards();
+  
+  // Debug rewards amount
+  console.log('🏠 [PAGE] unclaimedRewards from useRewards():', unclaimedRewards);
+  
+  // Calculate tier count for modal
+  const ACCUMULATION_TIERS = [10000, 25000, 50000, 100000, 250000, 500000, 1000000, 2500000];
+  const tierCount = ACCUMULATION_TIERS.filter(threshold => (unclaimedRewards || 0) >= threshold).length;
   const [selectedProperty, setSelectedProperty] = useState<number | null>(null);
+  const [showCoinModal, setShowCoinModal] = useState(false);
   const [profilePicture, setProfilePicture] = useState<string | null>(null);
   const [cornerSquareStyle, setCornerSquareStyle] = useState<'property' | 'profile'>('property');
   const [customBoardBackground, setCustomBoardBackground] = useState<string | null>(null);
@@ -147,7 +160,13 @@ export default function Home() {
 
         {/* CENTER: Board */}
         <div className="flex items-center justify-center overflow-hidden">
-          <Board onSelectProperty={setSelectedProperty} profilePicture={profilePicture} cornerSquareStyle={cornerSquareStyle} customBoardBackground={customBoardBackground} />
+          <Board 
+            onSelectProperty={setSelectedProperty} 
+            onCoinClick={() => setShowCoinModal(true)}
+            profilePicture={profilePicture} 
+            cornerSquareStyle={cornerSquareStyle} 
+            customBoardBackground={customBoardBackground} 
+          />
         </div>
         
         {/* RIGHT COLUMN: Profile/Wallet + Leaderboard + Live Feed */}
@@ -175,6 +194,13 @@ export default function Home() {
       <PropertyModal 
         propertyId={selectedProperty}
         onClose={() => setSelectedProperty(null)}
+      />
+      
+      <FloatingCoinsModal
+        isOpen={showCoinModal}
+        onClose={() => setShowCoinModal(false)}
+        rewardsAmount={unclaimedRewards || 0}
+        tierCount={tierCount}
       />
     </div>
   );

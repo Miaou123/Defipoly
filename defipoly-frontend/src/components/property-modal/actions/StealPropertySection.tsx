@@ -32,7 +32,7 @@ export function StealPropertySection({
   onClose
 }: StealPropertySectionProps) {
   const { stealPropertyInstant } = useDefipoly();
-  const { showSuccess, showError } = useNotification();
+  const { showSuccess, showError, showInfo } = useNotification();
   const { isStealOnCooldown, getStealCooldownRemaining } = useGameState();
   
   const [availableTargets, setAvailableTargets] = useState<number | null>(null);
@@ -118,6 +118,10 @@ export function StealPropertySection({
           'Steal Protection Active',
           'The selected target has steal protection active (6h cooldown).'
         );
+      } else if (errorMsg.includes('User rejected') || errorMsg.includes('rejected the request')) {
+        // Don't show error for user cancellation - just show info
+        showInfo('Transaction Cancelled', 'Request rejected by user');
+        return;
       } else {
         showError('Steal Failed', errorMsg);
       }

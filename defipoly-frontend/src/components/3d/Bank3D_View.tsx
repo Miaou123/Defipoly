@@ -1,21 +1,9 @@
 'use client';
 
-import { memo, Suspense } from 'react';
-import { Canvas } from '@react-three/fiber';
+import { memo } from 'react';
 import { PerspectiveCamera } from '@react-three/drei';
 import { Bank3D_V2 } from './r3f/Bank3D_R3F';
-
-// Lighting for inline canvas
-function BankLighting() {
-  return (
-    <>
-      <ambientLight intensity={1.2} />
-      <directionalLight position={[5, 10, 7]} intensity={1.5} />
-      <directionalLight position={[-5, 5, -5]} intensity={0.5} color="#ffeedd" />
-      <directionalLight position={[0, -5, 5]} intensity={0.3} />
-    </>
-  );
-}
+import { View3D } from './SharedCanvas';
 
 interface Bank3D_ViewProps {
   size?: number;
@@ -33,26 +21,17 @@ function Bank3D_ViewComponent({
   onCollect 
 }: Bank3D_ViewProps) {
   return (
-    <div 
+    <View3D 
       className="flex items-center justify-center cursor-pointer" 
       style={{ width: size, height: size }}
       onClick={onCollect}
     >
-      <Canvas
-        style={{ width: '100%', height: '100%' }}
-        gl={{ antialias: true, alpha: true, powerPreference: 'default' }}
-        flat
-      >
-        <BankLighting />
-        <PerspectiveCamera makeDefault position={[0, 5, 40]} fov={45} />
-        <Suspense fallback={null}>
-          <Bank3D_V2 
-            rewardsAmount={rewardsAmount}
-            profilePicture={profilePicture}
-          />
-        </Suspense>
-      </Canvas>
-    </div>
+      <PerspectiveCamera makeDefault position={[0, 5, 40]} fov={45} />
+      <Bank3D_V2 
+        rewardsAmount={rewardsAmount}
+        profilePicture={profilePicture}
+      />
+    </View3D>
   );
 }
 

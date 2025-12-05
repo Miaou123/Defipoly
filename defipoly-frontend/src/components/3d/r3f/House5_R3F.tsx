@@ -24,8 +24,6 @@ function getSetIdFromColor(colorClass: string): number {
   };
   
   const result = colorToSetMap[colorClass] ?? 0;
-  console.log(`[getSetIdFromColor] Input: "${colorClass}" -> SetId: ${result}, found in map: ${colorClass in colorToSetMap}`);
-  
   return result;
 }
 
@@ -45,11 +43,9 @@ export function House5_R3F({ isPulsing = false, color = 'bg-purple-500' }: House
   const groupRef = useRef<THREE.Group>(null);
   const scaleRef = useRef({ current: 1, target: 1 });
 
-  console.log(`[House5_R3F] Received color prop: ${color}`);
 
   // Get colors based on property color (convert to setId first)
   const setId = getSetIdFromColor(color);
-  console.log(`[House5_R3F] Converted color ${color} to setId: ${setId}`);
   
   const colors = SET_COLOR_SCHEMES[setId] ?? SET_COLOR_SCHEMES[0] ?? {
     wall: 0xE8D4B8, 
@@ -59,7 +55,6 @@ export function House5_R3F({ isPulsing = false, color = 'bg-purple-500' }: House
     accent: 0x8B4513
   };
   
-  console.log(`[House5_R3F] Using color scheme for setId ${setId}:`, colors);
 
   useFrame(() => {
     if (!groupRef.current) return;
@@ -312,7 +307,7 @@ export function House5_R3F({ isPulsing = false, color = 'bg-purple-500' }: House
 
       {/* Coat of arms */}
       <mesh position={[0, entranceHeight + 0.6, mainDepth/2 + entranceDepth + 0.02]}>
-        <circleGeometry args={[0.18, 16]} />
+        <cylinderGeometry args={[0.18, 0.18, 0.02, 16]} />
         <meshStandardMaterial color={0xD4AF37} metalness={0.8} roughness={0.2} />
       </mesh>
       <mesh geometry={shieldGeo} position={[0, entranceHeight + 0.58, mainDepth/2 + entranceDepth + 0.03]}>

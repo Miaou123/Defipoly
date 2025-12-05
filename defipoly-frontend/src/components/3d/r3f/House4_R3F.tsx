@@ -122,7 +122,7 @@ export function House4_R3F({ isPulsing = false }: House4_R3FProps) {
 
       {/* Medallion */}
       <mesh position={[0, roofBaseY + roofHeight * 0.45 + 0.25, roofD + 0.02]}>
-        <circleGeometry args={[0.25, 24]} />
+        <cylinderGeometry args={[0.25, 0.25, 0.02, 24]} />
         <meshStandardMaterial color={0xFFFDF5} roughness={0.3} />
       </mesh>
       <mesh position={[0, roofBaseY + roofHeight * 0.45 + 0.25, roofD + 0.03]}>
@@ -284,7 +284,7 @@ export function House4_R3F({ isPulsing = false }: House4_R3FProps) {
       </mesh>
       {/* Fanlight */}
       <mesh position={[0, doorY + doorHeight / 2 + 0.3, mainDepth / 2 + 0.06]}>
-        <circleGeometry args={[0.25, 16, 0, Math.PI]} />
+        <planeGeometry args={[0.5, 0.25]} />
         <meshStandardMaterial color={0xE8F4FF} emissive={0xFFFFCC} emissiveIntensity={0.15} roughness={0.1} />
       </mesh>
       {/* Door handle */}

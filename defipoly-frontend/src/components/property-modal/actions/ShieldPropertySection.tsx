@@ -30,7 +30,7 @@ export function ShieldPropertySection({
   onClose
 }: ShieldPropertySectionProps) {
   const { activateShield } = useDefipoly();
-  const { showSuccess, showError } = useNotification();
+  const { showSuccess, showError, showInfo } = useNotification();
   
   const [selectedHours, setSelectedHours] = useState(24);
   const [timeRemaining, setTimeRemaining] = useState('');
@@ -107,8 +107,10 @@ export function ShieldPropertySection({
       const errorString = error?.message || error?.toString() || '';
       let errorMessage = 'Failed to activate shield';
       
-      if (errorString.includes('User rejected')) {
-        errorMessage = 'Transaction was cancelled';
+      if (errorString.includes('User rejected') || errorString.includes('rejected the request')) {
+        // Don't show error for user cancellation - just show info
+        showInfo('Transaction Cancelled', 'Request rejected by user');
+        return;
       } else if (errorString.includes('insufficient')) {
         errorMessage = 'Insufficient balance';
       } else if (errorString.includes('InvalidShieldDuration')) {

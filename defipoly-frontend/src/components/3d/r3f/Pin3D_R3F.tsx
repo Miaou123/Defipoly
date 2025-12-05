@@ -80,7 +80,7 @@ export function Pin3D_R3F({ color = 'bg-purple-500' }: Pin3D_R3FProps) {
 
       {/* Shadow on ground */}
       <mesh position={[0, -0.64, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-        <circleGeometry args={[0.3, 24]} />
+        <planeGeometry args={[0.6, 0.6]} />
         <meshBasicMaterial 
           color={0x000000} 
           transparent

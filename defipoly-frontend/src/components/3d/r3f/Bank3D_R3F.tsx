@@ -27,11 +27,12 @@ function LogoFallback() {
   
   return (
     <mesh>
-      <circleGeometry args={[2.0, 32]} />
+      <planeGeometry args={[4.0, 4.0]} />
       <meshBasicMaterial map={texture} side={THREE.DoubleSide} />
     </mesh>
   );
 }
+
 
 export function Bank3D_V2({ 
   rewardsAmount = 0,
@@ -499,6 +500,7 @@ export function Bank3D_V2({
           );
         })}
       </group>
+
     </group>
   );
 }

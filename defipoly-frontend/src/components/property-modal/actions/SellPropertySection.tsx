@@ -33,7 +33,7 @@ export function SellPropertySection({
   onClose
 }: SellPropertySectionProps) {
   const { sellProperty } = useDefipoly();
-  const { showSuccess, showError } = useNotification();
+  const { showSuccess, showError, showInfo } = useNotification();
   const { getOwnership } = useGameState();
   const { publicKey } = useWallet();
   
@@ -129,8 +129,10 @@ export function SellPropertySection({
       
       if (errorString.includes('InsufficientSlots')) {
         errorMessage = 'Not enough slots to sell';
-      } else if (errorString.includes('User rejected')) {
-        errorMessage = 'Transaction was cancelled';
+      } else if (errorString.includes('User rejected') || errorString.includes('rejected the request')) {
+        // Don't show error for user cancellation - just show info
+        showInfo('Transaction Cancelled', 'Request rejected by user');
+        return;
       }
       
       showError('Sale Failed', errorMessage);

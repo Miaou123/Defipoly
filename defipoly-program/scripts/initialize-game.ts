@@ -191,16 +191,22 @@ async function main() {
   try {
     await program.methods
       .adminUpdateAccumulationBonus(
-        new BN(50_000 * DECIMALS),    // Tier 1: 50k tokens
-        500,                           // 5% bonus
-        new BN(100_000 * DECIMALS),   // Tier 2: 100k tokens
+        new BN(10_000 * DECIMALS),    // Tier 1: 10k tokens
+        100,                           // 1% bonus
+        new BN(25_000 * DECIMALS),   // Tier 2: 25k tokens
+        250,                          // 2.5% bonus
+        new BN(50_000 * DECIMALS),   // Tier 3: 50k tokens
+        500,                          // 5% bonus
+        new BN(100_000 * DECIMALS),   // Tier 4: 100k tokens
         1000,                          // 10% bonus
-        new BN(250_000 * DECIMALS),   // Tier 3: 250k tokens
+        new BN(250_000 * DECIMALS), // Tier 5: 250k tokens
         1500,                          // 15% bonus
-        new BN(500_000 * DECIMALS),   // Tier 4: 500k tokens
+        new BN(500_000 * DECIMALS), // Tier 5: 500k tokens
         2000,                          // 20% bonus
         new BN(1_000_000 * DECIMALS), // Tier 5: 1M tokens
         2500,                          // 25% bonus
+        new BN(2_500_000 * DECIMALS), // Tier 5: 2.5M tokens
+        4000,                          // 40% bonus
       )
       .accounts({
         gameConfig,
