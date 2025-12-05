@@ -1222,7 +1222,14 @@ export function Board3DScene({ onSelectProperty, onCoinClick, spectatorMode, spe
     
     const walletKey = publicKey.toBase58();
     const storageKey = `hasSeenClaimHint_${walletKey}`;
+    const firstPurchaseKey = `firstPurchaseTime_${walletKey}`;
     
+    console.log('🏦 Claim hint check:', {
+      walletKey,
+      storageValue: localStorage.getItem(storageKey),
+      firstPurchaseTime: localStorage.getItem(firstPurchaseKey),
+      currentOwnerships: gameState?.ownerships,
+    });
     
     if (localStorage.getItem(storageKey) === 'true') return;
     
@@ -1230,22 +1237,49 @@ export function Board3DScene({ onSelectProperty, onCoinClick, spectatorMode, spe
       ? (spectatorOwnerships?.filter(o => o.slotsOwned > 0).length || 0)
       : (gameState?.ownerships?.filter(o => o.slotsOwned > 0).length || 0);
     
-    
-    if (previousOwnershipsCountRef.current === 0 && currentCount > 0 && !hasTriggeredHintRef.current) {
-      hasTriggeredHintRef.current = true;
+    // If user has properties
+    if (currentCount > 0) {
+      // Check if we've recorded the first purchase time
+      let firstPurchaseTime = localStorage.getItem(firstPurchaseKey);
       
-      const timer = setTimeout(() => {
-        if (localStorage.getItem(storageKey) !== 'true') {
-          setShowClaimHint(true);
-        }
-      }, 30000); // 30 seconds after first purchase
+      if (!firstPurchaseTime) {
+        // This is their first property - record the time
+        firstPurchaseTime = Date.now().toString();
+        localStorage.setItem(firstPurchaseKey, firstPurchaseTime);
+        console.log('🏦 Recording first purchase time:', new Date(parseInt(firstPurchaseTime)));
+      }
       
-      return () => clearTimeout(timer);
+      // Calculate time since first purchase
+      const timeSincePurchase = Date.now() - parseInt(firstPurchaseTime);
+      const shouldShowHint = timeSincePurchase >= 30000; // 30 seconds
+      
+      console.log('🏦 Time since first purchase:', {
+        timeSincePurchase: Math.floor(timeSincePurchase / 1000) + 's',
+        shouldShowHint,
+        showClaimHint
+      });
+      
+      if (shouldShowHint && !showClaimHint) {
+        console.log('🏦 Showing claim hint arrow!');
+        setShowClaimHint(true);
+      } else if (!shouldShowHint && !showClaimHint) {
+        // Set up timer for remaining time
+        const remainingTime = 30000 - timeSincePurchase;
+        console.log('🏦 Setting timer for remaining time:', Math.floor(remainingTime / 1000) + 's');
+        
+        const timer = setTimeout(() => {
+          console.log('🏦 Timer fired! Showing claim hint arrow!');
+          if (localStorage.getItem(storageKey) !== 'true') {
+            setShowClaimHint(true);
+          }
+        }, remainingTime);
+        
+        return () => clearTimeout(timer);
+      }
     }
     
-    previousOwnershipsCountRef.current = currentCount;
     return undefined;
-  }, [publicKey, gameState?.ownerships, spectatorMode, spectatorOwnerships]);
+  }, [publicKey, gameState?.ownerships, spectatorMode, spectatorOwnerships, showClaimHint]);
 
   const handleClaimHintDismiss = useCallback(() => {
     if (!publicKey) return;

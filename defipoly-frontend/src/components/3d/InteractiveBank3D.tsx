@@ -201,6 +201,11 @@ export const InteractiveBank3D = forwardRef<{ handleParticleArrive: (incomeValue
   const handleBankClick = useCallback(async () => {
     const now = Date.now();
     
+    // Dismiss claim hint on bank click
+    if (showClaimHint && onClaimHintDismiss) {
+      onClaimHintDismiss();
+    }
+    
     // Check if user has any properties first
     const hasProperties = gameState?.ownerships?.some(o => o.slotsOwned > 0) || false;
     
@@ -303,35 +308,21 @@ export const InteractiveBank3D = forwardRef<{ handleParticleArrive: (incomeValue
       setClaiming(false);
       claimingRef.current = false;
     }
-  }, [connected, publicKey, claiming, claimingRef, rewardsLoading, animatedRewards, claimRewards, connection, showSuccess, showError]);
+  }, [connected, publicKey, claiming, claimingRef, rewardsLoading, animatedRewards, claimRewards, connection, showSuccess, showError, gameState, showClaimHint, onClaimHintDismiss]);
 
-  // Handle hover to dismiss hint and scale bank
+  // Handle hover to scale bank
   const handlePointerOver = useCallback(() => {
     document.body.style.cursor = 'pointer';
     setIsHovered(true);
-    
-    // Dismiss claim hint on hover
-    if (showClaimHint && onClaimHintDismiss) {
-      onClaimHintDismiss();
-    }
-  }, [showClaimHint, onClaimHintDismiss]);
+  }, []);
 
   const handlePointerOut = useCallback(() => {
     document.body.style.cursor = 'auto';
     setIsHovered(false);
   }, []);
 
-  // Animate the golden claim arrow and bank scaling
+  // Animate bank scaling
   useFrame((state, delta) => {
-    // Arrow animation
-    if (arrowRef.current && showClaimHint) {
-      const t = state.clock.elapsedTime;
-      const pulse = Math.sin(t * 2.5) * 0.4 + 0.8; // Oscillates between 0.4 and 1.2
-      const float = Math.sin(t * 1.5) * 0.5; // Gentle up/down float
-      arrowRef.current.style.opacity = pulse;
-      arrowRef.current.style.transform = `translateY(${float}px) rotate(90deg)`;
-    }
-
     // Bank scaling animation
     if (bankGroupRef.current) {
       const hoverMultiplier = isHovered ? 1.1 : 1.0;
@@ -363,23 +354,19 @@ export const InteractiveBank3D = forwardRef<{ handleParticleArrive: (incomeValue
       {/* Golden claim hint arrow */}
       {showClaimHint && (
         <Html
+          position={[0, 25, 0]}
           center
-          position={[0, 15, 0]}
           style={{
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
             pointerEvents: 'none',
-            zIndex: 5,
           }}
         >
-          <div
-            ref={arrowRef}
-            style={{
-              display: 'flex',
-              justifyContent: 'center',
-              alignItems: 'center',
-              pointerEvents: 'none',
-            }}
-          >
-            <PointerArrowIcon className="w-8 h-8 text-yellow-400 drop-shadow-[0_0_12px_rgba(250,204,21,0.9)]" />
+          <div className="animate-bounce">
+            <div style={{ transform: 'rotate(90deg)' }}>
+              <PointerArrowIcon className="w-24 h-24 text-yellow-400 drop-shadow-[0_0_12px_rgba(250,204,21,0.9)]" />
+            </div>
           </div>
         </Html>
       )}
