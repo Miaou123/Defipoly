@@ -22,8 +22,8 @@ function Pin3D_ViewComponent({
       style={{ width: size, height: size }}
       inModal={inModal}
     >
-      <PerspectiveCamera makeDefault position={[3, 2, 3]} fov={60} lookAt={[0, 0, 0]} />
-      <group position={[0, 0, 0]} scale={0.8}>
+      <PerspectiveCamera makeDefault position={inModal ? [0, 1, 4] : [3, 2, 3]} fov={60} lookAt={[0, 0, 0]} />
+      <group position={[0, 0, 0]} scale={inModal ? 0.6 : 0.8}>
         <Pin3D_R3F color={color} />
       </group>
     </LazyView3D>
