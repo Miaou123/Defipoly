@@ -225,13 +225,6 @@ export function GameStateProvider({ children }: { children: React.ReactNode }) {
         profile: data.profile,
       });
 
-      console.log('✅ Game state loaded:', {
-        ownerships: ownerships.length,
-        setCooldowns: data.cooldowns.sets.length,
-        stealCooldowns: data.cooldowns.steals.length,
-        profile: data.profile,
-      });
-
     } catch (err) {
       console.error('Error fetching game state:', err);
       setError(err instanceof Error ? err.message : 'Failed to fetch game state');
@@ -296,7 +289,6 @@ export function GameStateProvider({ children }: { children: React.ReactNode }) {
     if (!socket || !connected || !publicKey) return;
 
     const handleGameStateUpdate = () => {
-      console.log('🔄 Game state update received via WebSocket');
       fetchGameState();
     };
 

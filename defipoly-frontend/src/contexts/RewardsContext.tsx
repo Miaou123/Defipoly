@@ -1,6 +1,6 @@
 // ============================================
 // FILE: defipoly-frontend/src/contexts/RewardsContext.tsx
-// Makes useRewards state a singleton to prevent multiple 15-minute intervals
+// Makes useRewards state a singleton to prevent multiple 5-minute intervals
 // ============================================
 
 'use client';
@@ -12,7 +12,7 @@ import { useGameState } from '@/contexts/GameStateContext';
 import { fetchPlayerData } from '@/utils/program';
 import { useDefipoly } from '@/contexts/DefipolyContext';
 
-const REFRESH_INTERVAL = 15 * 60 * 1000; // 15 minutes in milliseconds
+const REFRESH_INTERVAL = 5 * 60 * 1000; // 5 minutes in milliseconds
 
 interface RewardsContextType {
   ownerships: any[];
@@ -41,7 +41,6 @@ export function RewardsProvider({ children }: { children: React.ReactNode }) {
   // ✅ Calculate actual pending rewards (blockchain + time-based calculation)
   const fetchBlockchainRewards = async () => {
     if (!publicKey || !program) {
-      console.log('❌ Cannot fetch blockchain - no publicKey or program');
       return null;
     }
 
@@ -102,16 +101,15 @@ export function RewardsProvider({ children }: { children: React.ReactNode }) {
     }
   }, [publicKey]);
 
-  // ✅ Fetch pending rewards from blockchain on mount and every 15 min
+  // ✅ Fetch pending rewards from blockchain on mount and every 5 min
   useEffect(() => {
     if (!publicKey || !program) return;
 
     const fetchAndUpdate = async () => {
       const now = Date.now();
       
-      // Skip if we fetched less than 15 minutes ago (unless it's the first fetch)
+      // Skip if we fetched less than 5 minutes ago (unless it's the first fetch)
       if (lastFetchTime.current && (now - lastFetchTime.current) < REFRESH_INTERVAL) {
-        console.log('⏭️ Skipping blockchain fetch (cached)');
         return;
       }
 
@@ -135,9 +133,8 @@ export function RewardsProvider({ children }: { children: React.ReactNode }) {
     // Fetch immediately on mount
     fetchAndUpdate();
 
-    // Set up 15-minute interval refresh
+    // Set up 5-minute interval refresh
     const intervalId = setInterval(() => {
-      console.log('🔄 15-minute refresh: Fetching pending rewards from blockchain...');
       fetchAndUpdate();
     }, REFRESH_INTERVAL);
 
@@ -173,7 +170,6 @@ export function RewardsProvider({ children }: { children: React.ReactNode }) {
 
     const handleOwnershipChanged = async (data: any) => {
       if (data.wallet === publicKey.toString()) {
-        console.log('🏠 Ownership changed via WebSocket:', data);
         
         // Refresh pending rewards from blockchain immediately
         const blockchainRewards = await fetchBlockchainRewards();

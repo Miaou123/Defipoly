@@ -157,18 +157,19 @@ export function PropertyThemeModal({
 
       if (response.ok) {
         const data = await response.json();
-        console.log('Card upload successful, setting background:', data.backgroundUrl);
+        console.log('🎯 [PropertyThemeModal] Upload response:', data);
+        console.log('🎯 [PropertyThemeModal] Background URL:', data.backgroundUrl);
         onCustomBackgroundChange(data.backgroundUrl);
         onThemeChange('custom');
-        showSuccess('Upload Success', 'Property card theme updated');
+        showSuccess('Upload Success', 'Property cards theme updated');
       } else {
         const errorData = await response.text();
         console.error('Upload failed:', errorData);
-        showError('Upload Failed', 'Failed to upload property card theme');
+        showError('Upload Failed', 'Failed to upload property cards theme');
       }
     } catch (error) {
-      console.error('Error uploading property card theme:', error);
-      showError('Upload Error', 'Error uploading property card theme');
+      console.error('Error uploading property cards theme:', error);
+      showError('Upload Error', 'Error uploading property cards theme');
     } finally {
       setUploading(false);
     }
@@ -176,6 +177,8 @@ export function PropertyThemeModal({
 
   const handleRemoveCustom = async () => {
     if (!publicKey) return;
+    
+    console.log('🗑️ [PropertyThemeModal] Removing custom background:', customBackground);
     
     try {
       // Delete the file from server if it's an upload

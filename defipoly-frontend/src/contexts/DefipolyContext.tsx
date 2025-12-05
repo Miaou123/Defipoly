@@ -95,12 +95,10 @@ export function DefipolyProvider({ children }: { children: React.ReactNode }) {
     }
 
     const checkInitialization = async () => {
-      console.log('🔍 [DefipolyContext] Starting initialization check...');
       
       try {
         // Check token account
         const hasTokenAccount = await checkTokenAccountExists(connection, wallet.publicKey);
-        console.log('💰 [DefipolyContext] Token account exists:', hasTokenAccount);
         setTokenAccountExists(hasTokenAccount);
 
         // Fetch token balance if account exists
@@ -121,7 +119,6 @@ export function DefipolyProvider({ children }: { children: React.ReactNode }) {
         // Check if player is initialized
         const playerData = await fetchPlayerData(program, wallet.publicKey);
         const isInitialized = playerData !== null;
-        console.log('👤 [DefipolyContext] Player initialized:', isInitialized);
         setPlayerInitialized(isInitialized);
         
         initCheckDone.current = true;
@@ -142,7 +139,7 @@ export function DefipolyProvider({ children }: { children: React.ReactNode }) {
       const transaction = new Transaction().add(instruction);
       
       const signature = await provider.sendAndConfirm(transaction);
-      console.log('Token account created:', signature);
+
       
       setTokenAccountExists(true);
       return signature;
@@ -175,7 +172,6 @@ export function DefipolyProvider({ children }: { children: React.ReactNode }) {
         })
         .rpc();
 
-      console.log('Player initialized:', tx);
       setPlayerInitialized(true);
       return { playerAccount: playerPDA, tx };
     } catch (error) {

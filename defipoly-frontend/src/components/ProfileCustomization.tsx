@@ -158,7 +158,7 @@ export function ProfileCustomization({
     if (customPropertyCardBackground) {
       return `url(${customPropertyCardBackground})`;
     }
-    return THEME_CONSTANTS.DEFAULT_PROPERTY_CARD_BACKGROUND;
+    return 'linear-gradient(135deg, rgba(74, 44, 90, 0.9), rgba(236, 72, 153, 0.7))';
   };
 
   return (

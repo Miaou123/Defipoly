@@ -29,6 +29,7 @@ interface Board3DSceneProps {
   spectatorMode?: boolean;
   spectatorOwnerships?: any[];
   customBoardBackground?: string | null;
+  custom3DPropertyTiles?: string | null;
 }
 
 interface SceneProps extends Board3DSceneProps {
@@ -39,6 +40,7 @@ interface SceneProps extends Board3DSceneProps {
   connected: boolean;
   hasProperties: boolean;
   customBoardBackground?: string | null;
+  custom3DPropertyTiles?: string | null;
 }
 
 // EXACT DIMENSIONS TO MATCH PROTOTYPE
@@ -448,6 +450,7 @@ interface PropertyTileProps {
   isStealOnCooldown: (id: number) => boolean;
   spectatorMode: boolean;
   cameraDistance?: number;
+  customTexture?: string | null;
 }
 
 function PropertyTile({ 
@@ -466,9 +469,22 @@ function PropertyTile({
   isPropertyOnCooldown,
   isStealOnCooldown,
   spectatorMode,
-  cameraDistance
+  cameraDistance,
+  customTexture
 }: PropertyTileProps) {
   const [hovered, setHovered] = useState(false);
+  
+  
+  // Load custom texture if provided
+  let texture = null;
+  if (customTexture) {
+    texture = useTexture(customTexture);
+    texture.colorSpace = THREE.SRGBColorSpace;
+    texture.wrapS = texture.wrapT = THREE.ClampToEdgeWrapping;
+    texture.repeat.set(1, 1);
+    texture.offset.set(0, 0);
+  }
+  
   const getColorHex = (colorClass: string) => {
     const colorMap: { [key: string]: string } = {
       'bg-amber-900': '#78350f',
@@ -545,6 +561,78 @@ function PropertyTile({
           emissiveIntensity={hovered && interactive ? 0.15 : 0}
         />
       </mesh>
+      
+      {/* Texture overlay on top of tile (only if texture exists) */}
+      {texture && (() => {
+        // Calculate texture rotation based on tile side
+        let textureRotation: [number, number, number] = [-Math.PI/2, 0, 0]; // default (bottom row)
+        
+        switch (side) {
+          case 'top':
+            // Top row: rotate 180° so text is readable from bottom of board
+            textureRotation = [-Math.PI/2, 0, Math.PI];
+            break;
+          case 'left':
+            // Left side: rotate 90° more (was 90° clockwise, now 180°)
+            textureRotation = [-Math.PI/2, 0, -Math.PI/2];
+            break;
+          case 'right':
+            // Right side: rotate 90° more (was -90°, now 0°)
+            textureRotation = [-Math.PI/2, 0, Math.PI/2];
+            break;
+          case 'bottom':
+          default:
+            // Bottom row: no additional rotation (default orientation)
+            textureRotation = [-Math.PI/2, 0, 0];
+            break;
+        }
+        
+        // Adjust plane dimensions and position to add more padding toward center
+        let planeWidth = width * 0.9;
+        let planeHeight = depth * 0.9;
+        let offsetX = 0;
+        let offsetZ = 0;
+        
+        // For 90° rotations, swap dimensions to maintain visual consistency
+        if (side === 'left' || side === 'right') {
+          // Swap width and height for rotated tiles to maintain same visual footprint
+          planeWidth = depth * 0.9;
+          planeHeight = width * 0.9;
+        }
+        
+        // Add offset to move texture away from board center (more inner padding)
+        const paddingOffset = 0.05; // Adjust this value to control how much offset
+        
+        switch (side) {
+          case 'top':
+            // Move texture toward the top edge (away from center)
+            offsetZ = -paddingOffset;
+            break;
+          case 'bottom':
+            // Move texture toward the bottom edge (away from center)
+            offsetZ = paddingOffset;
+            break;
+          case 'left':
+            // Move texture toward the left edge (away from center)
+            offsetX = -paddingOffset;
+            break;
+          case 'right':
+            // Move texture toward the right edge (away from center)
+            offsetX = paddingOffset;
+            break;
+        }
+        
+        return (
+          <mesh position={[offsetX, tileThickness/2 + 0.001, offsetZ]} rotation={textureRotation} receiveShadow>
+            <planeGeometry args={[planeWidth, planeHeight]} />
+            <meshStandardMaterial 
+              map={texture}
+              roughness={0.8}
+              metalness={0.1}
+            />
+          </mesh>
+        );
+      })()}
       
       {/* Color strip */}
       <mesh position={stripPosition} castShadow>
@@ -752,8 +840,10 @@ function Scene({
   handleClaimHintDismiss,
   connected,
   hasProperties,
-  customBoardBackground
+  customBoardBackground,
+  custom3DPropertyTiles
 }: SceneProps) {
+  
   const gameState = useGameState();
   const { unclaimedRewards } = useRewards();
   const ownerships = gameState?.ownerships || [];
@@ -898,8 +988,10 @@ function Scene({
       <CornerTile3D position={[-halfW + cornerSize/2, tileY, halfH - cornerSize/2]} cornerType="parking" size={cornerSize} />
       <CornerTile3D position={[halfW - cornerSize/2, tileY, halfH - cornerSize/2]} cornerType="gotojail" size={cornerSize} />
       
-      {/* ===== TOP ROW (properties 11-16) ===== */}
-      {[11, 12, 13, 14, 15, 16].map((id, i) => {
+      {/* ===== PROPERTY TILES WITH SUSPENSE FOR TEXTURE LOADING ===== */}
+      <Suspense fallback={null}>
+        {/* ===== TOP ROW (properties 11-16) ===== */}
+        {[11, 12, 13, 14, 15, 16].map((id, i) => {
         const prop = PROPERTIES.find(p => p.id === id)!;
         const x = -halfW + cornerSize + tileLong/2 + i * tileLong;
         const z = -halfH + tileShort/2;
@@ -922,6 +1014,7 @@ function Scene({
             isStealOnCooldown={spectatorMode ? () => false : isStealOnCooldown || (() => false)}
             spectatorMode={spectatorMode || false}
             cameraDistance={cameraDistance}
+            customTexture={custom3DPropertyTiles}
           />
         );
       })}
@@ -950,6 +1043,7 @@ function Scene({
             isStealOnCooldown={spectatorMode ? () => false : isStealOnCooldown || (() => false)}
             spectatorMode={spectatorMode || false}
             cameraDistance={cameraDistance}
+            customTexture={custom3DPropertyTiles}
           />
         );
       })}
@@ -978,6 +1072,7 @@ function Scene({
             isStealOnCooldown={spectatorMode ? () => false : isStealOnCooldown || (() => false)}
             spectatorMode={spectatorMode || false}
             cameraDistance={cameraDistance}
+            customTexture={custom3DPropertyTiles}
           />
         );
       })}
@@ -1006,9 +1101,11 @@ function Scene({
             isStealOnCooldown={spectatorMode ? () => false : isStealOnCooldown || (() => false)}
             spectatorMode={spectatorMode || false}
             cameraDistance={cameraDistance}
+            customTexture={custom3DPropertyTiles}
           />
         );
       })}
+      </Suspense>
       
       {/* ===== BANK (only when connected and not in spectator mode) ===== */}
       {connected && !spectatorMode && (
@@ -1053,7 +1150,8 @@ function Scene({
   );
 }
 
-export function Board3DScene({ onSelectProperty, onCoinClick, spectatorMode, spectatorOwnerships, customBoardBackground }: Board3DSceneProps) {
+export function Board3DScene({ onSelectProperty, onCoinClick, spectatorMode, spectatorOwnerships, customBoardBackground, custom3DPropertyTiles }: Board3DSceneProps) {
+  
   
   const containerRef = useRef<HTMLDivElement>(null);
   const [mounted, setMounted] = useState(false);
@@ -1369,6 +1467,7 @@ export function Board3DScene({ onSelectProperty, onCoinClick, spectatorMode, spe
           connected={connected}
           hasProperties={hasProperties}
           customBoardBackground={customBoardBackground}
+          custom3DPropertyTiles={custom3DPropertyTiles}
         />
       </Canvas>
     </div>

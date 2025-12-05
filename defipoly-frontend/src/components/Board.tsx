@@ -12,6 +12,7 @@ interface BoardProps {
   cornerSquareStyle?: 'property' | 'profile';
   customBoardBackground?: string | null;
   customPropertyCardBackground?: string | null;
+  custom3DPropertyTiles?: string | null;
 }
 
 export function Board({ 
@@ -20,7 +21,9 @@ export function Board({
   spectatorMode = false, 
   spectatorOwnerships = [],
   customBoardBackground,
+  custom3DPropertyTiles,
 }: BoardProps) {
+
 
   return (
     <div className="w-full h-full relative">
@@ -32,6 +35,7 @@ export function Board({
         spectatorMode={spectatorMode}
         spectatorOwnerships={spectatorOwnerships}
         customBoardBackground={customBoardBackground}
+        custom3DPropertyTiles={custom3DPropertyTiles}
       />
     </div>
   );

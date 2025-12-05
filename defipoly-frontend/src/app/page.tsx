@@ -20,8 +20,6 @@ export default function Home() {
   const { gameState } = useGameState();
   const { unclaimedRewards } = useRewards();
   
-  // Debug rewards amount
-  console.log('🏠 [PAGE] unclaimedRewards from useRewards():', unclaimedRewards);
   
   // Calculate tier count for modal
   const ACCUMULATION_TIERS = [10000, 25000, 50000, 100000, 250000, 500000, 1000000, 2500000];
@@ -31,6 +29,7 @@ export default function Home() {
   const [profilePicture, setProfilePicture] = useState<string | null>(null);
   const [cornerSquareStyle, setCornerSquareStyle] = useState<'property' | 'profile'>('property');
   const [customBoardBackground, setCustomBoardBackground] = useState<string | null>(null);
+  const [customPropertyCardBackground, setCustomPropertyCardBackground] = useState<string | null>(null);
   const [isMobile, setIsMobile] = useState(false);
   const [sideColumnWidth, setSideColumnWidth] = useState(400);
   
@@ -67,15 +66,10 @@ export default function Home() {
       clearProfileCache(publicKey.toString());
       getProfile(publicKey.toString())
         .then(profile => {
-          console.log('🔍 [MAIN PAGE] Loaded profile for main game:', profile);
           setProfilePicture(profile.profilePicture);
           setCornerSquareStyle(profile.cornerSquareStyle || 'property');
           setCustomBoardBackground(profile.customBoardBackground || null);
-          console.log('🔍 [MAIN PAGE] Set state:', {
-            profilePicture: profile.profilePicture,
-            cornerSquareStyle: profile.cornerSquareStyle || 'property',
-            customBoardBackground: profile.customBoardBackground || null
-          });
+          setCustomPropertyCardBackground(profile.customPropertyCardBackground || null);
         })
         .catch(error => {
           console.error('Error loading profile:', error);
@@ -90,6 +84,7 @@ export default function Home() {
           setProfilePicture(updatedProfile.profilePicture);
           setCornerSquareStyle(updatedProfile.cornerSquareStyle || 'property');
           setCustomBoardBackground(updatedProfile.customBoardBackground || null);
+          setCustomPropertyCardBackground(updatedProfile.customPropertyCardBackground || null);
         } catch (error) {
           console.error('Error updating profile:', error);
         }
@@ -165,7 +160,8 @@ export default function Home() {
             onCoinClick={() => setShowCoinModal(true)}
             profilePicture={profilePicture} 
             cornerSquareStyle={cornerSquareStyle} 
-            customBoardBackground={customBoardBackground} 
+            customBoardBackground={customBoardBackground}
+            custom3DPropertyTiles={customPropertyCardBackground} 
           />
         </div>
         

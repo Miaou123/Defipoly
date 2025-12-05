@@ -41,7 +41,8 @@ export function PropertyModal({ propertyId, onClose }: PropertyModalProps) {
     [propertyId]
   );
   
-  const { getOwnership } = useGameState();
+  const gameState = useGameState();
+  const { getOwnership } = gameState;
   
   // Prevent duplicate API calls
   const fetchingRef = useRef(false);
@@ -257,6 +258,7 @@ export function PropertyModal({ propertyId, onClose }: PropertyModalProps) {
                     propertyId={propertyId} 
                     onSelect={() => {}} 
                     modalView={true}
+                    customPropertyCardBackground={gameState.profile.customPropertyCardBackground}
                   />
                 </div>
               </div>

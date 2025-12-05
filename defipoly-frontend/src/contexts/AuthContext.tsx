@@ -87,8 +87,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       localStorage.setItem('defipoly_auth_token', jwtToken);
       setToken(jwtToken);
       setIsAuthenticated(true);
-
-      console.log('✅ Authentication successful');
+      
     } catch (error) {
       console.error('Authentication error:', error);
       throw error;

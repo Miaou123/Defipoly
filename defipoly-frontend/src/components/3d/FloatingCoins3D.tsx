@@ -159,13 +159,10 @@ export function FloatingCoins3D({ rewardsAmount, position = [0, 1.95, 0], onCoin
   const [hoveredCoin, setHoveredCoin] = useState<number | null>(null);
   const [showFirstCoinHint, setShowFirstCoinHint] = useState(false);
   const [hasClickedFirstCoin, setHasClickedFirstCoin] = useState(false);
-  
-  console.log('🪙 FloatingCoins3D render - rewardsAmount:', rewardsAmount);
-  
+
   // Calculate how many tiers the user has reached
   const tierCount = useMemo(() => {
     const count = ACCUMULATION_TIERS.filter(threshold => rewardsAmount >= threshold).length;
-    console.log('🎯 Tier calculation - rewardsAmount:', rewardsAmount, 'tierCount:', count, 'thresholds:', ACCUMULATION_TIERS);
     return count;
   }, [rewardsAmount]);
 
@@ -188,7 +185,6 @@ export function FloatingCoins3D({ rewardsAmount, position = [0, 1.95, 0], onCoin
   // Create coin data for animation
   const coinData = useMemo(() => {
     if (tierCount === 0) {
-      console.log('⚠️ No coins to render - tierCount is 0');
       return [];
     }
     
@@ -208,7 +204,6 @@ export function FloatingCoins3D({ rewardsAmount, position = [0, 1.95, 0], onCoin
       };
     });
     
-    console.log('💰 Created coin data:', data);
     return data;
   }, [tierCount, showFirstCoinHint]);
 
@@ -254,10 +249,7 @@ export function FloatingCoins3D({ rewardsAmount, position = [0, 1.95, 0], onCoin
     });
   });
 
-  console.log('🔍 Render decision - tierCount:', tierCount, 'coinData.length:', coinData.length);
-
   if (tierCount === 0) {
-    console.log('🚫 Returning null - no tiers reached');
     return null;
   }
 

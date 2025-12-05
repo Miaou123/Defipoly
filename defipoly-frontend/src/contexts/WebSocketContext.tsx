@@ -36,8 +36,6 @@ export function WebSocketProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const socketUrl = process.env['NEXT_PUBLIC_API_BASE_URL'] || 'http://localhost:3101';
     
-    console.log('🔌 Connecting to WebSocket server:', socketUrl);
-    
     const newSocket = io(socketUrl, {
       transports: ['websocket', 'polling'],
       reconnection: true,
@@ -50,18 +48,15 @@ export function WebSocketProvider({ children }: { children: React.ReactNode }) {
     setSocket(newSocket);
 
     newSocket.on('connect', () => {
-      console.log('🔌 WebSocket connected');
       setConnected(true);
       
       // Re-subscribe to wallet if we had one
       if (currentWalletRef.current) {
-        console.log('👛 Re-subscribing to wallet:', currentWalletRef.current);
         newSocket.emit('subscribe-wallet', currentWalletRef.current);
       }
     });
 
     newSocket.on('disconnect', (reason) => {
-      console.log('🔌 WebSocket disconnected:', reason);
       setConnected(false);
     });
 
@@ -70,7 +65,6 @@ export function WebSocketProvider({ children }: { children: React.ReactNode }) {
     });
 
     return () => {
-      console.log('🔌 Cleaning up WebSocket connection');
       newSocket.disconnect();
     };
   }, []); // Empty dependency array - initialize only once
@@ -78,7 +72,6 @@ export function WebSocketProvider({ children }: { children: React.ReactNode }) {
   const subscribeToWallet = useCallback((walletAddress: string) => {
     currentWalletRef.current = walletAddress;
     if (socketRef.current?.connected) {
-      console.log('👛 Subscribing to wallet events:', walletAddress);
       socketRef.current.emit('subscribe-wallet', walletAddress);
     }
   }, []);
@@ -89,7 +82,6 @@ export function WebSocketProvider({ children }: { children: React.ReactNode }) {
 
   const subscribeToProperty = useCallback((propertyId: number) => {
     if (socketRef.current?.connected) {
-      console.log('🏠 Subscribing to property:', propertyId);
       socketRef.current.emit('subscribe-property', propertyId);
       setSubscribedProperties(prev => new Set([...prev, propertyId]));
     }
@@ -97,7 +89,6 @@ export function WebSocketProvider({ children }: { children: React.ReactNode }) {
 
   const unsubscribeFromProperty = useCallback((propertyId: number) => {
     if (socketRef.current?.connected) {
-      console.log('🏠 Unsubscribing from property:', propertyId);
       socketRef.current.emit('unsubscribe-property', propertyId);
       setSubscribedProperties(prev => {
         const newSet = new Set(prev);
