@@ -4,112 +4,11 @@ import { useRef, useMemo, useState, useEffect, Suspense } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { useTexture, Html } from '@react-three/drei';
 import * as THREE from 'three';
-import { X, TrendingUp, Star, Target, Coins } from 'lucide-react';
 import { PointerArrowIcon } from '@/components/icons/UIIcons';
 
 // Reward tiers for accumulation bonuses
 const ACCUMULATION_TIERS = [10000, 25000, 50000, 100000, 250000, 500000, 1000000, 2500000];
 
-interface FloatingCoinsModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  rewardsAmount: number;
-  tierCount: number;
-}
-
-function FloatingCoinsModal({ isOpen, onClose, rewardsAmount, tierCount }: FloatingCoinsModalProps) {
-  if (!isOpen) return null;
-
-  return (
-    <div 
-      className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-[70] p-4"
-      onClick={onClose}
-    >
-      <div 
-        className="bg-gradient-to-br from-purple-950/95 via-purple-900/95 to-purple-950/95 backdrop-blur-xl rounded-2xl border-2 border-purple-500/30 shadow-2xl shadow-purple-500/20 max-w-md w-full overflow-hidden"
-        onClick={e => e.stopPropagation()}
-      >
-        {/* Header */}
-        <div className="relative bg-gradient-to-r from-yellow-900/50 to-amber-700/50 border-b border-yellow-500/30 p-6">
-          <div className="flex justify-between items-start">
-            <div className="flex items-center gap-3">
-              <Coins className="w-8 h-8 text-yellow-300" />
-              <h2 className="text-2xl font-black text-yellow-100">Reward Coins</h2>
-            </div>
-            <button 
-              onClick={onClose}
-              className="text-yellow-300 hover:text-white transition-colors hover:bg-yellow-800/50 rounded-lg p-2"
-            >
-              <X size={24} />
-            </button>
-          </div>
-        </div>
-
-        {/* Content */}
-        <div className="p-6 space-y-4">
-          <div className="bg-yellow-900/30 rounded-xl p-4 border border-yellow-500/20">
-            <div className="flex items-start gap-3">
-              <Star className="w-5 h-5 text-yellow-400 mt-1 flex-shrink-0" />
-              <div>
-                <h3 className="font-bold text-yellow-100 mb-2">Current Status</h3>
-                <p className="text-yellow-200 text-sm leading-relaxed">
-                  You have accumulated <span className="font-bold text-yellow-300">${rewardsAmount.toLocaleString()}</span> in total rewards, unlocking <span className="font-bold text-yellow-300">{tierCount} coin{tierCount !== 1 ? 's' : ''}</span> around the bank.
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-yellow-900/30 rounded-xl p-4 border border-yellow-500/20">
-            <div className="flex items-start gap-3">
-              <Target className="w-5 h-5 text-yellow-400 mt-1 flex-shrink-0" />
-              <div>
-                <h3 className="font-bold text-yellow-100 mb-2">Reward Tiers</h3>
-                <div className="space-y-2">
-                  {ACCUMULATION_TIERS.map((threshold, index) => {
-                    const unlocked = rewardsAmount >= threshold;
-                    return (
-                      <div key={threshold} className={`flex items-center gap-2 text-xs ${
-                        unlocked ? 'text-yellow-300' : 'text-yellow-600'
-                      }`}>
-                        <div className={`w-2 h-2 rounded-full ${
-                          unlocked ? 'bg-yellow-400' : 'bg-yellow-800'
-                        }`} />
-                        <span>Tier {index + 1}: ${threshold.toLocaleString()}</span>
-                        {unlocked && <span className="text-yellow-400">✓</span>}
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-amber-900/20 rounded-xl p-4 border border-amber-500/20">
-            <div className="flex items-start gap-3">
-              <TrendingUp className="w-5 h-5 text-amber-400 mt-1 flex-shrink-0" />
-              <div>
-                <h3 className="font-bold text-amber-200 mb-2">Next Milestone</h3>
-                <p className="text-amber-200 text-sm leading-relaxed">
-                  {tierCount < ACCUMULATION_TIERS.length 
-                    ? `Reach $${ACCUMULATION_TIERS[tierCount]?.toLocaleString()} to unlock the next coin!`
-                    : 'You have unlocked all reward tiers! Congratulations!'
-                  }
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <button
-            onClick={onClose}
-            className="w-full py-2 rounded-lg font-semibold text-sm transition-all bg-yellow-600/40 hover:bg-yellow-600/60 border border-yellow-500/50 text-yellow-100 hover:border-yellow-400/70"
-          >
-            Got It!
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 // Texture loading components (separate like in Bank3D)
 function CoinLogoFace() {
@@ -417,8 +316,10 @@ export function FloatingCoins3D({ rewardsAmount, position = [0, 1.95, 0], onCoin
                     pointerEvents: 'none',
                   }}
                 >
-                  <div style={{ transform: 'rotate(0deg)' }} className="animate-bounce">
-                    <PointerArrowIcon className="w-12 h-12 text-yellow-400 drop-shadow-[0_0_12px_rgba(250,204,21,0.9)]" />
+                  <div className="animate-bounce">
+                    <div style={{ transform: 'rotate(90deg)' }}>
+                      <PointerArrowIcon className="w-12 h-12 text-yellow-400 drop-shadow-[0_0_12px_rgba(250,204,21,0.9)]" />
+                    </div>
                   </div>
                 </Html>
               )}
@@ -430,5 +331,3 @@ export function FloatingCoins3D({ rewardsAmount, position = [0, 1.95, 0], onCoin
   );
 }
 
-// Export the modal separately for use outside the 3D scene
-export { FloatingCoinsModal };

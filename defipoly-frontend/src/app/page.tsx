@@ -6,7 +6,7 @@ import { Portfolio } from '@/components/Portfolio';
 import { Leaderboard } from '@/components/Leaderboard';
 import { LiveFeed } from '@/components/LiveFeed';
 import { PropertyModal } from '@/components/property-modal';
-import { FloatingCoinsModal } from '@/components/3d/FloatingCoins3D';
+import { FloatingCoinsModal } from '@/components/FloatingCoinsModal';
 import { ProfileWallet } from '@/components/ProfileWallet';
 import { MobileLayout } from '@/components/MobileLayout';
 import { useState, useEffect } from 'react';
@@ -200,7 +200,6 @@ export default function Home() {
         isOpen={showCoinModal}
         onClose={() => setShowCoinModal(false)}
         rewardsAmount={unclaimedRewards || 0}
-        tierCount={tierCount}
       />
     </div>
   );
