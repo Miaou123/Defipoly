@@ -13,10 +13,48 @@ function ProfilePictureMesh({ url }: { url: string }) {
   const texture = useTexture(url);
   texture.colorSpace = THREE.SRGBColorSpace;
   
+  // Create a shader material that clips the texture to a circle
+  const material = new THREE.ShaderMaterial({
+    uniforms: {
+      map: { value: texture },
+    },
+    vertexShader: `
+      varying vec2 vUv;
+      void main() {
+        vUv = uv;
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+      }
+    `,
+    fragmentShader: `
+      uniform sampler2D map;
+      varying vec2 vUv;
+      void main() {
+        // Convert UV to centered coordinates (-1 to 1)
+        vec2 center = vUv - 0.5;
+        
+        // Calculate distance from center
+        float dist = length(center);
+        
+        // Discard pixels outside the circle (with slight antialiasing)
+        if (dist > 0.5) {
+          discard;
+        }
+        
+        // Apply slight fade at edges for smoother appearance
+        float alpha = 1.0 - smoothstep(0.48, 0.5, dist);
+        
+        vec4 texColor = texture2D(map, vUv);
+        gl_FragColor = vec4(texColor.rgb, texColor.a * alpha);
+      }
+    `,
+    side: THREE.DoubleSide,
+    transparent: true,
+  });
+  
   return (
     <mesh>
-      <circleGeometry args={[2.0, 32]} />
-      <meshBasicMaterial map={texture} side={THREE.DoubleSide} />
+      <planeGeometry args={[4.0, 4.0]} />
+      <primitive object={material} attach="material" />
     </mesh>
   );
 }
@@ -25,10 +63,48 @@ function LogoFallback() {
   const texture = useTexture('/logo.svg');
   texture.colorSpace = THREE.SRGBColorSpace;
   
+  // Create the same circular clipping shader material for the logo
+  const material = new THREE.ShaderMaterial({
+    uniforms: {
+      map: { value: texture },
+    },
+    vertexShader: `
+      varying vec2 vUv;
+      void main() {
+        vUv = uv;
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+      }
+    `,
+    fragmentShader: `
+      uniform sampler2D map;
+      varying vec2 vUv;
+      void main() {
+        // Convert UV to centered coordinates (-1 to 1)
+        vec2 center = vUv - 0.5;
+        
+        // Calculate distance from center
+        float dist = length(center);
+        
+        // Discard pixels outside the circle (with slight antialiasing)
+        if (dist > 0.5) {
+          discard;
+        }
+        
+        // Apply slight fade at edges for smoother appearance
+        float alpha = 1.0 - smoothstep(0.48, 0.5, dist);
+        
+        vec4 texColor = texture2D(map, vUv);
+        gl_FragColor = vec4(texColor.rgb, texColor.a * alpha);
+      }
+    `,
+    side: THREE.DoubleSide,
+    transparent: true,
+  });
+  
   return (
     <mesh>
       <planeGeometry args={[4.0, 4.0]} />
-      <meshBasicMaterial map={texture} side={THREE.DoubleSide} />
+      <primitive object={material} attach="material" />
     </mesh>
   );
 }

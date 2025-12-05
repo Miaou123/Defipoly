@@ -83,15 +83,35 @@ export function PropertyThemeModal({
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleCustomColorApply = async () => {
-    if (!publicKey) return;
+    if (!publicKey) {
+      showError('No Wallet', 'Please connect your wallet first');
+      return;
+    }
     
     setUploading(true);
     try {
-      const svgContent = `<svg width="100" height="100" xmlns="http://www.w3.org/2000/svg">
-        <rect width="100" height="100" fill="${customColor}" />
-      </svg>`;
-      const blob = new Blob([svgContent], { type: 'image/svg+xml' });
-      const file = new File([blob], 'color-theme.svg', { type: 'image/svg+xml' });
+      // Check if we have an auth token
+      const token = localStorage.getItem('defipoly_auth_token');
+      if (!token) {
+        showError('Not Authenticated', 'Please refresh the page and try again');
+        return;
+      }
+
+      // Create a 100x100 PNG with the selected color
+      const canvas = document.createElement('canvas');
+      canvas.width = 100;
+      canvas.height = 100;
+      const ctx = canvas.getContext('2d');
+      
+      // Fill the canvas with the selected color
+      ctx.fillStyle = customColor;
+      ctx.fillRect(0, 0, 100, 100);
+      
+      // Convert to PNG blob
+      const blob = await new Promise(resolve => {
+        canvas.toBlob(resolve, 'image/png', 1.0);
+      });
+      const file = new File([blob], 'color-theme.png', { type: 'image/png' });
       
       const formData = new FormData();
       formData.append('file', file);
@@ -113,11 +133,13 @@ export function PropertyThemeModal({
         onThemeChange('custom');
         showSuccess('Applied', 'Custom color applied');
       } else {
+        const errorText = await response.text();
+        console.error('Server error:', errorText);
         showError('Failed', 'Failed to apply custom color');
       }
     } catch (error) {
       console.error('Error applying custom color:', error);
-      showError('Error', 'Error applying custom color');
+      showError('Error', `Error applying custom color: ${error.message}`);
     } finally {
       setUploading(false);
     }
@@ -263,7 +285,9 @@ export function PropertyThemeModal({
                     className="w-9 h-9 rounded border-2 border-purple-500/30 bg-transparent cursor-pointer"
                   />
                   <button
-                    onClick={handleCustomColorApply}
+                    onClick={() => {
+                      handleCustomColorApply().catch(console.error);
+                    }}
                     disabled={uploading}
                     className="flex-1 px-4 py-2 bg-green-600 hover:bg-green-500 disabled:opacity-50 rounded transition-colors text-white text-sm font-medium"
                   >
@@ -307,17 +331,15 @@ export function PropertyThemeModal({
             </div>
 
             {/* Preview */}
-            <div className="bg-purple-800/20 rounded-lg border border-purple-500/20 p-4 flex items-center justify-center min-h-[120px]">
+            <div className="bg-purple-800/20 rounded-lg border border-purple-500/20 p-2 flex items-center justify-center min-h-[240px]">
               <div 
-                className="w-20 h-24 rounded border-2 border-purple-500/30 flex items-center justify-center text-[10px] text-purple-200 font-medium"
+                className="w-full h-40 rounded border-2 border-purple-500/30 max-w-[120px]"
                 style={{
                   background: customBackground 
                     ? `url(${customBackground}) center/cover`
                     : customColor
                 }}
-              >
-                Card
-              </div>
+              />
             </div>
           </div>
 

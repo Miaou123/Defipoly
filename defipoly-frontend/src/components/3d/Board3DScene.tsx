@@ -30,6 +30,8 @@ interface Board3DSceneProps {
   spectatorOwnerships?: any[];
   customBoardBackground?: string | null;
   custom3DPropertyTiles?: string | null;
+  profilePicture?: string | null;
+  cornerSquareStyle?: 'property' | 'profile';
 }
 
 interface SceneProps extends Board3DSceneProps {
@@ -41,6 +43,8 @@ interface SceneProps extends Board3DSceneProps {
   hasProperties: boolean;
   customBoardBackground?: string | null;
   custom3DPropertyTiles?: string | null;
+  profilePicture?: string | null;
+  cornerSquareStyle?: 'property' | 'profile';
 }
 
 // EXACT DIMENSIONS TO MATCH PROTOTYPE
@@ -475,10 +479,14 @@ function PropertyTile({
   const [hovered, setHovered] = useState(false);
   
   
-  // Load custom texture if provided
+  // Load custom texture - always call hook to maintain hook order
+  // Use a data URL for transparent 1x1 pixel as fallback when no custom texture
+  const fallbackTexture = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChAI9g4ndUwAAAABJRU5ErkJggg==';
+  const loadedTexture = useTexture(customTexture || fallbackTexture);
+  
   let texture = null;
-  if (customTexture) {
-    texture = useTexture(customTexture);
+  if (customTexture && loadedTexture) {
+    texture = loadedTexture;
     texture.colorSpace = THREE.SRGBColorSpace;
     texture.wrapS = texture.wrapT = THREE.ClampToEdgeWrapping;
     texture.repeat.set(1, 1);
@@ -841,7 +849,9 @@ function Scene({
   connected,
   hasProperties,
   customBoardBackground,
-  custom3DPropertyTiles
+  custom3DPropertyTiles,
+  profilePicture,
+  cornerSquareStyle
 }: SceneProps) {
   
   const gameState = useGameState();
@@ -983,10 +993,38 @@ function Scene({
       
       
       {/* ===== CORNERS ===== */}
-      <CornerTile3D position={[-halfW + cornerSize/2, tileY, -halfH + cornerSize/2]} cornerType="go" size={cornerSize} />
-      <CornerTile3D position={[halfW - cornerSize/2, tileY, -halfH + cornerSize/2]} cornerType="jail" size={cornerSize} />
-      <CornerTile3D position={[-halfW + cornerSize/2, tileY, halfH - cornerSize/2]} cornerType="parking" size={cornerSize} />
-      <CornerTile3D position={[halfW - cornerSize/2, tileY, halfH - cornerSize/2]} cornerType="gotojail" size={cornerSize} />
+      <CornerTile3D 
+        position={[-halfW + cornerSize/2, tileY, -halfH + cornerSize/2]} 
+        cornerType="go" 
+        size={cornerSize}
+        cornerSquareStyle={cornerSquareStyle}
+        customPropertyCardBackground={custom3DPropertyTiles}
+        profilePicture={profilePicture}
+      />
+      <CornerTile3D 
+        position={[halfW - cornerSize/2, tileY, -halfH + cornerSize/2]} 
+        cornerType="jail" 
+        size={cornerSize}
+        cornerSquareStyle={cornerSquareStyle}
+        customPropertyCardBackground={custom3DPropertyTiles}
+        profilePicture={profilePicture}
+      />
+      <CornerTile3D 
+        position={[-halfW + cornerSize/2, tileY, halfH - cornerSize/2]} 
+        cornerType="parking" 
+        size={cornerSize}
+        cornerSquareStyle={cornerSquareStyle}
+        customPropertyCardBackground={custom3DPropertyTiles}
+        profilePicture={profilePicture}
+      />
+      <CornerTile3D 
+        position={[halfW - cornerSize/2, tileY, halfH - cornerSize/2]} 
+        cornerType="gotojail" 
+        size={cornerSize}
+        cornerSquareStyle={cornerSquareStyle}
+        customPropertyCardBackground={custom3DPropertyTiles}
+        profilePicture={profilePicture}
+      />
       
       {/* ===== PROPERTY TILES WITH SUSPENSE FOR TEXTURE LOADING ===== */}
       <Suspense fallback={null}>
@@ -1150,7 +1188,7 @@ function Scene({
   );
 }
 
-export function Board3DScene({ onSelectProperty, onCoinClick, spectatorMode, spectatorOwnerships, customBoardBackground, custom3DPropertyTiles }: Board3DSceneProps) {
+export function Board3DScene({ onSelectProperty, onCoinClick, spectatorMode, spectatorOwnerships, customBoardBackground, custom3DPropertyTiles, profilePicture, cornerSquareStyle }: Board3DSceneProps) {
   
   
   const containerRef = useRef<HTMLDivElement>(null);
@@ -1455,20 +1493,24 @@ export function Board3DScene({ onSelectProperty, onCoinClick, spectatorMode, spe
           stencil: false
         }}
       >
-        <Scene 
-          onSelectProperty={onSelectProperty}
-          onCoinClick={onCoinClick}
-          spectatorMode={spectatorMode}
-          spectatorOwnerships={spectatorOwnerships}
-          cameraControlsRef={cameraControlsRef}
-          particlesVisible={particlesVisible}
-          showClaimHint={showClaimHint}
-          handleClaimHintDismiss={handleClaimHintDismiss}
-          connected={connected}
-          hasProperties={hasProperties}
-          customBoardBackground={customBoardBackground}
-          custom3DPropertyTiles={custom3DPropertyTiles}
-        />
+        <Suspense fallback={null}>
+          <Scene 
+            onSelectProperty={onSelectProperty}
+            onCoinClick={onCoinClick}
+            spectatorMode={spectatorMode}
+            spectatorOwnerships={spectatorOwnerships}
+            cameraControlsRef={cameraControlsRef}
+            particlesVisible={particlesVisible}
+            showClaimHint={showClaimHint}
+            handleClaimHintDismiss={handleClaimHintDismiss}
+            connected={connected}
+            hasProperties={hasProperties}
+            customBoardBackground={customBoardBackground}
+            custom3DPropertyTiles={custom3DPropertyTiles}
+            profilePicture={profilePicture || gameState?.profile?.profilePicture}
+            cornerSquareStyle={cornerSquareStyle || gameState?.profile?.cornerSquareStyle || 'property'}
+          />
+        </Suspense>
       </Canvas>
     </div>
   );

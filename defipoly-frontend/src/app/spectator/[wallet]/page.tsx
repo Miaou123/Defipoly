@@ -183,14 +183,6 @@ export default function SpectatorPage() {
     );
   }
 
-  console.log('🎯 [SPECTATOR] Passing to Board component:', {
-    profilePicture: profile?.profilePicture || null,
-    cornerSquareStyle: profile?.cornerSquareStyle || 'property',
-    boardTheme: profile?.boardTheme || 'dark',
-    propertyCardTheme: profile?.propertyCardTheme || 'default',
-    customBoardBackground: profile?.customBoardBackground || null,
-    customPropertyCardBackground: profile?.customPropertyCardBackground || null
-  });
 
   return (
     <div className="h-screen overflow-hidden relative">
@@ -370,7 +362,7 @@ export default function SpectatorPage() {
             profilePicture={profile?.profilePicture || null}
             cornerSquareStyle={profile?.cornerSquareStyle || 'property'}
             customBoardBackground={profile?.customBoardBackground || null}
-            customPropertyCardBackground={profile?.customPropertyCardBackground || null}
+            custom3DPropertyTiles={profile?.customPropertyCardBackground || null}
           />
         </div>
         

@@ -22,6 +22,8 @@ export function Board({
   spectatorOwnerships = [],
   customBoardBackground,
   custom3DPropertyTiles,
+  profilePicture,
+  cornerSquareStyle,
 }: BoardProps) {
 
 
@@ -36,6 +38,8 @@ export function Board({
         spectatorOwnerships={spectatorOwnerships}
         customBoardBackground={customBoardBackground}
         custom3DPropertyTiles={custom3DPropertyTiles}
+        profilePicture={profilePicture}
+        cornerSquareStyle={cornerSquareStyle}
       />
     </div>
   );

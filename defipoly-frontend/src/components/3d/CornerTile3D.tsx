@@ -1,7 +1,8 @@
 'use client';
 
-import { useRef, useMemo } from 'react';
+import { useRef, useMemo, Suspense } from 'react';
 import { useFrame } from '@react-three/fiber';
+import { useTexture } from '@react-three/drei';
 // import { Text } from '@react-three/drei'; // REMOVED: Text component causes WebGL context loss
 import * as THREE from 'three';
 
@@ -26,6 +27,9 @@ interface CornerTile3DProps {
   position: [number, number, number];
   cornerType: 'go' | 'jail' | 'parking' | 'gotojail';
   size: number;
+  cornerSquareStyle?: 'property' | 'profile';
+  customPropertyCardBackground?: string | null;
+  profilePicture?: string | null;
 }
 
 // ============================================
@@ -370,9 +374,87 @@ function CornerCombined() {
 }
 
 // ============================================
+// TEXTURE OVERLAY COMPONENT
+// ============================================
+function CornerTextureOverlay({ textureUrl, size, cornerSquareStyle, profilePicture }: {
+  textureUrl: string;
+  size: number;
+  cornerSquareStyle: 'property' | 'profile';
+  profilePicture?: string | null;
+}) {
+  const texture = useTexture(textureUrl);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  texture.wrapS = texture.wrapT = THREE.ClampToEdgeWrapping;
+  texture.repeat.set(1, 1);
+  texture.offset.set(0, 0);
+
+  // For profile pictures, create a circular shader material like we did for the bank
+  if (cornerSquareStyle === 'profile' && profilePicture) {
+    const material = new THREE.ShaderMaterial({
+      uniforms: {
+        map: { value: texture },
+      },
+      vertexShader: `
+        varying vec2 vUv;
+        void main() {
+          vUv = uv;
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+        }
+      `,
+      fragmentShader: `
+        uniform sampler2D map;
+        varying vec2 vUv;
+        void main() {
+          // Convert UV to centered coordinates
+          vec2 center = vUv - 0.5;
+          
+          // Calculate distance from center
+          float dist = length(center);
+          
+          // Discard pixels outside the circle
+          if (dist > 0.5) {
+            discard;
+          }
+          
+          // Apply slight fade at edges for smoother appearance
+          float alpha = 1.0 - smoothstep(0.48, 0.5, dist);
+          
+          vec4 texColor = texture2D(map, vUv);
+          gl_FragColor = vec4(texColor.rgb, texColor.a * alpha);
+        }
+      `,
+      side: THREE.DoubleSide,
+      transparent: true,
+    });
+
+    return (
+      <mesh position={[0, tileThickness + 0.001, 0]} rotation={[-Math.PI/2, 0, 0]} receiveShadow>
+        <planeGeometry args={[size * 0.8, size * 0.8]} />
+        <primitive object={material} attach="material" />
+      </mesh>
+    );
+  }
+
+  // For property card style, use regular texture
+  return (
+    <mesh position={[0, tileThickness + 0.001, 0]} rotation={[-Math.PI/2, 0, 0]} receiveShadow>
+      <planeGeometry args={[size * 0.8, size * 0.8]} />
+      <meshStandardMaterial map={texture} roughness={0.8} metalness={0.1} />
+    </mesh>
+  );
+}
+
+// ============================================
 // MAIN CORNER TILE COMPONENT
 // ============================================
-export function CornerTile3D({ position, cornerType, size }: CornerTile3DProps) {
+export function CornerTile3D({ 
+  position, 
+  cornerType, 
+  size, 
+  cornerSquareStyle = 'property',
+  customPropertyCardBackground,
+  profilePicture 
+}: CornerTile3DProps) {
   // Text rotation based on corner position (diagonal text)
   const textRotation: [number, number, number] = useMemo(() => {
     switch (cornerType) {
@@ -392,6 +474,19 @@ export function CornerTile3D({ position, cornerType, size }: CornerTile3DProps) 
     }
   };
 
+  // Determine which texture to use based on corner square style
+  const getTextureUrl = () => {
+    if (cornerSquareStyle === 'profile' && profilePicture) {
+      return profilePicture;
+    }
+    if (cornerSquareStyle === 'property' && customPropertyCardBackground) {
+      return customPropertyCardBackground;
+    }
+    return null;
+  };
+
+  const textureUrl = getTextureUrl();
+
   return (
     <group position={position}>
       {/* Base tile */}
@@ -409,6 +504,18 @@ export function CornerTile3D({ position, cornerType, size }: CornerTile3DProps) 
           emissiveIntensity={0.3}
         />
       </mesh>
+
+      {/* Texture overlay (if any) */}
+      {textureUrl && (
+        <Suspense fallback={null}>
+          <CornerTextureOverlay 
+            textureUrl={textureUrl}
+            size={size}
+            cornerSquareStyle={cornerSquareStyle}
+            profilePicture={profilePicture}
+          />
+        </Suspense>
+      )}
 
       {/* Animated floating elements */}
       <group position={[0, tileThickness / 2, 0]}>
