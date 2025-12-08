@@ -331,6 +331,10 @@ export default function ProfilePage() {
                   setCustomPropertyCardBackground={async (bg) => {
                     await gameState.updateProfile({ customPropertyCardBackground: bg });
                   }}
+                  customSceneBackground={gameState.profile.customSceneBackground}
+                  setCustomSceneBackground={async (bg) => {
+                    await gameState.updateProfile({ customSceneBackground: bg });
+                  }}
                   walletAddress={publicKey.toString()}
                 />
               </div>

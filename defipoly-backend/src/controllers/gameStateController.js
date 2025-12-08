@@ -168,6 +168,7 @@ const getGameState = async (req, res) => {
           property_card_theme as propertyCardTheme,
           custom_board_background as customBoardBackground,
           custom_property_card_background as customPropertyCardBackground,
+          custom_scene_background as customSceneBackground,
           updated_at as updatedAt
         FROM profiles
         WHERE wallet_address = ?`,

@@ -30,6 +30,7 @@ interface Board3DSceneProps {
   spectatorOwnerships?: any[];
   customBoardBackground?: string | null | undefined;
   custom3DPropertyTiles?: string | null | undefined;
+  customSceneBackground?: string | null | undefined;
   profilePicture?: string | null | undefined;
   cornerSquareStyle?: 'property' | 'profile' | undefined;
 }
@@ -41,6 +42,7 @@ interface SceneProps extends Board3DSceneProps {
   handleClaimHintDismiss: () => void;
   connected: boolean;
   hasProperties: boolean;
+  showcaseMode: boolean;
   customBoardBackground?: string | null;
   custom3DPropertyTiles?: string | null;
   profilePicture?: string | null;
@@ -351,6 +353,42 @@ function CameraController({
       }
       animationComplete.current = true;
     }
+  });
+
+  return null;
+}
+
+/**
+ * ShowcaseController - Rotates camera around the board for showcase/promotional purposes
+ */
+function ShowcaseController({ 
+  enabled, 
+  controlsRef 
+}: { 
+  enabled: boolean; 
+  controlsRef: React.RefObject<any>;
+}) {
+  const angleRef = useRef(0);
+
+  useFrame((state, delta) => {
+    if (!enabled || !controlsRef.current) return;
+
+    // Increment angle for smooth rotation
+    angleRef.current += delta * 0.15;
+
+    // Calculate camera position on a circle
+    const radius = 10;
+    const x = Math.sin(angleRef.current) * radius;
+    const z = Math.cos(angleRef.current) * radius;
+    const y = 7;
+
+    // Update camera position
+    const camera = controlsRef.current.object;
+    camera.position.set(x, y, z);
+
+    // Update controls target to look at center of board
+    controlsRef.current.target.set(0, 0, 0);
+    controlsRef.current.update();
   });
 
   return null;
@@ -848,6 +886,7 @@ function Scene({
   handleClaimHintDismiss,
   connected,
   hasProperties,
+  showcaseMode,
   customBoardBackground,
   custom3DPropertyTiles,
   profilePicture,
@@ -970,6 +1009,7 @@ function Scene({
     <>
       {/* Camera Controller */}
       <CameraController connected={connected} controlsRef={cameraControlsRef} />
+      <ShowcaseController enabled={showcaseMode} controlsRef={cameraControlsRef} />
       
       {/* Lighting */}
       <ambientLight intensity={0.8} />
@@ -982,8 +1022,8 @@ function Scene({
       <OrbitControls
         ref={cameraControlsRef}
         enablePan={false}
-        enableZoom={connected}
-        enableRotate={connected}
+        enableZoom={connected && !showcaseMode}
+        enableRotate={connected && !showcaseMode}
         minPolarAngle={Math.PI / 6}
         maxPolarAngle={Math.PI / 2.2}
         minDistance={5}
@@ -1190,7 +1230,7 @@ function Scene({
   );
 }
 
-export function Board3DScene({ onSelectProperty, onCoinClick, spectatorMode, spectatorOwnerships, customBoardBackground, custom3DPropertyTiles, profilePicture, cornerSquareStyle }: Board3DSceneProps) {
+export function Board3DScene({ onSelectProperty, onCoinClick, spectatorMode, spectatorOwnerships, customBoardBackground, custom3DPropertyTiles, customSceneBackground, profilePicture, cornerSquareStyle }: Board3DSceneProps) {
   
   
   const containerRef = useRef<HTMLDivElement>(null);
@@ -1198,6 +1238,7 @@ export function Board3DScene({ onSelectProperty, onCoinClick, spectatorMode, spe
   const [particlesVisible, setParticlesVisible] = useState(true);
   const [showClaimHint, setShowClaimHint] = useState(false);
   const [webglError, setWebglError] = useState<string | null>(null);
+  const [showcaseMode, setShowcaseMode] = useState(false);
   const cameraControlsRef = useRef<any>(null);
   const { publicKey, connected } = useWallet();
   const gameState = useGameState();
@@ -1475,6 +1516,30 @@ export function Board3DScene({ onSelectProperty, onCoinClick, spectatorMode, spe
           >
             <ZoomOutIcon size={16} />
           </button>
+          <button
+            onClick={() => setShowcaseMode(!showcaseMode)}
+            title={showcaseMode ? "Exit Showcase" : "Showcase Mode"}
+            style={{
+              background: showcaseMode ? '#eab308' : '#6d28d9',
+              color: 'white',
+              border: 'none',
+              padding: '8px',
+              borderRadius: '4px',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+            onMouseOver={(e) => (e.target as HTMLButtonElement).style.background = showcaseMode ? '#f59e0b' : '#7c3aed'}
+            onMouseOut={(e) => (e.target as HTMLButtonElement).style.background = showcaseMode ? '#eab308' : '#6d28d9'}
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M12 3C7.03 3 3 7.03 3 12s4.03 9 9 9 9-4.03 9-9-4.03-9-9-9zm0 16c-3.87 0-7-3.13-7-7s3.13-7 7-7 7 3.13 7 7-3.13 7-7 7z" fill="currentColor"/>
+              <path d="M12 7c-2.76 0-5 2.24-5 5s2.24 5 5 5 5-2.24 5-5-2.24-5-5-5zm0 8c-1.65 0-3-1.35-3-3s1.35-3 3-3 3 1.35 3 3-1.35 3-3 3z" fill="currentColor"/>
+              <path d="M17 2h4c.55 0 1 .45 1 1v4c0 .55-.45 1-1 1s-1-.45-1-1V4h-3c-.55 0-1-.45-1-1s.45-1 1-1z" fill="currentColor"/>
+              <path d="M3 2h4c.55 0 1 .45 1 1s-.45 1-1 1H4v3c0 .55-.45 1-1 1s-1-.45-1-1V3c0-.55.45-1 1-1z" fill="currentColor"/>
+            </svg>
+          </button>
         </div>
       )}
 
@@ -1487,7 +1552,7 @@ export function Board3DScene({ onSelectProperty, onCoinClick, spectatorMode, spe
         }}
         shadows
         style={{ 
-          background: 'linear-gradient(180deg, #0a0015 0%, #1a0a2e 50%, #0a0015 100%)',
+          background: customSceneBackground || 'linear-gradient(180deg, #0a0015 0%, #1a0a2e 50%, #0a0015 100%)',
           width: '100%',
           height: '100%'
         }}
@@ -1542,6 +1607,7 @@ export function Board3DScene({ onSelectProperty, onCoinClick, spectatorMode, spe
             handleClaimHintDismiss={handleClaimHintDismiss}
             connected={connected}
             hasProperties={hasProperties}
+            showcaseMode={showcaseMode}
             customBoardBackground={customBoardBackground || null}
             custom3DPropertyTiles={custom3DPropertyTiles || null}
             profilePicture={profilePicture || gameState?.profile?.profilePicture}

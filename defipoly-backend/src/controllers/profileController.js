@@ -26,6 +26,7 @@ const getProfile = (req, res) => {
         propertyCardTheme: row.property_card_theme || 'dark',
         customBoardBackground: row.custom_board_background || null,
         customPropertyCardBackground: row.custom_property_card_background || null,
+        customSceneBackground: row.custom_scene_background || null,
         updatedAt: row.updated_at,
       });
     }
@@ -33,7 +34,7 @@ const getProfile = (req, res) => {
 };
 
 const updateProfile = (req, res) => {
-  const { wallet, username, profilePicture, cornerSquareStyle, boardTheme, propertyCardTheme, customBoardBackground, customPropertyCardBackground } = req.body;
+  const { wallet, username, profilePicture, cornerSquareStyle, boardTheme, propertyCardTheme, customBoardBackground, customPropertyCardBackground, customSceneBackground } = req.body;
   const db = getDatabase();
   
   if (!wallet) {
@@ -60,10 +61,11 @@ const updateProfile = (req, res) => {
       const finalPropertyCardTheme = propertyCardTheme !== undefined ? propertyCardTheme : (existingProfile?.property_card_theme || 'dark');
       const finalCustomBoardBackground = customBoardBackground !== undefined ? customBoardBackground : (existingProfile?.custom_board_background || null);
       const finalCustomPropertyCardBackground = customPropertyCardBackground !== undefined ? customPropertyCardBackground : (existingProfile?.custom_property_card_background || null);
+      const finalCustomSceneBackground = customSceneBackground !== undefined ? customSceneBackground : (existingProfile?.custom_scene_background || null);
       
       db.run(
-        `INSERT INTO profiles (wallet_address, username, profile_picture, corner_square_style, board_theme, property_card_theme, custom_board_background, custom_property_card_background, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `INSERT INTO profiles (wallet_address, username, profile_picture, corner_square_style, board_theme, property_card_theme, custom_board_background, custom_property_card_background, custom_scene_background, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
          ON CONFLICT(wallet_address) 
          DO UPDATE SET 
            username = ?,
@@ -73,10 +75,11 @@ const updateProfile = (req, res) => {
            property_card_theme = ?,
            custom_board_background = ?,
            custom_property_card_background = ?,
+           custom_scene_background = ?,
            updated_at = ?`,
         [
-          wallet, finalUsername, finalProfilePicture, finalCornerSquareStyle, finalBoardTheme, finalPropertyCardTheme, finalCustomBoardBackground, finalCustomPropertyCardBackground, updatedAt,
-          finalUsername, finalProfilePicture, finalCornerSquareStyle, finalBoardTheme, finalPropertyCardTheme, finalCustomBoardBackground, finalCustomPropertyCardBackground, updatedAt
+          wallet, finalUsername, finalProfilePicture, finalCornerSquareStyle, finalBoardTheme, finalPropertyCardTheme, finalCustomBoardBackground, finalCustomPropertyCardBackground, finalCustomSceneBackground, updatedAt,
+          finalUsername, finalProfilePicture, finalCornerSquareStyle, finalBoardTheme, finalPropertyCardTheme, finalCustomBoardBackground, finalCustomPropertyCardBackground, finalCustomSceneBackground, updatedAt
         ],
         (err) => {
           if (err) {
@@ -127,6 +130,7 @@ const getProfilesBatch = (req, res) => {
           propertyCardTheme: row.property_card_theme || 'dark',
           customBoardBackground: row.custom_board_background || null,
           customPropertyCardBackground: row.custom_property_card_background || null,
+          customSceneBackground: row.custom_scene_background || null,
           updatedAt: row.updated_at,
         };
       });
@@ -160,7 +164,7 @@ const removeProfilePicture = (req, res) => {
 };
 
 const updateThemePreferences = (req, res) => {
-  const { wallet, boardTheme, propertyCardTheme, customBoardBackground, customPropertyCardBackground, cornerSquareStyle } = req.body;
+  const { wallet, boardTheme, propertyCardTheme, customBoardBackground, customPropertyCardBackground, customSceneBackground, cornerSquareStyle } = req.body;
   const db = getDatabase();
   
   if (!wallet) {
@@ -186,11 +190,12 @@ const updateThemePreferences = (req, res) => {
       const finalPropertyCardTheme = propertyCardTheme !== undefined ? propertyCardTheme : (existingProfile?.property_card_theme || 'dark');
       const finalCustomBoardBackground = customBoardBackground !== undefined ? customBoardBackground : (existingProfile?.custom_board_background || null);
       const finalCustomPropertyCardBackground = customPropertyCardBackground !== undefined ? customPropertyCardBackground : (existingProfile?.custom_property_card_background || null);
+      const finalCustomSceneBackground = customSceneBackground !== undefined ? customSceneBackground : (existingProfile?.custom_scene_background || null);
       const finalCornerSquareStyle = cornerSquareStyle !== undefined ? cornerSquareStyle : (existingProfile?.corner_square_style || 'property');
       
       db.run(
-        `INSERT INTO profiles (wallet_address, username, profile_picture, board_theme, property_card_theme, custom_board_background, custom_property_card_background, corner_square_style, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `INSERT INTO profiles (wallet_address, username, profile_picture, board_theme, property_card_theme, custom_board_background, custom_property_card_background, custom_scene_background, corner_square_style, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
          ON CONFLICT(wallet_address) 
          DO UPDATE SET 
            username = ?,
@@ -199,11 +204,12 @@ const updateThemePreferences = (req, res) => {
            property_card_theme = ?,
            custom_board_background = ?,
            custom_property_card_background = ?,
+           custom_scene_background = ?,
            corner_square_style = ?,
            updated_at = ?`,
         [
-          wallet, finalUsername, finalProfilePicture, finalBoardTheme, finalPropertyCardTheme, finalCustomBoardBackground, finalCustomPropertyCardBackground, finalCornerSquareStyle, updatedAt,
-          finalUsername, finalProfilePicture, finalBoardTheme, finalPropertyCardTheme, finalCustomBoardBackground, finalCustomPropertyCardBackground, finalCornerSquareStyle, updatedAt
+          wallet, finalUsername, finalProfilePicture, finalBoardTheme, finalPropertyCardTheme, finalCustomBoardBackground, finalCustomPropertyCardBackground, finalCustomSceneBackground, finalCornerSquareStyle, updatedAt,
+          finalUsername, finalProfilePicture, finalBoardTheme, finalPropertyCardTheme, finalCustomBoardBackground, finalCustomPropertyCardBackground, finalCustomSceneBackground, finalCornerSquareStyle, updatedAt
         ],
         (err) => {
           if (err) {

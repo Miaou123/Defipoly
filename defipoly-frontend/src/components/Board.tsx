@@ -13,6 +13,7 @@ interface BoardProps {
   customBoardBackground?: string | null;
   customPropertyCardBackground?: string | null;
   custom3DPropertyTiles?: string | null;
+  customSceneBackground?: string | null;
 }
 
 export function Board({ 
@@ -22,6 +23,7 @@ export function Board({
   spectatorOwnerships = [],
   customBoardBackground,
   custom3DPropertyTiles,
+  customSceneBackground,
   profilePicture,
   cornerSquareStyle,
 }: BoardProps) {
@@ -38,6 +40,7 @@ export function Board({
         spectatorOwnerships={spectatorOwnerships}
         customBoardBackground={customBoardBackground}
         custom3DPropertyTiles={custom3DPropertyTiles}
+        customSceneBackground={customSceneBackground}
         profilePicture={profilePicture}
         cornerSquareStyle={cornerSquareStyle}
       />

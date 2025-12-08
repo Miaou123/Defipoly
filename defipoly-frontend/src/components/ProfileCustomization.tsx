@@ -5,6 +5,7 @@ import { useWallet } from '@solana/wallet-adapter-react';
 import { useNotification } from '@/contexts/NotificationContext';
 import { BoardThemeModal } from '@/components/modals/BoardThemeModal';
 import { PropertyThemeModal } from '@/components/modals/PropertyThemeModal';
+import { SceneBackgroundModal } from '@/components/modals/SceneBackgroundModal';
 import { clearProfileCache } from '@/utils/profileStorage';
 import { Edit3, Camera } from 'lucide-react';
 import { authenticatedFetch } from '@/contexts/AuthContext';
@@ -33,6 +34,8 @@ interface ProfileCustomizationProps {
   setCustomBoardBackground: (bg: string | null) => void;
   customPropertyCardBackground: string | null;
   setCustomPropertyCardBackground: (bg: string | null) => void;
+  customSceneBackground: string | null;
+  setCustomSceneBackground: (bg: string | null) => void;
   
   // Wallet address
   walletAddress: string;
@@ -58,6 +61,8 @@ export function ProfileCustomization({
   setCustomBoardBackground,
   customPropertyCardBackground,
   setCustomPropertyCardBackground,
+  customSceneBackground,
+  setCustomSceneBackground,
   walletAddress
 }: ProfileCustomizationProps) {
   const { publicKey } = useWallet();
@@ -66,6 +71,7 @@ export function ProfileCustomization({
   const [uploadingPicture, setUploadingPicture] = useState(false);
   const [showBoardThemeModal, setShowBoardThemeModal] = useState(false);
   const [showPropertyThemeModal, setShowPropertyThemeModal] = useState(false);
+  const [showSceneBackgroundModal, setShowSceneBackgroundModal] = useState(false);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -159,6 +165,11 @@ export function ProfileCustomization({
       return `url(${customPropertyCardBackground})`;
     }
     return 'linear-gradient(135deg, rgba(74, 44, 90, 0.9), rgba(236, 72, 153, 0.7))';
+  };
+
+  // Get preview background for scene
+  const getScenePreviewBackground = () => {
+    return customSceneBackground || THEME_CONSTANTS.DEFAULT_SCENE_BACKGROUND;
   };
 
   return (
@@ -268,7 +279,7 @@ export function ProfileCustomization({
           <span>🎨</span>
           Make your own board!
         </h3>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-3 gap-3">
           {/* Board Background */}
           <div className="text-center">
             <div className="text-[10px] text-purple-400 mb-1.5 font-semibold">🎮 Board</div>
@@ -332,6 +343,24 @@ export function ProfileCustomization({
               </div>
             </div>
           </div>
+
+          {/* Scene Background */}
+          <div className="text-center">
+            <div className="text-[10px] text-purple-400 mb-1.5 font-semibold">🌌 Scene</div>
+            <div className="relative group">
+              <div 
+                className="w-full aspect-square rounded border-2 border-purple-500/25 overflow-hidden cursor-pointer"
+                style={{ background: getScenePreviewBackground() }}
+                onClick={() => setShowSceneBackgroundModal(true)}
+              />
+              <div 
+                className="absolute inset-0 bg-black/60 rounded flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                onClick={() => setShowSceneBackgroundModal(true)}
+              >
+                <Camera size={16} className="text-white" />
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -364,6 +393,13 @@ export function ProfileCustomization({
         customBackground={customPropertyCardBackground}
         onThemeChange={setPropertyCardTheme}
         onCustomBackgroundChange={setCustomPropertyCardBackground}
+      />
+
+      <SceneBackgroundModal
+        isOpen={showSceneBackgroundModal}
+        onClose={() => setShowSceneBackgroundModal(false)}
+        currentBackground={customSceneBackground}
+        onBackgroundChange={setCustomSceneBackground}
       />
     </>
   );

@@ -19,6 +19,9 @@ const crypto = require('crypto');
 const helmet = require('helmet');
 const multer = require('multer');
 
+const { airdropService } = require('./src/services/airdropService');
+const airdropRoutes = require('./src/routes/airdropRoutes');
+
 // ============================================
 // SECURITY: Rate Limiting
 // ============================================
@@ -206,6 +209,9 @@ app.post('/api/admin/unblock-ip', verifyAdmin, unblockIP);
 // Mount API routes
 app.use('/api', routes);
 
+// Mount airdrop routes
+app.use('/api/airdrop', airdropRoutes); 
+
 // Mount WSS monitoring routes
 app.use('/api/wss', wssMonitoringRouter);
 
@@ -255,7 +261,7 @@ async function initializeWSS() {
     // Initialize gap detector
     if (process.env.ENABLE_WSS !== 'false') {
       console.log('🔍 Starting gap detector...');
-      gapDetector = new GapDetector(RPC_URL, PROGRAM_ID);
+      gapDetector = new GapDetector(RPC_URL, WS_URL, PROGRAM_ID);
       await gapDetector.start();
       console.log('✅ Gap detector started successfully\n');
     }
@@ -274,6 +280,15 @@ async function startServer() {
     console.log('📦 Initializing database...');
     await initDatabase();
     console.log('✅ Database initialized\n');
+
+    // Initialize airdrop service  // ADD THIS BLOCK
+    if (process.env.AIRDROP_WALLET_PRIVATE_KEY) {
+      console.log('💰 Initializing airdrop service...');
+      await airdropService.initialize(process.env.AIRDROP_WALLET_PRIVATE_KEY);
+      console.log('✅ Airdrop service initialized\n');
+    } else {
+      console.log('⚠️  Airdrop service disabled (no private key)\n');
+    }
 
     // Initialize Socket.IO for real-time events
     console.log('🔌 Initializing Socket.IO...');
@@ -324,6 +339,10 @@ async function startServer() {
       console.log(`\n🛡️  Security endpoints:`);
       console.log(`   GET  /api/admin/rate-limit-stats`);
       console.log(`   POST /api/admin/unblock-ip\n`);
+      console.log(`\n💰 Airdrop endpoints:`);
+      console.log(`   POST /api/airdrop`);
+      console.log(`   GET  /api/airdrop/status`);
+      console.log(`   GET  /api/airdrop/check/:wallet`);
     });
 
   } catch (error) {

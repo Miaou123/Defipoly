@@ -14,6 +14,7 @@ export interface ProfileData {
   propertyCardTheme: string | null;
   customBoardBackground: string | null;
   customPropertyCardBackground: string | null;
+  customSceneBackground: string | null;
   lastUpdated: number;
 }
 
@@ -49,6 +50,7 @@ export async function getProfile(address: string): Promise<ProfileData> {
         propertyCardTheme: data.propertyCardTheme || 'dark',
         customBoardBackground: data.customBoardBackground || null,
         customPropertyCardBackground: data.customPropertyCardBackground || null,
+        customSceneBackground: data.customSceneBackground || null,
         lastUpdated: data.updatedAt || 0,
       };
 
@@ -67,6 +69,7 @@ export async function getProfile(address: string): Promise<ProfileData> {
         propertyCardTheme: 'dark', 
         customBoardBackground: null,
         customPropertyCardBackground: null,
+        customSceneBackground: null,
         lastUpdated: 0 
       };
     }
@@ -105,6 +108,7 @@ export async function getProfilesBatch(addresses: string[]): Promise<Record<stri
           propertyCardTheme: profile.propertyCardTheme || 'dark',
           customBoardBackground: profile.customBoardBackground || null,
           customPropertyCardBackground: profile.customPropertyCardBackground || null,
+          customSceneBackground: profile.customSceneBackground || null,
           lastUpdated: profile.updatedAt || 0,
         };
 
@@ -267,6 +271,7 @@ export async function setThemePreferences(address: string, themes: {
   propertyCardTheme?: string;
   customBoardBackground?: string | null;
   customPropertyCardBackground?: string | null;
+  customSceneBackground?: string | null;
 }): Promise<boolean> {
   try {
     // Get current profile data
@@ -284,6 +289,7 @@ export async function setThemePreferences(address: string, themes: {
         propertyCardTheme: themes.propertyCardTheme ?? currentProfile.propertyCardTheme,
         customBoardBackground: themes.customBoardBackground ?? currentProfile.customBoardBackground,
         customPropertyCardBackground: themes.customPropertyCardBackground ?? currentProfile.customPropertyCardBackground,
+        customSceneBackground: themes.customSceneBackground ?? currentProfile.customSceneBackground,
       }),
     });
 
@@ -394,6 +400,7 @@ function getProfileFromLocalStorage(address: string): ProfileData {
       propertyCardTheme: 'dark',
       customBoardBackground: null,
       customPropertyCardBackground: null, 
+      customSceneBackground: null,
       lastUpdated: 0 
     };
   }
@@ -405,6 +412,7 @@ function getProfileFromLocalStorage(address: string): ProfileData {
   const propertyCardTheme = localStorage.getItem(`propertyTheme_${address}`) || 'dark';
   const customBoardBackground = localStorage.getItem(`customBoard_${address}`) || null;
   const customPropertyCardBackground = localStorage.getItem(`customProperty_${address}`) || null;
+  const customSceneBackground = localStorage.getItem(`customScene_${address}`) || null;
   const lastUpdated = parseInt(localStorage.getItem(`profile_updated_${address}`) || '0');
 
   return {
@@ -415,6 +423,7 @@ function getProfileFromLocalStorage(address: string): ProfileData {
     propertyCardTheme,
     customBoardBackground,
     customPropertyCardBackground,
+    customSceneBackground,
     lastUpdated,
   };
 }

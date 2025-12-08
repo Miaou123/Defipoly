@@ -43,6 +43,7 @@ function createTables() {
         property_card_theme TEXT DEFAULT 'dark',
         custom_board_background TEXT,
         custom_property_card_background TEXT,
+        custom_scene_background TEXT,
         corner_square_style TEXT DEFAULT 'property',
         updated_at INTEGER DEFAULT (strftime('%s', 'now'))
       )

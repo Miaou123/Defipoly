@@ -108,7 +108,8 @@ export default function SpectatorPage() {
             boardTheme: 'dark',
             propertyCardTheme: 'dark',
             customBoardBackground: null,
-            customPropertyCardBackground: null
+            customPropertyCardBackground: null,
+            customSceneBackground: null
           };
         }
         
@@ -363,6 +364,7 @@ export default function SpectatorPage() {
             cornerSquareStyle={profile?.cornerSquareStyle || 'property'}
             customBoardBackground={profile?.customBoardBackground || null}
             custom3DPropertyTiles={profile?.customPropertyCardBackground || null}
+            customSceneBackground={profile?.customSceneBackground || null}
           />
         </div>
         
