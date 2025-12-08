@@ -17,26 +17,11 @@ interface SceneBackgroundModalProps {
 }
 
 const GRADIENT_PRESETS = [
-  {
-    name: "Purple Night",
-    value: THEME_CONSTANTS.DEFAULT_SCENE_BACKGROUND
-  },
-  {
-    name: "Deep Space",
-    value: "linear-gradient(180deg, #000000 0%, #0d0d1a 50%, #000000 100%)"
-  },
-  {
-    name: "Sunset",
-    value: "linear-gradient(180deg, #1a0a0a 0%, #2d1a1a 50%, #1a0505 100%)"
-  },
-  {
-    name: "Ocean",
-    value: "linear-gradient(180deg, #0a1015 0%, #0d1a2e 50%, #0a1520 100%)"
-  },
-  {
-    name: "Forest",
-    value: "linear-gradient(180deg, #0a150a 0%, #1a2e1a 50%, #0a150a 100%)"
-  }
+  THEME_CONSTANTS.DEFAULT_SCENE_BACKGROUND,
+  "linear-gradient(180deg, #000000 0%, #0d0d1a 50%, #000000 100%)", // Deep Space
+  "linear-gradient(180deg, #1a0a0a 0%, #2d1a1a 50%, #1a0505 100%)", // Sunset
+  "linear-gradient(180deg, #0a1015 0%, #0d1a2e 50%, #0a1520 100%)", // Ocean
+  "linear-gradient(180deg, #0a150a 0%, #1a2e1a 50%, #0a150a 100%)", // Forest
 ];
 
 export function SceneBackgroundModal({
@@ -198,20 +183,16 @@ export function SceneBackgroundModal({
             {/* Gradient Presets */}
             <div>
               <div className="text-sm font-semibold text-purple-200 mb-3">Gradient Presets</div>
-              <div className="grid grid-cols-1 gap-2">
-                {GRADIENT_PRESETS.map((preset) => (
+              <div className="grid grid-cols-3 gap-2">
+                {GRADIENT_PRESETS.map((preset, index) => (
                   <button
-                    key={preset.name}
-                    onClick={() => handleGradientSelect(preset.value)}
+                    key={index}
+                    onClick={() => handleGradientSelect(preset)}
                     disabled={saving}
-                    className="flex items-center gap-2 p-2 bg-purple-800/30 hover:bg-purple-700/50 rounded border border-purple-500/20 transition-colors text-left"
-                  >
-                    <div 
-                      className="w-6 h-6 rounded border border-purple-500/30"
-                      style={{ background: preset.value }}
-                    />
-                    <span className="text-purple-100 text-sm">{preset.name}</span>
-                  </button>
+                    className="aspect-square rounded border border-purple-500/30 hover:border-purple-500/60 transition-colors"
+                    style={{ background: preset }}
+                    title={`Preset ${index + 1}`}
+                  />
                 ))}
               </div>
             </div>

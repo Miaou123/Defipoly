@@ -6,6 +6,7 @@ import { useNotification } from '@/contexts/NotificationContext';
 import { BoardThemeModal } from '@/components/modals/BoardThemeModal';
 import { PropertyThemeModal } from '@/components/modals/PropertyThemeModal';
 import { SceneBackgroundModal } from '@/components/modals/SceneBackgroundModal';
+import { CornerSquareModal } from '@/components/modals/CornerSquareModal';
 import { clearProfileCache } from '@/utils/profileStorage';
 import { Edit3, Camera } from 'lucide-react';
 import { authenticatedFetch } from '@/contexts/AuthContext';
@@ -36,6 +37,8 @@ interface ProfileCustomizationProps {
   setCustomPropertyCardBackground: (bg: string | null) => void;
   customSceneBackground: string | null;
   setCustomSceneBackground: (bg: string | null) => void;
+  cornerSquareStyle: 'property' | 'profile';
+  setCornerSquareStyle: (style: 'property' | 'profile') => void;
   
   // Wallet address
   walletAddress: string;
@@ -63,6 +66,8 @@ export function ProfileCustomization({
   setCustomPropertyCardBackground,
   customSceneBackground,
   setCustomSceneBackground,
+  cornerSquareStyle,
+  setCornerSquareStyle,
   walletAddress
 }: ProfileCustomizationProps) {
   const { publicKey } = useWallet();
@@ -72,6 +77,7 @@ export function ProfileCustomization({
   const [showBoardThemeModal, setShowBoardThemeModal] = useState(false);
   const [showPropertyThemeModal, setShowPropertyThemeModal] = useState(false);
   const [showSceneBackgroundModal, setShowSceneBackgroundModal] = useState(false);
+  const [showCornerSquareModal, setShowCornerSquareModal] = useState(false);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -279,7 +285,7 @@ export function ProfileCustomization({
           <span>🎨</span>
           Make your own board!
         </h3>
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-4 gap-3">
           {/* Board Background */}
           <div className="text-center">
             <div className="text-[10px] text-purple-400 mb-1.5 font-semibold">🎮 Board</div>
@@ -361,6 +367,27 @@ export function ProfileCustomization({
               </div>
             </div>
           </div>
+
+          {/* Corner Square Style */}
+          <div className="text-center">
+            <div className="text-[10px] text-purple-400 mb-1.5 font-semibold">📐 Corners</div>
+            <div className="relative group">
+              <div 
+                className="w-full aspect-square rounded border-2 border-purple-500/25 overflow-hidden cursor-pointer bg-gradient-to-br from-purple-600 to-purple-800 flex items-center justify-center"
+                onClick={() => setShowCornerSquareModal(true)}
+              >
+                <div className="text-white text-lg">
+                  {cornerSquareStyle === 'profile' ? '👤' : '🎯'}
+                </div>
+              </div>
+              <div 
+                className="absolute inset-0 bg-black/60 rounded flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                onClick={() => setShowCornerSquareModal(true)}
+              >
+                <Camera size={16} className="text-white" />
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -400,6 +427,13 @@ export function ProfileCustomization({
         onClose={() => setShowSceneBackgroundModal(false)}
         currentBackground={customSceneBackground}
         onBackgroundChange={setCustomSceneBackground}
+      />
+
+      <CornerSquareModal
+        isOpen={showCornerSquareModal}
+        onClose={() => setShowCornerSquareModal(false)}
+        currentCornerSquareStyle={cornerSquareStyle}
+        onCornerSquareStyleChange={setCornerSquareStyle}
       />
     </>
   );

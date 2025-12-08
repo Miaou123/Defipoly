@@ -114,6 +114,8 @@ export default function Home() {
           profilePicture={profilePicture}
           cornerSquareStyle={cornerSquareStyle}
           customBoardBackground={customBoardBackground}
+          customPropertyCardBackground={customPropertyCardBackground}
+          customSceneBackground={customSceneBackground}
         />
         {selectedProperty !== null && (
           <PropertyModal 

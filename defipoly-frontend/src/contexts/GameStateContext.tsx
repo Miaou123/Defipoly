@@ -70,6 +70,7 @@ export interface ProfileData {
   propertyCardTheme: string;
   customBoardBackground: string | null;
   customPropertyCardBackground: string | null;
+  customSceneBackground: string | null;
   updatedAt: number | null;
 }
 
@@ -146,6 +147,7 @@ export function GameStateProvider({ children }: { children: React.ReactNode }) {
       propertyCardTheme: 'dark',
       customBoardBackground: null,
       customPropertyCardBackground: null,
+      customSceneBackground: null,
       updatedAt: null,
     },
   });
@@ -185,6 +187,7 @@ export function GameStateProvider({ children }: { children: React.ReactNode }) {
           propertyCardTheme: 'dark',
           customBoardBackground: null,
           customPropertyCardBackground: null,
+          customSceneBackground: null,
           updatedAt: null,
         },
       });

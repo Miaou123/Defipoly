@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { TrophyIcon, HexagonBadge, PointerArrowIcon } from './icons/UIIcons';
-import { ProfileData } from '@/utils/profileStorage';
+import { ProfileData } from '@/contexts/GameStateContext';
 import { setCachedSpectator } from '@/utils/spectatorCache';
 import { useWebSocket } from '@/contexts/WebSocketContext';
 import { useGameState } from '@/contexts/GameStateContext';
@@ -145,6 +145,7 @@ export function Leaderboard({ scaleFactor = 1 }: LeaderboardProps) {
               const profilesData: Record<string, ProfileData> = {};
               for (const wallet of walletAddresses) {
                 profilesData[wallet] = {
+                  walletAddress: wallet,
                   username: null,
                   profilePicture: null,
                   cornerSquareStyle: 'property',
@@ -152,7 +153,8 @@ export function Leaderboard({ scaleFactor = 1 }: LeaderboardProps) {
                   propertyCardTheme: 'dark',
                   customBoardBackground: null,
                   customPropertyCardBackground: null,
-                  lastUpdated: 0
+                  customSceneBackground: null,
+                  updatedAt: 0
                 };
               }
               setProfiles(profilesData);
@@ -162,6 +164,7 @@ export function Leaderboard({ scaleFactor = 1 }: LeaderboardProps) {
             const profilesData: Record<string, ProfileData> = {};
             for (const wallet of walletAddresses) {
               profilesData[wallet] = {
+                walletAddress: wallet,
                 username: null,
                 profilePicture: null,
                 cornerSquareStyle: 'property',
@@ -169,7 +172,8 @@ export function Leaderboard({ scaleFactor = 1 }: LeaderboardProps) {
                 propertyCardTheme: 'dark',
                 customBoardBackground: null,
                 customPropertyCardBackground: null,
-                lastUpdated: 0
+                customSceneBackground: null,
+                updatedAt: 0
               };
             }
             setProfiles(profilesData);
@@ -231,12 +235,26 @@ export function Leaderboard({ scaleFactor = 1 }: LeaderboardProps) {
       propertyCardTheme: 'dark' as const,
       customBoardBackground: null,
       customPropertyCardBackground: null,
-      updatedAt: Date.now(),
-      lastUpdated: Date.now()
+      customSceneBackground: null,
+      updatedAt: Date.now()
+    };
+    
+    // Convert to spectatorCache ProfileData format (it still uses the old interface)
+    const spectatorProfileData = {
+      walletAddress: profileData.walletAddress,
+      username: profileData.username,
+      profilePicture: profileData.profilePicture,
+      cornerSquareStyle: profileData.cornerSquareStyle,
+      boardTheme: profileData.boardTheme,
+      propertyCardTheme: profileData.propertyCardTheme,
+      customBoardBackground: profileData.customBoardBackground,
+      customPropertyCardBackground: profileData.customPropertyCardBackground,
+      customSceneBackground: profileData.customSceneBackground,
+      lastUpdated: profileData.updatedAt || Date.now()
     };
     
     // Cache with rank information from leaderboard
-    setCachedSpectator(leader.walletAddress, profileData, null, [], leader.rank);
+    setCachedSpectator(leader.walletAddress, spectatorProfileData, null, [], leader.rank);
     console.log('💾 [LEADERBOARD] Pre-cached spectator data with rank:', leader.rank);
     
     window.location.href = `/spectator/${leader.walletAddress}`;

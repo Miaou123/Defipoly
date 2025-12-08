@@ -1,11 +1,10 @@
 'use client';
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { X, Home } from 'lucide-react';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { useNotification } from '@/contexts/NotificationContext';
-import { clearProfileCache, getProfile } from '@/utils/profileStorage';
-import { CornerSquare } from '../BoardHelpers';
+import { clearProfileCache } from '@/utils/profileStorage';
 import { authenticatedFetch } from '@/contexts/AuthContext';
 
 interface PropertyThemeModalProps {
@@ -16,6 +15,14 @@ interface PropertyThemeModalProps {
   onThemeChange: (theme: string) => void;
   onCustomBackgroundChange: (bg: string | null) => void;
 }
+
+const GRADIENT_PRESETS = [
+  "linear-gradient(135deg, #9333ea, #ec4899)", // Purple Night
+  "linear-gradient(135deg, #000000, #1e1e1e)", // Deep Space
+  "linear-gradient(135deg, #dc2626, #fb923c)", // Sunset
+  "linear-gradient(135deg, #0891b2, #064e3b)", // Ocean
+  "linear-gradient(135deg, #22c55e, #15803d)", // Forest
+];
 
 export function PropertyThemeModal({
   isOpen,
@@ -29,60 +36,88 @@ export function PropertyThemeModal({
   const { showSuccess, showError } = useNotification();
   const [customColor, setCustomColor] = useState('#9333ea');
   const [uploading, setUploading] = useState(false);
-  const [cornerSquareStyle, setCornerSquareStyle] = useState<'property' | 'profile'>('property');
-  const [currentProfilePicture, setCurrentProfilePicture] = useState<string | null>(null);
-  
-  // Load current user's profile picture for preview
-  useEffect(() => {
-    if (publicKey) {
-      getProfile(publicKey.toString())
-        .then(profile => {
-          setCurrentProfilePicture(profile.profilePicture);
-          setCornerSquareStyle(profile.cornerSquareStyle || 'property');
-        })
-        .catch(error => {
-          console.error('Error loading profile for preview:', error);
-        });
-    }
-  }, [publicKey]);
-  
-  // Save corner style to backend
-  const saveCornerStyle = async (style: 'property' | 'profile') => {
-    if (!publicKey) return;
-    
-    try {
-      const response = await authenticatedFetch(`${process.env['NEXT_PUBLIC_API_BASE_URL'] || 'http://localhost:3101'}/api/profile/themes`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          wallet: publicKey.toString(),
-          cornerSquareStyle: style,
-        }),
-      });
-      
-      if (response.ok) {
-        // Clear cache so main page picks up the new corner style
-        clearProfileCache(publicKey.toString());
-        // Trigger a profile update event
-        window.dispatchEvent(new CustomEvent('profileUpdated'));
-        showSuccess('Saved', 'Corner style preference saved');
-      } else {
-        showError('Failed', 'Failed to save corner style preference');
-      }
-    } catch (error) {
-      console.error('Error saving corner style:', error);
-      showError('Error', 'Error saving corner style');
-    }
-  };
-  
-  // Handle corner style change
-  const handleCornerStyleChange = (style: 'property' | 'profile') => {
-    setCornerSquareStyle(style);
-    saveCornerStyle(style);
-  };
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleCustomColorApply = async () => {
+  const handleGradientSelect = async (gradientValue: string) => {
+    if (!publicKey) {
+      showError('No Wallet', 'Please connect your wallet first');
+      return;
+    }
+    
+    setUploading(true);
+    try {
+      // Generate gradient image instead of storing gradient string
+      const canvas = document.createElement('canvas');
+      canvas.width = 400;
+      canvas.height = 300;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) {
+        throw new Error('Unable to get canvas context');
+      }
+      
+      // Create gradient from CSS string
+      const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+      
+      // Parse gradient colors from CSS string
+      const colorMatches = gradientValue.match(/#[0-9a-fA-F]{6}/g);
+      if (colorMatches && colorMatches.length >= 2) {
+        gradient.addColorStop(0, colorMatches[0]!);
+        gradient.addColorStop(1, colorMatches[1]!);
+      } else {
+        // Fallback to solid color if parsing fails
+        const singleColor = colorMatches?.[0] || '#9333ea';
+        gradient.addColorStop(0, singleColor);
+        gradient.addColorStop(1, singleColor);
+      }
+      
+      ctx.fillStyle = gradient;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      
+      // Convert to PNG blob
+      const blob = await new Promise<Blob>((resolve) => {
+        canvas.toBlob((blob) => {
+          if (blob) resolve(blob);
+        }, 'image/png', 1.0);
+      });
+      const file = new File([blob], 'gradient-theme.png', { type: 'image/png' });
+      
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('wallet', publicKey.toString());
+      formData.append('uploadType', 'card');
+      formData.append('themeType', 'card');
+      if (customBackground) {
+        formData.append('oldBackgroundUrl', customBackground);
+      }
+
+      const response = await authenticatedFetch(`${process.env['NEXT_PUBLIC_API_BASE_URL'] || 'http://localhost:3101'}/api/profile/upload/theme`, {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        onCustomBackgroundChange(data.backgroundUrl);
+        showSuccess('Applied', 'Property card background updated');
+        
+        // Clear profile cache and trigger update
+        clearProfileCache(publicKey.toString());
+        window.dispatchEvent(new Event('profileUpdated'));
+      } else {
+        const errorText = await response.text();
+        console.error('Server error:', errorText);
+        showError('Failed', 'Failed to update property card background');
+      }
+    } catch (error) {
+      console.error('Error updating property card background:', error);
+      showError('Error', `Error updating property card background: ${error instanceof Error ? error.message : String(error)}`);
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleCustomColorApply = async (colorOrGradient?: string) => {
+    const finalColor = colorOrGradient || customColor;
     if (!publicKey) {
       showError('No Wallet', 'Please connect your wallet first');
       return;
@@ -106,8 +141,13 @@ export function PropertyThemeModal({
         throw new Error('Unable to get canvas context');
       }
       
-      // Fill the canvas with the selected color
-      ctx.fillStyle = customColor;
+      // Fill the canvas with the selected color or create a simple gradient representation
+      if (colorOrGradient && colorOrGradient.includes('gradient')) {
+        // For gradients, use a simple solid color representation
+        ctx.fillStyle = '#9333ea'; // Purple as default for gradients
+      } else {
+        ctx.fillStyle = finalColor;
+      }
       ctx.fillRect(0, 0, 100, 100);
       
       // Convert to PNG blob
@@ -279,8 +319,25 @@ export function PropertyThemeModal({
           <div className="grid grid-cols-2 gap-5 mb-4">
             {/* Controls */}
             <div className="flex flex-col gap-3">
-              {/* Solid Color */}
+              {/* Gradient Presets */}
               <div>
+                <div className="text-sm font-semibold text-purple-200 mb-3">Gradient Presets</div>
+                <div className="grid grid-cols-3 gap-2 mb-4">
+                  {GRADIENT_PRESETS.map((preset, index) => (
+                    <button
+                      key={index}
+                      onClick={() => handleGradientSelect(preset)}
+                      disabled={uploading}
+                      className="aspect-square rounded border border-purple-500/30 hover:border-purple-500/60 transition-colors"
+                      style={{ background: preset }}
+                      title={`Preset ${index + 1}`}
+                    />
+                  ))}
+                </div>
+              </div>
+
+              {/* Solid Color */}
+              <div className="border-t border-purple-500/20 pt-3">
                 <div className="text-sm font-semibold text-purple-200 mb-3">Solid Color</div>
                 <div className="flex gap-2 items-center">
                   <input
@@ -348,59 +405,6 @@ export function PropertyThemeModal({
             </div>
           </div>
 
-          {/* Corner Square Customization */}
-          <div className="border-t border-purple-500/20 pt-6 mb-4">
-            <div className="text-sm font-semibold text-purple-200 mb-3">Corner Square Style</div>
-            <div className="grid grid-cols-2 gap-4">
-              {/* Property Card Style Option */}
-              <div 
-                onClick={() => handleCornerStyleChange('property')}
-                className={`cursor-pointer rounded-lg border-2 p-3 transition-all ${
-                  cornerSquareStyle === 'property' 
-                    ? 'border-purple-500 bg-purple-500/20' 
-                    : 'border-purple-500/30 bg-purple-800/10 hover:border-purple-500/50'
-                }`}
-              >
-                <div className="text-xs text-purple-200 mb-2 font-medium">Property Card</div>
-                <div 
-                  className="w-full aspect-square rounded border-2 border-purple-500/30"
-                  style={{
-                    background: customBackground 
-                      ? `url(${customBackground}) center/cover`
-                      : 'linear-gradient(135deg, rgba(147, 51, 234, 0.9), rgba(236, 72, 153, 0.7))'
-                  }}
-                />
-                {!customBackground && (
-                  <p className="text-[9px] text-purple-400 mt-1 text-center">No custom background set</p>
-                )}
-              </div>
-
-              {/* Profile Picture Style Option */}
-              <div 
-                onClick={() => handleCornerStyleChange('profile')}
-                className={`cursor-pointer rounded-lg border-2 p-3 transition-all ${
-                  cornerSquareStyle === 'profile' 
-                    ? 'border-purple-500 bg-purple-500/20' 
-                    : 'border-purple-500/30 bg-purple-800/10 hover:border-purple-500/50'
-                }`}
-              >
-                <div className="text-xs text-purple-200 mb-2 font-medium">Profile Picture</div>
-                <div className="w-full aspect-square">
-                  <CornerSquare 
-                    icon="🎲" 
-                    label="GO" 
-                    bgColor="#8b5cf6"
-                    profilePicture={currentProfilePicture}
-                    cornerSquareStyle="profile"
-                    customPropertyCardBackground={customBackground}
-                  />
-                </div>
-                {!currentProfilePicture && (
-                  <p className="text-[9px] text-purple-400 mt-1 text-center">No profile picture set</p>
-                )}
-              </div>
-            </div>
-          </div>
 
           {/* Footer */}
           <div className="text-center">

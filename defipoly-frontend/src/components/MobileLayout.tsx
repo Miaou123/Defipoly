@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { MobileBoard } from './MobileBoard';
+import { Board } from './Board';
 import { Portfolio } from './Portfolio';
 import { Leaderboard } from './Leaderboard';
 import { LiveFeed } from './LiveFeed';
@@ -19,6 +19,8 @@ interface MobileLayoutProps {
   profilePicture: string | null;
   cornerSquareStyle: 'property' | 'profile';
   customBoardBackground: string | null;
+  customPropertyCardBackground: string | null;
+  customSceneBackground: string | null;
 }
 
 function MobileRewardsCard() {
@@ -85,12 +87,18 @@ export function MobileLayout({
   onSelectProperty, 
   profilePicture, 
   cornerSquareStyle,
-  customBoardBackground 
+  customBoardBackground,
+  customPropertyCardBackground,
+  customSceneBackground
 }: MobileLayoutProps) {
   const [activeTab, setActiveTab] = useState<TabType>('board');
   const { publicKey, connected } = useWallet();
   const { profile } = useGameState();
   const [scaleFactor, setScaleFactor] = useState(1);
+  const [startY, setStartY] = useState<number | null>(null);
+  const [currentY, setCurrentY] = useState<number | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const [panelHeight, setPanelHeight] = useState(300); // Initial height of bottom panel
   
   // Calculate scaleFactor based on screen width for mobile
   useEffect(() => {
@@ -107,16 +115,38 @@ export function MobileLayout({
   }, []);
 
   const tabs: { id: TabType; icon: string; label: string }[] = [
-    { id: 'board', icon: '🎮', label: 'Board' },
     { id: 'portfolio', icon: '💼', label: 'Portfolio' },
     { id: 'leaderboard', icon: '🏆', label: 'Ranks' },
     { id: 'feed', icon: '📡', label: 'Feed' },
   ];
 
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (activeTab === 'board') return;
+    const clientY = e.touches[0]?.clientY;
+    if (clientY !== undefined) {
+      setStartY(clientY);
+      setIsDragging(true);
+    }
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (!isDragging || !startY || activeTab === 'board') return;
+    const currentY = e.touches[0]?.clientY;
+    if (!currentY) return;
+    const diff = startY - currentY;
+    setPanelHeight(Math.max(100, Math.min(window.innerHeight - 200, 300 + diff)));
+  };
+
+  const handleTouchEnd = () => {
+    setIsDragging(false);
+    setStartY(null);
+    setCurrentY(null);
+  };
+
   return (
-    <div className="h-[100dvh] flex flex-col bg-gradient-to-b from-purple-950/50 to-black">
+    <div className="h-[100dvh] flex flex-col bg-gradient-to-b from-purple-950/50 to-black relative overflow-hidden">
       {/* Header */}
-      <header className="flex-shrink-0 flex items-center justify-between px-4 py-3 border-b border-purple-500/20 bg-black/40 backdrop-blur-lg safe-area-top">
+      <header className="flex-shrink-0 flex items-center justify-between px-4 py-3 border-b border-purple-500/20 bg-black/40 backdrop-blur-lg safe-area-top z-20">
         <div className="flex items-center gap-2">
           <img 
             src="/logo.svg" 
@@ -152,67 +182,77 @@ export function MobileLayout({
         </div>
       </header>
 
-      {/* Content Area */}
-      <main className="flex-1 overflow-hidden">
-        {activeTab === 'board' && (
-          <div className="h-full flex flex-col p-3 gap-3">
-            {/* Rewards Card - Compact */}
-            <div className="flex-shrink-0">
-              <MobileRewardsCard />
-            </div>
-            
-            {/* Board - Takes remaining space */}
-            <div className="flex-1 flex items-center justify-center overflow-hidden min-h-0">
-              <MobileBoard 
-                onSelectProperty={onSelectProperty}
-                profilePicture={profilePicture}
-                cornerSquareStyle={cornerSquareStyle}
-                customBoardBackground={customBoardBackground}
-              />
-            </div>
+      {/* 3D Board - Full screen background */}
+      <div className="absolute inset-0 top-[72px] bottom-0">
+        <div className="relative w-full h-full">
+          {/* Compact Rewards Bar - Fixed position at top */}
+          <div className="absolute top-3 left-3 right-3 z-10">
+            <MobileRewardsCard />
           </div>
-        )}
+          
+          {/* 3D Board */}
+          <Board 
+            onSelectProperty={onSelectProperty}
+            profilePicture={profilePicture}
+            cornerSquareStyle={cornerSquareStyle}
+            customBoardBackground={customBoardBackground}
+            custom3DPropertyTiles={customPropertyCardBackground}
+            customSceneBackground={customSceneBackground}
+            isMobile={true}
+          />
+        </div>
+      </div>
 
-        {activeTab === 'portfolio' && (
-          <div className="h-full overflow-hidden">
+      {/* Swipeable Bottom Panel */}
+      <div 
+        className="absolute bottom-0 left-0 right-0 bg-black/80 backdrop-blur-lg border-t border-purple-500/20 z-30"
+        style={{ height: `${panelHeight}px` }}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+      >
+        {/* Drag Handle */}
+        <div className="flex justify-center py-2">
+          <div className="w-10 h-1 bg-purple-500/60 rounded-full"></div>
+        </div>
+        
+        {/* Tab Navigation */}
+        <nav className="flex border-b border-purple-500/20 bg-black/40">
+          {tabs.map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`flex-1 py-2 flex flex-col items-center gap-1 transition-all ${
+                activeTab === tab.id 
+                  ? 'bg-purple-600/20 border-b-2 border-purple-500' 
+                  : 'border-b-2 border-transparent'
+              }`}
+            >
+              <span className="text-sm">{tab.icon}</span>
+              <span className={`text-[9px] font-medium ${
+                activeTab === tab.id ? 'text-purple-300' : 'text-purple-500'
+              }`}>
+                {tab.label}
+              </span>
+            </button>
+          ))}
+        </nav>
+        
+        {/* Panel Content */}
+        <div className="flex-1 overflow-hidden" style={{ height: `${panelHeight - 80}px` }}>
+          {activeTab === 'portfolio' && (
             <Portfolio onSelectProperty={onSelectProperty} scaleFactor={scaleFactor} />
-          </div>
-        )}
+          )}
 
-        {activeTab === 'leaderboard' && (
-          <div className="h-full overflow-hidden">
+          {activeTab === 'leaderboard' && (
             <Leaderboard scaleFactor={scaleFactor} />
-          </div>
-        )}
+          )}
 
-        {activeTab === 'feed' && (
-          <div className="h-full overflow-hidden">
+          {activeTab === 'feed' && (
             <LiveFeed scaleFactor={scaleFactor} />
-          </div>
-        )}
-      </main>
-
-      {/* Bottom Tab Bar */}
-      <nav className="flex-shrink-0 flex border-t border-purple-500/20 bg-black/60 backdrop-blur-lg pb-safe">
-        {tabs.map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
-            className={`flex-1 py-3 flex flex-col items-center gap-1 transition-all ${
-              activeTab === tab.id 
-                ? 'bg-purple-600/20 border-t-2 border-purple-500' 
-                : 'border-t-2 border-transparent'
-            }`}
-          >
-            <span className="text-xl">{tab.icon}</span>
-            <span className={`text-[10px] font-medium ${
-              activeTab === tab.id ? 'text-purple-300' : 'text-purple-500'
-            }`}>
-              {tab.label}
-            </span>
-          </button>
-        ))}
-      </nav>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

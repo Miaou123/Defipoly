@@ -335,6 +335,10 @@ export default function ProfilePage() {
                   setCustomSceneBackground={async (bg) => {
                     await gameState.updateProfile({ customSceneBackground: bg });
                   }}
+                  cornerSquareStyle={gameState.profile.cornerSquareStyle || 'property'}
+                  setCornerSquareStyle={async (style) => {
+                    await gameState.updateProfile({ cornerSquareStyle: style });
+                  }}
                   walletAddress={publicKey.toString()}
                 />
               </div>

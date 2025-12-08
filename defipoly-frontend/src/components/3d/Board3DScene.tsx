@@ -33,6 +33,7 @@ interface Board3DSceneProps {
   customSceneBackground?: string | null | undefined;
   profilePicture?: string | null | undefined;
   cornerSquareStyle?: 'property' | 'profile' | undefined;
+  isMobile?: boolean;
 }
 
 interface SceneProps extends Board3DSceneProps {
@@ -1230,7 +1231,7 @@ function Scene({
   );
 }
 
-export function Board3DScene({ onSelectProperty, onCoinClick, spectatorMode, spectatorOwnerships, customBoardBackground, custom3DPropertyTiles, customSceneBackground, profilePicture, cornerSquareStyle }: Board3DSceneProps) {
+export function Board3DScene({ onSelectProperty, onCoinClick, spectatorMode, spectatorOwnerships, customBoardBackground, custom3DPropertyTiles, customSceneBackground, profilePicture, cornerSquareStyle, isMobile = false }: Board3DSceneProps) {
   
   
   const containerRef = useRef<HTMLDivElement>(null);
@@ -1425,8 +1426,8 @@ export function Board3DScene({ onSelectProperty, onCoinClick, spectatorMode, spe
       ref={containerRef}
       style={{ width: '100%', height: '100%', position: 'relative' }}
     >
-      {/* Camera Controls - only show when connected */}
-      {connected && (
+      {/* Camera Controls - only show when connected and not mobile */}
+      {connected && !isMobile && (
         <div 
           style={{
             position: 'absolute',
@@ -1552,7 +1553,18 @@ export function Board3DScene({ onSelectProperty, onCoinClick, spectatorMode, spe
         }}
         shadows
         style={{ 
-          background: customSceneBackground || 'linear-gradient(180deg, #0a0015 0%, #1a0a2e 50%, #0a0015 100%)',
+          background: (() => {
+            const bg = customSceneBackground || '#0a0015';
+            
+            // If it's a gradient string, extract the first color for Canvas
+            if (bg.includes('linear-gradient') || bg.includes('radial-gradient')) {
+              const colorMatch = bg.match(/#[0-9a-fA-F]{6}/);
+              return colorMatch?.[0] || '#0a0015';
+            }
+            
+            // Otherwise use the background as-is (solid color or empty for default)
+            return bg || '#0a0015';
+          })(),
           width: '100%',
           height: '100%'
         }}
