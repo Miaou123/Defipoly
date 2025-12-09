@@ -270,7 +270,7 @@ export function ProfileCustomization({
     }
   };
 
-  // Handle preset application - generates actual image files
+  // Handle preset application - generates actual image files using batch upload
   const handlePresetApply = async (preset: ThemePreset) => {
     if (!publicKey) return;
     
@@ -282,51 +282,31 @@ export function ProfileCustomization({
       const boardImage = await generateGradientImage(preset.board, 400, 400);
       const tileImage = await generateSolidColorImage(preset.tile, 100, 100);
       
-      // Upload scene background
-      const sceneFormData = new FormData();
-      sceneFormData.append('file', sceneImage);
-      sceneFormData.append('wallet', publicKey.toString());
-      sceneFormData.append('uploadType', 'scene');
-      sceneFormData.append('themeType', 'scene');
+      // Create single FormData for batch upload
+      const formData = new FormData();
+      formData.append('wallet', publicKey.toString());
+      formData.append('sceneFile', sceneImage);
+      formData.append('boardFile', boardImage);
+      formData.append('tileFile', tileImage);
       
-      const sceneResponse = await authenticatedFetch(`${API_BASE_URL}/api/profile/upload/theme`, {
+      const response = await authenticatedFetch(`${API_BASE_URL}/api/profile/upload/theme-batch`, {
         method: 'POST',
-        body: sceneFormData,
-      });
-      
-      // Upload board background  
-      const boardFormData = new FormData();
-      boardFormData.append('file', boardImage);
-      boardFormData.append('wallet', publicKey.toString());
-      boardFormData.append('uploadType', 'board');
-      boardFormData.append('themeType', 'board');
-      
-      const boardResponse = await authenticatedFetch(`${API_BASE_URL}/api/profile/upload/theme`, {
-        method: 'POST',
-        body: boardFormData,
-      });
-      
-      // Upload tile background
-      const tileFormData = new FormData();
-      tileFormData.append('file', tileImage);
-      tileFormData.append('wallet', publicKey.toString());
-      tileFormData.append('uploadType', 'card');
-      tileFormData.append('themeType', 'card');
-      
-      const tileResponse = await authenticatedFetch(`${API_BASE_URL}/api/profile/upload/theme`, {
-        method: 'POST',
-        body: tileFormData,
+        body: formData,
       });
 
-      if (sceneResponse.ok && boardResponse.ok && tileResponse.ok) {
-        const sceneData = await sceneResponse.json();
-        const boardData = await boardResponse.json();
-        const tileData = await tileResponse.json();
+      if (response.ok) {
+        const data = await response.json();
         
-        // Update local state with image URLs
-        setCustomSceneBackground(sceneData.backgroundUrl);
-        setCustomBoardBackground(boardData.backgroundUrl);
-        setCustomPropertyCardBackground(tileData.backgroundUrl);
+        // Update local state with image URLs from batch response
+        if (data.results.scene && data.results.scene.backgroundUrl) {
+          setCustomSceneBackground(data.results.scene.backgroundUrl);
+        }
+        if (data.results.board && data.results.board.backgroundUrl) {
+          setCustomBoardBackground(data.results.board.backgroundUrl);
+        }
+        if (data.results.tile && data.results.tile.backgroundUrl) {
+          setCustomPropertyCardBackground(data.results.tile.backgroundUrl);
+        }
         
         // Clear profile cache and trigger update
         clearProfileCache(publicKey.toString());
@@ -334,7 +314,9 @@ export function ProfileCustomization({
         
         showSuccess('Theme Applied', `${preset.name} theme applied successfully`);
       } else {
-        showError('Failed', 'Failed to apply theme preset');
+        const errorData = await response.json();
+        console.error('Batch upload failed:', errorData);
+        showError('Failed', errorData.error || 'Failed to apply theme preset');
       }
     } catch (error) {
       console.error('Error applying theme preset:', error);

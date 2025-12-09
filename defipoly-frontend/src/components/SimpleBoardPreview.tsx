@@ -108,15 +108,15 @@ export const SimpleBoardPreview: React.FC<SimpleBoardPreviewProps> = ({
             
             {/* Top row */}
             <div className="absolute top-0 left-0 right-0 h-4 flex">
-              <div className="w-4 h-4 bg-gray-700 border-r border-gray-600" /> {/* Corner */}
+              <div className="w-4 h-4" style={getPropertyBackgroundStyle()} /> {/* Corner */}
               {Array.from({length: 6}).map((_, i) => (
                 <div 
                   key={`top-${i}`}
-                  className="flex-1 border-r border-gray-600 last:border-r-0"
+                  className="flex-1"
                   style={getPropertyBackgroundStyle()}
                 />
               ))}
-              <div className="w-4 h-4 bg-gray-700 border-l border-gray-600" /> {/* Corner */}
+              <div className="w-4 h-4" style={getPropertyBackgroundStyle()} /> {/* Corner */}
             </div>
             
             {/* Right column */}
@@ -124,7 +124,7 @@ export const SimpleBoardPreview: React.FC<SimpleBoardPreviewProps> = ({
               {Array.from({length: 5}).map((_, i) => (
                 <div 
                   key={`right-${i}`}
-                  className="flex-1 border-b border-gray-600 last:border-b-0"
+                  className="flex-1"
                   style={getPropertyBackgroundStyle()}
                 />
               ))}
@@ -132,15 +132,15 @@ export const SimpleBoardPreview: React.FC<SimpleBoardPreviewProps> = ({
             
             {/* Bottom row */}
             <div className="absolute bottom-0 left-0 right-0 h-4 flex">
-              <div className="w-4 h-4 bg-gray-700 border-r border-gray-600" /> {/* Corner */}
+              <div className="w-4 h-4" style={getPropertyBackgroundStyle()} /> {/* Corner */}
               {Array.from({length: 6}).map((_, i) => (
                 <div 
                   key={`bottom-${i}`}
-                  className="flex-1 border-r border-gray-600 last:border-r-0"
+                  className="flex-1"
                   style={getPropertyBackgroundStyle()}
                 />
               ))}
-              <div className="w-4 h-4 bg-gray-700 border-l border-gray-600" /> {/* Corner */}
+              <div className="w-4 h-4" style={getPropertyBackgroundStyle()} /> {/* Corner */}
             </div>
             
             {/* Left column */}
@@ -148,7 +148,7 @@ export const SimpleBoardPreview: React.FC<SimpleBoardPreviewProps> = ({
               {Array.from({length: 5}).map((_, i) => (
                 <div 
                   key={`left-${i}`}
-                  className="flex-1 border-b border-gray-600 last:border-b-0"
+                  className="flex-1"
                   style={getPropertyBackgroundStyle()}
                 />
               ))}

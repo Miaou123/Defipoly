@@ -198,6 +198,7 @@ const endpointLimiters = {
   // Upload endpoints - very strict
   'POST /api/profile/upload/picture': uploadLimiter,
   'POST /api/profile/upload/theme': uploadLimiter,
+  'POST /api/profile/upload/theme-batch': uploadLimiter,
   'POST /api/profile/upload/delete': uploadLimiter,
   
   // Action endpoints

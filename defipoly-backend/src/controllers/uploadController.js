@@ -267,8 +267,217 @@ const deleteUpload = async (req, res) => {
   }
 };
 
+// Batch upload handler for theme presets - handles all 3 theme components in single request
+const uploadThemeBatch = [
+  upload.fields([
+    { name: 'sceneFile', maxCount: 1 },
+    { name: 'boardFile', maxCount: 1 },
+    { name: 'tileFile', maxCount: 1 }
+  ]),
+  async (req, res) => {
+    try {
+      console.log('Theme batch upload request:', {
+        body: req.body,
+        files: req.files ? Object.keys(req.files) : 'No files'
+      });
+
+      const { wallet } = req.body;
+      
+      if (!wallet) {
+        console.error('No wallet address provided');
+        return res.status(400).json({ error: 'Wallet address required' });
+      }
+
+      if (wallet !== req.authenticatedWallet) {
+        return res.status(403).json({ error: 'Forbidden' });
+      }
+
+      if (!req.files || (!req.files.sceneFile && !req.files.boardFile && !req.files.tileFile)) {
+        console.error('No files in request');
+        return res.status(400).json({ error: 'No files uploaded' });
+      }
+
+      const db = getDatabase();
+      const updatedAt = Date.now();
+      const results = {};
+
+      // Helper function to process a single file
+      const processFile = async (file, themeType, subDir) => {
+        // Validate file type
+        const allowedMimeTypes = ['image/jpeg', 'image/png'];
+        if (!allowedMimeTypes.includes(file.mimetype)) {
+          throw new Error(`Invalid file type for ${themeType}. Only JPG and PNG allowed.`);
+        }
+
+        // Move file to appropriate directory and optimize
+        const finalDir = path.join(process.env.UPLOAD_DIR || './uploads', subDir);
+        if (!fs.existsSync(finalDir)) {
+          fs.mkdirSync(finalDir, { recursive: true });
+        }
+
+        const filename = file.filename;
+        const finalPath = path.join(finalDir, filename);
+        
+        // Move from temp to final location
+        fs.renameSync(file.path, finalPath);
+        
+        // Create optimized filename with .webp extension
+        const optimizedFilename = filename.replace(/\.[^/.]+$/, '.webp');
+        const optimizedPath = path.join(finalDir, optimizedFilename);
+
+        // Optimize image
+        const sharp = require('sharp');
+        let sharpInstance = sharp(finalPath);
+        
+        switch (themeType) {
+          case 'scene':
+            sharpInstance = sharpInstance
+              .resize(1920, 1080, { fit: 'inside', withoutEnlargement: true })
+              .webp({ quality: 90 });
+            break;
+          case 'board':
+            sharpInstance = sharpInstance
+              .resize(1920, 1080, { fit: 'inside', withoutEnlargement: true })
+              .webp({ quality: 90 });
+            break;
+          case 'tile':
+            sharpInstance = sharpInstance
+              .resize(400, 600, { fit: 'inside', withoutEnlargement: true })
+              .webp({ quality: 85 });
+            break;
+        }
+
+        await sharpInstance.toFile(optimizedPath);
+
+        // Delete original file
+        fs.unlinkSync(finalPath);
+
+        // Generate URL
+        const baseUrl = process.env.NODE_ENV === 'production' ? '' : 'http://localhost:3101';
+        const fileUrl = `${baseUrl}${UPLOAD_URL_PREFIX}/${subDir}/${optimizedFilename}`;
+        
+        console.log(`${themeType} file optimized and moved to:`, fileUrl);
+        return fileUrl;
+      };
+
+      // Process scene background
+      if (req.files.sceneFile && req.files.sceneFile[0]) {
+        try {
+          const fileUrl = await processFile(req.files.sceneFile[0], 'scene', 'scenes');
+          
+          // Update database
+          await new Promise((resolve, reject) => {
+            db.run(
+              `INSERT INTO profiles (wallet_address, custom_scene_background, updated_at)
+               VALUES (?, ?, ?)
+               ON CONFLICT(wallet_address) 
+               DO UPDATE SET 
+                 custom_scene_background = ?,
+                 updated_at = ?`,
+              [wallet, fileUrl, updatedAt, fileUrl, updatedAt],
+              (err) => {
+                if (err) reject(err);
+                else resolve();
+              }
+            );
+          });
+          
+          results.scene = { backgroundUrl: fileUrl };
+          console.log('Scene background saved to database:', fileUrl);
+        } catch (error) {
+          console.error('Error processing scene file:', error);
+          results.scene = { error: error.message };
+        }
+      }
+
+      // Process board background
+      if (req.files.boardFile && req.files.boardFile[0]) {
+        try {
+          const fileUrl = await processFile(req.files.boardFile[0], 'board', 'boards');
+          
+          // Update database
+          await new Promise((resolve, reject) => {
+            db.run(
+              `INSERT INTO profiles (wallet_address, board_theme, custom_board_background, updated_at)
+               VALUES (?, ?, ?, ?)
+               ON CONFLICT(wallet_address) 
+               DO UPDATE SET 
+                 board_theme = ?,
+                 custom_board_background = ?,
+                 updated_at = ?`,
+              [wallet, 'custom', fileUrl, updatedAt, 'custom', fileUrl, updatedAt],
+              (err) => {
+                if (err) reject(err);
+                else resolve();
+              }
+            );
+          });
+          
+          results.board = { backgroundUrl: fileUrl };
+          console.log('Board background saved to database:', fileUrl);
+        } catch (error) {
+          console.error('Error processing board file:', error);
+          results.board = { error: error.message };
+        }
+      }
+
+      // Process tile background
+      if (req.files.tileFile && req.files.tileFile[0]) {
+        try {
+          const fileUrl = await processFile(req.files.tileFile[0], 'tile', 'cards');
+          
+          // Update database
+          await new Promise((resolve, reject) => {
+            db.run(
+              `INSERT INTO profiles (wallet_address, property_card_theme, custom_property_card_background, updated_at)
+               VALUES (?, ?, ?, ?)
+               ON CONFLICT(wallet_address) 
+               DO UPDATE SET 
+                 property_card_theme = ?,
+                 custom_property_card_background = ?,
+                 updated_at = ?`,
+              [wallet, 'custom', fileUrl, updatedAt, 'custom', fileUrl, updatedAt],
+              (err) => {
+                if (err) reject(err);
+                else resolve();
+              }
+            );
+          });
+          
+          results.tile = { backgroundUrl: fileUrl };
+          console.log('Tile background saved to database:', fileUrl);
+        } catch (error) {
+          console.error('Error processing tile file:', error);
+          results.tile = { error: error.message };
+        }
+      }
+
+      // Check if any uploads succeeded
+      const successCount = Object.keys(results).filter(key => !results[key].error).length;
+      
+      if (successCount === 0) {
+        return res.status(500).json({ 
+          error: 'All uploads failed',
+          results 
+        });
+      }
+
+      res.json({ 
+        success: true,
+        message: `Theme batch upload completed. ${successCount} file(s) uploaded successfully.`,
+        results
+      });
+
+    } catch (error) {
+      console.error('Batch upload error details:', error);
+      res.status(500).json({ error: error.message || 'Batch upload failed' });
+    }
+  }
+];
+
 module.exports = {
   uploadProfilePicture,
   uploadThemeBackground,
+  uploadThemeBatch,
   deleteUpload
 };

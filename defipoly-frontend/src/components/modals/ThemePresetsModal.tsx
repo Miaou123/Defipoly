@@ -51,7 +51,7 @@ export function ThemePresetsModal({
   const PresetRow = ({ preset }: { preset: ThemePreset }) => (
     <div
       onClick={() => setSelectedPreset(preset)}
-      className={`flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-all duration-200 ${
+      className={`flex items-center gap-2 p-2 rounded cursor-pointer transition-all duration-200 ${
         selectedPreset?.id === preset.id
           ? 'bg-purple-500/20 backdrop-blur-sm'
           : 'hover:bg-white/5'
@@ -60,19 +60,19 @@ export function ThemePresetsModal({
       {/* Color swatch */}
       <div className="flex gap-1">
         <div 
-          className="w-4 h-4 rounded-sm"
+          className="w-3 h-3 rounded-sm"
           style={{
             background: `linear-gradient(135deg, ${preset.scene[0]} 0%, ${preset.scene[1]} 100%)`
           }}
         />
         <div 
-          className="w-4 h-4 rounded-sm"
+          className="w-3 h-3 rounded-sm"
           style={{
             background: `linear-gradient(135deg, ${preset.board[0]} 0%, ${preset.board[1]} 100%)`
           }}
         />
         <div 
-          className="w-4 h-4 rounded-sm"
+          className="w-3 h-3 rounded-sm"
           style={{ backgroundColor: preset.tile }}
         />
       </div>
@@ -81,9 +81,6 @@ export function ThemePresetsModal({
       <div className="flex-1 min-w-0">
         <div className="text-sm font-medium text-white truncate">
           {preset.name}
-        </div>
-        <div className="text-xs text-gray-400 capitalize">
-          {preset.category}
         </div>
       </div>
     </div>
@@ -134,7 +131,7 @@ export function ThemePresetsModal({
         <div className="flex h-[500px]">
           {/* Left Panel - Preset List */}
           <div className="w-2/5 border-r border-white/10 bg-gradient-to-b from-gray-800/50 to-gray-900/50">
-            <div className="h-full p-4">
+            <div className="h-full p-3 overflow-y-auto">
               <div className="space-y-1">
                 {presetsInCategory.map(preset => (
                   <PresetRow key={preset.id} preset={preset} />

@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { getProfile, updateProfile, getProfilesBatch, removeProfilePicture, updateThemePreferences } = require('../controllers/profileController');
 const { validateUsername } = require('../middleware/validation');
-const { uploadProfilePicture, uploadThemeBackground, deleteUpload } = require('../controllers/uploadController');
+const { uploadProfilePicture, uploadThemeBackground, uploadThemeBatch, deleteUpload } = require('../controllers/uploadController');
 const { verifyJWT, verifyWalletOwnership } = require('../middleware/jwtAuth');
 
 // GET /api/profile/:wallet - PUBLIC
@@ -19,6 +19,9 @@ router.post('/upload/picture', verifyJWT, uploadProfilePicture);
 
 // POST /api/profile/upload/theme - PROTECTED (no wallet ownership check - done in controller)
 router.post('/upload/theme', verifyJWT, uploadThemeBackground);
+
+// POST /api/profile/upload/theme-batch - PROTECTED (batch upload for theme presets)
+router.post('/upload/theme-batch', verifyJWT, uploadThemeBatch);
 
 // POST /api/profile/upload/delete - PROTECTED (no wallet ownership check - done in controller)
 router.post('/upload/delete', verifyJWT, deleteUpload);
