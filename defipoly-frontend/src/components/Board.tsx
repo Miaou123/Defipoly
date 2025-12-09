@@ -14,6 +14,7 @@ interface BoardProps {
   customPropertyCardBackground?: string | null;
   custom3DPropertyTiles?: string | null;
   customSceneBackground?: string | null;
+  themeCategory?: 'dark' | 'medium' | 'light' | null;
   isMobile?: boolean;
 }
 
@@ -25,6 +26,7 @@ export function Board({
   customBoardBackground,
   custom3DPropertyTiles,
   customSceneBackground,
+  themeCategory,
   profilePicture,
   cornerSquareStyle,
   isMobile = false,
@@ -43,6 +45,7 @@ export function Board({
         customBoardBackground={customBoardBackground}
         custom3DPropertyTiles={custom3DPropertyTiles}
         customSceneBackground={customSceneBackground}
+        themeCategory={themeCategory}
         profilePicture={profilePicture}
         cornerSquareStyle={cornerSquareStyle}
         isMobile={isMobile}

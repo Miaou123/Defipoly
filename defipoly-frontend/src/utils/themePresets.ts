@@ -26,15 +26,15 @@ export const THEME_PRESETS: ThemePreset[] = [
   { id: 'olive', name: 'Olive', category: 'medium', scene: ['#3a3d2a', '#505540'], board: ['#808860', '#707850'], tile: '#454a38' },
   { id: 'copper', name: 'Copper', category: 'medium', scene: ['#3d2a20', '#5a4030'], board: ['#b87850', '#a86840'], tile: '#4a3828' },
   
-  // Light themes
-  { id: 'soft-lavender', name: 'Soft Lavender', category: 'light', scene: ['#e8e0f0', '#d4c4e8'], board: ['#9b7bb8', '#8668a8'], tile: '#f0e8f8' },
-  { id: 'sky', name: 'Sky', category: 'light', scene: ['#e0f0f8', '#c4e0f0'], board: ['#6ba3c7', '#5090b8'], tile: '#e8f4fc' },
-  { id: 'mint', name: 'Mint', category: 'light', scene: ['#e0f5ed', '#c4e8d8'], board: ['#5fb892', '#4aa880'], tile: '#e8faf2' },
-  { id: 'peach', name: 'Peach', category: 'light', scene: ['#fef0e8', '#fce0d0'], board: ['#e8a07a', '#d88a60'], tile: '#fff5f0' },
-  { id: 'cream', name: 'Cream', category: 'light', scene: ['#f8f4e8', '#f0e8d4'], board: ['#c9b896', '#b8a580'], tile: '#faf8f2' },
-  { id: 'blush', name: 'Blush', category: 'light', scene: ['#f8e8ec', '#f0d4dc'], board: ['#d4899c', '#c47088'], tile: '#fcf0f4' },
-  { id: 'pearl', name: 'Pearl', category: 'light', scene: ['#f0f0f4', '#e4e4ec'], board: ['#9898b0', '#8080a0'], tile: '#f8f8fc' },
-  { id: 'sand', name: 'Sand', category: 'light', scene: ['#f5f0e5', '#e8dcc8'], board: ['#c4a87a', '#b09060'], tile: '#faf7f0' },
+  // Light themes (muted, not washed out)
+  { id: 'soft-lavender', name: 'Soft Lavender', category: 'light', scene: ['#c4b8d4', '#a898c0'], board: ['#8b6aa8', '#7a5898'], tile: '#d4c8e0' },
+  { id: 'sky', name: 'Sky', category: 'light', scene: ['#a8c8d8', '#8ab4c8'], board: ['#5890a8', '#4880a0'], tile: '#b8d0dc' },
+  { id: 'mint', name: 'Mint', category: 'light', scene: ['#a8d4c0', '#8ac4a8'], board: ['#4a9878', '#3a8868'], tile: '#b8dcc8' },
+  { id: 'peach', name: 'Peach', category: 'light', scene: ['#dcc0a8', '#c8a890'], board: ['#c08860', '#b07850'], tile: '#e0ccb8' },
+  { id: 'cream', name: 'Cream', category: 'light', scene: ['#d4c8b0', '#c0b498'], board: ['#a89870', '#988860'], tile: '#dcd4c0' },
+  { id: 'blush', name: 'Blush', category: 'light', scene: ['#d4b8c0', '#c0a0ac'], board: ['#b07888', '#a06878'], tile: '#dcc4cc' },
+  { id: 'pearl', name: 'Pearl', category: 'light', scene: ['#c0c0c8', '#a8a8b8'], board: ['#808898', '#707888'], tile: '#ccccd4' },
+  { id: 'sand', name: 'Sand', category: 'light', scene: ['#ccc4a8', '#b8ac90'], board: ['#a89060', '#987850'], tile: '#d8d0b8' },
 ];
 
 export const getPresetById = (id: string): ThemePreset | undefined => 
@@ -56,7 +56,7 @@ export const getBoardGradient = (preset: ThemePreset): string => {
 export const parseGradient = (gradient: string | null): [string, string] | null => {
   if (!gradient) return null;
   const colors = gradient.split(',');
-  if (colors.length === 2) {
+  if (colors.length === 2 && colors[0] && colors[1]) {
     return [colors[0].trim(), colors[1].trim()];
   }
   return null;

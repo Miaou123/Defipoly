@@ -21,6 +21,7 @@ interface MobileLayoutProps {
   customBoardBackground: string | null;
   customPropertyCardBackground: string | null;
   customSceneBackground: string | null;
+  themeCategory: 'dark' | 'medium' | 'light' | null;
 }
 
 function MobileRewardsCard() {
@@ -89,7 +90,8 @@ export function MobileLayout({
   cornerSquareStyle,
   customBoardBackground,
   customPropertyCardBackground,
-  customSceneBackground
+  customSceneBackground,
+  themeCategory
 }: MobileLayoutProps) {
   const [activeTab, setActiveTab] = useState<TabType>('board');
   const { publicKey, connected } = useWallet();
@@ -198,6 +200,7 @@ export function MobileLayout({
             customBoardBackground={customBoardBackground}
             custom3DPropertyTiles={customPropertyCardBackground}
             customSceneBackground={customSceneBackground}
+            themeCategory={themeCategory}
             isMobile={true}
           />
         </div>

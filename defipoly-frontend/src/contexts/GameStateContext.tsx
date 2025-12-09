@@ -71,6 +71,7 @@ export interface ProfileData {
   customBoardBackground: string | null;
   customPropertyCardBackground: string | null;
   customSceneBackground: string | null;
+  themeCategory: 'dark' | 'medium' | 'light' | null;
   updatedAt: number | null;
 }
 
@@ -148,6 +149,7 @@ export function GameStateProvider({ children }: { children: React.ReactNode }) {
       customBoardBackground: null,
       customPropertyCardBackground: null,
       customSceneBackground: null,
+      themeCategory: null,
       updatedAt: null,
     },
   });
@@ -188,6 +190,7 @@ export function GameStateProvider({ children }: { children: React.ReactNode }) {
           customBoardBackground: null,
           customPropertyCardBackground: null,
           customSceneBackground: null,
+          themeCategory: null,
           updatedAt: null,
         },
       });

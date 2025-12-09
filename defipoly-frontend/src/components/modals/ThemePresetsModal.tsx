@@ -24,14 +24,14 @@ export function ThemePresetsModal({
   onReset
 }: ThemePresetsModalProps) {
   const [selectedCategory, setSelectedCategory] = useState<'dark' | 'medium' | 'light'>('dark');
-  const [selectedPreset, setSelectedPreset] = useState<ThemePreset | null>(getPresetsByCategory('dark')[0]);
+  const [selectedPreset, setSelectedPreset] = useState<ThemePreset | null>(getPresetsByCategory('dark')[0] || null);
   
   const presetsInCategory = getPresetsByCategory(selectedCategory);
 
   // Update selected preset when category changes
   const handleCategoryChange = (category: 'dark' | 'medium' | 'light') => {
     setSelectedCategory(category);
-    setSelectedPreset(getPresetsByCategory(category)[0]);
+    setSelectedPreset(getPresetsByCategory(category)[0] || null);
   };
 
   const handleApply = () => {
@@ -79,7 +79,9 @@ export function ThemePresetsModal({
       
       {/* Preset info */}
       <div className="flex-1 min-w-0">
-        <div className="text-sm font-medium text-white truncate">
+        <div className={`text-sm font-medium truncate ${
+          preset.category === 'light' ? 'text-gray-900' : 'text-white'
+        }`}>
           {preset.name}
         </div>
       </div>
@@ -147,10 +149,14 @@ export function ThemePresetsModal({
                 <>
                   {/* Preset name */}
                   <div className="text-center mb-6">
-                    <h3 className="text-xl font-semibold text-white mb-1">
+                    <h3 className={`text-xl font-semibold mb-1 ${
+                      selectedPreset.category === 'light' ? 'text-gray-900' : 'text-white'
+                    }`}>
                       {selectedPreset.name}
                     </h3>
-                    <p className="text-gray-400 capitalize text-sm">
+                    <p className={`capitalize text-sm ${
+                      selectedPreset.category === 'light' ? 'text-gray-700' : 'text-gray-400'
+                    }`}>
                       {selectedPreset.category} theme
                     </p>
                   </div>

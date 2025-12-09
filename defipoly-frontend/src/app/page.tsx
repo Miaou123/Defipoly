@@ -32,6 +32,7 @@ export default function Home() {
   const [customBoardBackground, setCustomBoardBackground] = useState<string | null>(null);
   const [customPropertyCardBackground, setCustomPropertyCardBackground] = useState<string | null>(null);
   const [customSceneBackground, setCustomSceneBackground] = useState<string | null>(null);
+  const [themeCategory, setThemeCategory] = useState<'dark' | 'medium' | 'light' | null>(null);
   const [isMobile, setIsMobile] = useState(false);
   const [sideColumnWidth, setSideColumnWidth] = useState(400);
   
@@ -73,6 +74,7 @@ export default function Home() {
           setCustomBoardBackground(profile.customBoardBackground || null);
           setCustomPropertyCardBackground(profile.customPropertyCardBackground || null);
           setCustomSceneBackground(profile.customSceneBackground || null);
+          setThemeCategory(profile.themeCategory || null);
         })
         .catch(error => {
           console.error('Error loading profile:', error);
@@ -89,6 +91,7 @@ export default function Home() {
           setCustomBoardBackground(updatedProfile.customBoardBackground || null);
           setCustomPropertyCardBackground(updatedProfile.customPropertyCardBackground || null);
           setCustomSceneBackground(updatedProfile.customSceneBackground || null);
+          setThemeCategory(updatedProfile.themeCategory || null);
         } catch (error) {
           console.error('Error updating profile:', error);
         }
@@ -116,6 +119,7 @@ export default function Home() {
           customBoardBackground={customBoardBackground}
           customPropertyCardBackground={customPropertyCardBackground}
           customSceneBackground={customSceneBackground}
+          themeCategory={themeCategory}
         />
         {selectedProperty !== null && (
           <PropertyModal 
@@ -173,6 +177,7 @@ export default function Home() {
             customBoardBackground={customBoardBackground}
             custom3DPropertyTiles={customPropertyCardBackground} 
             customSceneBackground={customSceneBackground}
+            themeCategory={themeCategory}
           />
         </div>
         

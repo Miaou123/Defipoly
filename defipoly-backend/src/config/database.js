@@ -44,6 +44,7 @@ function createTables() {
         custom_board_background TEXT,
         custom_property_card_background TEXT,
         custom_scene_background TEXT,
+        theme_category TEXT,
         corner_square_style TEXT DEFAULT 'property',
         updated_at INTEGER DEFAULT (strftime('%s', 'now'))
       )
@@ -244,7 +245,55 @@ function createIndexes() {
     db.run(`CREATE INDEX IF NOT EXISTS idx_processed_tx_type ON processed_transactions(transaction_type, block_time DESC)`);
 
     console.log('✅ Database indexes created');
-    resolve();
+    
+    // Run migrations after indexes
+    runMigrations()
+      .then(() => resolve())
+      .catch((err) => {
+        console.error('Migration error:', err);
+        resolve(); // Don't fail startup on migration errors
+      });
+  });
+}
+
+function runMigrations() {
+  return new Promise((resolve, reject) => {
+    console.log('🔄 Running database migrations...');
+    
+    // Migration: Add theme_category column to profiles table
+    db.run(`
+      SELECT sql FROM sqlite_master WHERE type='table' AND name='profiles'
+    `, (err, row) => {
+      if (err) {
+        console.error('Error checking profiles table:', err);
+        return reject(err);
+      }
+      
+      // Check if theme_category column exists
+      db.all(`PRAGMA table_info(profiles)`, (err, columns) => {
+        if (err) {
+          console.error('Error getting table info:', err);
+          return reject(err);
+        }
+        
+        const hasThemeCategory = columns.some(col => col.name === 'theme_category');
+        
+        if (!hasThemeCategory) {
+          console.log('🔄 Adding theme_category column to profiles table...');
+          db.run(`ALTER TABLE profiles ADD COLUMN theme_category TEXT`, (err) => {
+            if (err) {
+              console.error('Error adding theme_category column:', err);
+              return reject(err);
+            }
+            console.log('✅ Added theme_category column to profiles table');
+            resolve();
+          });
+        } else {
+          console.log('✅ theme_category column already exists');
+          resolve();
+        }
+      });
+    });
   });
 }
 

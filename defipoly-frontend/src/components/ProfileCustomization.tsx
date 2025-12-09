@@ -288,6 +288,7 @@ export function ProfileCustomization({
       formData.append('sceneFile', sceneImage);
       formData.append('boardFile', boardImage);
       formData.append('tileFile', tileImage);
+      formData.append('themeCategory', preset.category); // Add theme category for text color detection
       
       const response = await authenticatedFetch(`${API_BASE_URL}/api/profile/upload/theme-batch`, {
         method: 'POST',

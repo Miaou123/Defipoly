@@ -281,7 +281,7 @@ const uploadThemeBatch = [
         files: req.files ? Object.keys(req.files) : 'No files'
       });
 
-      const { wallet } = req.body;
+      const { wallet, themeCategory } = req.body;
       
       if (!wallet) {
         console.error('No wallet address provided');
@@ -368,13 +368,14 @@ const uploadThemeBatch = [
           // Update database
           await new Promise((resolve, reject) => {
             db.run(
-              `INSERT INTO profiles (wallet_address, custom_scene_background, updated_at)
-               VALUES (?, ?, ?)
+              `INSERT INTO profiles (wallet_address, custom_scene_background, theme_category, updated_at)
+               VALUES (?, ?, ?, ?)
                ON CONFLICT(wallet_address) 
                DO UPDATE SET 
                  custom_scene_background = ?,
+                 theme_category = ?,
                  updated_at = ?`,
-              [wallet, fileUrl, updatedAt, fileUrl, updatedAt],
+              [wallet, fileUrl, themeCategory || null, updatedAt, fileUrl, themeCategory || null, updatedAt],
               (err) => {
                 if (err) reject(err);
                 else resolve();
@@ -398,14 +399,15 @@ const uploadThemeBatch = [
           // Update database
           await new Promise((resolve, reject) => {
             db.run(
-              `INSERT INTO profiles (wallet_address, board_theme, custom_board_background, updated_at)
-               VALUES (?, ?, ?, ?)
+              `INSERT INTO profiles (wallet_address, board_theme, custom_board_background, theme_category, updated_at)
+               VALUES (?, ?, ?, ?, ?)
                ON CONFLICT(wallet_address) 
                DO UPDATE SET 
                  board_theme = ?,
                  custom_board_background = ?,
+                 theme_category = ?,
                  updated_at = ?`,
-              [wallet, 'custom', fileUrl, updatedAt, 'custom', fileUrl, updatedAt],
+              [wallet, 'custom', fileUrl, themeCategory || null, updatedAt, 'custom', fileUrl, themeCategory || null, updatedAt],
               (err) => {
                 if (err) reject(err);
                 else resolve();
@@ -429,14 +431,15 @@ const uploadThemeBatch = [
           // Update database
           await new Promise((resolve, reject) => {
             db.run(
-              `INSERT INTO profiles (wallet_address, property_card_theme, custom_property_card_background, updated_at)
-               VALUES (?, ?, ?, ?)
+              `INSERT INTO profiles (wallet_address, property_card_theme, custom_property_card_background, theme_category, updated_at)
+               VALUES (?, ?, ?, ?, ?)
                ON CONFLICT(wallet_address) 
                DO UPDATE SET 
                  property_card_theme = ?,
                  custom_property_card_background = ?,
+                 theme_category = ?,
                  updated_at = ?`,
-              [wallet, 'custom', fileUrl, updatedAt, 'custom', fileUrl, updatedAt],
+              [wallet, 'custom', fileUrl, themeCategory || null, updatedAt, 'custom', fileUrl, themeCategory || null, updatedAt],
               (err) => {
                 if (err) reject(err);
                 else resolve();

@@ -15,6 +15,7 @@ export interface ProfileData {
   customBoardBackground: string | null;
   customPropertyCardBackground: string | null;
   customSceneBackground: string | null;
+  themeCategory: 'dark' | 'medium' | 'light' | null;
   lastUpdated: number;
 }
 
@@ -51,6 +52,7 @@ export async function getProfile(address: string): Promise<ProfileData> {
         customBoardBackground: data.customBoardBackground || null,
         customPropertyCardBackground: data.customPropertyCardBackground || null,
         customSceneBackground: data.customSceneBackground || null,
+        themeCategory: data.themeCategory || null,
         lastUpdated: data.updatedAt || 0,
       };
 
@@ -70,6 +72,7 @@ export async function getProfile(address: string): Promise<ProfileData> {
         customBoardBackground: null,
         customPropertyCardBackground: null,
         customSceneBackground: null,
+        themeCategory: null,
         lastUpdated: 0 
       };
     }
@@ -109,6 +112,7 @@ export async function getProfilesBatch(addresses: string[]): Promise<Record<stri
           customBoardBackground: profile.customBoardBackground || null,
           customPropertyCardBackground: profile.customPropertyCardBackground || null,
           customSceneBackground: profile.customSceneBackground || null,
+          themeCategory: profile.themeCategory || null,
           lastUpdated: profile.updatedAt || 0,
         };
 
@@ -401,6 +405,7 @@ function getProfileFromLocalStorage(address: string): ProfileData {
       customBoardBackground: null,
       customPropertyCardBackground: null, 
       customSceneBackground: null,
+      themeCategory: null,
       lastUpdated: 0 
     };
   }
@@ -413,6 +418,7 @@ function getProfileFromLocalStorage(address: string): ProfileData {
   const customBoardBackground = localStorage.getItem(`customBoard_${address}`) || null;
   const customPropertyCardBackground = localStorage.getItem(`customProperty_${address}`) || null;
   const customSceneBackground = localStorage.getItem(`customScene_${address}`) || null;
+  const themeCategory = localStorage.getItem(`themeCategory_${address}`) as 'dark' | 'medium' | 'light' | null || null;
   const lastUpdated = parseInt(localStorage.getItem(`profile_updated_${address}`) || '0');
 
   return {
@@ -424,6 +430,7 @@ function getProfileFromLocalStorage(address: string): ProfileData {
     customBoardBackground,
     customPropertyCardBackground,
     customSceneBackground,
+    themeCategory,
     lastUpdated,
   };
 }

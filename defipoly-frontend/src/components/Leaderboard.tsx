@@ -154,6 +154,7 @@ export function Leaderboard({ scaleFactor = 1 }: LeaderboardProps) {
                   customBoardBackground: null,
                   customPropertyCardBackground: null,
                   customSceneBackground: null,
+                  themeCategory: null,
                   updatedAt: 0
                 };
               }
@@ -173,6 +174,7 @@ export function Leaderboard({ scaleFactor = 1 }: LeaderboardProps) {
                 customBoardBackground: null,
                 customPropertyCardBackground: null,
                 customSceneBackground: null,
+                themeCategory: null,
                 updatedAt: 0
               };
             }
@@ -236,6 +238,7 @@ export function Leaderboard({ scaleFactor = 1 }: LeaderboardProps) {
       customBoardBackground: null,
       customPropertyCardBackground: null,
       customSceneBackground: null,
+      themeCategory: null,
       updatedAt: Date.now()
     };
     
@@ -250,6 +253,7 @@ export function Leaderboard({ scaleFactor = 1 }: LeaderboardProps) {
       customBoardBackground: profileData.customBoardBackground,
       customPropertyCardBackground: profileData.customPropertyCardBackground,
       customSceneBackground: profileData.customSceneBackground,
+      themeCategory: profileData.themeCategory || null,
       lastUpdated: profileData.updatedAt || Date.now()
     };
     

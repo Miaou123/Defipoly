@@ -32,6 +32,7 @@ interface Board3DSceneProps {
   customBoardBackground?: string | null | undefined;
   custom3DPropertyTiles?: string | null | undefined;
   customSceneBackground?: string | null | undefined;
+  themeCategory?: string | null | undefined;
   profilePicture?: string | null | undefined;
   cornerSquareStyle?: 'property' | 'profile' | undefined;
   isMobile?: boolean;
@@ -47,6 +48,7 @@ interface SceneProps extends Board3DSceneProps {
   showcaseMode: boolean;
   customBoardBackground?: string | null;
   custom3DPropertyTiles?: string | null;
+  themeCategory?: string | null;
   profilePicture?: string | null;
   cornerSquareStyle?: 'property' | 'profile';
 }
@@ -495,6 +497,7 @@ interface PropertyTileProps {
   spectatorMode: boolean;
   cameraDistance?: number;
   customTexture?: string | null;
+  themeCategory?: string | null;
 }
 
 function PropertyTile({ 
@@ -514,7 +517,8 @@ function PropertyTile({
   isStealOnCooldown,
   spectatorMode,
   cameraDistance,
-  customTexture
+  customTexture,
+  themeCategory
 }: PropertyTileProps) {
   const [hovered, setHovered] = useState(false);
   
@@ -591,6 +595,26 @@ function PropertyTile({
   }
 
   const hoverY = hovered && interactive ? 0.08 : 0;
+
+  // Detect if we should use dark text based on theme category or light colors
+  const shouldUseDarkText = (() => {
+    // If theme category is explicitly set
+    if (themeCategory === 'light') return true;
+    
+    // Fallback: detect based on known light theme patterns
+    // This works for custom uploaded light images or theme presets
+    if (customTexture && customTexture.includes('/cards/')) {
+      // For theme preset files, assume they might be light if recently created
+      // This is a temporary heuristic until theme metadata is fully implemented
+      return customTexture.includes('.webp') && customTexture.includes('upload');
+    }
+    
+    return false;
+  })();
+
+  // Determine text colors based on theme detection
+  const textColor = shouldUseDarkText ? "#1f2937" : "white";
+  const priceColor = shouldUseDarkText ? "#b45309" : "#facc15"; // Dark orange for light themes, yellow for dark themes
 
   return (
     <group 
@@ -701,7 +725,7 @@ function PropertyTile({
           position={namePosition}
           rotation={textRotation}
           fontSize={0.08}
-          color="white"
+          color={textColor}
           anchorX="center"
           anchorY="middle"
           maxWidth={width * 0.9}
@@ -716,7 +740,7 @@ function PropertyTile({
           position={pricePosition}
           rotation={textRotation}
           fontSize={0.1}
-          color="#facc15"
+          color={priceColor}
           anchorX="center"
           anchorY="middle"
         >
@@ -891,6 +915,7 @@ function Scene({
   showcaseMode,
   customBoardBackground,
   custom3DPropertyTiles,
+  themeCategory,
   profilePicture,
   cornerSquareStyle
 }: SceneProps) {
@@ -1097,6 +1122,7 @@ function Scene({
             spectatorMode={spectatorMode || false}
             cameraDistance={cameraDistance}
             customTexture={custom3DPropertyTiles || null}
+            themeCategory={themeCategory || null}
           />
         );
       })}
@@ -1126,6 +1152,7 @@ function Scene({
             spectatorMode={spectatorMode || false}
             cameraDistance={cameraDistance}
             customTexture={custom3DPropertyTiles || null}
+            themeCategory={themeCategory || null}
           />
         );
       })}
@@ -1155,6 +1182,7 @@ function Scene({
             spectatorMode={spectatorMode || false}
             cameraDistance={cameraDistance}
             customTexture={custom3DPropertyTiles || null}
+            themeCategory={themeCategory || null}
           />
         );
       })}
@@ -1184,6 +1212,7 @@ function Scene({
             spectatorMode={spectatorMode || false}
             cameraDistance={cameraDistance}
             customTexture={custom3DPropertyTiles || null}
+            themeCategory={themeCategory || null}
           />
         );
       })}
@@ -1232,7 +1261,7 @@ function Scene({
   );
 }
 
-export function Board3DScene({ onSelectProperty, onCoinClick, spectatorMode, spectatorOwnerships, customBoardBackground, custom3DPropertyTiles, customSceneBackground, profilePicture, cornerSquareStyle, isMobile = false }: Board3DSceneProps) {
+export function Board3DScene({ onSelectProperty, onCoinClick, spectatorMode, spectatorOwnerships, customBoardBackground, custom3DPropertyTiles, customSceneBackground, themeCategory, profilePicture, cornerSquareStyle, isMobile = false }: Board3DSceneProps) {
   
   
   const containerRef = useRef<HTMLDivElement>(null);
@@ -1618,6 +1647,7 @@ export function Board3DScene({ onSelectProperty, onCoinClick, spectatorMode, spe
             showcaseMode={showcaseMode}
             customBoardBackground={customBoardBackground || null}
             custom3DPropertyTiles={custom3DPropertyTiles || null}
+            themeCategory={themeCategory || null}
             profilePicture={profilePicture || gameState?.profile?.profilePicture}
             cornerSquareStyle={cornerSquareStyle || gameState?.profile?.cornerSquareStyle || 'property'}
           />
