@@ -21,6 +21,7 @@ import { InteractiveBank3D } from './InteractiveBank3D';
 import { IncomeFlow3D } from './IncomeFlow3D';
 import { FloatingCoins3D } from './FloatingCoins3D';
 import { BoardOnboarding3D } from './BoardOnboarding3D';
+import { createSceneGradientStyle } from '@/utils/themePresets';
 
 
 interface Board3DSceneProps {
@@ -1371,7 +1372,7 @@ export function Board3DScene({ onSelectProperty, onCoinClick, spectatorMode, spe
       <div style={{ 
         width: '100%', 
         height: '100%', 
-        background: 'linear-gradient(180deg, #0a0015 0%, #1a0a2e 50%, #0a0015 100%)',
+        background: customSceneBackground ? createSceneGradientStyle(customSceneBackground) : 'linear-gradient(180deg, #0a0015 0%, #1a0a2e 50%, #0a0015 100%)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -1391,7 +1392,7 @@ export function Board3DScene({ onSelectProperty, onCoinClick, spectatorMode, spe
         flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
-        background: 'linear-gradient(180deg, #0a0015 0%, #1a0a2e 50%, #0a0015 100%)',
+        background: customSceneBackground ? createSceneGradientStyle(customSceneBackground) : 'linear-gradient(180deg, #0a0015 0%, #1a0a2e 50%, #0a0015 100%)',
         color: '#ffffff',
         fontSize: '16px',
         fontFamily: 'system-ui, sans-serif',
@@ -1553,18 +1554,13 @@ export function Board3DScene({ onSelectProperty, onCoinClick, spectatorMode, spe
         }}
         shadows
         style={{ 
-          background: (() => {
-            const bg = customSceneBackground || '#0a0015';
-            
-            // If it's a gradient string, extract the first color for Canvas
-            if (bg.includes('linear-gradient') || bg.includes('radial-gradient')) {
-              const colorMatch = bg.match(/#[0-9a-fA-F]{6}/);
-              return colorMatch?.[0] || '#0a0015';
-            }
-            
-            // Otherwise use the background as-is (solid color or empty for default)
-            return bg || '#0a0015';
-          })(),
+          ...(customSceneBackground ? {
+            backgroundImage: `url(${customSceneBackground})`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+          } : {
+            background: 'linear-gradient(180deg, #0a0015 0%, #1a0a2e 50%, #0a0015 100%)',
+          }),
           width: '100%',
           height: '100%'
         }}

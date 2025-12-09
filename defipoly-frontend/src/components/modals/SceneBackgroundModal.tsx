@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 import { useWallet } from '@solana/wallet-adapter-react';
@@ -8,6 +8,7 @@ import { useNotification } from '@/contexts/NotificationContext';
 import { authenticatedFetch } from '@/contexts/AuthContext';
 import { clearProfileCache } from '@/utils/profileStorage';
 import { THEME_CONSTANTS } from '@/utils/themeConstants';
+import { createSceneGradientStyle, parseGradient } from '@/utils/themePresets';
 
 interface SceneBackgroundModalProps {
   isOpen: boolean;
@@ -16,13 +17,6 @@ interface SceneBackgroundModalProps {
   onBackgroundChange: (bg: string | null) => void;
 }
 
-const GRADIENT_PRESETS = [
-  THEME_CONSTANTS.DEFAULT_SCENE_BACKGROUND,
-  "linear-gradient(180deg, #000000 0%, #0d0d1a 50%, #000000 100%)", // Deep Space
-  "linear-gradient(180deg, #1a0a0a 0%, #2d1a1a 50%, #1a0505 100%)", // Sunset
-  "linear-gradient(180deg, #0a1015 0%, #0d1a2e 50%, #0a1520 100%)", // Ocean
-  "linear-gradient(180deg, #0a150a 0%, #1a2e1a 50%, #0a150a 100%)", // Forest
-];
 
 export function SceneBackgroundModal({
   isOpen,
@@ -33,11 +27,24 @@ export function SceneBackgroundModal({
   const { publicKey } = useWallet();
   const { showSuccess, showError } = useNotification();
   const [saving, setSaving] = useState(false);
-  const [customColor, setCustomColor] = useState('#0a0015');
+  const [customColor1, setCustomColor1] = useState('#0a0015');
+  const [customColor2, setCustomColor2] = useState('#1a0a2e');
+
+  // Initialize colors from current background
+  useEffect(() => {
+    if (currentBackground) {
+      const colors = parseGradient(currentBackground);
+      if (colors) {
+        setCustomColor1(colors[0]);
+        setCustomColor2(colors[1]);
+      }
+    }
+  }, [currentBackground]);
 
   if (!isOpen) return null;
 
-  const handleGradientSelect = async (gradientValue: string) => {
+
+  const handleGradientApply = async () => {
     if (!publicKey) {
       showError('No Wallet', 'Please connect your wallet first');
       return;
@@ -45,6 +52,9 @@ export function SceneBackgroundModal({
     
     setSaving(true);
     try {
+      // Store gradient colors in our format
+      const gradientValue = `${customColor1},${customColor2}`;
+      
       const response = await authenticatedFetch(`${process.env['NEXT_PUBLIC_API_BASE_URL'] || 'http://localhost:3101'}/api/profile`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -56,7 +66,7 @@ export function SceneBackgroundModal({
 
       if (response.ok) {
         onBackgroundChange(gradientValue);
-        showSuccess('Applied', 'Scene background updated');
+        showSuccess('Applied', 'Scene gradient applied');
         
         // Clear profile cache and trigger update
         clearProfileCache(publicKey.toString());
@@ -64,51 +74,11 @@ export function SceneBackgroundModal({
       } else {
         const errorText = await response.text();
         console.error('Server error:', errorText);
-        showError('Failed', 'Failed to update scene background');
+        showError('Failed', 'Failed to apply scene gradient');
       }
     } catch (error) {
-      console.error('Error updating scene background:', error);
-      showError('Error', `Error updating scene background: ${error instanceof Error ? error.message : String(error)}`);
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleCustomColorApply = async () => {
-    if (!publicKey) {
-      showError('No Wallet', 'Please connect your wallet first');
-      return;
-    }
-    
-    setSaving(true);
-    try {
-      // Convert solid color to a gradient format that works with Canvas background
-      const solidColorGradient = `linear-gradient(180deg, ${customColor} 0%, ${customColor} 100%)`;
-      
-      const response = await authenticatedFetch(`${process.env['NEXT_PUBLIC_API_BASE_URL'] || 'http://localhost:3101'}/api/profile`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          wallet: publicKey.toString(),
-          customSceneBackground: solidColorGradient
-        }),
-      });
-
-      if (response.ok) {
-        onBackgroundChange(solidColorGradient);
-        showSuccess('Applied', 'Custom scene color applied');
-        
-        // Clear profile cache and trigger update
-        clearProfileCache(publicKey.toString());
-        window.dispatchEvent(new Event('profileUpdated'));
-      } else {
-        const errorText = await response.text();
-        console.error('Server error:', errorText);
-        showError('Failed', 'Failed to apply custom scene color');
-      }
-    } catch (error) {
-      console.error('Error applying custom scene color:', error);
-      showError('Error', `Error applying custom scene color: ${error instanceof Error ? error.message : String(error)}`);
+      console.error('Error applying scene gradient:', error);
+      showError('Error', `Error applying scene gradient: ${error instanceof Error ? error.message : String(error)}`);
     } finally {
       setSaving(false);
     }
@@ -180,39 +150,36 @@ export function SceneBackgroundModal({
         <div className="grid grid-cols-2 gap-5 mb-4">
           {/* Controls */}
           <div className="flex flex-col gap-4">
-            {/* Gradient Presets */}
+            {/* Gradient Colors */}
             <div>
-              <div className="text-sm font-semibold text-purple-200 mb-3">Gradient Presets</div>
-              <div className="grid grid-cols-3 gap-2">
-                {GRADIENT_PRESETS.map((preset, index) => (
-                  <button
-                    key={index}
-                    onClick={() => handleGradientSelect(preset)}
-                    disabled={saving}
-                    className="aspect-square rounded border border-purple-500/30 hover:border-purple-500/60 transition-colors"
-                    style={{ background: preset }}
-                    title={`Preset ${index + 1}`}
+              <div className="text-sm font-semibold text-purple-200 mb-3">Scene Gradient Colors</div>
+              <div className="space-y-3">
+                <div className="flex gap-2 items-center">
+                  <label className="text-xs text-purple-400 w-16">Top:</label>
+                  <input
+                    type="color"
+                    value={customColor1}
+                    onChange={(e) => setCustomColor1(e.target.value)}
+                    className="w-9 h-9 rounded border-2 border-purple-500/30 bg-transparent cursor-pointer"
                   />
-                ))}
-              </div>
-            </div>
-
-            {/* Solid Color */}
-            <div className="border-t border-purple-500/20 pt-3">
-              <div className="text-sm font-semibold text-purple-200 mb-3">Solid Color</div>
-              <div className="flex gap-2 items-center">
-                <input
-                  type="color"
-                  value={customColor}
-                  onChange={(e) => setCustomColor(e.target.value)}
-                  className="w-9 h-9 rounded border-2 border-purple-500/30 bg-transparent cursor-pointer"
-                />
+                  <span className="text-xs text-purple-400 font-mono">{customColor1}</span>
+                </div>
+                <div className="flex gap-2 items-center">
+                  <label className="text-xs text-purple-400 w-16">Middle:</label>
+                  <input
+                    type="color"
+                    value={customColor2}
+                    onChange={(e) => setCustomColor2(e.target.value)}
+                    className="w-9 h-9 rounded border-2 border-purple-500/30 bg-transparent cursor-pointer"
+                  />
+                  <span className="text-xs text-purple-400 font-mono">{customColor2}</span>
+                </div>
                 <button
-                  onClick={handleCustomColorApply}
+                  onClick={handleGradientApply}
                   disabled={saving}
-                  className="flex-1 px-4 py-2 bg-green-600 hover:bg-green-500 disabled:opacity-50 rounded transition-colors text-white text-sm font-medium"
+                  className="w-full px-4 py-2 bg-green-600 hover:bg-green-500 disabled:opacity-50 rounded transition-colors text-white text-sm font-medium"
                 >
-                  {saving ? 'Applying...' : 'Apply'}
+                  {saving ? 'Applying...' : 'Apply Gradient'}
                 </button>
               </div>
             </div>
@@ -236,7 +203,9 @@ export function SceneBackgroundModal({
             <div 
               className="w-full h-48 rounded border-2 border-purple-500/30 max-w-[160px]"
               style={{
-                background: currentBackground || THEME_CONSTANTS.DEFAULT_SCENE_BACKGROUND
+                background: currentBackground 
+                  ? createSceneGradientStyle(currentBackground)
+                  : THEME_CONSTANTS.DEFAULT_SCENE_BACKGROUND
               }}
             />
           </div>

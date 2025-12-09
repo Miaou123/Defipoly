@@ -863,6 +863,188 @@ export const ZoomOutIcon: React.FC<IconProps> = ({ className = '', size = 24 }) 
   </svg>
 );
 
+// User/Profile Icon
+export const UserIcon: React.FC<IconProps> = ({ className = '', size = 24 }) => (
+  <svg 
+    width={size} 
+    height={size} 
+    viewBox="0 0 24 24" 
+    fill="none" 
+    xmlns="http://www.w3.org/2000/svg"
+    className={className}
+  >
+    <circle cx="12" cy="8" r="5" fill="currentColor" opacity="0.2"/>
+    <circle cx="12" cy="8" r="5" stroke="currentColor" strokeWidth="2"/>
+    <path 
+      d="M20 21a8 8 0 0 0-16 0" 
+      stroke="currentColor" 
+      strokeWidth="2" 
+      strokeLinecap="round"
+    />
+  </svg>
+);
+
+// Art/Palette Icon  
+export const PaletteIcon: React.FC<IconProps> = ({ className = '', size = 24 }) => (
+  <svg 
+    width={size} 
+    height={size} 
+    viewBox="0 0 24 24" 
+    fill="none" 
+    xmlns="http://www.w3.org/2000/svg"
+    className={className}
+  >
+    <path 
+      d="M12 2C8.13 2 5 5.13 5 9c0 5.25 4 7 7 7 3.22 0 4.8-2.1 4.8-3.5 0-1.1-.9-2-2-2-.83 0-1.5-.67-1.5-1.5S13.17 7.5 14 7.5s1.5-.67 1.5-1.5c0-1.93-1.57-3.5-3.5-3.5z"
+      fill="currentColor"
+      opacity="0.2"
+    />
+    <path 
+      d="M12 2C8.13 2 5 5.13 5 9c0 5.25 4 7 7 7 3.22 0 4.8-2.1 4.8-3.5 0-1.1-.9-2-2-2-.83 0-1.5-.67-1.5-1.5S13.17 7.5 14 7.5s1.5-.67 1.5-1.5c0-1.93-1.57-3.5-3.5-3.5z"
+      stroke="currentColor" 
+      strokeWidth="2"
+    />
+    <circle cx="8.5" cy="8.5" r="1.5" fill="currentColor"/>
+    <circle cx="11" cy="6" r="1" fill="currentColor"/>
+    <circle cx="15" cy="10" r="1.5" fill="currentColor"/>
+  </svg>
+);
+
+// Game Controller Icon
+export const GameControllerIcon: React.FC<IconProps> = ({ className = '', size = 24 }) => (
+  <svg 
+    width={size} 
+    height={size} 
+    viewBox="0 0 24 24" 
+    fill="none" 
+    xmlns="http://www.w3.org/2000/svg"
+    className={className}
+  >
+    <path 
+      d="M6 12h4l3-9 3 9h4c1.1 0 2 .9 2 2s-.9 2-2 2h-4l-3 9-3-9H6c-1.1 0-2-.9-2-2s.9-2 2-2z"
+      fill="currentColor"
+      opacity="0.2"
+    />
+    <path 
+      d="M6 12h4l3-9 3 9h4c1.1 0 2 .9 2 2s-.9 2-2 2h-4l-3 9-3-9H6c-1.1 0-2-.9-2-2s.9-2 2-2z"
+      stroke="currentColor" 
+      strokeWidth="2"
+      strokeLinejoin="round"
+    />
+    <circle cx="8" cy="14" r="1" fill="currentColor"/>
+    <circle cx="16" cy="14" r="1" fill="currentColor"/>
+  </svg>
+);
+
+// House Icon (already have BuildingIcon, but this is more house-like)
+export const HouseIcon: React.FC<IconProps> = ({ className = '', size = 24 }) => (
+  <svg 
+    width={size} 
+    height={size} 
+    viewBox="0 0 24 24" 
+    fill="none" 
+    xmlns="http://www.w3.org/2000/svg"
+    className={className}
+  >
+    <path 
+      d="M3 12l9-9 9 9v8a1 1 0 0 1-1 1H13v-6H11v6H5a1 1 0 0 1-1-1v-8z"
+      fill="currentColor"
+      opacity="0.2"
+    />
+    <path 
+      d="M3 12l9-9 9 9v8a1 1 0 0 1-1 1H13v-6H11v6H5a1 1 0 0 1-1-1v-8z"
+      stroke="currentColor" 
+      strokeWidth="2"
+      strokeLinejoin="round"
+    />
+    <rect x="9" y="16" width="6" height="5" stroke="currentColor" strokeWidth="2"/>
+  </svg>
+);
+
+// Galaxy/Space Icon
+export const GalaxyIcon: React.FC<IconProps> = ({ className = '', size = 24 }) => (
+  <svg 
+    width={size} 
+    height={size} 
+    viewBox="0 0 24 24" 
+    fill="none" 
+    xmlns="http://www.w3.org/2000/svg"
+    className={className}
+  >
+    <circle cx="12" cy="12" r="10" fill="currentColor" opacity="0.1"/>
+    <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2"/>
+    <ellipse cx="12" cy="12" rx="8" ry="3" stroke="currentColor" strokeWidth="1.5" opacity="0.6"/>
+    <ellipse cx="12" cy="12" rx="3" ry="8" stroke="currentColor" strokeWidth="1.5" opacity="0.6"/>
+    <circle cx="12" cy="12" r="2" fill="currentColor"/>
+    <circle cx="8" cy="8" r="1" fill="currentColor" opacity="0.8"/>
+    <circle cx="16" cy="16" r="1" fill="currentColor" opacity="0.8"/>
+    <circle cx="16" cy="8" r="0.5" fill="currentColor" opacity="0.6"/>
+    <circle cx="8" cy="16" r="0.5" fill="currentColor" opacity="0.6"/>
+  </svg>
+);
+
+// Corner/Ruler Icon
+export const RulerIcon: React.FC<IconProps> = ({ className = '', size = 24 }) => (
+  <svg 
+    width={size} 
+    height={size} 
+    viewBox="0 0 24 24" 
+    fill="none" 
+    xmlns="http://www.w3.org/2000/svg"
+    className={className}
+  >
+    <path 
+      d="M21.71 2.29a1 1 0 0 0-1.42 0L2.29 20.29a1 1 0 0 0 0 1.42 1 1 0 0 0 1.42 0l18-18a1 1 0 0 0 0-1.42z"
+      stroke="currentColor" 
+      strokeWidth="2"
+      strokeLinecap="round"
+    />
+    <path 
+      d="M3 21h3v-3M6 18h3v-3M9 15h3v-3M12 12h3v-3M15 9h3v-3M18 6h3V3"
+      stroke="currentColor" 
+      strokeWidth="1.5"
+      strokeLinecap="round"
+    />
+  </svg>
+);
+
+// Lightbulb/Idea Icon
+export const LightbulbIcon: React.FC<IconProps> = ({ className = '', size = 24 }) => (
+  <svg 
+    width={size} 
+    height={size} 
+    viewBox="0 0 24 24" 
+    fill="none" 
+    xmlns="http://www.w3.org/2000/svg"
+    className={className}
+  >
+    <path 
+      d="M15 14c.5-1 1-2 1-3.5A6 6 0 0 0 6 10.5c0 1.5.5 2.5 1 3.5v2a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2v-2z"
+      fill="currentColor"
+      opacity="0.2"
+    />
+    <path 
+      d="M15 14c.5-1 1-2 1-3.5A6 6 0 0 0 6 10.5c0 1.5.5 2.5 1 3.5v2a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2v-2z"
+      stroke="currentColor" 
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+    <path 
+      d="M9 19h6M10 22h4"
+      stroke="currentColor" 
+      strokeWidth="2"
+      strokeLinecap="round"
+    />
+    <path 
+      d="M12 7v1M8.5 8.5l.7.7M15.5 8.5l-.7.7"
+      stroke="currentColor" 
+      strokeWidth="1.5"
+      strokeLinecap="round"
+    />
+  </svg>
+);
+
 // Hexagon Badge with House for leaderboard rankings
 interface HexagonBadgeProps {
   rank: 1 | 2 | 3;
@@ -956,6 +1138,14 @@ export default {
   ZoomOutIcon,
   HexagonBadge,
   PointerArrowIcon,
+  // New icons for profile section
+  UserIcon,
+  PaletteIcon,
+  GameControllerIcon,
+  HouseIcon,
+  GalaxyIcon,
+  RulerIcon,
+  LightbulbIcon,
   ACTION_ICONS,
   getActionIcon,
 

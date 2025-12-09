@@ -7,10 +7,14 @@ import { BoardThemeModal } from '@/components/modals/BoardThemeModal';
 import { PropertyThemeModal } from '@/components/modals/PropertyThemeModal';
 import { SceneBackgroundModal } from '@/components/modals/SceneBackgroundModal';
 import { CornerSquareModal } from '@/components/modals/CornerSquareModal';
+import { ThemePresetsModal } from '@/components/modals/ThemePresetsModal';
+import { SimpleBoardPreview } from '@/components/SimpleBoardPreview';
 import { clearProfileCache } from '@/utils/profileStorage';
 import { Edit3, Camera } from 'lucide-react';
+import { UserIcon, PaletteIcon, GameControllerIcon, HouseIcon, GalaxyIcon, RulerIcon, LightbulbIcon, XCircleIcon } from '@/components/icons/UIIcons';
 import { authenticatedFetch } from '@/contexts/AuthContext';
 import { THEME_CONSTANTS } from '@/utils/themeConstants';
+import { ThemePreset, getSceneGradient, getBoardGradient, createGradientStyle, createSceneGradientStyle } from '@/utils/themePresets';
 
 interface ProfileCustomizationProps {
   // Profile picture props
@@ -78,6 +82,7 @@ export function ProfileCustomization({
   const [showPropertyThemeModal, setShowPropertyThemeModal] = useState(false);
   const [showSceneBackgroundModal, setShowSceneBackgroundModal] = useState(false);
   const [showCornerSquareModal, setShowCornerSquareModal] = useState(false);
+  const [showThemePresetModal, setShowThemePresetModal] = useState(false);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -175,7 +180,166 @@ export function ProfileCustomization({
 
   // Get preview background for scene
   const getScenePreviewBackground = () => {
-    return customSceneBackground || THEME_CONSTANTS.DEFAULT_SCENE_BACKGROUND;
+    if (customSceneBackground) {
+      return `url(${customSceneBackground})`;
+    }
+    return THEME_CONSTANTS.DEFAULT_SCENE_BACKGROUND;
+  };
+
+  // Generate image from gradient colors
+  const generateGradientImage = (colors: [string, string], width: number, height: number): Promise<File> => {
+    return new Promise((resolve) => {
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) throw new Error('Unable to get canvas context');
+      
+      const gradient = ctx.createLinearGradient(0, 0, width, height);
+      gradient.addColorStop(0, colors[0]);
+      gradient.addColorStop(1, colors[1]);
+      
+      ctx.fillStyle = gradient;
+      ctx.fillRect(0, 0, width, height);
+      
+      canvas.toBlob((blob) => {
+        if (blob) {
+          const file = new File([blob], 'theme-preset.png', { type: 'image/png' });
+          resolve(file);
+        }
+      }, 'image/png', 1.0);
+    });
+  };
+
+  // Generate solid color image
+  const generateSolidColorImage = (color: string, width: number, height: number): Promise<File> => {
+    return new Promise((resolve) => {
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) throw new Error('Unable to get canvas context');
+      
+      ctx.fillStyle = color;
+      ctx.fillRect(0, 0, width, height);
+      
+      canvas.toBlob((blob) => {
+        if (blob) {
+          const file = new File([blob], 'theme-preset-tile.png', { type: 'image/png' });
+          resolve(file);
+        }
+      }, 'image/png', 1.0);
+    });
+  };
+
+  // Handle preset reset to default
+  const handlePresetReset = async () => {
+    if (!publicKey) return;
+    
+    try {
+      showSuccess('Resetting Themes', 'Restoring default theme settings...');
+      
+      const response = await authenticatedFetch(`${API_BASE_URL}/api/profile`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          wallet: publicKey.toString(),
+          customSceneBackground: null,
+          customBoardBackground: null,
+          customPropertyCardBackground: null
+        }),
+      });
+
+      if (response.ok) {
+        // Update local state
+        setCustomSceneBackground(null);
+        setCustomBoardBackground(null);
+        setCustomPropertyCardBackground(null);
+        
+        // Clear profile cache and trigger update
+        clearProfileCache(publicKey.toString());
+        window.dispatchEvent(new Event('profileUpdated'));
+        
+        showSuccess('Reset Complete', 'All themes reset to default');
+      } else {
+        showError('Failed', 'Failed to reset themes');
+      }
+    } catch (error) {
+      console.error('Error resetting themes:', error);
+      showError('Error', 'Error resetting themes');
+    }
+  };
+
+  // Handle preset application - generates actual image files
+  const handlePresetApply = async (preset: ThemePreset) => {
+    if (!publicKey) return;
+    
+    try {
+      showSuccess('Applying Theme', `Generating ${preset.name} theme files...`);
+      
+      // Generate images for each component
+      const sceneImage = await generateGradientImage(preset.scene, 400, 400);
+      const boardImage = await generateGradientImage(preset.board, 400, 400);
+      const tileImage = await generateSolidColorImage(preset.tile, 100, 100);
+      
+      // Upload scene background
+      const sceneFormData = new FormData();
+      sceneFormData.append('file', sceneImage);
+      sceneFormData.append('wallet', publicKey.toString());
+      sceneFormData.append('uploadType', 'scene');
+      sceneFormData.append('themeType', 'scene');
+      
+      const sceneResponse = await authenticatedFetch(`${API_BASE_URL}/api/profile/upload/theme`, {
+        method: 'POST',
+        body: sceneFormData,
+      });
+      
+      // Upload board background  
+      const boardFormData = new FormData();
+      boardFormData.append('file', boardImage);
+      boardFormData.append('wallet', publicKey.toString());
+      boardFormData.append('uploadType', 'board');
+      boardFormData.append('themeType', 'board');
+      
+      const boardResponse = await authenticatedFetch(`${API_BASE_URL}/api/profile/upload/theme`, {
+        method: 'POST',
+        body: boardFormData,
+      });
+      
+      // Upload tile background
+      const tileFormData = new FormData();
+      tileFormData.append('file', tileImage);
+      tileFormData.append('wallet', publicKey.toString());
+      tileFormData.append('uploadType', 'card');
+      tileFormData.append('themeType', 'card');
+      
+      const tileResponse = await authenticatedFetch(`${API_BASE_URL}/api/profile/upload/theme`, {
+        method: 'POST',
+        body: tileFormData,
+      });
+
+      if (sceneResponse.ok && boardResponse.ok && tileResponse.ok) {
+        const sceneData = await sceneResponse.json();
+        const boardData = await boardResponse.json();
+        const tileData = await tileResponse.json();
+        
+        // Update local state with image URLs
+        setCustomSceneBackground(sceneData.backgroundUrl);
+        setCustomBoardBackground(boardData.backgroundUrl);
+        setCustomPropertyCardBackground(tileData.backgroundUrl);
+        
+        // Clear profile cache and trigger update
+        clearProfileCache(publicKey.toString());
+        window.dispatchEvent(new Event('profileUpdated'));
+        
+        showSuccess('Theme Applied', `${preset.name} theme applied successfully`);
+      } else {
+        showError('Failed', 'Failed to apply theme preset');
+      }
+    } catch (error) {
+      console.error('Error applying theme preset:', error);
+      showError('Error', 'Error applying theme preset');
+    }
   };
 
   return (
@@ -191,7 +355,7 @@ export function ProfileCustomization({
                 className="w-full h-full object-cover"
               />
             ) : (
-              <span className="text-4xl">👤</span>
+              <UserIcon className="w-8 h-8 text-white" />
             )}
           </div>
           {/* Hover Overlay */}
@@ -209,7 +373,7 @@ export function ProfileCustomization({
               className="absolute -bottom-1 -right-1 w-6 h-6 bg-red-600 hover:bg-red-500 rounded-full flex items-center justify-center transition-colors border-2 border-purple-900"
               title="Remove Profile Picture"
             >
-              <span className="text-white text-xs">✕</span>
+              <XCircleIcon className="w-3 h-3 text-white" />
             </button>
           )}
         </div>
@@ -279,16 +443,43 @@ export function ProfileCustomization({
 
       </div>
 
+      {/* Theme Presets Section */}
+      <div className="mb-6">
+        <h3 className="text-sm font-bold text-purple-100 mb-3 text-center flex items-center justify-center gap-2">
+          <PaletteIcon className="w-4 h-4" />
+          Theme Presets
+        </h3>
+        <div className="relative group max-w-48 mx-auto">
+          <SimpleBoardPreview
+            customSceneBackground={customSceneBackground}
+            customBoardBackground={customBoardBackground}
+            customPropertyCardBackground={customPropertyCardBackground}
+            className="w-full aspect-square rounded-lg border-2 border-purple-500/30 hover:border-purple-400/50 transition-all duration-300 hover:scale-[1.02]"
+            onClick={() => setShowThemePresetModal(true)}
+          />
+          {/* Hover overlay */}
+          <div className="absolute inset-0 bg-black/40 rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+            <div className="text-white text-sm font-semibold text-center">
+              <PaletteIcon className="w-5 h-5 mx-auto mb-1" />
+              Browse Themes
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* Customization Section */}
       <div>
         <h3 className="text-sm font-bold text-purple-100 mb-3 text-center flex items-center justify-center gap-2">
-          <span>🎨</span>
-          Make your own board!
+          <PaletteIcon className="w-4 h-4" />
+          Customize individual elements
         </h3>
         <div className="grid grid-cols-4 gap-3">
           {/* Board Background */}
           <div className="text-center">
-            <div className="text-[10px] text-purple-400 mb-1.5 font-semibold">🎮 Board</div>
+            <div className="text-[10px] text-purple-400 mb-1.5 font-semibold flex items-center gap-1 justify-center">
+              <GameControllerIcon className="w-3 h-3" />
+              Board
+            </div>
             <div className="relative group">
               <div 
                 className="w-full aspect-square rounded border-2 border-purple-500/25 overflow-hidden cursor-pointer"
@@ -320,7 +511,10 @@ export function ProfileCustomization({
 
           {/* Property Card Style */}
           <div className="text-center">
-            <div className="text-[10px] text-purple-400 mb-1.5 font-semibold">🏠 Cards</div>
+            <div className="text-[10px] text-purple-400 mb-1.5 font-semibold flex items-center gap-1 justify-center">
+              <HouseIcon className="w-3 h-3" />
+              Cards
+            </div>
             <div className="relative group">
               <div 
                 className="w-full aspect-square rounded border-2 border-purple-500/25 overflow-hidden cursor-pointer"
@@ -352,7 +546,10 @@ export function ProfileCustomization({
 
           {/* Scene Background */}
           <div className="text-center">
-            <div className="text-[10px] text-purple-400 mb-1.5 font-semibold">🌌 Scene</div>
+            <div className="text-[10px] text-purple-400 mb-1.5 font-semibold flex items-center gap-1 justify-center">
+              <GalaxyIcon className="w-3 h-3" />
+              Scene
+            </div>
             <div className="relative group">
               <div 
                 className="w-full aspect-square rounded border-2 border-purple-500/25 overflow-hidden cursor-pointer"
@@ -370,14 +567,23 @@ export function ProfileCustomization({
 
           {/* Corner Square Style */}
           <div className="text-center">
-            <div className="text-[10px] text-purple-400 mb-1.5 font-semibold">📐 Corners</div>
+            <div className="text-[10px] text-purple-400 mb-1.5 font-semibold flex items-center gap-1 justify-center">
+              <RulerIcon className="w-3 h-3" />
+              Corners
+            </div>
             <div className="relative group">
               <div 
                 className="w-full aspect-square rounded border-2 border-purple-500/25 overflow-hidden cursor-pointer bg-gradient-to-br from-purple-600 to-purple-800 flex items-center justify-center"
                 onClick={() => setShowCornerSquareModal(true)}
               >
-                <div className="text-white text-lg">
-                  {cornerSquareStyle === 'profile' ? '👤' : '🎯'}
+                <div className="text-white">
+                  {cornerSquareStyle === 'profile' ? (
+                    <UserIcon className="w-5 h-5" />
+                  ) : (
+                    <div className="w-5 h-5 rounded-full border-2 border-white flex items-center justify-center">
+                      <div className="w-2 h-2 bg-white rounded-full" />
+                    </div>
+                  )}
                 </div>
               </div>
               <div 
@@ -395,7 +601,10 @@ export function ProfileCustomization({
       <div className="mt-4 bg-purple-800/20 rounded-md p-2 border border-purple-500/10">
         <div className="text-[9px] text-purple-400 text-center space-y-1">
           <div>
-            <span className="font-semibold">💡</span> Upload custom backgrounds (images or GIFs)
+            <span className="font-semibold flex items-center gap-1">
+              <LightbulbIcon className="w-3 h-3" />
+              Upload custom backgrounds (images or GIFs)
+            </span>
           </div>
           <div className="text-purple-500">
             Board: max 5MB • Cards: max 3MB • Profile: max 2MB
@@ -434,6 +643,13 @@ export function ProfileCustomization({
         onClose={() => setShowCornerSquareModal(false)}
         currentCornerSquareStyle={cornerSquareStyle}
         onCornerSquareStyleChange={setCornerSquareStyle}
+      />
+
+      <ThemePresetsModal
+        isOpen={showThemePresetModal}
+        onClose={() => setShowThemePresetModal(false)}
+        onApply={handlePresetApply}
+        onReset={handlePresetReset}
       />
     </>
   );

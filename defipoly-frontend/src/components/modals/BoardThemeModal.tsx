@@ -7,6 +7,7 @@ import { useWallet } from '@solana/wallet-adapter-react';
 import { useNotification } from '@/contexts/NotificationContext';
 import { authenticatedFetch } from '@/contexts/AuthContext';
 import { clearProfileCache } from '@/utils/profileStorage';
+import { createGradientStyle } from '@/utils/themePresets';
 
 interface BoardThemeModalProps {
   isOpen: boolean;
@@ -17,13 +18,6 @@ interface BoardThemeModalProps {
   onCustomBackgroundChange: (bg: string | null) => void;
 }
 
-const GRADIENT_PRESETS = [
-  "linear-gradient(135deg, #1a0a2e, #171427)", // Purple Night
-  "linear-gradient(135deg, #000000, #0d0d1a)", // Deep Space
-  "linear-gradient(135deg, #1a0a0a, #2d1a1a)", // Sunset
-  "linear-gradient(135deg, #0a1015, #0d1a2e)", // Ocean
-  "linear-gradient(135deg, #0a150a, #1a2e1a)", // Forest
-];
 
 
 export function BoardThemeModal({
@@ -42,83 +36,6 @@ export function BoardThemeModal({
 
   if (!isOpen) return null;
 
-  const handleGradientSelect = async (gradientValue: string) => {
-    if (!publicKey) {
-      showError('No Wallet', 'Please connect your wallet first');
-      return;
-    }
-    
-    setUploading(true);
-    try {
-      // Generate gradient image instead of storing gradient string
-      const canvas = document.createElement('canvas');
-      canvas.width = 400;
-      canvas.height = 400;
-      const ctx = canvas.getContext('2d');
-      if (!ctx) {
-        throw new Error('Unable to get canvas context');
-      }
-      
-      // Create gradient from CSS string
-      const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
-      
-      // Parse gradient colors from CSS string
-      const colorMatches = gradientValue.match(/#[0-9a-fA-F]{6}/g);
-      if (colorMatches && colorMatches.length >= 2) {
-        gradient.addColorStop(0, colorMatches[0]!);
-        gradient.addColorStop(1, colorMatches[1]!);
-      } else {
-        // Fallback to solid color if parsing fails
-        const singleColor = colorMatches?.[0] || '#1a0a2e';
-        gradient.addColorStop(0, singleColor);
-        gradient.addColorStop(1, singleColor);
-      }
-      
-      ctx.fillStyle = gradient;
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-      
-      // Convert to PNG blob
-      const blob = await new Promise<Blob>((resolve) => {
-        canvas.toBlob((blob) => {
-          if (blob) resolve(blob);
-        }, 'image/png', 1.0);
-      });
-      const file = new File([blob], 'board-gradient.png', { type: 'image/png' });
-      
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('wallet', publicKey.toString());
-      formData.append('uploadType', 'board');
-      formData.append('themeType', 'board');
-      if (customBackground) {
-        formData.append('oldBackgroundUrl', customBackground);
-      }
-
-      const response = await authenticatedFetch(`${process.env['NEXT_PUBLIC_API_BASE_URL'] || 'http://localhost:3101'}/api/profile/upload/theme`, {
-        method: 'POST',
-        body: formData,
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        onCustomBackgroundChange(data.backgroundUrl);
-        showSuccess('Applied', 'Board background updated');
-        
-        // Clear profile cache and trigger update
-        clearProfileCache(publicKey.toString());
-        window.dispatchEvent(new Event('profileUpdated'));
-      } else {
-        const errorText = await response.text();
-        console.error('Server error:', errorText);
-        showError('Failed', 'Failed to update board background');
-      }
-    } catch (error) {
-      console.error('Error updating board background:', error);
-      showError('Error', `Error updating board background: ${error instanceof Error ? error.message : String(error)}`);
-    } finally {
-      setUploading(false);
-    }
-  };
 
   const handleCustomColorApply = async () => {
     if (!publicKey) {
@@ -128,20 +45,20 @@ export function BoardThemeModal({
     
     setUploading(true);
     try {
-      // Convert solid color to a gradient format
-      const solidColorGradient = `linear-gradient(135deg, ${customColor}, ${customColor})`;
+      // Store as a gradient format for consistency with theme presets
+      const colorGradient = `${customColor},${customColor}`;
       
       const response = await authenticatedFetch(`${process.env['NEXT_PUBLIC_API_BASE_URL'] || 'http://localhost:3101'}/api/profile`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           wallet: publicKey.toString(),
-          customBoardBackground: solidColorGradient
+          customBoardBackground: colorGradient
         }),
       });
 
       if (response.ok) {
-        onCustomBackgroundChange(solidColorGradient);
+        onCustomBackgroundChange(colorGradient);
         showSuccess('Applied', 'Custom board color applied');
         
         // Clear profile cache and trigger update
@@ -295,25 +212,8 @@ export function BoardThemeModal({
         <div className="grid grid-cols-2 gap-5 mb-4">
           {/* Controls */}
           <div className="flex flex-col gap-3">
-            {/* Gradient Presets */}
-            <div>
-              <div className="text-sm font-semibold text-purple-200 mb-3">Gradient Presets</div>
-              <div className="grid grid-cols-3 gap-2 mb-4">
-                {GRADIENT_PRESETS.map((preset, index) => (
-                  <button
-                    key={index}
-                    onClick={() => handleGradientSelect(preset)}
-                    disabled={uploading}
-                    className="aspect-square rounded border border-purple-500/30 hover:border-purple-500/60 transition-colors"
-                    style={{ background: preset }}
-                    title={`Preset ${index + 1}`}
-                  />
-                ))}
-              </div>
-            </div>
-
             {/* Solid Color */}
-            <div className="border-t border-purple-500/20 pt-3">
+            <div>
               <div className="text-sm font-semibold text-purple-200 mb-3">Solid Color</div>
               <div className="flex gap-2 items-center">
                 <input
@@ -353,6 +253,7 @@ export function BoardThemeModal({
                   JPG, PNG, GIF • Max 5MB
                 </small>
               </div>
+            </div>
 
             {/* Reset Button */}
             {customBackground && (
@@ -366,7 +267,6 @@ export function BoardThemeModal({
                 </button>
               </div>
             )}
-            </div>
           </div>
 
           {/* Preview */}
@@ -374,7 +274,17 @@ export function BoardThemeModal({
             <div 
               className="w-full h-40 rounded border-2 border-purple-500/30 max-w-[160px]"
               style={{
-                background: customBackground || 'linear-gradient(135deg, #1a0a2e, #171427)'
+                background: (() => {
+                  if (!customBackground) return 'linear-gradient(135deg, #1a0a2e, #171427)';
+                  // Check if it's a gradient format (contains comma)
+                  if (customBackground.includes(',')) {
+                    return createGradientStyle(customBackground, '135deg');
+                  }
+                  // Otherwise assume it's an image URL
+                  return `url(${customBackground})`;
+                })(),
+                backgroundSize: 'cover',
+                backgroundPosition: 'center'
               }}
             />
           </div>

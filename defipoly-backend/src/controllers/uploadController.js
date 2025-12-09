@@ -104,7 +104,7 @@ const uploadThemeBackground = [
         return res.status(403).json({ error: 'Forbidden' });
       }
 
-      if (!themeType || !['board', 'card'].includes(themeType)) {
+      if (!themeType || !['board', 'card', 'scene'].includes(themeType)) {
         console.error('Invalid theme type:', themeType);
         return res.status(400).json({ error: 'Invalid theme type' });
       }
@@ -186,6 +186,30 @@ const uploadThemeBackground = [
             }
             
             console.log('Property card theme saved to database:', fileUrl);
+            res.json({ 
+              success: true, 
+              backgroundUrl: fileUrl,
+              message: `${themeType} background uploaded successfully`
+            });
+          }
+        );
+      } else if (themeType === 'scene') {
+        // Update scene background settings
+        db.run(
+          `INSERT INTO profiles (wallet_address, custom_scene_background, updated_at)
+           VALUES (?, ?, ?)
+           ON CONFLICT(wallet_address) 
+           DO UPDATE SET 
+             custom_scene_background = ?,
+             updated_at = ?`,
+          [wallet, fileUrl, updatedAt, fileUrl, updatedAt],
+          (err) => {
+            if (err) {
+              console.error('Database error updating scene background:', err);
+              return res.status(500).json({ error: 'Failed to save scene background to database' });
+            }
+            
+            console.log('Scene background saved to database:', fileUrl);
             res.json({ 
               success: true, 
               backgroundUrl: fileUrl,

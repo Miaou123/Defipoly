@@ -10,7 +10,7 @@ const UPLOAD_URL_PREFIX = process.env.UPLOAD_URL_PREFIX || '/uploads';
 
 // Ensure upload directories exist
 const ensureUploadDirs = () => {
-  const dirs = ['profiles', 'boards', 'cards'];
+  const dirs = ['profiles', 'boards', 'cards', 'scenes'];
   dirs.forEach(dir => {
     const fullPath = path.join(UPLOAD_DIR, dir);
     if (!fs.existsSync(fullPath)) {
@@ -25,7 +25,8 @@ ensureUploadDirs();
 const FILE_SIZE_LIMITS = {
   profile: 2 * 1024 * 1024,    // 2MB for profile pictures
   board: 5 * 1024 * 1024,      // 5MB for board backgrounds
-  card: 3 * 1024 * 1024        // 3MB for card backgrounds
+  card: 3 * 1024 * 1024,       // 3MB for card backgrounds
+  scene: 5 * 1024 * 1024       // 5MB for scene backgrounds
 };
 
 // Multer storage configuration - save to temp location first
@@ -75,6 +76,8 @@ const optimizeImage = async (req, res, next) => {
       subDir = 'boards';
     } else if (themeType === 'card') {
       subDir = 'cards';
+    } else if (themeType === 'scene') {
+      subDir = 'scenes';
     } else {
       subDir = 'profiles';
     }
