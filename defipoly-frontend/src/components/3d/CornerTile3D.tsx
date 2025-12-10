@@ -382,7 +382,35 @@ function CornerTextureOverlay({ textureUrl, size, cornerSquareStyle, profilePict
   cornerSquareStyle: 'property' | 'profile';
   profilePicture?: string | null;
 }) {
-  const texture = useTexture(textureUrl);
+  // Generate texture URL - handle single colors by creating canvas texture
+  const finalTextureUrl = useMemo(() => {
+    // Check if textureUrl is a single hex color
+    const hexColorRegex = /^#[0-9A-Fa-f]{6}$/;
+    if (hexColorRegex.test(textureUrl)) {
+      // Generate canvas texture from single color
+      const canvas = document.createElement('canvas');
+      canvas.width = 256;
+      canvas.height = 256;
+      const ctx = canvas.getContext('2d');
+      
+      if (!ctx) {
+        console.warn('Could not get canvas context for color texture generation');
+        return textureUrl; // fallback to original
+      }
+      
+      // Fill with solid color
+      ctx.fillStyle = textureUrl;
+      ctx.fillRect(0, 0, 256, 256);
+      
+      // Return as data URL
+      return canvas.toDataURL('image/png');
+    }
+    
+    // If not a hex color, treat as regular URL
+    return textureUrl;
+  }, [textureUrl]);
+
+  const texture = useTexture(finalTextureUrl);
   texture.colorSpace = THREE.SRGBColorSpace;
   texture.wrapS = texture.wrapT = THREE.ClampToEdgeWrapping;
   texture.repeat.set(1, 1);

@@ -42,14 +42,14 @@ export function ThemePresetModal({
       <div 
         className="w-full aspect-square rounded-lg border-4 border-gray-600 relative overflow-hidden"
         style={{
-          background: `linear-gradient(135deg, ${preset.board[0]} 0%, ${preset.board[1]} 100%)`
+          background: `linear-gradient(135deg, ${preset.colors[0]} 0%, ${preset.colors[1]} 100%)`
         }}
       >
         {/* Scene gradient overlay (subtle) */}
         <div 
           className="absolute inset-0 opacity-20"
           style={{
-            background: `linear-gradient(180deg, ${preset.scene[0]} 0%, ${preset.scene[1]} 100%)`
+            background: `linear-gradient(180deg, ${preset.colors[0]} 0%, ${preset.colors[1]} 100%)`
           }}
         />
         
@@ -68,7 +68,7 @@ export function ThemePresetModal({
               <div 
                 key={`top-${i}`}
                 className="flex-1 border-r border-white/50 last:border-r-0"
-                style={{ backgroundColor: `${preset.tile}40` }}
+                style={{ backgroundColor: `${preset.colors[0]}40` }}
               />
             ))}
           </div>
@@ -79,7 +79,7 @@ export function ThemePresetModal({
               <div 
                 key={`bottom-${i}`}
                 className="flex-1 border-r border-white/50 last:border-r-0"
-                style={{ backgroundColor: `${preset.tile}40` }}
+                style={{ backgroundColor: `${preset.colors[0]}40` }}
               />
             ))}
           </div>
@@ -90,7 +90,7 @@ export function ThemePresetModal({
               <div 
                 key={`left-${i}`}
                 className="flex-1 border-b border-white/50 last:border-b-0"
-                style={{ backgroundColor: `${preset.tile}40` }}
+                style={{ backgroundColor: `${preset.colors[0]}40` }}
               />
             ))}
           </div>
@@ -101,7 +101,7 @@ export function ThemePresetModal({
               <div 
                 key={`right-${i}`}
                 className="flex-1 border-b border-white/50 last:border-b-0"
-                style={{ backgroundColor: `${preset.tile}40` }}
+                style={{ backgroundColor: `${preset.colors[0]}40` }}
               />
             ))}
           </div>
@@ -174,19 +174,19 @@ export function ThemePresetModal({
                     <div 
                       className="w-full h-16 relative"
                       style={{
-                        background: `linear-gradient(135deg, ${preset.board[0]} 0%, ${preset.board[1]} 100%)`
+                        background: `linear-gradient(135deg, ${preset.colors[0]} 0%, ${preset.colors[1]} 100%)`
                       }}
                     >
                       {/* Small tile color indicator */}
                       <div 
                         className="absolute bottom-1 right-1 w-4 h-4 rounded border border-gray-600"
-                        style={{ backgroundColor: preset.tile }}
+                        style={{ backgroundColor: preset.colors[0] }}
                       />
                       {/* Scene color indicator */}
                       <div 
                         className="absolute top-1 left-1 w-4 h-4 rounded border border-gray-600"
                         style={{
-                          background: `linear-gradient(45deg, ${preset.scene[0]} 0%, ${preset.scene[1]} 100%)`
+                          background: `linear-gradient(45deg, ${preset.colors[0]} 0%, ${preset.colors[1]} 100%)`
                         }}
                       />
                     </div>
@@ -239,13 +239,13 @@ export function ThemePresetModal({
                       <div className="flex gap-2">
                         <div 
                           className="w-4 h-4 rounded border border-gray-600"
-                          style={{ backgroundColor: selectedPreset.scene[0] }}
-                          title={selectedPreset.scene[0]}
+                          style={{ backgroundColor: selectedPreset.colors[0] }}
+                          title={selectedPreset.colors[0]}
                         />
                         <div 
                           className="w-4 h-4 rounded border border-gray-600"
-                          style={{ backgroundColor: selectedPreset.scene[1] }}
-                          title={selectedPreset.scene[1]}
+                          style={{ backgroundColor: selectedPreset.colors[1] }}
+                          title={selectedPreset.colors[1]}
                         />
                       </div>
                     </div>
@@ -255,13 +255,13 @@ export function ThemePresetModal({
                       <div className="flex gap-2">
                         <div 
                           className="w-4 h-4 rounded border border-gray-600"
-                          style={{ backgroundColor: selectedPreset.board[0] }}
-                          title={selectedPreset.board[0]}
+                          style={{ backgroundColor: selectedPreset.colors[0] }}
+                          title={selectedPreset.colors[0]}
                         />
                         <div 
                           className="w-4 h-4 rounded border border-gray-600"
-                          style={{ backgroundColor: selectedPreset.board[1] }}
-                          title={selectedPreset.board[1]}
+                          style={{ backgroundColor: selectedPreset.colors[1] }}
+                          title={selectedPreset.colors[1]}
                         />
                       </div>
                     </div>
@@ -270,8 +270,8 @@ export function ThemePresetModal({
                       <div className="text-purple-200 font-medium mb-1">Property Tiles</div>
                       <div 
                         className="w-4 h-4 rounded border border-gray-600"
-                        style={{ backgroundColor: selectedPreset.tile }}
-                        title={selectedPreset.tile}
+                        style={{ backgroundColor: selectedPreset.colors[0] }}
+                        title={selectedPreset.colors[0]}
                       />
                     </div>
                   </div>

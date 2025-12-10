@@ -11,6 +11,8 @@ interface ThemePresetSelectorProps {
   currentSceneBackground?: string | null;
   currentBoardBackground?: string | null; 
   currentTileBackground?: string | null;
+  currentBoardPresetId?: string | null;
+  currentTilePresetId?: string | null;
   onApply: (preset: ThemePreset) => void;
 }
 
@@ -18,6 +20,8 @@ export const ThemePresetSelector: React.FC<ThemePresetSelectorProps> = ({
   currentSceneBackground,
   currentBoardBackground,
   currentTileBackground,
+  currentBoardPresetId,
+  currentTilePresetId,
   onApply
 }) => {
   const [selectedCategory, setSelectedCategory] = useState<'dark' | 'medium' | 'light'>('dark');
@@ -70,13 +74,15 @@ export const ThemePresetSelector: React.FC<ThemePresetSelectorProps> = ({
             <div 
               className="w-full h-16 relative"
               style={{
-                background: `linear-gradient(135deg, ${preset.board[0]} 0%, ${preset.board[1]} 100%)`
+                background: `linear-gradient(135deg, ${preset.colors[0]} 0%, ${preset.colors[1]} 100%)`
               }}
             >
               {/* Small tile color indicator */}
               <div 
-                className="absolute bottom-1 right-1 w-4 h-4 rounded border border-gray-600"
-                style={{ backgroundColor: preset.tile }}
+                className={`absolute bottom-1 right-1 w-4 h-4 rounded border ${
+                  preset.category === 'light' ? 'border-gray-800' : 'border-gray-600'
+                }`}
+                style={{ backgroundColor: preset.colors[0] }}
               />
             </div>
             

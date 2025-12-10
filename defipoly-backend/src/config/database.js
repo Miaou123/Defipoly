@@ -45,6 +45,7 @@ function createTables() {
         custom_property_card_background TEXT,
         custom_scene_background TEXT,
         theme_category TEXT,
+        writing_style TEXT DEFAULT 'light',
         corner_square_style TEXT DEFAULT 'property',
         updated_at INTEGER DEFAULT (strftime('%s', 'now'))
       )
@@ -277,20 +278,78 @@ function runMigrations() {
         }
         
         const hasThemeCategory = columns.some(col => col.name === 'theme_category');
+        const hasWritingStyle = columns.some(col => col.name === 'writing_style');
+        const hasBoardPresetId = columns.some(col => col.name === 'board_preset_id');
+        const hasTilePresetId = columns.some(col => col.name === 'tile_preset_id');
+        
+        const migrations = [];
         
         if (!hasThemeCategory) {
-          console.log('🔄 Adding theme_category column to profiles table...');
-          db.run(`ALTER TABLE profiles ADD COLUMN theme_category TEXT`, (err) => {
-            if (err) {
-              console.error('Error adding theme_category column:', err);
-              return reject(err);
-            }
-            console.log('✅ Added theme_category column to profiles table');
-            resolve();
-          });
-        } else {
-          console.log('✅ theme_category column already exists');
+          migrations.push(() => new Promise((resolve, reject) => {
+            console.log('🔄 Adding theme_category column to profiles table...');
+            db.run(`ALTER TABLE profiles ADD COLUMN theme_category TEXT`, (err) => {
+              if (err) {
+                console.error('Error adding theme_category column:', err);
+                return reject(err);
+              }
+              console.log('✅ Added theme_category column to profiles table');
+              resolve();
+            });
+          }));
+        }
+        
+        if (!hasWritingStyle) {
+          migrations.push(() => new Promise((resolve, reject) => {
+            console.log('🔄 Adding writing_style column to profiles table...');
+            db.run(`ALTER TABLE profiles ADD COLUMN writing_style TEXT DEFAULT 'light'`, (err) => {
+              if (err) {
+                console.error('Error adding writing_style column:', err);
+                return reject(err);
+              }
+              console.log('✅ Added writing_style column to profiles table');
+              resolve();
+            });
+          }));
+        }
+        
+        if (!hasBoardPresetId) {
+          migrations.push(() => new Promise((resolve, reject) => {
+            console.log('🔄 Adding board_preset_id column to profiles table...');
+            db.run(`ALTER TABLE profiles ADD COLUMN board_preset_id TEXT DEFAULT NULL`, (err) => {
+              if (err) {
+                console.error('Error adding board_preset_id column:', err);
+                return reject(err);
+              }
+              console.log('✅ Added board_preset_id column to profiles table');
+              resolve();
+            });
+          }));
+        }
+        
+        if (!hasTilePresetId) {
+          migrations.push(() => new Promise((resolve, reject) => {
+            console.log('🔄 Adding tile_preset_id column to profiles table...');
+            db.run(`ALTER TABLE profiles ADD COLUMN tile_preset_id TEXT DEFAULT NULL`, (err) => {
+              if (err) {
+                console.error('Error adding tile_preset_id column:', err);
+                return reject(err);
+              }
+              console.log('✅ Added tile_preset_id column to profiles table');
+              resolve();
+            });
+          }));
+        }
+        
+        if (migrations.length === 0) {
+          console.log('✅ All profile columns already exist');
           resolve();
+        } else {
+          // Run migrations sequentially
+          migrations.reduce((promise, migration) => {
+            return promise.then(() => migration());
+          }, Promise.resolve()).then(() => {
+            resolve();
+          }).catch(reject);
         }
       });
     });

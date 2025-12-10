@@ -71,7 +71,10 @@ export interface ProfileData {
   customBoardBackground: string | null;
   customPropertyCardBackground: string | null;
   customSceneBackground: string | null;
+  boardPresetId: string | null;
+  tilePresetId: string | null;
   themeCategory: 'dark' | 'medium' | 'light' | null;
+  writingStyle: 'light' | 'dark';
   updatedAt: number | null;
 }
 
@@ -149,7 +152,10 @@ export function GameStateProvider({ children }: { children: React.ReactNode }) {
       customBoardBackground: null,
       customPropertyCardBackground: null,
       customSceneBackground: null,
+      boardPresetId: null,
+      tilePresetId: null,
       themeCategory: null,
+      writingStyle: 'light',
       updatedAt: null,
     },
   });
@@ -190,7 +196,10 @@ export function GameStateProvider({ children }: { children: React.ReactNode }) {
           customBoardBackground: null,
           customPropertyCardBackground: null,
           customSceneBackground: null,
+          boardPresetId: null,
+          tilePresetId: null,
           themeCategory: null,
+          writingStyle: 'light',
           updatedAt: null,
         },
       });
@@ -253,7 +262,10 @@ export function GameStateProvider({ children }: { children: React.ReactNode }) {
       });
   
       if (!response.ok) {
-        throw new Error('Failed to update profile');
+        const errorText = await response.text();
+        console.error('GameStateContext updateProfile failed:', response.status, errorText);
+        console.error('Failed updates:', updates);
+        throw new Error(`Failed to update profile: ${response.status} - ${errorText}`);
       }
   
       // Update local state immediately for better UX

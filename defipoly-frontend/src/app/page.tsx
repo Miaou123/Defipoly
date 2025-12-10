@@ -33,6 +33,7 @@ export default function Home() {
   const [customPropertyCardBackground, setCustomPropertyCardBackground] = useState<string | null>(null);
   const [customSceneBackground, setCustomSceneBackground] = useState<string | null>(null);
   const [themeCategory, setThemeCategory] = useState<'dark' | 'medium' | 'light' | null>(null);
+  const [writingStyle, setWritingStyle] = useState<'light' | 'dark'>('light');
   const [isMobile, setIsMobile] = useState(false);
   const [sideColumnWidth, setSideColumnWidth] = useState(400);
   
@@ -75,6 +76,7 @@ export default function Home() {
           setCustomPropertyCardBackground(profile.customPropertyCardBackground || null);
           setCustomSceneBackground(profile.customSceneBackground || null);
           setThemeCategory(profile.themeCategory || null);
+          setWritingStyle(profile.writingStyle || 'light');
         })
         .catch(error => {
           console.error('Error loading profile:', error);
@@ -92,6 +94,7 @@ export default function Home() {
           setCustomPropertyCardBackground(updatedProfile.customPropertyCardBackground || null);
           setCustomSceneBackground(updatedProfile.customSceneBackground || null);
           setThemeCategory(updatedProfile.themeCategory || null);
+          setWritingStyle(updatedProfile.writingStyle || 'light');
         } catch (error) {
           console.error('Error updating profile:', error);
         }
@@ -174,10 +177,13 @@ export default function Home() {
             onCoinClick={() => setShowCoinModal(true)}
             profilePicture={profilePicture} 
             cornerSquareStyle={cornerSquareStyle} 
-            customBoardBackground={customBoardBackground}
-            custom3DPropertyTiles={customPropertyCardBackground} 
-            customSceneBackground={customSceneBackground}
+            customBoardBackground={gameState.profile.customBoardBackground || customBoardBackground}
+            custom3DPropertyTiles={gameState.profile.customPropertyCardBackground || customPropertyCardBackground} 
+            customSceneBackground={gameState.profile.customSceneBackground || customSceneBackground}
+            boardPresetId={gameState.profile.boardPresetId}
+            tilePresetId={gameState.profile.tilePresetId}
             themeCategory={themeCategory}
+            writingStyle={writingStyle}
           />
         </div>
         

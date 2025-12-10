@@ -321,23 +321,39 @@ export default function ProfilePage() {
                   }}
                   propertyCardTheme={gameState.profile.propertyCardTheme}
                   setPropertyCardTheme={async (theme) => {
+                    console.log('Setting property card theme to:', theme);
                     await gameState.updateProfile({ propertyCardTheme: theme });
                   }}
                   customBoardBackground={gameState.profile.customBoardBackground}
                   setCustomBoardBackground={async (bg) => {
+                    console.log('Setting custom board background to:', bg);
                     await gameState.updateProfile({ customBoardBackground: bg });
                   }}
                   customPropertyCardBackground={gameState.profile.customPropertyCardBackground}
                   setCustomPropertyCardBackground={async (bg) => {
+                    console.log('Setting custom property card background to:', bg);
                     await gameState.updateProfile({ customPropertyCardBackground: bg });
                   }}
                   customSceneBackground={gameState.profile.customSceneBackground}
                   setCustomSceneBackground={async (bg) => {
+                    console.log('Setting custom scene background to:', bg);
                     await gameState.updateProfile({ customSceneBackground: bg });
+                  }}
+                  boardPresetId={gameState.profile.boardPresetId}
+                  setBoardPresetId={async (presetId) => {
+                    await gameState.updateProfile({ boardPresetId: presetId });
+                  }}
+                  tilePresetId={gameState.profile.tilePresetId}
+                  setTilePresetId={async (presetId) => {
+                    await gameState.updateProfile({ tilePresetId: presetId });
                   }}
                   cornerSquareStyle={gameState.profile.cornerSquareStyle || 'property'}
                   setCornerSquareStyle={async (style) => {
                     await gameState.updateProfile({ cornerSquareStyle: style });
+                  }}
+                  writingStyle={gameState.profile.writingStyle || 'light'}
+                  setWritingStyle={async (style) => {
+                    await gameState.updateProfile({ writingStyle: style });
                   }}
                   walletAddress={publicKey.toString()}
                 />

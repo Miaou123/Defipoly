@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { TrophyIcon, HexagonBadge, PointerArrowIcon } from './icons/UIIcons';
-import { ProfileData } from '@/contexts/GameStateContext';
+import { ProfileData } from '@/utils/profileStorage';
 import { setCachedSpectator } from '@/utils/spectatorCache';
 import { useWebSocket } from '@/contexts/WebSocketContext';
 import { useGameState } from '@/contexts/GameStateContext';
@@ -154,8 +154,11 @@ export function Leaderboard({ scaleFactor = 1 }: LeaderboardProps) {
                   customBoardBackground: null,
                   customPropertyCardBackground: null,
                   customSceneBackground: null,
+                  boardPresetId: null,
+                  tilePresetId: null,
                   themeCategory: null,
-                  updatedAt: 0
+                  writingStyle: 'light',
+                  lastUpdated: 0
                 };
               }
               setProfiles(profilesData);
@@ -174,8 +177,11 @@ export function Leaderboard({ scaleFactor = 1 }: LeaderboardProps) {
                 customBoardBackground: null,
                 customPropertyCardBackground: null,
                 customSceneBackground: null,
+                boardPresetId: null,
+                tilePresetId: null,
                 themeCategory: null,
-                updatedAt: 0
+                writingStyle: 'light',
+                lastUpdated: 0
               };
             }
             setProfiles(profilesData);
@@ -238,23 +244,29 @@ export function Leaderboard({ scaleFactor = 1 }: LeaderboardProps) {
       customBoardBackground: null,
       customPropertyCardBackground: null,
       customSceneBackground: null,
+      boardPresetId: null,
+      tilePresetId: null,
       themeCategory: null,
-      updatedAt: Date.now()
+      writingStyle: 'light' as const,
+      lastUpdated: Date.now()
     };
     
     // Convert to spectatorCache ProfileData format (it still uses the old interface)
-    const spectatorProfileData = {
-      walletAddress: profileData.walletAddress,
-      username: profileData.username,
-      profilePicture: profileData.profilePicture,
-      cornerSquareStyle: profileData.cornerSquareStyle,
-      boardTheme: profileData.boardTheme,
-      propertyCardTheme: profileData.propertyCardTheme,
-      customBoardBackground: profileData.customBoardBackground,
-      customPropertyCardBackground: profileData.customPropertyCardBackground,
-      customSceneBackground: profileData.customSceneBackground,
+    const spectatorProfileData: ProfileData = {
+      walletAddress: profileData.walletAddress || leader.walletAddress,
+      username: profileData.username || null,
+      profilePicture: profileData.profilePicture || null,
+      cornerSquareStyle: profileData.cornerSquareStyle || 'property',
+      boardTheme: profileData.boardTheme || 'dark',
+      propertyCardTheme: profileData.propertyCardTheme || 'dark',
+      customBoardBackground: profileData.customBoardBackground || null,
+      customPropertyCardBackground: profileData.customPropertyCardBackground || null,
+      customSceneBackground: profileData.customSceneBackground || null,
+      boardPresetId: profileData.boardPresetId || null,
+      tilePresetId: profileData.tilePresetId || null,
       themeCategory: profileData.themeCategory || null,
-      lastUpdated: profileData.updatedAt || Date.now()
+      writingStyle: profileData.writingStyle || 'light',
+      lastUpdated: profileData.lastUpdated || Date.now()
     };
     
     // Cache with rank information from leaderboard

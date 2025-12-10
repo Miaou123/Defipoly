@@ -15,7 +15,10 @@ export interface ProfileData {
   customBoardBackground: string | null;
   customPropertyCardBackground: string | null;
   customSceneBackground: string | null;
+  boardPresetId: string | null;
+  tilePresetId: string | null;
   themeCategory: 'dark' | 'medium' | 'light' | null;
+  writingStyle: 'light' | 'dark' | null;
   lastUpdated: number;
 }
 
@@ -52,7 +55,10 @@ export async function getProfile(address: string): Promise<ProfileData> {
         customBoardBackground: data.customBoardBackground || null,
         customPropertyCardBackground: data.customPropertyCardBackground || null,
         customSceneBackground: data.customSceneBackground || null,
+        boardPresetId: data.boardPresetId || null,
+        tilePresetId: data.tilePresetId || null,
         themeCategory: data.themeCategory || null,
+        writingStyle: data.writingStyle || 'light',
         lastUpdated: data.updatedAt || 0,
       };
 
@@ -72,7 +78,10 @@ export async function getProfile(address: string): Promise<ProfileData> {
         customBoardBackground: null,
         customPropertyCardBackground: null,
         customSceneBackground: null,
+        boardPresetId: null,
+        tilePresetId: null,
         themeCategory: null,
+        writingStyle: 'light',
         lastUpdated: 0 
       };
     }
@@ -112,7 +121,10 @@ export async function getProfilesBatch(addresses: string[]): Promise<Record<stri
           customBoardBackground: profile.customBoardBackground || null,
           customPropertyCardBackground: profile.customPropertyCardBackground || null,
           customSceneBackground: profile.customSceneBackground || null,
+          boardPresetId: profile.boardPresetId || null,
+          tilePresetId: profile.tilePresetId || null,
           themeCategory: profile.themeCategory || null,
+          writingStyle: profile.writingStyle || 'light',
           lastUpdated: profile.updatedAt || 0,
         };
 
@@ -353,6 +365,45 @@ export async function setThemePreferences(address: string, themes: {
 }
 
 /**
+ * Set writing style for a wallet address
+ */
+export async function setWritingStyle(address: string, writingStyle: 'light' | 'dark'): Promise<boolean> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/profile/writing-style`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        wallet: address,
+        writingStyle: writingStyle,
+      }),
+    });
+
+    if (response.ok) {
+      // Clear cache
+      profileCache.delete(address);
+      
+      // Also save to localStorage as backup
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(`writing_style_${address}`, writingStyle);
+        localStorage.setItem(`profile_updated_${address}`, Date.now().toString());
+      }
+      
+      return true;
+    }
+  } catch (error) {
+    console.error('Failed to save writing style to API:', error);
+  }
+
+  // Fallback to localStorage only
+  if (typeof window !== 'undefined') {
+    localStorage.setItem(`writing_style_${address}`, writingStyle);
+    localStorage.setItem(`profile_updated_${address}`, Date.now().toString());
+  }
+  
+  return false;
+}
+
+/**
  * Remove profile picture
  */
 export async function removeProfilePicture(address: string): Promise<boolean> {
@@ -405,7 +456,10 @@ function getProfileFromLocalStorage(address: string): ProfileData {
       customBoardBackground: null,
       customPropertyCardBackground: null, 
       customSceneBackground: null,
+      boardPresetId: null,
+      tilePresetId: null,
       themeCategory: null,
+      writingStyle: 'light',
       lastUpdated: 0 
     };
   }
@@ -418,7 +472,10 @@ function getProfileFromLocalStorage(address: string): ProfileData {
   const customBoardBackground = localStorage.getItem(`customBoard_${address}`) || null;
   const customPropertyCardBackground = localStorage.getItem(`customProperty_${address}`) || null;
   const customSceneBackground = localStorage.getItem(`customScene_${address}`) || null;
+  const boardPresetId = localStorage.getItem(`board_preset_${address}`) || null;
+  const tilePresetId = localStorage.getItem(`tile_preset_${address}`) || null;
   const themeCategory = localStorage.getItem(`themeCategory_${address}`) as 'dark' | 'medium' | 'light' | null || null;
+  const writingStyle = (localStorage.getItem(`writing_style_${address}`) as 'light' | 'dark') || 'light';
   const lastUpdated = parseInt(localStorage.getItem(`profile_updated_${address}`) || '0');
 
   return {
@@ -430,7 +487,10 @@ function getProfileFromLocalStorage(address: string): ProfileData {
     customBoardBackground,
     customPropertyCardBackground,
     customSceneBackground,
+    boardPresetId,
+    tilePresetId,
     themeCategory,
+    writingStyle,
     lastUpdated,
   };
 }

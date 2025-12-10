@@ -1,6 +1,7 @@
 'use client';
 
 import { Canvas, useFrame } from '@react-three/fiber';
+import { useMemo, useEffect, useRef, useState, Suspense, useCallback } from 'react';
 import { OrbitControls, Text, PerspectiveCamera, Html, useTexture } from '@react-three/drei';
 import { useGameState } from '@/contexts/GameStateContext';
 import { useRewards } from '@/contexts/RewardsContext';
@@ -14,7 +15,6 @@ import { House4_R3F } from './r3f/House4_R3F';
 import { House5_R3F } from './r3f/House5_R3F';
 import { Pin3D_R3F } from './r3f/Pin3D_R3F';
 import { CornerTile3D } from './CornerTile3D';
-import { useMemo, useEffect, useRef, useState, Suspense, useCallback } from 'react';
 import * as THREE from 'three';
 import { ResetViewIcon, ZoomInIcon, ZoomOutIcon, HideIcon, PointerArrowIcon, ShieldIcon, ShieldCooldownIcon, HourglassIcon, TargetIcon } from '../icons/UIIcons';
 import { InteractiveBank3D } from './InteractiveBank3D';
@@ -22,6 +22,7 @@ import { IncomeFlow3D } from './IncomeFlow3D';
 import { FloatingCoins3D } from './FloatingCoins3D';
 import { BoardOnboarding3D } from './BoardOnboarding3D';
 import { createSceneGradientStyle } from '@/utils/themePresets';
+import { useBoardPresetTexture, useTilePresetTexture, useScenePresetTexture } from '@/hooks/usePresetTexture';
 
 
 interface Board3DSceneProps {
@@ -32,7 +33,10 @@ interface Board3DSceneProps {
   customBoardBackground?: string | null | undefined;
   custom3DPropertyTiles?: string | null | undefined;
   customSceneBackground?: string | null | undefined;
+  boardPresetId?: string | null | undefined;
+  tilePresetId?: string | null | undefined;
   themeCategory?: string | null | undefined;
+  writingStyle?: 'light' | 'dark' | undefined;
   profilePicture?: string | null | undefined;
   cornerSquareStyle?: 'property' | 'profile' | undefined;
   isMobile?: boolean;
@@ -48,7 +52,10 @@ interface SceneProps extends Board3DSceneProps {
   showcaseMode: boolean;
   customBoardBackground?: string | null;
   custom3DPropertyTiles?: string | null;
+  boardPresetId?: string | null;
+  tilePresetId?: string | null;
   themeCategory?: string | null;
+  writingStyle?: 'light' | 'dark';
   profilePicture?: string | null;
   cornerSquareStyle?: 'property' | 'profile';
 }
@@ -66,7 +73,71 @@ const colorStripWidth = 0.15;
 
 // Board surface with custom texture
 function BoardSurfaceWithTexture({ customBackground }: { customBackground: string }) {
-  const texture = useTexture(customBackground);
+  // Add logging to identify problematic texture URLs
+  console.log('🚨 BoardSurfaceWithTexture called with:', customBackground);
+  
+  // Check if customBackground is a single hex color and handle it
+  const finalTextureUrl = useMemo(() => {
+    // Check if it's a single hex color
+    const hexColorRegex = /^#[0-9A-Fa-f]{6}$/;
+    if (hexColorRegex.test(customBackground)) {
+      console.warn('BoardSurfaceWithTexture: Converting single hex color to texture:', customBackground);
+      // Generate canvas texture from single color
+      const canvas = document.createElement('canvas');
+      canvas.width = 512;
+      canvas.height = 512;
+      const ctx = canvas.getContext('2d');
+      
+      if (!ctx) {
+        console.error('Could not get canvas context for board texture generation');
+        return customBackground; // fallback to original
+      }
+      
+      // Fill with solid color
+      ctx.fillStyle = customBackground;
+      ctx.fillRect(0, 0, 512, 512);
+      
+      // Return as data URL
+      return canvas.toDataURL('image/png');
+    }
+    
+    // Check if it's gradient format and handle it
+    if (customBackground.includes(',') && customBackground.split(',').length === 2) {
+      const colors = customBackground.split(',').map(c => c.trim());
+      const hexColorRegex = /^#[0-9A-Fa-f]{6}$/;
+      if (hexColorRegex.test(colors[0]) && hexColorRegex.test(colors[1])) {
+        console.warn('BoardSurfaceWithTexture: Converting gradient to texture:', customBackground);
+        // Generate canvas texture from gradient
+        const canvas = document.createElement('canvas');
+        canvas.width = 512;
+        canvas.height = 512;
+        const ctx = canvas.getContext('2d');
+        
+        if (!ctx) {
+          console.error('Could not get canvas context for gradient board texture generation');
+          return customBackground; // fallback to original
+        }
+        
+        // Create diagonal gradient (135deg)
+        const gradient = ctx.createLinearGradient(0, 0, 512, 512);
+        gradient.addColorStop(0, colors[0]);
+        gradient.addColorStop(1, colors[1]);
+        
+        // Fill canvas with gradient
+        ctx.fillStyle = gradient;
+        ctx.fillRect(0, 0, 512, 512);
+        
+        // Return as data URL
+        return canvas.toDataURL('image/png');
+      }
+    }
+    
+    // If not a color format, treat as regular URL
+    console.log('BoardSurfaceWithTexture: Using as regular URL:', customBackground);
+    return customBackground;
+  }, [customBackground]);
+
+  const texture = useTexture(finalTextureUrl);
   texture.colorSpace = THREE.SRGBColorSpace;
   texture.wrapS = texture.wrapT = THREE.ClampToEdgeWrapping;
   texture.repeat.set(1, 1);
@@ -116,16 +187,30 @@ function DefaultBoardSurface() {
   );
 }
 
+
 // Board surface component with conditional texture loading
-function BoardSurface({ customBackground }: { customBackground?: string | null }) {
-  if (customBackground) {
+function BoardSurface({ 
+  customBackground, 
+  boardPresetId 
+}: { 
+  customBackground?: string | null;
+  boardPresetId?: string | null;
+}) {
+  const boardTexture = useBoardPresetTexture(boardPresetId ?? null, customBackground ?? null);
+  console.log('BoardSurface - boardTexture:', boardTexture, 'customBackground:', customBackground, 'boardPresetId:', boardPresetId);
+  
+  // If we have a texture (including generated textures from colors), use texture approach
+  if (boardTexture) {
+    console.log('🚨 BoardSurface: Using TEXTURE approach with:', boardTexture);
     return (
       <Suspense fallback={<DefaultBoardSurface />}>
-        <BoardSurfaceWithTexture customBackground={customBackground} />
+        <BoardSurfaceWithTexture customBackground={boardTexture} />
       </Suspense>
     );
   }
   
+  // Default board
+  console.log('⚪ BoardSurface: Using DEFAULT board');
   return <DefaultBoardSurface />;
 }
 
@@ -497,7 +582,9 @@ interface PropertyTileProps {
   spectatorMode: boolean;
   cameraDistance?: number;
   customTexture?: string | null;
+  tilePresetId?: string | null;
   themeCategory?: string | null;
+  writingStyle?: 'light' | 'dark';
 }
 
 function PropertyTile({ 
@@ -518,18 +605,23 @@ function PropertyTile({
   spectatorMode,
   cameraDistance,
   customTexture,
-  themeCategory
+  tilePresetId,
+  themeCategory,
+  writingStyle
 }: PropertyTileProps) {
   const [hovered, setHovered] = useState(false);
   
   
-  // Load custom texture - always call hook to maintain hook order
-  // Use a data URL for transparent 1x1 pixel as fallback when no custom texture
+  // Use preset texture hook to get the final texture URL
+  const tileTexture = useTilePresetTexture(tilePresetId ?? null, customTexture ?? null);
+  
+  // Load texture - always call hook to maintain hook order
+  // Use a data URL for transparent 1x1 pixel as fallback when no texture
   const fallbackTexture = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChAI9g4ndUwAAAABJRU5ErkJggg==';
-  const loadedTexture = useTexture(customTexture || fallbackTexture);
+  const loadedTexture = useTexture(tileTexture || fallbackTexture);
   
   let texture = null;
-  if (customTexture && loadedTexture) {
+  if (tileTexture && loadedTexture) {
     texture = loadedTexture;
     texture.colorSpace = THREE.SRGBColorSpace;
     texture.wrapS = texture.wrapT = THREE.ClampToEdgeWrapping;
@@ -596,25 +688,35 @@ function PropertyTile({
 
   const hoverY = hovered && interactive ? 0.08 : 0;
 
-  // Detect if we should use dark text based on theme category or light colors
-  const shouldUseDarkText = (() => {
-    // If theme category is explicitly set
-    if (themeCategory === 'light') return true;
-    
-    // Fallback: detect based on known light theme patterns
-    // This works for custom uploaded light images or theme presets
-    if (customTexture && customTexture.includes('/cards/')) {
-      // For theme preset files, assume they might be light if recently created
-      // This is a temporary heuristic until theme metadata is fully implemented
-      return customTexture.includes('.webp') && customTexture.includes('upload');
-    }
-    
-    return false;
-  })();
+  // Determine text color based on writing style
+  const shouldUseDarkText = writingStyle === 'dark';
 
   // Determine text colors based on theme detection
   const textColor = shouldUseDarkText ? "#1f2937" : "white";
   const priceColor = shouldUseDarkText ? "#b45309" : "#facc15"; // Dark orange for light themes, yellow for dark themes
+
+  // Determine tile base color
+  const getTileBaseColor = () => {
+    // If we have a custom color, use it
+    if (customTexture && !texture) {
+      const hexColorRegex = /^#[0-9A-Fa-f]{6}$/;
+      const isColor = hexColorRegex.test(customTexture) || 
+                     (customTexture.includes(',') && 
+                      customTexture.split(',').every(c => hexColorRegex.test(c.trim())));
+      
+      if (isColor) {
+        const tileColor = customTexture.includes(',') 
+          ? customTexture.split(',')[0].trim() 
+          : customTexture;
+        console.log('PropertyTile using base color:', tileColor);
+        return tileColor;
+      }
+    }
+    // Default color
+    return interactive ? "#4A2C5A" : "#2E1A3A";
+  };
+
+  const tileBaseColor = getTileBaseColor();
 
   return (
     <group 
@@ -623,17 +725,17 @@ function PropertyTile({
       onPointerOut={() => setHovered(false)}
       onClick={() => interactive && onClick()}
     >
-      {/* Tile base */}
+      {/* Tile base - use custom color if available */}
       <mesh castShadow receiveShadow>
         <boxGeometry args={[width, tileThickness, depth]} />
         <meshStandardMaterial 
-          color={interactive ? "#4A2C5A" : "#2E1A3A"}
+          color={tileBaseColor}
           roughness={0.7}
           emissive={hovered && interactive ? colorHex : '#000000'}
           emissiveIntensity={hovered && interactive ? 0.15 : 0}
         />
       </mesh>
-      
+
       {/* Texture overlay on top of tile (only if texture exists) */}
       {texture && (() => {
         // Calculate texture rotation based on tile side
@@ -725,10 +827,12 @@ function PropertyTile({
           position={namePosition}
           rotation={textRotation}
           fontSize={0.08}
+          fontWeight={600}
           color={textColor}
           anchorX="center"
           anchorY="middle"
-          maxWidth={width * 0.9}
+          maxWidth={width * 0.7}
+          textAlign="center"
         >
           {property.name}
         </Text>
@@ -740,6 +844,7 @@ function PropertyTile({
           position={pricePosition}
           rotation={textRotation}
           fontSize={0.1}
+          fontWeight={600}
           color={priceColor}
           anchorX="center"
           anchorY="middle"
@@ -915,7 +1020,10 @@ function Scene({
   showcaseMode,
   customBoardBackground,
   custom3DPropertyTiles,
+  boardPresetId,
+  tilePresetId,
   themeCategory,
+  writingStyle,
   profilePicture,
   cornerSquareStyle
 }: SceneProps) {
@@ -1058,7 +1166,10 @@ function Scene({
       />
       
       {/* Board surface with custom background support */}
-      <BoardSurface customBackground={customBoardBackground || null} />
+      <BoardSurface 
+        customBackground={customBoardBackground || null} 
+        boardPresetId={boardPresetId || null}
+      />
       
       
       {/* ===== CORNERS ===== */}
@@ -1122,7 +1233,9 @@ function Scene({
             spectatorMode={spectatorMode || false}
             cameraDistance={cameraDistance}
             customTexture={custom3DPropertyTiles || null}
+            tilePresetId={tilePresetId || null}
             themeCategory={themeCategory || null}
+            writingStyle={writingStyle || 'light'}
           />
         );
       })}
@@ -1152,7 +1265,9 @@ function Scene({
             spectatorMode={spectatorMode || false}
             cameraDistance={cameraDistance}
             customTexture={custom3DPropertyTiles || null}
+            tilePresetId={tilePresetId || null}
             themeCategory={themeCategory || null}
+            writingStyle={writingStyle || 'light'}
           />
         );
       })}
@@ -1182,7 +1297,9 @@ function Scene({
             spectatorMode={spectatorMode || false}
             cameraDistance={cameraDistance}
             customTexture={custom3DPropertyTiles || null}
+            tilePresetId={tilePresetId || null}
             themeCategory={themeCategory || null}
+            writingStyle={writingStyle || 'light'}
           />
         );
       })}
@@ -1212,7 +1329,9 @@ function Scene({
             spectatorMode={spectatorMode || false}
             cameraDistance={cameraDistance}
             customTexture={custom3DPropertyTiles || null}
+            tilePresetId={tilePresetId || null}
             themeCategory={themeCategory || null}
+            writingStyle={writingStyle || 'light'}
           />
         );
       })}
@@ -1261,7 +1380,7 @@ function Scene({
   );
 }
 
-export function Board3DScene({ onSelectProperty, onCoinClick, spectatorMode, spectatorOwnerships, customBoardBackground, custom3DPropertyTiles, customSceneBackground, themeCategory, profilePicture, cornerSquareStyle, isMobile = false }: Board3DSceneProps) {
+export function Board3DScene({ onSelectProperty, onCoinClick, spectatorMode, spectatorOwnerships, customBoardBackground, custom3DPropertyTiles, customSceneBackground, boardPresetId, tilePresetId, themeCategory, writingStyle, profilePicture, cornerSquareStyle, isMobile = false }: Board3DSceneProps) {
   
   
   const containerRef = useRef<HTMLDivElement>(null);
@@ -1583,11 +1702,21 @@ export function Board3DScene({ onSelectProperty, onCoinClick, spectatorMode, spe
         }}
         shadows
         style={{ 
-          ...(customSceneBackground ? {
-            backgroundImage: `url(${customSceneBackground})`,
-            backgroundSize: 'cover',
-            backgroundPosition: 'center',
-          } : {
+          ...(customSceneBackground ? 
+            // Check if it's a gradient format (contains comma)
+            customSceneBackground.includes(',') ? {
+              background: `linear-gradient(180deg, ${customSceneBackground.split(',')[0]} 0%, ${customSceneBackground.split(',')[1]} 50%, ${customSceneBackground.split(',')[0]} 100%)`,
+            } : 
+            // Check if it's a single hex color
+            /^#[0-9A-Fa-f]{6}$/.test(customSceneBackground) ? {
+              background: customSceneBackground,
+            } : {
+              // Otherwise treat as image URL
+              backgroundImage: `url(${customSceneBackground})`,
+              backgroundSize: 'cover',
+              backgroundPosition: 'center',
+            }
+          : {
             background: 'linear-gradient(180deg, #0a0015 0%, #1a0a2e 50%, #0a0015 100%)',
           }),
           width: '100%',
@@ -1647,7 +1776,10 @@ export function Board3DScene({ onSelectProperty, onCoinClick, spectatorMode, spe
             showcaseMode={showcaseMode}
             customBoardBackground={customBoardBackground || null}
             custom3DPropertyTiles={custom3DPropertyTiles || null}
+            boardPresetId={boardPresetId || null}
+            tilePresetId={tilePresetId || null}
             themeCategory={themeCategory || null}
+            writingStyle={writingStyle || 'light'}
             profilePicture={profilePicture || gameState?.profile?.profilePicture}
             cornerSquareStyle={cornerSquareStyle || gameState?.profile?.cornerSquareStyle || 'property'}
           />

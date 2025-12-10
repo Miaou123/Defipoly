@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { getProfile, updateProfile, getProfilesBatch, removeProfilePicture, updateThemePreferences } = require('../controllers/profileController');
+const { getProfile, updateProfile, getProfilesBatch, removeProfilePicture, updateThemePreferences, updateWritingStyle } = require('../controllers/profileController');
 const { validateUsername } = require('../middleware/validation');
 const { uploadProfilePicture, uploadThemeBackground, uploadThemeBatch, deleteUpload } = require('../controllers/uploadController');
 const { verifyJWT, verifyWalletOwnership } = require('../middleware/jwtAuth');
@@ -31,5 +31,8 @@ router.delete('/:wallet/picture', verifyJWT, verifyWalletOwnership('wallet'), re
 
 // POST /api/profile/themes - PROTECTED
 router.post('/themes', verifyJWT, verifyWalletOwnership('wallet'), updateThemePreferences);
+
+// POST /api/profile/writing-style - PROTECTED
+router.post('/writing-style', verifyJWT, verifyWalletOwnership('wallet'), updateWritingStyle);
 
 module.exports = router;

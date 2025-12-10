@@ -16,6 +16,13 @@ interface PropertyThemeModalProps {
   onCustomBackgroundChange: (bg: string | null) => void;
 }
 
+const GRADIENT_PRESETS = [
+  "linear-gradient(135deg, #9333ea, #ec4899)", // Purple Night
+  "linear-gradient(135deg, #000000, #1e1e1e)", // Deep Space
+  "linear-gradient(135deg, #dc2626, #fb923c)", // Sunset
+  "linear-gradient(135deg, #0891b2, #064e3b)", // Ocean
+  "linear-gradient(135deg, #22c55e, #15803d)", // Forest
+];
 
 export function PropertyThemeModal({
   isOpen,
@@ -31,6 +38,84 @@ export function PropertyThemeModal({
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const handleGradientSelect = async (gradientValue: string) => {
+    if (!publicKey) {
+      showError('No Wallet', 'Please connect your wallet first');
+      return;
+    }
+    
+    setUploading(true);
+    try {
+      // Generate gradient image instead of storing gradient string
+      const canvas = document.createElement('canvas');
+      canvas.width = 400;
+      canvas.height = 300;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) {
+        throw new Error('Unable to get canvas context');
+      }
+      
+      // Create gradient from CSS string
+      const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+      
+      // Parse gradient colors from CSS string
+      const colorMatches = gradientValue.match(/#[0-9a-fA-F]{6}/g);
+      if (colorMatches && colorMatches.length >= 2) {
+        gradient.addColorStop(0, colorMatches[0]!);
+        gradient.addColorStop(1, colorMatches[1]!);
+      } else {
+        // Fallback to solid color if parsing fails
+        const singleColor = colorMatches?.[0] || '#9333ea';
+        gradient.addColorStop(0, singleColor);
+        gradient.addColorStop(1, singleColor);
+      }
+      
+      ctx.fillStyle = gradient;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      
+      // Convert to PNG blob
+      const blob = await new Promise<Blob>((resolve) => {
+        canvas.toBlob((blob) => {
+          if (blob) resolve(blob);
+        }, 'image/png', 1.0);
+      });
+      const file = new File([blob], 'gradient-theme.png', { type: 'image/png' });
+      
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('wallet', publicKey.toString());
+      formData.append('uploadType', 'card');
+      formData.append('themeType', 'card');
+      if (customBackground) {
+        formData.append('oldBackgroundUrl', customBackground);
+      }
+
+      const response = await authenticatedFetch(`${process.env['NEXT_PUBLIC_API_BASE_URL'] || 'http://localhost:3101'}/api/profile/upload/theme`, {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        onCustomBackgroundChange(data.backgroundUrl);
+        onPresetChange(null); // Clear preset when using gradient
+        onThemeChange('custom');
+        showSuccess('Applied', 'Gradient theme applied');
+        
+        // Clear profile cache and trigger update
+        clearProfileCache(publicKey.toString());
+        window.dispatchEvent(new Event('profileUpdated'));
+      } else {
+        showError('Upload Failed', 'Failed to apply gradient theme');
+      }
+    } catch (error) {
+      console.error('Error applying gradient theme:', error);
+      showError('Apply Error', 'Error applying gradient theme');
+    } finally {
+      setUploading(false);
+    }
+  };
+
   const handleCustomColorApply = async () => {
     if (!publicKey) {
       showError('No Wallet', 'Please connect your wallet first');
@@ -39,18 +124,22 @@ export function PropertyThemeModal({
     
     setUploading(true);
     try {
-      // Store solid color directly
+      // Store as gradient format for consistency with theme presets
+      const colorGradient = `${customColor},${customColor}`;
+      
       const response = await authenticatedFetch(`${process.env['NEXT_PUBLIC_API_BASE_URL'] || 'http://localhost:3101'}/api/profile`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           wallet: publicKey.toString(),
-          customPropertyCardBackground: customColor
+          customPropertyCardBackground: colorGradient,
+          tilePresetId: null // Clear preset when using custom color
         }),
       });
 
       if (response.ok) {
-        onCustomBackgroundChange(customColor);
+        onCustomBackgroundChange(colorGradient);
+        onPresetChange(null); // Clear preset when using custom color
         onThemeChange('custom');
         showSuccess('Applied', 'Custom color applied');
         
@@ -93,6 +182,7 @@ export function PropertyThemeModal({
       formData.append('wallet', publicKey.toString());
       formData.append('uploadType', 'card');
       formData.append('themeType', 'card');
+      formData.append('tilePresetId', ''); // Clear preset when uploading custom image
       if (customBackground) {
         formData.append('oldBackgroundUrl', customBackground);
       }
@@ -104,11 +194,14 @@ export function PropertyThemeModal({
 
       if (response.ok) {
         const data = await response.json();
-        console.log('🎯 [PropertyThemeModal] Upload response:', data);
-        console.log('🎯 [PropertyThemeModal] Background URL:', data.backgroundUrl);
         onCustomBackgroundChange(data.backgroundUrl);
+        onPresetChange(null); // Clear preset when uploading custom image
         onThemeChange('custom');
         showSuccess('Upload Success', 'Property cards theme updated');
+        
+        // Clear profile cache and trigger update
+        clearProfileCache(publicKey.toString());
+        window.dispatchEvent(new Event('profileUpdated'));
       } else {
         const errorData = await response.text();
         console.error('Upload failed:', errorData);
@@ -124,8 +217,6 @@ export function PropertyThemeModal({
 
   const handleRemoveCustom = async () => {
     if (!publicKey) return;
-    
-    console.log('🗑️ [PropertyThemeModal] Removing custom background:', customBackground);
     
     try {
       // Delete the file from server if it's an upload
@@ -146,7 +237,8 @@ export function PropertyThemeModal({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           wallet: publicKey.toString(),
-          customPropertyCardBackground: null
+          customPropertyCardBackground: null,
+          tilePresetId: null
         }),
       });
       
@@ -160,6 +252,7 @@ export function PropertyThemeModal({
       
       // Update local state
       onCustomBackgroundChange(null);
+      onPresetChange(null);
       onThemeChange('dark');
       showSuccess('Removed', 'Custom background removed');
       
@@ -199,8 +292,25 @@ export function PropertyThemeModal({
           <div className="grid grid-cols-2 gap-5 mb-4">
             {/* Controls */}
             <div className="flex flex-col gap-3">
-              {/* Solid Color */}
+              {/* Gradient Presets */}
               <div>
+                <div className="text-sm font-semibold text-purple-200 mb-3">Gradient Presets</div>
+                <div className="grid grid-cols-3 gap-2 mb-4">
+                  {GRADIENT_PRESETS.map((preset, index) => (
+                    <button
+                      key={index}
+                      onClick={() => handleGradientSelect(preset)}
+                      disabled={uploading}
+                      className="aspect-square rounded border border-purple-500/30 hover:border-purple-500/60 transition-colors"
+                      style={{ background: preset }}
+                      title={`Preset ${index + 1}`}
+                    />
+                  ))}
+                </div>
+              </div>
+
+              {/* Solid Color */}
+              <div className="border-t border-purple-500/20 pt-3">
                 <div className="text-sm font-semibold text-purple-200 mb-3">Solid Color</div>
                 <div className="flex gap-2 items-center">
                   <input
@@ -248,9 +358,10 @@ export function PropertyThemeModal({
               {customBackground && (
                 <button
                   onClick={handleRemoveCustom}
-                  className="w-full px-3 py-2 bg-red-600/80 hover:bg-red-600 rounded transition-colors text-white text-xs"
+                  disabled={uploading}
+                  className="w-full px-3 py-2 bg-red-600/80 hover:bg-red-600 disabled:opacity-50 rounded transition-colors text-white text-xs"
                 >
-                  Remove Background
+                  {uploading ? 'Removing...' : 'Remove Background'}
                 </button>
               )}
             </div>
@@ -260,14 +371,20 @@ export function PropertyThemeModal({
               <div 
                 className="w-full h-40 rounded border-2 border-purple-500/30 max-w-[120px]"
                 style={{
-                  background: customBackground 
-                    ? `url(${customBackground}) center/cover`
-                    : customColor
+                  background: (() => {
+                    if (!customBackground) return 'linear-gradient(135deg, #1a0a2e, #171427)';
+                    // Check if it's a gradient format (contains comma)
+                    if (customBackground.includes(',')) {
+                      const colors = customBackground.split(',');
+                      return `linear-gradient(135deg, ${colors[0]}, ${colors[1]})`;
+                    }
+                    // Otherwise assume it's an image URL
+                    return `url(${customBackground}) center/cover`;
+                  })()
                 }}
               />
             </div>
           </div>
-
 
           {/* Footer */}
           <div className="text-center">

@@ -14,7 +14,10 @@ interface BoardProps {
   customPropertyCardBackground?: string | null;
   custom3DPropertyTiles?: string | null;
   customSceneBackground?: string | null;
+  boardPresetId?: string | null;
+  tilePresetId?: string | null;
   themeCategory?: 'dark' | 'medium' | 'light' | null;
+  writingStyle?: 'light' | 'dark';
   isMobile?: boolean;
 }
 
@@ -26,7 +29,10 @@ export function Board({
   customBoardBackground,
   custom3DPropertyTiles,
   customSceneBackground,
+  boardPresetId,
+  tilePresetId,
   themeCategory,
+  writingStyle,
   profilePicture,
   cornerSquareStyle,
   isMobile = false,
@@ -45,7 +51,10 @@ export function Board({
         customBoardBackground={customBoardBackground}
         custom3DPropertyTiles={custom3DPropertyTiles}
         customSceneBackground={customSceneBackground}
+        boardPresetId={boardPresetId}
+        tilePresetId={tilePresetId}
         themeCategory={themeCategory}
+        writingStyle={writingStyle}
         profilePicture={profilePicture}
         cornerSquareStyle={cornerSquareStyle}
         isMobile={isMobile}

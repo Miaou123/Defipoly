@@ -62,18 +62,18 @@ export function ThemePresetsModal({
         <div 
           className="w-3 h-3 rounded-sm"
           style={{
-            background: `linear-gradient(135deg, ${preset.scene[0]} 0%, ${preset.scene[1]} 100%)`
+            background: `linear-gradient(135deg, ${preset.colors[0]} 0%, ${preset.colors[1]} 100%)`
           }}
         />
         <div 
           className="w-3 h-3 rounded-sm"
           style={{
-            background: `linear-gradient(135deg, ${preset.board[0]} 0%, ${preset.board[1]} 100%)`
+            background: `linear-gradient(135deg, ${preset.colors[0]} 0%, ${preset.colors[1]} 100%)`
           }}
         />
         <div 
           className="w-3 h-3 rounded-sm"
-          style={{ backgroundColor: preset.tile }}
+          style={{ backgroundColor: preset.colors[0] }}
         />
       </div>
       
@@ -164,9 +164,9 @@ export function ThemePresetsModal({
                   {/* Live preview */}
                   <div className="w-full max-w-xs mb-6">
                     <SimpleBoardPreview
-                      customSceneBackground={`${selectedPreset.scene[0]},${selectedPreset.scene[1]}`}
-                      customBoardBackground={`${selectedPreset.board[0]},${selectedPreset.board[1]}`}
-                      customPropertyCardBackground={selectedPreset.tile}
+                      customSceneBackground={`${selectedPreset.colors[0]},${selectedPreset.colors[1]}`}
+                      customBoardBackground={`${selectedPreset.colors[0]},${selectedPreset.colors[1]}`}
+                      customPropertyCardBackground={selectedPreset.colors[0]}
                       className="w-full aspect-square rounded-xl shadow-2xl border border-white/20"
                     />
                   </div>

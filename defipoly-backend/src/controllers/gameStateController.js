@@ -169,6 +169,9 @@ const getGameState = async (req, res) => {
           custom_board_background as customBoardBackground,
           custom_property_card_background as customPropertyCardBackground,
           custom_scene_background as customSceneBackground,
+          board_preset_id as boardPresetId,
+          tile_preset_id as tilePresetId,
+          writing_style as writingStyle,
           updated_at as updatedAt
         FROM profiles
         WHERE wallet_address = ?`,
@@ -184,6 +187,10 @@ const getGameState = async (req, res) => {
             propertyCardTheme: 'dark',
             customBoardBackground: null,
             customPropertyCardBackground: null,
+            customSceneBackground: null,
+            boardPresetId: null,
+            tilePresetId: null,
+            writingStyle: 'light',
             updatedAt: null
           });
         }

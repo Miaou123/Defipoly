@@ -41,8 +41,14 @@ interface ProfileCustomizationProps {
   setCustomPropertyCardBackground: (bg: string | null) => void;
   customSceneBackground: string | null;
   setCustomSceneBackground: (bg: string | null) => void;
+  boardPresetId: string | null;
+  setBoardPresetId: (presetId: string | null) => void;
+  tilePresetId: string | null;
+  setTilePresetId: (presetId: string | null) => void;
   cornerSquareStyle: 'property' | 'profile';
   setCornerSquareStyle: (style: 'property' | 'profile') => void;
+  writingStyle: 'light' | 'dark';
+  setWritingStyle: (style: 'light' | 'dark') => void;
   
   // Wallet address
   walletAddress: string;
@@ -70,8 +76,14 @@ export function ProfileCustomization({
   setCustomPropertyCardBackground,
   customSceneBackground,
   setCustomSceneBackground,
+  boardPresetId,
+  setBoardPresetId,
+  tilePresetId,
+  setTilePresetId,
   cornerSquareStyle,
   setCornerSquareStyle,
+  writingStyle,
+  setWritingStyle,
   walletAddress
 }: ProfileCustomizationProps) {
   const { publicKey } = useWallet();
@@ -82,7 +94,7 @@ export function ProfileCustomization({
   const [showPropertyThemeModal, setShowPropertyThemeModal] = useState(false);
   const [showSceneBackgroundModal, setShowSceneBackgroundModal] = useState(false);
   const [showCornerSquareModal, setShowCornerSquareModal] = useState(false);
-  const [showThemePresetModal, setShowThemePresetModal] = useState(false);
+  const [showThemePresetsModal, setShowThemePresetsModal] = useState(false);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -165,7 +177,23 @@ export function ProfileCustomization({
   // Get preview background for board
   const getBoardPreviewBackground = () => {
     if (customBoardBackground) {
-      return `url(${customBoardBackground})`;
+      // Check if it's a color format (hex colors or gradient)
+      const hexColorRegex = /^#[0-9A-Fa-f]{6}$/;
+      if (hexColorRegex.test(customBoardBackground)) {
+        // Single hex color
+        console.log('🎨 Board preview using single color:', customBoardBackground);
+        return customBoardBackground;
+      } else if (customBoardBackground.includes(',') && 
+                 customBoardBackground.split(',').every(c => hexColorRegex.test(c.trim()))) {
+        // Gradient colors
+        const colors = customBoardBackground.split(',').map(c => c.trim());
+        console.log('🎨 Board preview using gradient:', colors);
+        return `linear-gradient(135deg, ${colors[0]}, ${colors[1]})`;
+      } else {
+        // Assume it's a URL
+        console.log('🎨 Board preview using URL:', customBoardBackground);
+        return `url(${customBoardBackground})`;
+      }
     }
     return THEME_CONSTANTS.DEFAULT_BOARD_BACKGROUND;
   };
@@ -173,7 +201,23 @@ export function ProfileCustomization({
   // Get preview background for property cards
   const getPropertyPreviewBackground = () => {
     if (customPropertyCardBackground) {
-      return `url(${customPropertyCardBackground})`;
+      // Check if it's a color format (hex colors)
+      const hexColorRegex = /^#[0-9A-Fa-f]{6}$/;
+      if (hexColorRegex.test(customPropertyCardBackground)) {
+        // Single hex color
+        console.log('🎨 Property preview using single color:', customPropertyCardBackground);
+        return customPropertyCardBackground;
+      } else if (customPropertyCardBackground.includes(',') && 
+                 customPropertyCardBackground.split(',').every(c => hexColorRegex.test(c.trim()))) {
+        // Gradient colors
+        const colors = customPropertyCardBackground.split(',').map(c => c.trim());
+        console.log('🎨 Property preview using gradient:', colors);
+        return `linear-gradient(135deg, ${colors[0]}, ${colors[1]})`;
+      } else {
+        // Assume it's a URL
+        console.log('🎨 Property preview using URL:', customPropertyCardBackground);
+        return `url(${customPropertyCardBackground})`;
+      }
     }
     return 'linear-gradient(135deg, rgba(74, 44, 90, 0.9), rgba(236, 72, 153, 0.7))';
   };
@@ -181,7 +225,23 @@ export function ProfileCustomization({
   // Get preview background for scene
   const getScenePreviewBackground = () => {
     if (customSceneBackground) {
-      return `url(${customSceneBackground})`;
+      // Check if it's a color format (hex colors or gradient)
+      const hexColorRegex = /^#[0-9A-Fa-f]{6}$/;
+      if (hexColorRegex.test(customSceneBackground)) {
+        // Single hex color
+        console.log('🎨 Scene preview using single color:', customSceneBackground);
+        return customSceneBackground;
+      } else if (customSceneBackground.includes(',') && 
+                 customSceneBackground.split(',').every(c => hexColorRegex.test(c.trim()))) {
+        // Gradient colors
+        const colors = customSceneBackground.split(',').map(c => c.trim());
+        console.log('🎨 Scene preview using gradient:', colors);
+        return `linear-gradient(135deg, ${colors[0]}, ${colors[1]})`;
+      } else {
+        // Assume it's a URL
+        console.log('🎨 Scene preview using URL:', customSceneBackground);
+        return `url(${customSceneBackground})`;
+      }
     }
     return THEME_CONSTANTS.DEFAULT_SCENE_BACKGROUND;
   };
@@ -270,54 +330,84 @@ export function ProfileCustomization({
     }
   };
 
-  // Handle preset application - generates actual image files using batch upload
-  const handlePresetApply = async (preset: ThemePreset) => {
+
+  // Handle writing style change
+  const handleWritingStyleChange = async (newStyle: 'light' | 'dark') => {
     if (!publicKey) return;
     
     try {
-      showSuccess('Applying Theme', `Generating ${preset.name} theme files...`);
-      
-      // Generate images for each component
-      const sceneImage = await generateGradientImage(preset.scene, 400, 400);
-      const boardImage = await generateGradientImage(preset.board, 400, 400);
-      const tileImage = await generateSolidColorImage(preset.tile, 100, 100);
-      
-      // Create single FormData for batch upload
-      const formData = new FormData();
-      formData.append('wallet', publicKey.toString());
-      formData.append('sceneFile', sceneImage);
-      formData.append('boardFile', boardImage);
-      formData.append('tileFile', tileImage);
-      formData.append('themeCategory', preset.category); // Add theme category for text color detection
-      
-      const response = await authenticatedFetch(`${API_BASE_URL}/api/profile/upload/theme-batch`, {
+      const response = await authenticatedFetch(`${API_BASE_URL}/api/profile/writing-style`, {
         method: 'POST',
-        body: formData,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          wallet: publicKey.toString(),
+          writingStyle: newStyle
+        }),
       });
 
       if (response.ok) {
-        const data = await response.json();
-        
-        // Update local state with image URLs from batch response
-        if (data.results.scene && data.results.scene.backgroundUrl) {
-          setCustomSceneBackground(data.results.scene.backgroundUrl);
-        }
-        if (data.results.board && data.results.board.backgroundUrl) {
-          setCustomBoardBackground(data.results.board.backgroundUrl);
-        }
-        if (data.results.tile && data.results.tile.backgroundUrl) {
-          setCustomPropertyCardBackground(data.results.tile.backgroundUrl);
-        }
+        setWritingStyle(newStyle);
+        // Clear profile cache and trigger update
+        clearProfileCache(publicKey.toString());
+        window.dispatchEvent(new Event('profileUpdated'));
+        showSuccess('Updated', `Writing style changed to ${newStyle}`);
+      } else {
+        showError('Failed', 'Failed to update writing style');
+      }
+    } catch (error) {
+      console.error('Error updating writing style:', error);
+      showError('Error', 'Error updating writing style');
+    }
+  };
+
+  const handleThemePresetApply = async (preset: ThemePreset) => {
+    if (!publicKey) {
+      showError('No Wallet', 'Please connect your wallet first');
+      return;
+    }
+
+    console.log('Applying theme preset:', preset);
+    console.log('Setting customBoardBackground to:', `${preset.colors[0]},${preset.colors[1]}`);
+    console.log('Setting customPropertyCardBackground to:', preset.colors[0]);
+    console.log('Setting customSceneBackground to:', `${preset.colors[0]},${preset.colors[1]}`);
+
+    try {
+      const response = await authenticatedFetch(`${API_BASE_URL}/api/profile`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          wallet: publicKey.toString(),
+          boardPresetId: preset.id,
+          tilePresetId: preset.id,
+          customBoardBackground: `${preset.colors[0]},${preset.colors[1]}`, // Set board background as gradient
+          customPropertyCardBackground: preset.colors[0], // Set property background as solid color
+          customSceneBackground: `${preset.colors[0]},${preset.colors[1]}` // Set scene background as gradient
+        }),
+      });
+
+      if (response.ok) {
+        console.log('Theme preset API response OK, updating local state...');
+        setBoardPresetId(preset.id);
+        setTilePresetId(preset.id);
+        setCustomBoardBackground(`${preset.colors[0]},${preset.colors[1]}`);
+        setCustomPropertyCardBackground(preset.colors[0]);
+        setCustomSceneBackground(`${preset.colors[0]},${preset.colors[1]}`);
+        setBoardTheme('preset');
+        setPropertyCardTheme('preset');
+        console.log('Local state updated with:', {
+          customBoardBackground: `${preset.colors[0]},${preset.colors[1]}`,
+          customPropertyCardBackground: preset.colors[0],
+          customSceneBackground: `${preset.colors[0]},${preset.colors[1]}`
+        });
+        showSuccess('Applied', `${preset.name} theme applied to all areas`);
         
         // Clear profile cache and trigger update
         clearProfileCache(publicKey.toString());
         window.dispatchEvent(new Event('profileUpdated'));
-        
-        showSuccess('Theme Applied', `${preset.name} theme applied successfully`);
       } else {
-        const errorData = await response.json();
-        console.error('Batch upload failed:', errorData);
-        showError('Failed', errorData.error || 'Failed to apply theme preset');
+        const errorText = await response.text();
+        console.error('Theme preset API error:', errorText);
+        showError('Failed', `Failed to apply theme preset: ${response.status}`);
       }
     } catch (error) {
       console.error('Error applying theme preset:', error);
@@ -432,19 +522,18 @@ export function ProfileCustomization({
           <PaletteIcon className="w-4 h-4" />
           Theme Presets
         </h3>
-        <div className="relative group max-w-48 mx-auto">
+        <div className="max-w-48 mx-auto relative group cursor-pointer" onClick={() => setShowThemePresetsModal(true)}>
           <SimpleBoardPreview
             customSceneBackground={customSceneBackground}
             customBoardBackground={customBoardBackground}
             customPropertyCardBackground={customPropertyCardBackground}
-            className="w-full aspect-square rounded-lg border-2 border-purple-500/30 hover:border-purple-400/50 transition-all duration-300 hover:scale-[1.02]"
-            onClick={() => setShowThemePresetModal(true)}
+            className="w-full aspect-square rounded-lg border-2 border-purple-500/30 transition-all group-hover:border-purple-400/60"
           />
-          {/* Hover overlay */}
-          <div className="absolute inset-0 bg-black/40 rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-            <div className="text-white text-sm font-semibold text-center">
-              <PaletteIcon className="w-5 h-5 mx-auto mb-1" />
-              Browse Themes
+          {/* Hover Overlay */}
+          <div className="absolute inset-0 bg-black/60 rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+            <div className="text-white text-center">
+              <Camera size={24} className="mx-auto mb-1" />
+              <div className="text-xs font-medium">Choose Theme</div>
             </div>
           </div>
         </div>
@@ -580,6 +669,52 @@ export function ProfileCustomization({
         </div>
       </div>
 
+      {/* Writing Style Section */}
+      <div className="mt-6">
+        <h3 className="text-sm font-bold text-purple-100 mb-3 text-center flex items-center justify-center gap-2">
+          <LightbulbIcon className="w-4 h-4" />
+          Writing Style
+        </h3>
+        <div className="flex gap-2 max-w-48 mx-auto">
+          {/* Light Writing */}
+          <button
+            onClick={() => handleWritingStyleChange('light')}
+            className={`flex-1 p-2 rounded-lg border-2 transition-all duration-200 ${
+              writingStyle === 'light'
+                ? 'border-purple-400 bg-purple-800/30'
+                : 'border-purple-500/25 bg-purple-900/20 hover:border-purple-500/40'
+            }`}
+          >
+            <div className="text-center">
+              <div className="w-8 h-8 mx-auto mb-1 rounded-full bg-gray-800 flex items-center justify-center">
+                <span className="text-white text-xs font-bold">Aa</span>
+              </div>
+              <div className="text-[10px] text-purple-300 font-semibold">Light Text</div>
+            </div>
+          </button>
+          
+          {/* Dark Writing */}
+          <button
+            onClick={() => handleWritingStyleChange('dark')}
+            className={`flex-1 p-2 rounded-lg border-2 transition-all duration-200 ${
+              writingStyle === 'dark'
+                ? 'border-purple-400 bg-purple-800/30'
+                : 'border-purple-500/25 bg-purple-900/20 hover:border-purple-500/40'
+            }`}
+          >
+            <div className="text-center">
+              <div className="w-8 h-8 mx-auto mb-1 rounded-full bg-gray-200 flex items-center justify-center">
+                <span className="text-black text-xs font-bold">Aa</span>
+              </div>
+              <div className="text-[10px] text-purple-300 font-semibold">Dark Text</div>
+            </div>
+          </button>
+        </div>
+        <div className="text-[9px] text-purple-500 text-center mt-2">
+          Controls text color on property tiles
+        </div>
+      </div>
+
       {/* Tips */}
       <div className="mt-4 bg-purple-800/20 rounded-md p-2 border border-purple-500/10">
         <div className="text-[9px] text-purple-400 text-center space-y-1">
@@ -604,6 +739,7 @@ export function ProfileCustomization({
         onThemeChange={setBoardTheme}
         onCustomBackgroundChange={setCustomBoardBackground}
       />
+      {showBoardThemeModal && console.log('🔍 BoardThemeModal props:', { customBoardBackground, boardPresetId, boardTheme })}
 
       <PropertyThemeModal
         isOpen={showPropertyThemeModal}
@@ -613,6 +749,7 @@ export function ProfileCustomization({
         onThemeChange={setPropertyCardTheme}
         onCustomBackgroundChange={setCustomPropertyCardBackground}
       />
+      {showPropertyThemeModal && console.log('🔍 PropertyThemeModal props:', { customPropertyCardBackground, tilePresetId, propertyCardTheme })}
 
       <SceneBackgroundModal
         isOpen={showSceneBackgroundModal}
@@ -629,11 +766,12 @@ export function ProfileCustomization({
       />
 
       <ThemePresetsModal
-        isOpen={showThemePresetModal}
-        onClose={() => setShowThemePresetModal(false)}
-        onApply={handlePresetApply}
+        isOpen={showThemePresetsModal}
+        onClose={() => setShowThemePresetsModal(false)}
+        onApply={handleThemePresetApply}
         onReset={handlePresetReset}
       />
+
     </>
   );
 }
