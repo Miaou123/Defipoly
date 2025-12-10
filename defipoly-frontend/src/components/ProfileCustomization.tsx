@@ -467,7 +467,7 @@ export function ProfileCustomization({
               value={tempUsername}
               onChange={(e) => setTempUsername(e.target.value)}
               placeholder="Enter username"
-              className="w-full px-3 py-1.5 bg-purple-900/50 border border-purple-500/30 rounded-lg text-purple-100 placeholder-purple-500 focus:outline-none focus:border-purple-400 text-sm text-center"
+              className="w-full px-2 py-1 bg-purple-900/50 border border-purple-500/30 rounded-lg text-purple-100 placeholder-purple-500 focus:outline-none focus:border-purple-400 text-xs text-center"
               maxLength={20}
               autoFocus
             />
@@ -517,12 +517,12 @@ export function ProfileCustomization({
       </div>
 
       {/* Theme Presets Section */}
-      <div className="mb-6">
-        <h3 className="text-sm font-bold text-purple-100 mb-3 text-center flex items-center justify-center gap-2">
-          <PaletteIcon className="w-4 h-4" />
+      <div className="mb-3">
+        <h3 className="text-xs font-bold text-purple-100 mb-2 text-center flex items-center justify-center gap-1">
+          <PaletteIcon className="w-3 h-3" />
           Theme Presets
         </h3>
-        <div className="max-w-48 mx-auto relative group cursor-pointer" onClick={() => setShowThemePresetsModal(true)}>
+        <div className="max-w-32 mx-auto relative group cursor-pointer" onClick={() => setShowThemePresetsModal(true)}>
           <SimpleBoardPreview
             customSceneBackground={customSceneBackground}
             customBoardBackground={customBoardBackground}
@@ -532,8 +532,8 @@ export function ProfileCustomization({
           {/* Hover Overlay */}
           <div className="absolute inset-0 bg-black/60 rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
             <div className="text-white text-center">
-              <Camera size={24} className="mx-auto mb-1" />
-              <div className="text-xs font-medium">Choose Theme</div>
+              <Camera size={18} className="mx-auto mb-0.5" />
+              <div className="text-[10px] font-medium">Choose Theme</div>
             </div>
           </div>
         </div>
@@ -541,11 +541,11 @@ export function ProfileCustomization({
 
       {/* Customization Section */}
       <div>
-        <h3 className="text-sm font-bold text-purple-100 mb-3 text-center flex items-center justify-center gap-2">
-          <PaletteIcon className="w-4 h-4" />
-          Customize individual elements
+        <h3 className="text-xs font-bold text-purple-100 mb-2 text-center flex items-center justify-center gap-1">
+          <PaletteIcon className="w-3 h-3" />
+          Customize elements
         </h3>
-        <div className="grid grid-cols-4 gap-3">
+        <div className="grid grid-cols-4 gap-2">
           {/* Board Background */}
           <div className="text-center">
             <div className="text-[10px] text-purple-400 mb-1.5 font-semibold flex items-center gap-1 justify-center">
@@ -670,12 +670,12 @@ export function ProfileCustomization({
       </div>
 
       {/* Writing Style Section */}
-      <div className="mt-6">
-        <h3 className="text-sm font-bold text-purple-100 mb-3 text-center flex items-center justify-center gap-2">
-          <LightbulbIcon className="w-4 h-4" />
+      <div className="mt-3">
+        <h3 className="text-xs font-bold text-purple-100 mb-2 text-center flex items-center justify-center gap-1">
+          <LightbulbIcon className="w-3 h-3" />
           Writing Style
         </h3>
-        <div className="flex gap-2 max-w-48 mx-auto">
+        <div className="flex gap-2 max-w-32 mx-auto">
           {/* Light Writing */}
           <button
             onClick={() => handleWritingStyleChange('light')}
@@ -686,10 +686,10 @@ export function ProfileCustomization({
             }`}
           >
             <div className="text-center">
-              <div className="w-8 h-8 mx-auto mb-1 rounded-full bg-gray-800 flex items-center justify-center">
-                <span className="text-white text-xs font-bold">Aa</span>
+              <div className="w-6 h-6 mx-auto mb-0.5 rounded-full bg-gray-800 flex items-center justify-center">
+                <span className="text-white text-[10px] font-bold">Aa</span>
               </div>
-              <div className="text-[10px] text-purple-300 font-semibold">Light Text</div>
+              <div className="text-[9px] text-purple-300 font-semibold">Light</div>
             </div>
           </button>
           
@@ -703,10 +703,10 @@ export function ProfileCustomization({
             }`}
           >
             <div className="text-center">
-              <div className="w-8 h-8 mx-auto mb-1 rounded-full bg-gray-200 flex items-center justify-center">
-                <span className="text-black text-xs font-bold">Aa</span>
+              <div className="w-6 h-6 mx-auto mb-0.5 rounded-full bg-gray-200 flex items-center justify-center">
+                <span className="text-black text-[10px] font-bold">Aa</span>
               </div>
-              <div className="text-[10px] text-purple-300 font-semibold">Dark Text</div>
+              <div className="text-[9px] text-purple-300 font-semibold">Dark</div>
             </div>
           </button>
         </div>
@@ -716,16 +716,14 @@ export function ProfileCustomization({
       </div>
 
       {/* Tips */}
-      <div className="mt-4 bg-purple-800/20 rounded-md p-2 border border-purple-500/10">
-        <div className="text-[9px] text-purple-400 text-center space-y-1">
-          <div>
-            <span className="font-semibold flex items-center gap-1">
-              <LightbulbIcon className="w-3 h-3" />
-              Upload custom backgrounds (images or GIFs)
-            </span>
+      <div className="mt-2 bg-purple-800/20 rounded-md p-1.5 border border-purple-500/10">
+        <div className="text-[8px] text-purple-400 text-center">
+          <div className="font-semibold flex items-center gap-0.5 justify-center">
+            <LightbulbIcon className="w-2.5 h-2.5" />
+            Upload custom backgrounds
           </div>
           <div className="text-purple-500">
-            Board: max 5MB • Cards: max 3MB • Profile: max 2MB
+            Board: 5MB • Cards: 3MB • Profile: 2MB
           </div>
         </div>
       </div>

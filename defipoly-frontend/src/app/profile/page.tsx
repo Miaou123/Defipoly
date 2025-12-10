@@ -456,10 +456,10 @@ export default function ProfilePage() {
                             'border-amber-400'
                           }`}
                         >
-                          <div className="flex items-start justify-between gap-3">
+                          <div className="flex items-start justify-between gap-2">
                             <div className="flex-1 min-w-0">
-                              <div className="text-purple-100 text-sm leading-relaxed">{activity.message}</div>
-                              <div className="text-xs text-purple-400 mt-1">
+                              <div className="text-purple-100 text-xs leading-relaxed">{activity.message}</div>
+                              <div className="text-[10px] text-purple-400 mt-0.5">
                                 {formatTimestamp(activity.timestamp)}
                               </div>
                             </div>
@@ -467,7 +467,7 @@ export default function ProfilePage() {
                               href={`https://explorer.solana.com/tx/${activity.signature}?cluster=devnet`}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="flex-shrink-0 px-2 py-1 bg-purple-600/50 hover:bg-purple-600 rounded text-xs transition-colors"
+                              className="flex-shrink-0 px-1.5 py-0.5 bg-purple-600/50 hover:bg-purple-600 rounded text-[10px] transition-colors"
                             >
                               TX
                             </a>
