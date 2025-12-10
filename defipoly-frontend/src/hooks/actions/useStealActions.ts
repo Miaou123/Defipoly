@@ -51,11 +51,9 @@ export const useStealActions = (
 
     setLoading(true);
     try {
-      console.log(`🎲 Initiating random steal for property ${propertyId}...`);
 
       // ✅ NEW: Fetch ALL ownerships for this property from backend API
       // This gets us ALL owners with their steal_protection_expiry data!
-      console.log('🔍 Fetching property owners from backend API...');
       
       const API_BASE_URL = process.env['NEXT_PUBLIC_API_BASE_URL'] || 'http://localhost:3005';
       const response = await fetch(`${API_BASE_URL}/api/properties/${propertyId}/owners`);
@@ -70,7 +68,6 @@ export const useStealActions = (
       // Filter for this specific property
       const propertyOwners = allOwnerships.filter((o: any) => o.property_id === propertyId);
       
-      console.log(`📊 Found ${propertyOwners.length} total owners for property ${propertyId}`);
 
       // ✅ NEW: Filter for eligible targets using backend data
       const currentTime = Math.floor(Date.now() / 1000);
@@ -79,7 +76,6 @@ export const useStealActions = (
       for (const ownership of propertyOwners) {
         // Skip self
         if (ownership.wallet_address === wallet.publicKey.toString()) {
-          console.log(`⏭️  Skipping self`);
           continue;
         }
 
@@ -90,26 +86,22 @@ export const useStealActions = (
 
         // Skip if no unshielded slots
         if (unshieldedSlots <= 0) {
-          console.log(`⏭️  Skipping ${ownership.wallet_address.slice(0, 8)}... (no unshielded slots)`);
           continue;
         }
 
         // ✅ CRITICAL FIX: Check steal_protection_expiry from backend!
         if (currentTime < ownership.steal_protection_expiry) {
-          console.log(`⏭️  Skipping ${ownership.wallet_address.slice(0, 8)}... (steal protection active until ${ownership.steal_protection_expiry})`);
           continue;
         }
 
         // This target is eligible!
         eligibleTargets.push(new PublicKey(ownership.wallet_address));
-        console.log(`✅ Eligible: ${ownership.wallet_address.slice(0, 8)}... (${unshieldedSlots} unshielded slots, no protection)`);
       }
 
       if (eligibleTargets.length === 0) {
         throw new Error('No eligible targets found. All owners are either shielded or have steal protection active.');
       }
 
-      console.log(`✅ Found ${eligibleTargets.length} eligible targets`);
 
       // Prepare remaining_accounts (pairs of ownership + player account)
       const remainingAccounts = [];
@@ -129,7 +121,6 @@ export const useStealActions = (
         });
       }
 
-      console.log(`📦 Prepared ${remainingAccounts.length / 2} target pairs for remaining_accounts`);
 
       // Get token accounts
       const playerTokenAccount = await getAssociatedTokenAddress(TOKEN_MINT, wallet.publicKey);
@@ -145,7 +136,6 @@ export const useStealActions = (
       const userRandomness = new Uint8Array(32);
       crypto.getRandomValues(userRandomness);
       
-      console.log('🎲 Executing truly random steal (target selected on-chain)...');
 
       const methods = program?.methods;
       if (!methods) {
@@ -173,7 +163,6 @@ export const useStealActions = (
         .remainingAccounts(remainingAccounts)
         .rpc();
 
-      console.log('✅ Steal transaction sent:', tx);
 
       // Parse events to get result
       let stealResult: StealResult = {
@@ -200,7 +189,6 @@ export const useStealActions = (
                 vrfResult: eventData.vrfResult?.toString() || '0',
                 targetAddress: eventData.target?.toString(),
               };
-              console.log('🎉 STEAL SUCCESS!', stealResult);
             } else if (event.name === 'StealFailedEvent') {
               const eventData = event.data as any;
               stealResult = {
@@ -209,7 +197,6 @@ export const useStealActions = (
                 vrfResult: eventData.vrfResult?.toString() || '0',
                 targetAddress: eventData.target?.toString(),
               };
-              console.log('❌ Steal failed', stealResult);
             }
           }
         }
@@ -241,7 +228,6 @@ export const useStealActions = (
       
       if (errorMessage.includes('already been processed') || 
           errorMessage.includes('AlreadyProcessed')) {
-        console.log('✅ Transaction already processed');
         return {
           tx: 'already-processed',
           success: true,

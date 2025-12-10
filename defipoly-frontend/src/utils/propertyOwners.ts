@@ -21,7 +21,6 @@ export async function fetchPropertyOwners(
   stealProtectionExpiry: number; 
 }[]> {
   try {
-    console.log(`🔍 Fetching all owners for property ${propertyId}...`);
     
     // Direct approach: fetch all ownership accounts using getProgramAccounts
     const filters: GetProgramAccountsFilter[] = [
@@ -122,7 +121,6 @@ export async function fetchPropertyOwners(
       }
     }
 
-    console.log(`✅ Found ${owners.length} owners with unshielded slots for property ${propertyId}`);
     return owners;
   } catch (error) {
     console.error('Error fetching property owners:', error);

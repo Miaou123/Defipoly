@@ -73,7 +73,6 @@ export default function SpectatorPage() {
       const cached = getCachedSpectator(walletAddress);
       
       if (cached) {
-        console.log('✅ [SPECTATOR CACHE HIT] Using pre-cached data from Leaderboard');
         setProfile(cached.profile);
         setStats(cached.stats);
         setSpectatorOwnerships(cached.ownerships || []); 
@@ -82,7 +81,6 @@ export default function SpectatorPage() {
         return;
       }
   
-      console.log('🔍 [SPECTATOR CACHE MISS] Fetching fresh data (direct URL access)');
       
       try {
         // Fetch all endpoints in parallel including leaderboard to get rank
@@ -97,7 +95,6 @@ export default function SpectatorPage() {
         
         if (profileResponse.ok) {
           profileData = await profileResponse.json();
-          console.log('✅ [SPECTATOR] Profile fetched');
         } else {
           console.warn('⚠️ [SPECTATOR] Profile not found, using defaults');
           profileData = {
@@ -116,7 +113,6 @@ export default function SpectatorPage() {
         let statsData = null;
         if (statsResponse.ok) {
           statsData = await statsResponse.json();
-          console.log('✅ [SPECTATOR] Stats fetched');
         }
 
         let ownershipsData: any[] = [];
@@ -133,7 +129,6 @@ export default function SpectatorPage() {
             stealProtectionExpiry: { toNumber: () => o.stealProtectionExpiry },
             bump: o.bump,
           }));
-          console.log('✅ [SPECTATOR] Game state fetched:', ownershipsData.length, 'ownerships');
         }
 
         // Extract leaderboard rank
@@ -148,7 +143,6 @@ export default function SpectatorPage() {
         }
 
         setCachedSpectator(walletAddress, profileData, statsData, ownershipsData, userRank);
-        console.log('💾 [SPECTATOR] Data cached for 30s');
         
         setProfile(profileData);
         setStats(statsData);

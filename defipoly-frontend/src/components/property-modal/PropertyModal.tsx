@@ -99,7 +99,6 @@ export function PropertyModal({ propertyId, onClose }: PropertyModalProps) {
 
         // Only log once per property fetch
         if (lastFetchedPropertyId.current !== propertyId) {
-          console.log('🔍 PropertyModal fetching data for property:', propertyId);
         }
     
         const availableSlots = propertyState?.available_slots ?? property.maxSlots ?? 0;

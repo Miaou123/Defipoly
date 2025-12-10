@@ -66,7 +66,6 @@ export const useShieldActions = (
         })
         .rpc();
 
-      console.log('✅ Shield activated successfully:', tx);
       
       return tx;
     } catch (error: any) {
@@ -75,7 +74,6 @@ export const useShieldActions = (
       const errorMessage = error?.message || error?.toString() || '';
       if (errorMessage.includes('already been processed') || 
           errorMessage.includes('AlreadyProcessed')) {
-        console.log('✅ Transaction already processed (success)');
         return 'already-processed';
       }
       

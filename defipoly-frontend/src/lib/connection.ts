@@ -41,9 +41,7 @@ export function getConnection(config?: ConnectionConfig): Connection {
 
   // Add connection event handlers
   cachedConnection.onLogs('all', (logs) => {
-    if (process.env.NODE_ENV === 'development') {
-      console.log('[Solana Logs]', logs);
-    }
+    // Logs captured but not displayed to reduce console noise
   });
 
   return cachedConnection;
@@ -78,7 +76,6 @@ export async function checkConnection(): Promise<boolean> {
   try {
     const conn = getConnection();
     const version = await conn.getVersion();
-    console.log('Solana connection healthy. Version:', version);
     return true;
   } catch (error) {
     console.error('Solana connection error:', error);

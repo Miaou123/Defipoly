@@ -47,7 +47,6 @@ export async function storeAction(action: GameAction): Promise<boolean> {
     });
 
     if (response.ok) {
-      console.log('✅ Action stored:', action.actionType);
       return true;
     }
     console.error('Failed to store action:', await response.text());
@@ -71,7 +70,6 @@ export async function storeActionsBatch(actions: GameAction[]): Promise<number> 
 
     if (response.ok) {
       const data = await response.json();
-      console.log(`✅ Stored ${data.inserted} actions`);
       return data.inserted;
     }
     return 0;

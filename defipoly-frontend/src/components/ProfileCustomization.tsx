@@ -181,17 +181,14 @@ export function ProfileCustomization({
       const hexColorRegex = /^#[0-9A-Fa-f]{6}$/;
       if (hexColorRegex.test(customBoardBackground)) {
         // Single hex color
-        console.log('🎨 Board preview using single color:', customBoardBackground);
         return customBoardBackground;
       } else if (customBoardBackground.includes(',') && 
                  customBoardBackground.split(',').every(c => hexColorRegex.test(c.trim()))) {
         // Gradient colors
         const colors = customBoardBackground.split(',').map(c => c.trim());
-        console.log('🎨 Board preview using gradient:', colors);
         return `linear-gradient(135deg, ${colors[0]}, ${colors[1]})`;
       } else {
         // Assume it's a URL
-        console.log('🎨 Board preview using URL:', customBoardBackground);
         return `url(${customBoardBackground})`;
       }
     }
@@ -205,17 +202,14 @@ export function ProfileCustomization({
       const hexColorRegex = /^#[0-9A-Fa-f]{6}$/;
       if (hexColorRegex.test(customPropertyCardBackground)) {
         // Single hex color
-        console.log('🎨 Property preview using single color:', customPropertyCardBackground);
         return customPropertyCardBackground;
       } else if (customPropertyCardBackground.includes(',') && 
                  customPropertyCardBackground.split(',').every(c => hexColorRegex.test(c.trim()))) {
         // Gradient colors
         const colors = customPropertyCardBackground.split(',').map(c => c.trim());
-        console.log('🎨 Property preview using gradient:', colors);
         return `linear-gradient(135deg, ${colors[0]}, ${colors[1]})`;
       } else {
         // Assume it's a URL
-        console.log('🎨 Property preview using URL:', customPropertyCardBackground);
         return `url(${customPropertyCardBackground})`;
       }
     }
@@ -229,17 +223,14 @@ export function ProfileCustomization({
       const hexColorRegex = /^#[0-9A-Fa-f]{6}$/;
       if (hexColorRegex.test(customSceneBackground)) {
         // Single hex color
-        console.log('🎨 Scene preview using single color:', customSceneBackground);
         return customSceneBackground;
       } else if (customSceneBackground.includes(',') && 
                  customSceneBackground.split(',').every(c => hexColorRegex.test(c.trim()))) {
         // Gradient colors
         const colors = customSceneBackground.split(',').map(c => c.trim());
-        console.log('🎨 Scene preview using gradient:', colors);
         return `linear-gradient(135deg, ${colors[0]}, ${colors[1]})`;
       } else {
         // Assume it's a URL
-        console.log('🎨 Scene preview using URL:', customSceneBackground);
         return `url(${customSceneBackground})`;
       }
     }
@@ -366,11 +357,6 @@ export function ProfileCustomization({
       return;
     }
 
-    console.log('Applying theme preset:', preset);
-    console.log('Setting customBoardBackground to:', `${preset.colors[0]},${preset.colors[1]}`);
-    console.log('Setting customPropertyCardBackground to:', preset.colors[0]);
-    console.log('Setting customSceneBackground to:', `${preset.colors[0]},${preset.colors[1]}`);
-
     try {
       const response = await authenticatedFetch(`${API_BASE_URL}/api/profile`, {
         method: 'POST',
@@ -386,7 +372,6 @@ export function ProfileCustomization({
       });
 
       if (response.ok) {
-        console.log('Theme preset API response OK, updating local state...');
         setBoardPresetId(preset.id);
         setTilePresetId(preset.id);
         setCustomBoardBackground(`${preset.colors[0]},${preset.colors[1]}`);
@@ -394,11 +379,6 @@ export function ProfileCustomization({
         setCustomSceneBackground(`${preset.colors[0]},${preset.colors[1]}`);
         setBoardTheme('preset');
         setPropertyCardTheme('preset');
-        console.log('Local state updated with:', {
-          customBoardBackground: `${preset.colors[0]},${preset.colors[1]}`,
-          customPropertyCardBackground: preset.colors[0],
-          customSceneBackground: `${preset.colors[0]},${preset.colors[1]}`
-        });
         showSuccess('Applied', `${preset.name} theme applied to all areas`);
         
         // Clear profile cache and trigger update
@@ -737,7 +717,6 @@ export function ProfileCustomization({
         onThemeChange={setBoardTheme}
         onCustomBackgroundChange={setCustomBoardBackground}
       />
-      {showBoardThemeModal && console.log('🔍 BoardThemeModal props:', { customBoardBackground, boardPresetId, boardTheme })}
 
       <PropertyThemeModal
         isOpen={showPropertyThemeModal}
@@ -747,7 +726,6 @@ export function ProfileCustomization({
         onThemeChange={setPropertyCardTheme}
         onCustomBackgroundChange={setCustomPropertyCardBackground}
       />
-      {showPropertyThemeModal && console.log('🔍 PropertyThemeModal props:', { customPropertyCardBackground, tilePresetId, propertyCardTheme })}
 
       <SceneBackgroundModal
         isOpen={showSceneBackgroundModal}

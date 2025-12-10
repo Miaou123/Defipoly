@@ -63,14 +63,8 @@ export function LiveFeed({ scaleFactor = 1 }: LiveFeedProps) {
   // Check if we should show the spectator hint
   useEffect(() => {
     const hasUsedSpectator = localStorage.getItem('hasUsedSpectator');
-    console.log('📡 LiveFeed spectator hint check:', {
-      hasUsedSpectator,
-      totalSlotsOwned,
-      shouldShow: !hasUsedSpectator && totalSlotsOwned > 0
-    });
     // Show hint if: user owns at least 1 property AND hasn't used spectator yet
     if (!hasUsedSpectator && totalSlotsOwned > 0) {
-      console.log('📡 Showing livefeed spectator hint!');
       setShowSpectatorHint(true);
     }
   }, [totalSlotsOwned]);
@@ -204,7 +198,6 @@ export function LiveFeed({ scaleFactor = 1 }: LiveFeedProps) {
 
     const fetchHistoricalActions = async () => {
       try {
-        console.log('🔍 Fetching recent actions from backend...');
         const response = await fetch(`${API_BASE_URL}/api/actions/recent?limit=20`);
         
         if (!response.ok) {
@@ -213,16 +206,13 @@ export function LiveFeed({ scaleFactor = 1 }: LiveFeedProps) {
         }
         
         const data = await response.json();
-        console.log('📦 Received data from backend:', data);
         
         if (data.actions && Array.isArray(data.actions)) {
-          console.log(`📋 Processing ${data.actions.length} actions...`);
           
           const feedItems = data.actions
             .map((action: any) => actionToFeedItem(action))
             .filter((item: FeedItem | null): item is FeedItem => item !== null);
           
-          console.log(`✅ Created ${feedItems.length} feed items`);
           setFeed(feedItems);
           
           // Fetch profiles for all wallet addresses in the feed
@@ -232,12 +222,10 @@ export function LiveFeed({ scaleFactor = 1 }: LiveFeedProps) {
             if (item.targetAddress) allAddresses.add(item.targetAddress);
           });
           
-          console.log(`👥 Fetching profiles for ${allAddresses.size} addresses...`);
           
           if (allAddresses.size > 0) {
             const profilesData = await getProfilesBatch(Array.from(allAddresses));
             setProfiles(profilesData);
-            console.log('✅ Profiles loaded');
           }
         } else {
           console.warn('⚠️ No actions array in response');
@@ -268,7 +256,6 @@ export function LiveFeed({ scaleFactor = 1 }: LiveFeedProps) {
         return;
       }
       
-      console.log('✅ [LiveFeed] Converted to feed item:', feedItem);
       
       setFeed(prev => {
         const isDuplicate = prev.some(existingItem => 
@@ -276,7 +263,6 @@ export function LiveFeed({ scaleFactor = 1 }: LiveFeedProps) {
         );
         
         if (isDuplicate) {
-          console.log('ℹ️ [LiveFeed] Duplicate action, skipping');
           return prev;
         }
         

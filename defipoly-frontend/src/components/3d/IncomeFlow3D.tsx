@@ -398,11 +398,16 @@ interface IncomeFlow3DProps {
   enabled?: boolean;
   particlesVisible?: boolean;
   onParticleArrive?: (incomeValue: number) => void;
+  showcaseMode?: boolean;
+  showcaseOwnerships?: Array<{propertyId: number; slotsOwned: number; owner: string}>;
 }
 
-export function IncomeFlow3D({ enabled = true, particlesVisible = true, onParticleArrive }: IncomeFlow3DProps) {
-  const { ownerships } = useGameState();
+export function IncomeFlow3D({ enabled = true, particlesVisible = true, onParticleArrive, showcaseMode = false, showcaseOwnerships }: IncomeFlow3DProps) {
+  const { ownerships: gameOwnerships } = useGameState();
   const { triggerSpawn } = useParticleSpawn();
+  
+  // Use showcase ownerships or real game ownerships
+  const ownerships = showcaseMode ? (showcaseOwnerships || []) : gameOwnerships;
   
   // Refs for instanced meshes
   const billMeshRef = useRef<THREE.InstancedMesh>(null);
@@ -525,9 +530,7 @@ export function IncomeFlow3D({ enabled = true, particlesVisible = true, onPartic
     particle.rotSpeedX = (Math.random() - 0.5) * 3;
     particle.rotSpeedY = (Math.random() - 0.5) * 4;
     particle.rotSpeedZ = (Math.random() - 0.5) * 2;
-    
-    triggerSpawn(propData.propertyId);
-  }, [triggerSpawn]);
+  }, []);
 
   // Bank counter timer
   const scheduleBankUpdate = useCallback((propData: PropertyIncomeData) => {
@@ -544,7 +547,7 @@ export function IncomeFlow3D({ enabled = true, particlesVisible = true, onPartic
     bankTimersRef.current.set(propData.propertyId, timer);
   }, [enabled, onParticleArrive]);
 
-  // Spawn timer management
+  // Spawn timer management (works for both normal and showcase mode)
   useEffect(() => {
     if (!enabled || !particlesVisible) {
       spawnTimersRef.current.forEach(timer => clearTimeout(timer));
@@ -560,10 +563,21 @@ export function IncomeFlow3D({ enabled = true, particlesVisible = true, onPartic
     const scheduleSpawn = (propData: PropertyIncomeData) => {
       if (!isActive) return;
       
-      const interval = propData.tier.intervalMs * (0.8 + Math.random() * 0.4);
+      // In showcase mode, make spawns more frequent and random
+      const baseInterval = showcaseMode ? 
+        propData.tier.intervalMs * 0.3 : // Much faster in showcase
+        propData.tier.intervalMs;
+      
+      const interval = baseInterval * (0.8 + Math.random() * 0.4);
       const timer = setTimeout(() => {
         if (!isActive) return;
         spawnParticle(propData, interval);
+        
+        // In showcase mode, don't trigger real spawn context
+        if (!showcaseMode) {
+          triggerSpawn(propData.propertyId);
+        }
+        
         scheduleSpawn(propData);
       }, interval);
       
@@ -585,7 +599,7 @@ export function IncomeFlow3D({ enabled = true, particlesVisible = true, onPartic
       spawnTimersRef.current.forEach(timer => clearTimeout(timer));
       spawnTimersRef.current.clear();
     };
-  }, [enabled, ownedProperties, spawnParticle, particlesVisible]);
+  }, [enabled, ownedProperties, spawnParticle, particlesVisible, showcaseMode, triggerSpawn]);
 
   // Bank counter timer management
   useEffect(() => {

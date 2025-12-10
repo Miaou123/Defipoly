@@ -12,6 +12,7 @@ interface BoardOnboarding3DProps {
   hasProperties: boolean;
   showClaimHint?: boolean;
   onClaimHintDismiss?: () => void;
+  onStartShowcase?: () => void;
 }
 
 /**
@@ -22,7 +23,7 @@ interface BoardOnboarding3DProps {
  * - Connected, no properties: Properties will show golden glow (handled in PropertyTile)
  * - Has properties: Nothing rendered (bank claim handled separately)
  */
-export function BoardOnboarding3D({ hasProperties, showClaimHint = false, onClaimHintDismiss }: BoardOnboarding3DProps) {
+export function BoardOnboarding3D({ hasProperties, showClaimHint = false, onClaimHintDismiss, onStartShowcase }: BoardOnboarding3DProps) {
   const { connected } = useWallet();
   const { visible: walletModalVisible, setVisible } = useWalletModal();
   const [showPropertyHint, setShowPropertyHint] = useState(false);
@@ -172,6 +173,44 @@ export function BoardOnboarding3D({ hasProperties, showClaimHint = false, onClai
             </svg>
             Connect Wallet
           </button>
+
+          {/* Showcase button */}
+          {onStartShowcase && (
+            <button
+              onClick={onStartShowcase}
+              style={{
+                background: 'transparent',
+                border: '2px solid rgba(168, 85, 247, 0.5)',
+                borderRadius: '12px',
+                padding: '12px 24px',
+                color: 'rgba(255, 255, 255, 0.8)',
+                fontSize: 'clamp(14px, 1.8vw, 16px)',
+                fontWeight: 600,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                boxShadow: '0 4px 20px rgba(168, 85, 247, 0.2)',
+                transition: 'all 0.3s ease',
+                marginTop: '8px',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = 'scale(1.05)';
+                e.currentTarget.style.borderColor = 'rgba(168, 85, 247, 0.8)';
+                e.currentTarget.style.color = 'white';
+                e.currentTarget.style.boxShadow = '0 6px 25px rgba(168, 85, 247, 0.4)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = 'scale(1)';
+                e.currentTarget.style.borderColor = 'rgba(168, 85, 247, 0.5)';
+                e.currentTarget.style.color = 'rgba(255, 255, 255, 0.8)';
+                e.currentTarget.style.boxShadow = '0 4px 20px rgba(168, 85, 247, 0.2)';
+              }}
+            >
+              <span style={{ fontSize: '18px' }}>🎬</span>
+              Watch Demo
+            </button>
+          )}
         </div>
 
         <style>{`

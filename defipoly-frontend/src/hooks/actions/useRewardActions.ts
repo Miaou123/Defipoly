@@ -56,7 +56,6 @@ export const useRewardActions = (
         // ✅ No remainingAccounts needed!
         .rpc();
   
-      console.log('✅ Rewards claimed successfully:', tx);
   
       // ✅ WEBHOOK HANDLES ALL STORAGE AUTOMATICALLY - No manual storage needed!
   

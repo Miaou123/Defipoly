@@ -69,8 +69,6 @@ export function ClaimTestTokens() {
 
     setClaimLoading(true);
     try {
-      console.log('🔍 Connection endpoint:', connection.rpcEndpoint);
-      console.log('🔍 Wallet:', publicKey.toString());
       
       showInfo('Claiming Tokens', 'Please approve the transaction in your wallet...');
 
@@ -82,22 +80,17 @@ export function ClaimTestTokens() {
         })
       );
 
-      console.log('🔍 Getting blockhash...');
       const { blockhash } = await connection.getLatestBlockhash('confirmed');
-      console.log('🔍 Blockhash:', blockhash);
       
       transaction.recentBlockhash = blockhash;
       transaction.feePayer = publicKey;
 
-      console.log('🔍 Signing transaction...');
       const signedTx = await signTransaction(transaction);
       
-      console.log('🔍 Sending raw transaction via our RPC...');
       const signature = await connection.sendRawTransaction(signedTx.serialize(), {
         skipPreflight: false,
         preflightCommitment: 'confirmed',
       });
-      console.log('🔍 Signature:', signature);
 
       showInfo('Verifying...', 'Waiting for confirmation...');
 
@@ -200,8 +193,8 @@ export function ClaimTestTokens() {
       <div className="bg-purple-900/30 rounded-lg p-3 mb-4 flex items-start gap-2">
         <AlertCircle className="w-4 h-4 text-yellow-400 mt-0.5 flex-shrink-0" />
         <p className="text-xs text-purple-200">
-          Make sure your wallet is set to <strong>Devnet</strong> before claiming. 
-          This transaction verifies you're on the correct network.
+        Your tokens will be sent on <strong>Devnet</strong>. No need to switch networks — 
+        but if you want to view your balance, you can set your wallet to Devnet.
         </p>
       </div>
 
@@ -217,8 +210,7 @@ export function ClaimTestTokens() {
           </>
         ) : (
           <>
-            <Gift className="w-5 h-5" />
-            Claim 0.5 SOL + 10M Tokens
+            Claim Tokens
           </>
         )}
       </button>

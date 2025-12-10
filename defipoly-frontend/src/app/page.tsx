@@ -9,12 +9,14 @@ import { PropertyModal } from '@/components/property-modal';
 import { FloatingCoinsModal } from '@/components/FloatingCoinsModal';
 import { ProfileWallet } from '@/components/ProfileWallet';
 import { MobileLayout } from '@/components/MobileLayout';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { useGameState } from '@/contexts/GameStateContext';
 import { useRewards } from '@/contexts/RewardsContext';
 import { getProfile, clearProfileCache } from '@/utils/profileStorage';
 import { ClaimTestTokens } from '@/components/ClaimTestTokens';
+import { SHOWCASE_SCENES, ShowcaseScene } from '@/utils/showcaseScenes';
+import { ShowcaseMode, ShowcaseOverlay } from '@/components/3d/ShowcaseMode';
 
 export default function Home() {
   const { publicKey } = useWallet();
@@ -36,6 +38,11 @@ export default function Home() {
   const [writingStyle, setWritingStyle] = useState<'light' | 'dark'>('light');
   const [isMobile, setIsMobile] = useState(false);
   const [sideColumnWidth, setSideColumnWidth] = useState(400);
+  
+  // Showcase mode state
+  const [showcaseMode, setShowcaseMode] = useState(false);
+  const [currentShowcaseScene, setCurrentShowcaseScene] = useState<ShowcaseScene | null>(null);
+  const prevWalletConnected = useRef<boolean>(false);
   
   // Calculate scaleFactor based on side column width (from 0.7 to 1.0)
   const scaleFactor = Math.max(0.7, Math.min(1.0, sideColumnWidth / 400));
@@ -111,6 +118,104 @@ export default function Home() {
     return undefined;
   }, [publicKey]);
 
+  // Showcase controller logic with smooth transitions - resets on each start
+  useEffect(() => {
+    console.log('🎭 [SHOWCASE] useEffect triggered, showcaseMode:', showcaseMode);
+    if (!showcaseMode) {
+      console.log('🎭 [SHOWCASE] Not in showcase mode, clearing scene');
+      setCurrentShowcaseScene(null); // Reset scene when stopping
+      return;
+    }
+    
+    // Always start from the beginning (scene 0) when showcase mode starts
+    let sceneIndex = 0;
+    console.log('🎭 [SHOWCASE] Starting fresh - Setting initial scene:', SHOWCASE_SCENES[0]?.name);
+    setCurrentShowcaseScene(SHOWCASE_SCENES[0]);
+    
+    let timeoutId: NodeJS.Timeout | null = null;
+    
+    const scheduleNextScene = () => {
+      const currentScene = SHOWCASE_SCENES[sceneIndex];
+      if (!currentScene) return;
+      
+      timeoutId = setTimeout(() => {
+        const nextIndex = (sceneIndex + 1) % SHOWCASE_SCENES.length;
+        
+        // If we completed all scenes and wallet is not connected, exit demo
+        if (nextIndex === 0 && !publicKey) {
+          console.log('🎭 [SHOWCASE] Completed full cycle for non-connected user, auto-exiting');
+          setShowcaseMode(false);
+          setCurrentShowcaseScene(null);
+          return;
+        }
+        
+        sceneIndex = nextIndex;
+        const nextScene = SHOWCASE_SCENES[sceneIndex];
+        console.log('🎭 [SHOWCASE] Smoothly transitioning to scene:', sceneIndex, nextScene?.name);
+        
+        // Use requestAnimationFrame for smooth transition
+        requestAnimationFrame(() => {
+          setCurrentShowcaseScene(nextScene);
+          scheduleNextScene(); // Schedule the next transition
+        });
+      }, currentScene.duration * 1000);
+    };
+    
+    // Start the scheduling chain
+    scheduleNextScene();
+    
+    console.log('🎭 [SHOWCASE] Smooth transition system set up - starting fresh');
+    
+    return () => {
+      console.log('🎭 [SHOWCASE] Clearing showcase transition system and resetting');
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+      setCurrentShowcaseScene(null); // Ensure clean reset
+    };
+  }, [showcaseMode]);
+
+  // Auto-exit showcase if user connects wallet (only on wallet connection change, not on showcase start)
+  useEffect(() => {
+    const isWalletConnected = !!publicKey;
+    console.log('🎭 [SHOWCASE] Wallet connection check:', { 
+      showcaseMode, 
+      wasConnected: prevWalletConnected.current,
+      isConnected: isWalletConnected,
+      justConnected: !prevWalletConnected.current && isWalletConnected
+    });
+    
+    // Only exit if wallet was just connected (not already connected)
+    if (showcaseMode && !prevWalletConnected.current && isWalletConnected) {
+      console.log('🚪 [SHOWCASE] Auto-exiting because user just connected wallet');
+      setShowcaseMode(false);
+      setCurrentShowcaseScene(null);
+    }
+    
+    // Update previous wallet state
+    prevWalletConnected.current = isWalletConnected;
+  }, [showcaseMode, publicKey]);
+
+  // Showcase handlers
+  const handleStartShowcase = () => {
+    console.log('🎭 [SHOWCASE] Starting showcase mode...', {
+      currentMode: showcaseMode,
+      scenesAvailable: SHOWCASE_SCENES.length
+    });
+    setShowcaseMode(true);
+    console.log('🎭 [SHOWCASE] Showcase mode set to true');
+  };
+
+  const handleExitShowcase = () => {
+    console.log('🚪 [SHOWCASE] Exiting showcase mode...', {
+      currentMode: showcaseMode,
+      currentScene: currentShowcaseScene?.name
+    });
+    setShowcaseMode(false);
+    setCurrentShowcaseScene(null);
+    console.log('🚪 [SHOWCASE] Showcase mode exited');
+  };
+
   // Mobile Layout
   if (isMobile) {
     return (
@@ -184,6 +289,10 @@ export default function Home() {
             tilePresetId={gameState.profile.tilePresetId}
             themeCategory={themeCategory}
             writingStyle={writingStyle}
+            showcaseMode={showcaseMode}
+            showcaseScene={currentShowcaseScene}
+            onExitShowcase={handleExitShowcase}
+            onStartShowcase={handleStartShowcase}
           />
         </div>
         
@@ -218,6 +327,14 @@ export default function Home() {
         onClose={() => setShowCoinModal(false)}
         rewardsAmount={unclaimedRewards || 0}
       />
+
+      {/* Showcase Overlay */}
+      {showcaseMode && currentShowcaseScene && (
+        <ShowcaseOverlay 
+          currentScene={currentShowcaseScene} 
+          onExit={handleExitShowcase} 
+        />
+      )}
     </div>
   );
 }

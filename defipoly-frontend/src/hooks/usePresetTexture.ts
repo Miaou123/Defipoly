@@ -29,7 +29,6 @@ export function usePresetTexture(
         const hexColorRegex = /^#[0-9A-Fa-f]{6}$/;
         if (hexColorRegex.test(colors[0]) && hexColorRegex.test(colors[1])) {
           // Generate canvas texture from gradient colors
-          console.log('usePresetTexture: Generating gradient texture from:', customUrl);
           const canvas = document.createElement('canvas');
           canvas.width = size;
           canvas.height = size;
@@ -58,7 +57,6 @@ export function usePresetTexture(
       const hexColorRegex = /^#[0-9A-Fa-f]{6}$/;
       if (hexColorRegex.test(customUrl)) {
         // Generate canvas texture from single color
-        console.log('usePresetTexture: Generating solid color texture from:', customUrl);
         const canvas = document.createElement('canvas');
         canvas.width = size;
         canvas.height = size;
@@ -78,13 +76,11 @@ export function usePresetTexture(
       }
       
       // If not color format, treat as regular URL (actual image)
-      console.log('usePresetTexture: Using as image URL:', customUrl);
       return customUrl;
     }
     
     // Generate gradient texture from preset
     if (presetId && THEME_PRESETS[presetId]) {
-      console.log('🔥 usePresetTexture: Generating preset texture for:', presetId);
       const preset = THEME_PRESETS[presetId];
       
       // Create canvas
@@ -109,12 +105,10 @@ export function usePresetTexture(
       
       // Return as data URL
       const dataUrl = canvas.toDataURL('image/png');
-      console.log('🔥 usePresetTexture: Returning generated texture for preset:', presetId);
       return dataUrl;
     }
     
     // No preset or custom URL
-    console.log('usePresetTexture: Returning null (no preset or custom URL)');
     return null;
   }, [presetId, customUrl, size]);
 }
@@ -126,9 +120,7 @@ export function useBoardPresetTexture(
   presetId: string | null,
   customUrl: string | null
 ): string | null {
-  console.log('useBoardPresetTexture called with:', { presetId, customUrl });
   const result = usePresetTexture(presetId, customUrl, 512);
-  console.log('useBoardPresetTexture returning:', result);
   return result;
 }
 

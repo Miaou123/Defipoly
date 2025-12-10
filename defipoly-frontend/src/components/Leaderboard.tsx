@@ -67,14 +67,8 @@ export function Leaderboard({ scaleFactor = 1 }: LeaderboardProps) {
   // Check if we should show the spectator hint
   useEffect(() => {
     const hasUsedSpectator = localStorage.getItem('hasUsedSpectator');
-    console.log('🏆 Leaderboard spectator hint check:', {
-      hasUsedSpectator,
-      totalSlotsOwned,
-      shouldShow: !hasUsedSpectator && totalSlotsOwned > 0
-    });
     // Show hint if: user owns at least 1 property AND hasn't used spectator yet
     if (!hasUsedSpectator && totalSlotsOwned > 0) {
-      console.log('🏆 Showing leaderboard spectator hint!');
       setShowSpectatorHint(true);
     }
   }, [totalSlotsOwned]);
@@ -112,7 +106,6 @@ export function Leaderboard({ scaleFactor = 1 }: LeaderboardProps) {
     const fetchLeaderboard = async () => {
       setLoading(true);
       try {
-        console.log('🏆 Fetching leaderboard from backend...');
         
         const response = await fetch(`${API_BASE_URL}/api/leaderboard?limit=50`);
         
@@ -122,7 +115,6 @@ export function Leaderboard({ scaleFactor = 1 }: LeaderboardProps) {
         
         const data: LeaderboardData = await response.json();
         
-        console.log(`🏆 Found ${data.leaderboard.length} players`);
         setLeaderboardData(data);
         
         // Check if backend has a batch profiles endpoint, otherwise use localStorage
@@ -202,7 +194,6 @@ export function Leaderboard({ scaleFactor = 1 }: LeaderboardProps) {
     if (!socket || !connected) return;
 
     const handleLeaderboardChanged = (data: any) => {
-      console.log('🏆 Leaderboard updated via WebSocket');
       if (data.topPlayers) {
         setLeaderboardData(prev => prev ? {
           ...prev,
@@ -271,7 +262,6 @@ export function Leaderboard({ scaleFactor = 1 }: LeaderboardProps) {
     
     // Cache with rank information from leaderboard
     setCachedSpectator(leader.walletAddress, spectatorProfileData, null, [], leader.rank);
-    console.log('💾 [LEADERBOARD] Pre-cached spectator data with rank:', leader.rank);
     
     window.location.href = `/spectator/${leader.walletAddress}`;
   };

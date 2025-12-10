@@ -21,6 +21,8 @@ interface InteractiveBank3DProps {
   onParticleArrive?: (incomeValue?: number) => void;
   showClaimHint?: boolean;
   onClaimHintDismiss?: () => void;
+  displayOnly?: boolean;
+  displayValue?: number;
 }
 
 function ClaimHintGlow({ visible }: { visible: boolean }) {
@@ -140,6 +142,8 @@ export const InteractiveBank3D = forwardRef<{ handleParticleArrive: (incomeValue
   onParticleArrive,
   showClaimHint = false,
   onClaimHintDismiss,
+  displayOnly = false,
+  displayValue = 0,
 }, ref) {
   const { connected, publicKey } = useWallet();
   const { connection } = useConnection();
@@ -160,15 +164,22 @@ export const InteractiveBank3D = forwardRef<{ handleParticleArrive: (incomeValue
   const bankGroupRef = useRef<any>(null);
 
 
-  // Initialize displayedRewards from blockchain value
+  // Initialize displayedRewards from blockchain value or display value
   useEffect(() => {
+    if (displayOnly) {
+      setDisplayedRewards(displayValue);
+      setAnimatedRewards(displayValue);
+      initializedRef.current = true;
+      return;
+    }
+    
     // Only initialize if we haven't yet AND we're not loading AND we have rewards AND we're not claiming AND didn't just claim
     if (!initializedRef.current && unclaimedRewards > 0 && !claimingRef.current && !justClaimedRef.current && !rewardsLoading) {
       setDisplayedRewards(unclaimedRewards);
       setAnimatedRewards(unclaimedRewards);
       initializedRef.current = true;
     }
-  }, [unclaimedRewards, rewardsLoading]);
+  }, [displayOnly, displayValue, unclaimedRewards, rewardsLoading]);
 
   // Sync with blockchain when rewards go to 0 (claimed on-chain)
   useEffect(() => {
@@ -199,6 +210,10 @@ export const InteractiveBank3D = forwardRef<{ handleParticleArrive: (incomeValue
 
   // Handle bank click to claim rewards
   const handleBankClick = useCallback(async () => {
+    if (displayOnly) {
+      return; // Disable clicks in display-only mode
+    }
+    
     const now = Date.now();
     
     // Dismiss claim hint on bank click
@@ -218,13 +233,11 @@ export const InteractiveBank3D = forwardRef<{ handleParticleArrive: (incomeValue
     
     if (claiming || claimingRef.current || rewardsLoading || animatedRewards === 0 || (now - lastClickTimeRef.current < 1000)) {
       if (now - lastClickTimeRef.current < 1000) {
-        console.log('🏦 Bank click ignored - too soon after last click');
       }
       return;
     }
     
     lastClickTimeRef.current = now;
-    console.log('🏦 3D Bank clicked - starting claim process');
     claimingRef.current = true;
     setClaiming(true);
     
@@ -289,7 +302,6 @@ export const InteractiveBank3D = forwardRef<{ handleParticleArrive: (incomeValue
       const errorMessage = String(error instanceof Error ? error.message : error);
       if (errorMessage.includes('User rejected') || errorMessage.includes('rejected the request')) {
         // User canceled the transaction - don't show an error
-        console.log('🚫 User canceled the claim transaction');
       } else if (errorMessage.includes('already been processed') || 
           errorMessage.includes('AlreadyProcessed')) {
         showSuccess('Rewards Claimed!', 'Rewards have been claimed!');
@@ -304,22 +316,25 @@ export const InteractiveBank3D = forwardRef<{ handleParticleArrive: (incomeValue
         showError('Claim Failed', 'Failed to claim rewards. Please try again.');
       }
     } finally {
-      console.log('🏦 3D Bank claim process finished - resetting state');
       setClaiming(false);
       claimingRef.current = false;
     }
-  }, [connected, publicKey, claiming, claimingRef, rewardsLoading, animatedRewards, claimRewards, connection, showSuccess, showError, gameState, showClaimHint, onClaimHintDismiss]);
+  }, [displayOnly, connected, publicKey, claiming, claimingRef, rewardsLoading, animatedRewards, claimRewards, connection, showSuccess, showError, gameState, showClaimHint, onClaimHintDismiss]);
 
   // Handle hover to scale bank
   const handlePointerOver = useCallback(() => {
-    document.body.style.cursor = 'pointer';
-    setIsHovered(true);
-  }, []);
+    if (!displayOnly) {
+      document.body.style.cursor = 'pointer';
+      setIsHovered(true);
+    }
+  }, [displayOnly]);
 
   const handlePointerOut = useCallback(() => {
-    document.body.style.cursor = 'auto';
-    setIsHovered(false);
-  }, []);
+    if (!displayOnly) {
+      document.body.style.cursor = 'auto';
+      setIsHovered(false);
+    }
+  }, [displayOnly]);
 
   // Animate bank scaling
   useFrame((state, delta) => {

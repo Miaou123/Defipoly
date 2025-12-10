@@ -21,8 +21,11 @@ import { InteractiveBank3D } from './InteractiveBank3D';
 import { IncomeFlow3D } from './IncomeFlow3D';
 import { FloatingCoins3D } from './FloatingCoins3D';
 import { BoardOnboarding3D } from './BoardOnboarding3D';
-import { createSceneGradientStyle } from '@/utils/themePresets';
+import { createSceneGradientStyle, getPresetById } from '@/utils/themePresets';
+import { usePreloadedShowcaseTextures } from '@/hooks/usePreloadedShowcaseTextures';
 import { useBoardPresetTexture, useTilePresetTexture, useScenePresetTexture } from '@/hooks/usePresetTexture';
+import { ShowcaseScene } from '@/utils/showcaseScenes';
+import { ShowcaseCameraController } from './ShowcaseMode';
 
 
 interface Board3DSceneProps {
@@ -40,6 +43,10 @@ interface Board3DSceneProps {
   profilePicture?: string | null | undefined;
   cornerSquareStyle?: 'property' | 'profile' | undefined;
   isMobile?: boolean;
+  showcaseMode?: boolean;
+  showcaseScene?: ShowcaseScene | null;
+  onExitShowcase?: () => void;
+  onStartShowcase?: () => void;
 }
 
 interface SceneProps extends Board3DSceneProps {
@@ -50,6 +57,7 @@ interface SceneProps extends Board3DSceneProps {
   connected: boolean;
   hasProperties: boolean;
   showcaseMode: boolean;
+  showcaseScene?: ShowcaseScene | null;
   customBoardBackground?: string | null;
   custom3DPropertyTiles?: string | null;
   boardPresetId?: string | null;
@@ -58,6 +66,7 @@ interface SceneProps extends Board3DSceneProps {
   writingStyle?: 'light' | 'dark';
   profilePicture?: string | null;
   cornerSquareStyle?: 'property' | 'profile';
+  rotationMode: boolean;
 }
 
 // EXACT DIMENSIONS TO MATCH PROTOTYPE
@@ -73,15 +82,14 @@ const colorStripWidth = 0.15;
 
 // Board surface with custom texture
 function BoardSurfaceWithTexture({ customBackground }: { customBackground: string }) {
-  // Add logging to identify problematic texture URLs
-  console.log('🚨 BoardSurfaceWithTexture called with:', customBackground);
+  // Generate texture from custom background
   
   // Check if customBackground is a single hex color and handle it
   const finalTextureUrl = useMemo(() => {
     // Check if it's a single hex color
     const hexColorRegex = /^#[0-9A-Fa-f]{6}$/;
     if (hexColorRegex.test(customBackground)) {
-      console.warn('BoardSurfaceWithTexture: Converting single hex color to texture:', customBackground);
+      // Convert single hex color to texture
       // Generate canvas texture from single color
       const canvas = document.createElement('canvas');
       canvas.width = 512;
@@ -133,7 +141,6 @@ function BoardSurfaceWithTexture({ customBackground }: { customBackground: strin
     }
     
     // If not a color format, treat as regular URL
-    console.log('BoardSurfaceWithTexture: Using as regular URL:', customBackground);
     return customBackground;
   }, [customBackground]);
 
@@ -197,20 +204,18 @@ function BoardSurface({
   boardPresetId?: string | null;
 }) {
   const boardTexture = useBoardPresetTexture(boardPresetId ?? null, customBackground ?? null);
-  console.log('BoardSurface - boardTexture:', boardTexture, 'customBackground:', customBackground, 'boardPresetId:', boardPresetId);
+  // Board surface texture logic
   
   // If we have a texture (including generated textures from colors), use texture approach
   if (boardTexture) {
-    console.log('🚨 BoardSurface: Using TEXTURE approach with:', boardTexture);
+    // Use texture approach
     return (
       <Suspense fallback={<DefaultBoardSurface />}>
         <BoardSurfaceWithTexture customBackground={boardTexture} />
       </Suspense>
     );
   }
-  
-  // Default board
-  console.log('⚪ BoardSurface: Using DEFAULT board');
+
   return <DefaultBoardSurface />;
 }
 
@@ -356,13 +361,16 @@ const CAMERA_POSITIONS = {
  * CameraController - Animates camera based on connection state
  * Stops animating once transition is complete to allow manual control
  * Skips animation if already connected on page load
+ * Handles zoom-out when showcase mode ends for non-connected wallets
  */
 function CameraController({ 
   connected, 
-  controlsRef 
+  controlsRef,
+  showcaseMode 
 }: { 
   connected: boolean; 
   controlsRef: React.RefObject<any>;
+  showcaseMode?: boolean;
 }) {
   const targetPosition = useRef(CAMERA_POSITIONS.ZOOMED_OUT.position.clone());
   const targetLookAt = useRef(CAMERA_POSITIONS.ZOOMED_OUT.lookAt.clone());
@@ -371,12 +379,21 @@ function CameraController({
   const isInitialMount = useRef(true);
   const needsImmediateSnap = useRef(false);
   const prevConnected = useRef<boolean | null>(null);
+  const prevShowcaseMode = useRef<boolean>(false);
 
   // Handle initial mount and connection changes
   useEffect(() => {
     const config = connected ? CAMERA_POSITIONS.ZOOMED_IN : CAMERA_POSITIONS.ZOOMED_OUT;
     targetPosition.current.copy(config.position);
     targetLookAt.current.copy(config.lookAt);
+    
+    // Handle showcase mode ending for non-connected wallets
+    if (prevShowcaseMode.current === true && showcaseMode === false && !connected) {
+      // Showcase just ended and wallet is not connected - animate zoom out
+      animationComplete.current = false;
+      prevShowcaseMode.current = false;
+      return;
+    }
     
     // On initial mount, if already connected, skip animation and snap immediately
     if (isInitialMount.current) {
@@ -388,6 +405,7 @@ function CameraController({
         currentLookAt.current.copy(config.lookAt);
       }
       prevConnected.current = connected;
+      prevShowcaseMode.current = showcaseMode || false;
       return;
     }
     
@@ -396,7 +414,10 @@ function CameraController({
       animationComplete.current = false;
       prevConnected.current = connected;
     }
-  }, [connected]);
+    
+    // Update showcase mode tracking
+    prevShowcaseMode.current = showcaseMode || false;
+  }, [connected, showcaseMode]);
 
   useFrame(({ camera }) => {
     // Handle immediate snap for already-connected users
@@ -708,7 +729,6 @@ function PropertyTile({
         const tileColor = customTexture.includes(',') 
           ? customTexture.split(',')[0].trim() 
           : customTexture;
-        console.log('PropertyTile using base color:', tileColor);
         return tileColor;
       }
     }
@@ -1018,6 +1038,9 @@ function Scene({
   connected,
   hasProperties,
   showcaseMode,
+  showcaseScene,
+  onExitShowcase,
+  onStartShowcase,
   customBoardBackground,
   custom3DPropertyTiles,
   boardPresetId,
@@ -1025,14 +1048,53 @@ function Scene({
   themeCategory,
   writingStyle,
   profilePicture,
-  cornerSquareStyle
+  cornerSquareStyle,
+  rotationMode
 }: SceneProps) {
+  
+  // Debug log showcase props (only when in showcase mode)
+  if (showcaseMode) {
+    console.log('🎭 [SCENE] Scene component props:', {
+      showcaseMode,
+      showcaseScene: showcaseScene ? { id: showcaseScene.id, name: showcaseScene.name } : null,
+      onExitShowcase: !!onExitShowcase,
+      onStartShowcase: !!onStartShowcase
+    });
+  }
   
   const gameState = useGameState();
   const { unclaimedRewards } = useRewards();
-  const ownerships = gameState?.ownerships || [];
+  const ownerships = showcaseMode && showcaseScene ? showcaseScene.mockOwnerships : (gameState?.ownerships || []);
   const bankRef = useRef<any>(null);
   const [cameraDistance, setCameraDistance] = useState(25);
+  
+  // Preload all showcase textures for instant swapping
+  const preloadedTextures = usePreloadedShowcaseTextures();
+  
+  // Double-buffered texture system to prevent flashing
+  const [currentTextures, setCurrentTextures] = useState<{board: string | null; property: string | null}>({
+    board: null,
+    property: null
+  });
+  
+  // Update textures when showcase scene changes
+  useEffect(() => {
+    if (showcaseMode && showcaseScene && preloadedTextures[showcaseScene.themePresetId]) {
+      const textures = preloadedTextures[showcaseScene.themePresetId];
+      // Use requestAnimationFrame to ensure smooth transition
+      requestAnimationFrame(() => {
+        setCurrentTextures({
+          board: textures.board,
+          property: textures.property
+        });
+      });
+    }
+  }, [showcaseMode, showcaseScene, preloadedTextures]);
+  
+  // Use buffered textures or fallback to direct access
+  const showcaseBoardTexture = showcaseMode ? currentTextures.board || preloadedTextures[showcaseScene?.themePresetId || '']?.board : null;
+  const showcasePropertyTexture = showcaseMode ? currentTextures.property || preloadedTextures[showcaseScene?.themePresetId || '']?.property : null;
+  // Keep original scene background - don't change it during showcase
 
   // Get cooldown functions from useGameState
   const { 
@@ -1043,11 +1105,14 @@ function Scene({
 
   // Create helper to get ownership for a property
   const getPropertyOwnership = useCallback((propertyId: number) => {
+    if (showcaseMode && showcaseScene) {
+      return showcaseScene.mockOwnerships.find((o: any) => o.propertyId === propertyId);
+    }
     if (spectatorMode && spectatorOwnerships) {
       return spectatorOwnerships.find((o: any) => o.propertyId === propertyId);
     }
     return getOwnership ? getOwnership(propertyId) : ownerships.find(o => o.propertyId === propertyId);
-  }, [spectatorMode, spectatorOwnerships, getOwnership, ownerships]);
+  }, [showcaseMode, showcaseScene, spectatorMode, spectatorOwnerships, getOwnership, ownerships]);
   
   // Check if we should show property hint (connected but no properties and hasn't opened modal yet)
   const [hasOpenedModal, setHasOpenedModal] = useState(false);
@@ -1143,8 +1208,20 @@ function Scene({
   return (
     <>
       {/* Camera Controller */}
-      <CameraController connected={connected} controlsRef={cameraControlsRef} />
-      <ShowcaseController enabled={showcaseMode} controlsRef={cameraControlsRef} />
+      {showcaseMode && showcaseScene ? (
+        <ShowcaseCameraController 
+          animation={showcaseScene.cameraAnimation} 
+          controlsRef={cameraControlsRef}
+          connected={connected}
+        />
+      ) : (
+        <CameraController connected={connected} controlsRef={cameraControlsRef} showcaseMode={showcaseMode} />
+      )}
+      
+      {/* Rotation Controller - only when rotation mode is enabled and not in showcase */}
+      {!showcaseMode && (
+        <ShowcaseController enabled={rotationMode} controlsRef={cameraControlsRef} />
+      )}
       
       {/* Lighting */}
       <ambientLight intensity={0.8} />
@@ -1167,8 +1244,8 @@ function Scene({
       
       {/* Board surface with custom background support */}
       <BoardSurface 
-        customBackground={customBoardBackground || null} 
-        boardPresetId={boardPresetId || null}
+        customBackground={showcaseMode ? showcaseBoardTexture : (customBoardBackground || null)} 
+        boardPresetId={showcaseMode ? null : (boardPresetId || null)}
       />
       
       
@@ -1178,7 +1255,7 @@ function Scene({
         cornerType="go" 
         size={cornerSize}
         cornerSquareStyle={cornerSquareStyle || 'property'}
-        customPropertyCardBackground={custom3DPropertyTiles || null}
+        customPropertyCardBackground={showcaseMode ? showcasePropertyTexture : (custom3DPropertyTiles || null)}
         profilePicture={profilePicture || null}
       />
       <CornerTile3D 
@@ -1186,7 +1263,7 @@ function Scene({
         cornerType="jail" 
         size={cornerSize}
         cornerSquareStyle={cornerSquareStyle || 'property'}
-        customPropertyCardBackground={custom3DPropertyTiles || null}
+        customPropertyCardBackground={showcaseMode ? showcasePropertyTexture : (custom3DPropertyTiles || null)}
         profilePicture={profilePicture || null}
       />
       <CornerTile3D 
@@ -1194,7 +1271,7 @@ function Scene({
         cornerType="parking" 
         size={cornerSize}
         cornerSquareStyle={cornerSquareStyle || 'property'}
-        customPropertyCardBackground={custom3DPropertyTiles || null}
+        customPropertyCardBackground={showcaseMode ? showcasePropertyTexture : (custom3DPropertyTiles || null)}
         profilePicture={profilePicture || null}
       />
       <CornerTile3D 
@@ -1202,7 +1279,7 @@ function Scene({
         cornerType="gotojail" 
         size={cornerSize}
         cornerSquareStyle={cornerSquareStyle || 'property'}
-        customPropertyCardBackground={custom3DPropertyTiles || null}
+        customPropertyCardBackground={showcaseMode ? showcasePropertyTexture : (custom3DPropertyTiles || null)}
         profilePicture={profilePicture || null}
       />
       
@@ -1224,16 +1301,16 @@ function Scene({
             buildingLevel={getBuildingLevel(id)}
             hasCompleteSet={isPropertyInCompleteSet(id)}
             particlesVisible={particlesVisible}
-            onClick={() => onSelectProperty(id)}
-            interactive={connected}
+            onClick={() => !showcaseMode && onSelectProperty(id)}
+            interactive={connected && !showcaseMode}
             showPropertyHint={showPropertyHint}
             ownership={getPropertyOwnership(id)}
             isPropertyOnCooldown={spectatorMode ? () => false : isPropertyOnCooldown || (() => false)}
             isStealOnCooldown={spectatorMode ? () => false : isStealOnCooldown || (() => false)}
             spectatorMode={spectatorMode || false}
             cameraDistance={cameraDistance}
-            customTexture={custom3DPropertyTiles || null}
-            tilePresetId={tilePresetId || null}
+            customTexture={showcaseMode ? showcasePropertyTexture : (custom3DPropertyTiles || null)}
+            tilePresetId={showcaseMode ? null : (tilePresetId || null)}
             themeCategory={themeCategory || null}
             writingStyle={writingStyle || 'light'}
           />
@@ -1256,16 +1333,16 @@ function Scene({
             buildingLevel={getBuildingLevel(id)}
             hasCompleteSet={isPropertyInCompleteSet(id)}
             particlesVisible={particlesVisible}
-            onClick={() => onSelectProperty(id)}
-            interactive={connected}
+            onClick={() => !showcaseMode && onSelectProperty(id)}
+            interactive={connected && !showcaseMode}
             showPropertyHint={showPropertyHint}
             ownership={getPropertyOwnership(id)}
             isPropertyOnCooldown={spectatorMode ? () => false : isPropertyOnCooldown || (() => false)}
             isStealOnCooldown={spectatorMode ? () => false : isStealOnCooldown || (() => false)}
             spectatorMode={spectatorMode || false}
             cameraDistance={cameraDistance}
-            customTexture={custom3DPropertyTiles || null}
-            tilePresetId={tilePresetId || null}
+            customTexture={showcaseMode ? showcasePropertyTexture : (custom3DPropertyTiles || null)}
+            tilePresetId={showcaseMode ? null : (tilePresetId || null)}
             themeCategory={themeCategory || null}
             writingStyle={writingStyle || 'light'}
           />
@@ -1288,16 +1365,16 @@ function Scene({
             buildingLevel={getBuildingLevel(id)}
             hasCompleteSet={isPropertyInCompleteSet(id)}
             particlesVisible={particlesVisible}
-            onClick={() => onSelectProperty(id)}
-            interactive={connected}
+            onClick={() => !showcaseMode && onSelectProperty(id)}
+            interactive={connected && !showcaseMode}
             showPropertyHint={showPropertyHint}
             ownership={getPropertyOwnership(id)}
             isPropertyOnCooldown={spectatorMode ? () => false : isPropertyOnCooldown || (() => false)}
             isStealOnCooldown={spectatorMode ? () => false : isStealOnCooldown || (() => false)}
             spectatorMode={spectatorMode || false}
             cameraDistance={cameraDistance}
-            customTexture={custom3DPropertyTiles || null}
-            tilePresetId={tilePresetId || null}
+            customTexture={showcaseMode ? showcasePropertyTexture : (custom3DPropertyTiles || null)}
+            tilePresetId={showcaseMode ? null : (tilePresetId || null)}
             themeCategory={themeCategory || null}
             writingStyle={writingStyle || 'light'}
           />
@@ -1320,16 +1397,16 @@ function Scene({
             buildingLevel={getBuildingLevel(id)}
             hasCompleteSet={isPropertyInCompleteSet(id)}
             particlesVisible={particlesVisible}
-            onClick={() => onSelectProperty(id)}
-            interactive={connected}
+            onClick={() => !showcaseMode && onSelectProperty(id)}
+            interactive={connected && !showcaseMode}
             showPropertyHint={showPropertyHint}
             ownership={getPropertyOwnership(id)}
             isPropertyOnCooldown={spectatorMode ? () => false : isPropertyOnCooldown || (() => false)}
             isStealOnCooldown={spectatorMode ? () => false : isStealOnCooldown || (() => false)}
             spectatorMode={spectatorMode || false}
             cameraDistance={cameraDistance}
-            customTexture={custom3DPropertyTiles || null}
-            tilePresetId={tilePresetId || null}
+            customTexture={showcaseMode ? showcasePropertyTexture : (custom3DPropertyTiles || null)}
+            tilePresetId={showcaseMode ? null : (tilePresetId || null)}
             themeCategory={themeCategory || null}
             writingStyle={writingStyle || 'light'}
           />
@@ -1337,19 +1414,21 @@ function Scene({
       })}
       </Suspense>
       
-      {/* ===== BANK (only when connected and not in spectator mode) ===== */}
-      {connected && !spectatorMode && (
+      {/* ===== BANK (show in showcase mode with fake values, or when connected) ===== */}
+      {(connected && !spectatorMode) || showcaseMode ? (
         <InteractiveBank3D 
           ref={bankRef}
           position={[0, 0.8, 0]} 
           scale={0.074}
-          showClaimHint={showClaimHint}
+          showClaimHint={showClaimHint && !showcaseMode}
           onClaimHintDismiss={handleClaimHintDismiss}
+          displayOnly={showcaseMode}
+          displayValue={showcaseMode && showcaseScene ? showcaseScene.bankDisplayValue : undefined}
         />
-      )}
+      ) : null}
       
-      {/* ===== FLOATING COINS (separate from bank to avoid hover interference) ===== */}
-      {connected && !spectatorMode && (
+      {/* ===== FLOATING COINS (separate from bank to avoid hover interference, hide in showcase mode) ===== */}
+      {connected && !spectatorMode && !showcaseMode && (
         <FloatingCoins3D 
           rewardsAmount={unclaimedRewards || 0}
           position={[0, 1.95, 0]}
@@ -1357,15 +1436,18 @@ function Scene({
         />
       )}
       
-      {/* ===== ONBOARDING OVERLAY ===== */}
-      <BoardOnboarding3D 
-        hasProperties={hasProperties} 
-        showClaimHint={showClaimHint}
-        onClaimHintDismiss={handleClaimHintDismiss}
-      />
+      {/* ===== ONBOARDING OVERLAY (hide in showcase mode) ===== */}
+      {!showcaseMode && (
+        <BoardOnboarding3D 
+          hasProperties={hasProperties} 
+          showClaimHint={showClaimHint}
+          onClaimHintDismiss={handleClaimHintDismiss}
+          onStartShowcase={onStartShowcase}
+        />
+      )}
       
-      {/* ===== 3D INCOME FLOW (only when connected and has properties) ===== */}
-      {!spectatorMode && connected && hasProperties && (
+      {/* ===== 3D INCOME FLOW (show in showcase mode with fake income, or when connected and has properties) ===== */}
+      {((!spectatorMode && connected && hasProperties) || (showcaseMode && showcaseScene)) && (
         <IncomeFlow3D 
           enabled={true}
           particlesVisible={particlesVisible}
@@ -1374,26 +1456,40 @@ function Scene({
               bankRef.current.handleParticleArrive(incomeValue);
             }
           }}
+          showcaseMode={showcaseMode}
+          showcaseOwnerships={showcaseMode ? showcaseScene?.mockOwnerships : undefined}
         />
       )}
     </>
   );
 }
 
-export function Board3DScene({ onSelectProperty, onCoinClick, spectatorMode, spectatorOwnerships, customBoardBackground, custom3DPropertyTiles, customSceneBackground, boardPresetId, tilePresetId, themeCategory, writingStyle, profilePicture, cornerSquareStyle, isMobile = false }: Board3DSceneProps) {
+export function Board3DScene({ onSelectProperty, onCoinClick, spectatorMode, spectatorOwnerships, customBoardBackground, custom3DPropertyTiles, customSceneBackground, boardPresetId, tilePresetId, themeCategory, writingStyle, profilePicture, cornerSquareStyle, isMobile = false, showcaseMode = false, showcaseScene, onExitShowcase, onStartShowcase }: Board3DSceneProps) {
   
+  // Debug log Board3DScene props (only when showcase state changes)
+  if (showcaseMode) {
+    console.log('🎭 [BOARD3D] Board3DScene props:', {
+      showcaseMode,
+      showcaseScene: showcaseScene ? { id: showcaseScene.id, name: showcaseScene.name } : null,
+      onExitShowcase: !!onExitShowcase,
+      onStartShowcase: !!onStartShowcase,
+      isMobile
+    });
+  }
   
   const containerRef = useRef<HTMLDivElement>(null);
   const [mounted, setMounted] = useState(false);
   const [particlesVisible, setParticlesVisible] = useState(true);
   const [showClaimHint, setShowClaimHint] = useState(false);
+  const [rotationMode, setRotationMode] = useState(false);
   const [webglError, setWebglError] = useState<string | null>(null);
-  const [showcaseMode, setShowcaseMode] = useState(false);
   const cameraControlsRef = useRef<any>(null);
   const { publicKey, connected } = useWallet();
   const gameState = useGameState();
   const hasTriggeredHintRef = useRef(false);
   const previousOwnershipsCountRef = useRef(0);
+  
+  // Keep original scene background during showcase - don't change it
 
   // Calculate if user has properties
   const hasProperties = useMemo(() => {
@@ -1414,14 +1510,7 @@ export function Board3DScene({ onSelectProperty, onCoinClick, spectatorMode, spe
     const walletKey = publicKey.toBase58();
     const storageKey = `hasSeenClaimHint_${walletKey}`;
     const firstPurchaseKey = `firstPurchaseTime_${walletKey}`;
-    
-    console.log('🏦 Claim hint check:', {
-      walletKey,
-      storageValue: localStorage.getItem(storageKey),
-      firstPurchaseTime: localStorage.getItem(firstPurchaseKey),
-      currentOwnerships: gameState?.ownerships,
-    });
-    
+
     if (localStorage.getItem(storageKey) === 'true') return;
     
     const currentCount = spectatorMode 
@@ -1437,29 +1526,19 @@ export function Board3DScene({ onSelectProperty, onCoinClick, spectatorMode, spe
         // This is their first property - record the time
         firstPurchaseTime = Date.now().toString();
         localStorage.setItem(firstPurchaseKey, firstPurchaseTime);
-        console.log('🏦 Recording first purchase time:', new Date(parseInt(firstPurchaseTime)));
       }
       
       // Calculate time since first purchase
       const timeSincePurchase = Date.now() - parseInt(firstPurchaseTime);
       const shouldShowHint = timeSincePurchase >= 30000; // 30 seconds
-      
-      console.log('🏦 Time since first purchase:', {
-        timeSincePurchase: Math.floor(timeSincePurchase / 1000) + 's',
-        shouldShowHint,
-        showClaimHint
-      });
-      
+
       if (shouldShowHint && !showClaimHint) {
-        console.log('🏦 Showing claim hint arrow!');
         setShowClaimHint(true);
       } else if (!shouldShowHint && !showClaimHint) {
         // Set up timer for remaining time
         const remainingTime = 30000 - timeSincePurchase;
-        console.log('🏦 Setting timer for remaining time:', Math.floor(remainingTime / 1000) + 's');
         
         const timer = setTimeout(() => {
-          console.log('🏦 Timer fired! Showing claim hint arrow!');
           if (localStorage.getItem(storageKey) !== 'true') {
             setShowClaimHint(true);
           }
@@ -1575,8 +1654,9 @@ export function Board3DScene({ onSelectProperty, onCoinClick, spectatorMode, spe
       ref={containerRef}
       style={{ width: '100%', height: '100%', position: 'relative' }}
     >
-      {/* Camera Controls - only show when connected and not mobile */}
-      {connected && !isMobile && (
+
+      {/* Camera Controls and Demo Button - show when connected or always show demo button */}
+      {(connected || !isMobile) && (
         <div 
           style={{
             position: 'absolute',
@@ -1590,6 +1670,58 @@ export function Board3DScene({ onSelectProperty, onCoinClick, spectatorMode, spe
             borderRadius: '8px',
           }}
         >
+          {/* Demo Button - always show when not mobile */}
+          {!isMobile && (
+            <button
+              onClick={() => {
+                console.log('🎬 Demo button clicked!', {
+                  showcaseMode,
+                  onExitShowcase: !!onExitShowcase,
+                  onStartShowcase: !!onStartShowcase
+                });
+                if (showcaseMode) {
+                  console.log('🚪 Exiting showcase mode...');
+                  onExitShowcase?.();
+                } else {
+                  console.log('🎭 Starting showcase mode...');
+                  onStartShowcase?.();
+                }
+              }}
+              title={showcaseMode ? "Exit Showcase" : "Watch Demo"}
+              style={{
+                background: showcaseMode ? '#eab308' : '#6d28d9',
+                color: 'white',
+                border: 'none',
+                padding: '8px',
+                borderRadius: '4px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '4px',
+                fontSize: '12px',
+                fontWeight: '600',
+              }}
+              onMouseOver={(e) => (e.target as HTMLButtonElement).style.background = showcaseMode ? '#f59e0b' : '#7c3aed'}
+              onMouseOut={(e) => (e.target as HTMLButtonElement).style.background = showcaseMode ? '#eab308' : '#6d28d9'}
+            >
+              {showcaseMode ? (
+                <>
+                  <span style={{ fontSize: '14px' }}>❌</span>
+                  <span>Exit</span>
+                </>
+              ) : (
+                <>
+                  <span style={{ fontSize: '14px' }}>🎬</span>
+                  <span>Demo</span>
+                </>
+              )}
+            </button>
+          )}
+          
+          {/* Camera Controls - only show when connected */}
+          {connected && (
+            <>
           <button
             onClick={() => setParticlesVisible(!particlesVisible)}
             title={particlesVisible ? "Hide Particles" : "Show Particles"}
@@ -1608,6 +1740,25 @@ export function Board3DScene({ onSelectProperty, onCoinClick, spectatorMode, spe
             onMouseOut={(e) => (e.target as HTMLButtonElement).style.background = particlesVisible ? '#6d28d9' : '#374151'}
           >
             <HideIcon size={16} />
+          </button>
+          <button
+            onClick={() => setRotationMode(!rotationMode)}
+            title={rotationMode ? "Stop Rotation" : "Start Rotation"}
+            style={{
+              background: rotationMode ? '#eab308' : '#6d28d9',
+              color: 'white',
+              border: 'none',
+              padding: '8px',
+              borderRadius: '4px',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+            onMouseOver={(e) => (e.target as HTMLButtonElement).style.background = rotationMode ? '#f59e0b' : '#7c3aed'}
+            onMouseOut={(e) => (e.target as HTMLButtonElement).style.background = rotationMode ? '#eab308' : '#6d28d9'}
+          >
+            <span style={{ fontSize: '16px' }}>{rotationMode ? '🛑' : '🌀'}</span>
           </button>
           <button
             onClick={resetView}
@@ -1666,30 +1817,8 @@ export function Board3DScene({ onSelectProperty, onCoinClick, spectatorMode, spe
           >
             <ZoomOutIcon size={16} />
           </button>
-          <button
-            onClick={() => setShowcaseMode(!showcaseMode)}
-            title={showcaseMode ? "Exit Showcase" : "Showcase Mode"}
-            style={{
-              background: showcaseMode ? '#eab308' : '#6d28d9',
-              color: 'white',
-              border: 'none',
-              padding: '8px',
-              borderRadius: '4px',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-            onMouseOver={(e) => (e.target as HTMLButtonElement).style.background = showcaseMode ? '#f59e0b' : '#7c3aed'}
-            onMouseOut={(e) => (e.target as HTMLButtonElement).style.background = showcaseMode ? '#eab308' : '#6d28d9'}
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M12 3C7.03 3 3 7.03 3 12s4.03 9 9 9 9-4.03 9-9-4.03-9-9-9zm0 16c-3.87 0-7-3.13-7-7s3.13-7 7-7 7 3.13 7 7-3.13 7-7 7z" fill="currentColor"/>
-              <path d="M12 7c-2.76 0-5 2.24-5 5s2.24 5 5 5 5-2.24 5-5-2.24-5-5-5zm0 8c-1.65 0-3-1.35-3-3s1.35-3 3-3 3 1.35 3 3-1.35 3-3 3z" fill="currentColor"/>
-              <path d="M17 2h4c.55 0 1 .45 1 1v4c0 .55-.45 1-1 1s-1-.45-1-1V4h-3c-.55 0-1-.45-1-1s.45-1 1-1z" fill="currentColor"/>
-              <path d="M3 2h4c.55 0 1 .45 1 1s-.45 1-1 1H4v3c0 .55-.45 1-1 1s-1-.45-1-1V3c0-.55.45-1 1-1z" fill="currentColor"/>
-            </svg>
-          </button>
+            </>
+          )}
         </div>
       )}
 
@@ -1737,7 +1866,6 @@ export function Board3DScene({ onSelectProperty, onCoinClick, spectatorMode, spe
             });
             
             canvas.addEventListener('webglcontextrestored', () => {
-              console.log('WebGL context restored');
               setWebglError(null);
             });
             
@@ -1774,6 +1902,9 @@ export function Board3DScene({ onSelectProperty, onCoinClick, spectatorMode, spe
             connected={connected}
             hasProperties={hasProperties}
             showcaseMode={showcaseMode}
+            showcaseScene={showcaseScene}
+            onExitShowcase={onExitShowcase}
+            onStartShowcase={onStartShowcase}
             customBoardBackground={customBoardBackground || null}
             custom3DPropertyTiles={custom3DPropertyTiles || null}
             boardPresetId={boardPresetId || null}
@@ -1782,6 +1913,7 @@ export function Board3DScene({ onSelectProperty, onCoinClick, spectatorMode, spe
             writingStyle={writingStyle || 'light'}
             profilePicture={profilePicture || gameState?.profile?.profilePicture}
             cornerSquareStyle={cornerSquareStyle || gameState?.profile?.cornerSquareStyle || 'property'}
+            rotationMode={rotationMode}
           />
         </Suspense>
       </Canvas>

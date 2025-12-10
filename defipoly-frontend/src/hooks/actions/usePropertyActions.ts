@@ -123,7 +123,6 @@ export const usePropertyActions = (
         skipPreflight: false,
       });
       
-      console.log(`✅ Bought ${slots} slot(s) successfully:`, signature);
       
       // Update states
       if (!playerData) setPlayerInitialized(true);
@@ -136,7 +135,6 @@ export const usePropertyActions = (
       // Check if already processed
       const errorMessage = error?.message || error?.toString() || '';
       if (errorMessage.includes('already been processed')) {
-        console.log('✅ Transaction already processed');
         return 'already-processed';
       }
       
@@ -180,7 +178,6 @@ export const usePropertyActions = (
         })
         .rpc();
 
-      console.log('✅ Property sold:', tx);
       await connection.confirmTransaction(tx, 'confirmed');
       return tx;
       

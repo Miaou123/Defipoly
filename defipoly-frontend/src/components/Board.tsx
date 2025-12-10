@@ -1,6 +1,7 @@
 'use client';
 
 import { Board3DScene } from './3d/Board3DScene';
+import { ShowcaseScene } from '@/utils/showcaseScenes';
 
 interface BoardProps {
   onSelectProperty: (propertyId: number) => void;
@@ -19,6 +20,10 @@ interface BoardProps {
   themeCategory?: 'dark' | 'medium' | 'light' | null;
   writingStyle?: 'light' | 'dark';
   isMobile?: boolean;
+  showcaseMode?: boolean;
+  showcaseScene?: ShowcaseScene | null;
+  onExitShowcase?: () => void;
+  onStartShowcase?: () => void;
 }
 
 export function Board({ 
@@ -36,6 +41,10 @@ export function Board({
   profilePicture,
   cornerSquareStyle,
   isMobile = false,
+  showcaseMode = false,
+  showcaseScene,
+  onExitShowcase,
+  onStartShowcase,
 }: BoardProps) {
 
 
@@ -58,6 +67,10 @@ export function Board({
         profilePicture={profilePicture}
         cornerSquareStyle={cornerSquareStyle}
         isMobile={isMobile}
+        showcaseMode={showcaseMode}
+        showcaseScene={showcaseScene}
+        onExitShowcase={onExitShowcase}
+        onStartShowcase={onStartShowcase}
       />
     </div>
   );

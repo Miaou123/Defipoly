@@ -35,7 +35,6 @@ export function getOwnershipPDA(playerPubkey: PublicKey, propertyId: number): [P
     [Buffer.from('ownership'), playerPubkey.toBuffer(), Buffer.from([propertyId])],
     PROGRAM_ID
   );
-  console.log(`🔑 Ownership PDA for property ${propertyId}:`, pda.toString());
   return [pda, bump];
 }
 
@@ -92,26 +91,18 @@ export async function fetchPropertyData(program: MemeopolyProgram, propertyId: n
 export async function fetchOwnershipData(program: MemeopolyProgram, playerPubkey: PublicKey, propertyId: number): Promise<PropertyOwnership | null> {
   const [ownershipPDA] = getOwnershipPDA(playerPubkey, propertyId);
   
-  console.log(`\n🔍 Fetching ownership for property ${propertyId}`);
-  console.log(`  Player: ${playerPubkey.toString()}`);
-  console.log(`  PDA: ${ownershipPDA.toString()}`);
   
   try {
     const connection = program.provider.connection;
     const accountInfo = await connection.getAccountInfo(ownershipPDA);
     
-    console.log(`  Account Info:`, accountInfo ? '✅ EXISTS' : '❌ NOT FOUND');
     
     if (!accountInfo) {
-      console.log(`  ⚠️ No account found at this PDA`);
       return null;
     }
     
-    console.log(`  Account data length: ${accountInfo.data.length} bytes`);
-    console.log(`  Owner: ${accountInfo.owner.toString()}`);
     
     const ownershipAccount = deserializeOwnership(accountInfo.data);
-    console.log(`  ✅ Successfully deserialized ownership:`, ownershipAccount);
     return ownershipAccount;
   } catch (error) {
     console.error(`  ❌ Error fetching ownership for property ${propertyId}:`, error);
@@ -144,7 +135,6 @@ export async function fetchPlayerData(program: MemeopolyProgram, playerPubkey: P
       
       // Success - log retry if it took multiple attempts
       if (attempt > 0) {
-        console.log(`✅ fetchPlayerData succeeded on attempt ${attempt + 1}`);
       }
       
       return playerAccount;
