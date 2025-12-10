@@ -28,24 +28,35 @@ export function ShowcaseMode({ isActive, onSceneChange, onExit }: ShowcaseModePr
   
   // Reset when showcase starts
   useEffect(() => {
-    if (isActive) {
+    if (isActive && SHOWCASE_SCENES.length > 0) {
       setCurrentSceneIndex(0);
       setElapsedTime(0);
-      sceneStartTimeRef.current = Date.now();
-      onSceneChange(SHOWCASE_SCENES[0]);
+      sceneStartTimeRef.current = Date.now() + 3000; // Add 3 second delay
+      const firstScene = SHOWCASE_SCENES[0];
+      if (firstScene) {
+        // Start the first scene immediately but delay the timer
+        setTimeout(() => {
+          onSceneChange(firstScene);
+        }, 3000);
+      }
     }
   }, [isActive, onSceneChange]);
   
   // Handle scene transitions
   useEffect(() => {
-    if (!isActive) return;
+    if (!isActive || SHOWCASE_SCENES.length === 0) return;
     
     const currentScene = SHOWCASE_SCENES[currentSceneIndex];
+    if (!currentScene) return;
+    
     const timer = setTimeout(() => {
       const nextIndex = (currentSceneIndex + 1) % SHOWCASE_SCENES.length;
-      setCurrentSceneIndex(nextIndex);
-      sceneStartTimeRef.current = Date.now();
-      onSceneChange(SHOWCASE_SCENES[nextIndex]);
+      const nextScene = SHOWCASE_SCENES[nextIndex];
+      if (nextScene) {
+        setCurrentSceneIndex(nextIndex);
+        sceneStartTimeRef.current = Date.now();
+        onSceneChange(nextScene);
+      }
     }, currentScene.duration * 1000);
     
     return () => clearTimeout(timer);
@@ -124,12 +135,17 @@ export function ShowcaseCameraController({
       camera.position.y = startPos.y + (targetHeight - startPos.y) * easeInOut;
       camera.position.z = startPos.z + (targetZ - startPos.z) * easeInOut;
       
-      // Interpolate look target
+      // Interpolate look target - end at y=0 to match rotation mode
       const lookX = startLookAt.x + (0 - startLookAt.x) * easeInOut;
       const lookY = startLookAt.y + (0 - startLookAt.y) * easeInOut;
       const lookZ = startLookAt.z + (0 - startLookAt.z) * easeInOut;
       
       camera.lookAt(lookX, lookY, lookZ);
+      
+      // Update OrbitControls target to match
+      if (controlsRef.current) {
+        controlsRef.current.target.set(lookX, lookY, lookZ);
+      }
     } else {
       // Normal orbit animation after dive-in or for connected wallets
       const radius = 10;
@@ -139,7 +155,12 @@ export function ShowcaseCameraController({
       camera.position.x = Math.sin(time * speed) * radius;
       camera.position.z = Math.cos(time * speed) * radius;
       camera.position.y = height;
-      camera.lookAt(0, 0, 0);
+      camera.lookAt(0, 0, 0);  // Look at y=0 to match rotation mode
+      
+      // Update OrbitControls target to match
+      if (controlsRef.current) {
+        controlsRef.current.target.set(0, 0, 0);
+      }
     }
     
     if (controlsRef.current) {

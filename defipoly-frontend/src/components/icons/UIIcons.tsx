@@ -1045,6 +1045,398 @@ export const LightbulbIcon: React.FC<IconProps> = ({ className = '', size = 24 }
   </svg>
 );
 
+// 💼 Briefcase/Portfolio Icon
+export const BriefcaseIcon: React.FC<IconProps> = ({ className = '', size = 24 }) => (
+  <svg 
+    width={size} 
+    height={size} 
+    viewBox="0 0 24 24" 
+    fill="none" 
+    xmlns="http://www.w3.org/2000/svg"
+    className={className}
+  >
+    <rect x="2" y="7" width="20" height="14" rx="2" fill="currentColor" opacity="0.2"/>
+    <rect x="2" y="7" width="20" height="14" rx="2" stroke="currentColor" strokeWidth="2"/>
+    <path 
+      d="M16 7V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2" 
+      stroke="currentColor" 
+      strokeWidth="2"
+    />
+    <path 
+      d="M12 12v4M2 12h20" 
+      stroke="currentColor" 
+      strokeWidth="2" 
+      strokeLinecap="round"
+    />
+  </svg>
+);
+
+// 📡 Broadcast/Feed Icon
+export const BroadcastIcon: React.FC<IconProps> = ({ className = '', size = 24 }) => (
+  <svg 
+    width={size} 
+    height={size} 
+    viewBox="0 0 24 24" 
+    fill="none" 
+    xmlns="http://www.w3.org/2000/svg"
+    className={className}
+  >
+    <circle cx="12" cy="12" r="3" fill="currentColor"/>
+    <path 
+      d="M8.5 8.5a5 5 0 0 1 7 0M6 6a9 9 0 0 1 12 0" 
+      stroke="currentColor" 
+      strokeWidth="2" 
+      strokeLinecap="round"
+    />
+    <path 
+      d="M15.5 15.5a5 5 0 0 1-7 0M18 18a9 9 0 0 1-12 0" 
+      stroke="currentColor" 
+      strokeWidth="2" 
+      strokeLinecap="round"
+    />
+  </svg>
+);
+
+// 📈 Chart Up/Growth Icon
+export const ChartUpIcon: React.FC<IconProps> = ({ className = '', size = 24 }) => (
+  <svg 
+    width={size} 
+    height={size} 
+    viewBox="0 0 24 24" 
+    fill="none" 
+    xmlns="http://www.w3.org/2000/svg"
+    className={className}
+  >
+    <path 
+      d="M3 3v18h18" 
+      stroke="currentColor" 
+      strokeWidth="2" 
+      strokeLinecap="round"
+      opacity="0.3"
+    />
+    <path 
+      d="M3 17l6-6 4 4 8-10" 
+      stroke="currentColor" 
+      strokeWidth="2.5" 
+      strokeLinecap="round" 
+      strokeLinejoin="round"
+    />
+    <path 
+      d="M17 5h4v4" 
+      stroke="currentColor" 
+      strokeWidth="2" 
+      strokeLinecap="round" 
+      strokeLinejoin="round"
+    />
+  </svg>
+);
+
+// 📤 Upload Icon
+export const UploadIcon: React.FC<IconProps> = ({ className = '', size = 24 }) => (
+  <svg 
+    width={size} 
+    height={size} 
+    viewBox="0 0 24 24" 
+    fill="none" 
+    xmlns="http://www.w3.org/2000/svg"
+    className={className}
+  >
+    <path 
+      d="M12 16V4M12 4l-4 4M12 4l4 4" 
+      stroke="currentColor" 
+      strokeWidth="2" 
+      strokeLinecap="round" 
+      strokeLinejoin="round"
+    />
+    <path 
+      d="M20 16v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2" 
+      stroke="currentColor" 
+      strokeWidth="2" 
+      strokeLinecap="round"
+    />
+  </svg>
+);
+
+// ⏳ Loading Icon (different from HourglassIcon)
+export const LoadingIcon: React.FC<IconProps> = ({ className = '', size = 24 }) => (
+  <svg 
+    width={size} 
+    height={size} 
+    viewBox="0 0 24 24" 
+    fill="none" 
+    xmlns="http://www.w3.org/2000/svg"
+    className={className}
+  >
+    <path 
+      d="M6 2h12v6l-4 4 4 4v6H6v-6l4-4-4-4V2z" 
+      fill="currentColor" 
+      opacity="0.2"
+    />
+    <path 
+      d="M6 2h12v6l-4 4 4 4v6H6v-6l4-4-4-4V2z" 
+      stroke="currentColor" 
+      strokeWidth="2"
+      strokeLinejoin="round"
+    />
+    <path 
+      d="M6 2h12M6 22h12" 
+      stroke="currentColor" 
+      strokeWidth="2"
+      strokeLinecap="round"
+    />
+    <circle cx="12" cy="12" r="1" fill="currentColor"/>
+    <circle cx="10" cy="17" r="0.5" fill="currentColor"/>
+    <circle cx="12" cy="18" r="0.5" fill="currentColor"/>
+    <circle cx="14" cy="17" r="0.5" fill="currentColor"/>
+  </svg>
+);
+
+// 💰 Money/Income Icon
+export const MoneyIcon: React.FC<IconProps> = ({ className = '', size = 24 }) => (
+  <svg 
+    width={size} 
+    height={size} 
+    viewBox="0 0 24 24" 
+    fill="none" 
+    xmlns="http://www.w3.org/2000/svg"
+    className={className}
+  >
+    <circle cx="12" cy="12" r="10" fill="currentColor" opacity="0.2"/>
+    <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2"/>
+    <path 
+      d="M12 6v12M9.5 9a3 3 0 0 1 5 0M14.5 15a3 3 0 0 1-5 0" 
+      stroke="currentColor" 
+      strokeWidth="2" 
+      strokeLinecap="round"
+    />
+  </svg>
+);
+
+// 📊 Chart/Stats Icon
+export const StatsIcon: React.FC<IconProps> = ({ className = '', size = 24 }) => (
+  <svg 
+    width={size} 
+    height={size} 
+    viewBox="0 0 24 24" 
+    fill="none" 
+    xmlns="http://www.w3.org/2000/svg"
+    className={className}
+  >
+    <rect x="3" y="3" width="18" height="18" rx="1" stroke="currentColor" strokeWidth="2" opacity="0.3"/>
+    <rect x="7" y="11" width="3" height="8" fill="currentColor" opacity="0.8"/>
+    <rect x="11" y="8" width="3" height="11" fill="currentColor" opacity="0.8"/>
+    <rect x="15" y="5" width="3" height="14" fill="currentColor" opacity="0.8"/>
+  </svg>
+);
+
+// 💎 Diamond/Premium Icon
+export const DiamondIcon: React.FC<IconProps> = ({ className = '', size = 24 }) => (
+  <svg 
+    width={size} 
+    height={size} 
+    viewBox="0 0 24 24" 
+    fill="none" 
+    xmlns="http://www.w3.org/2000/svg"
+    className={className}
+  >
+    <path 
+      d="M6 9h12l-2-4H8l-2 4zM6 9l6 11 6-11" 
+      fill="currentColor" 
+      opacity="0.2"
+    />
+    <path 
+      d="M6 9h12l-2-4H8l-2 4zM6 9l6 11 6-11" 
+      stroke="currentColor" 
+      strokeWidth="2" 
+      strokeLinejoin="round"
+    />
+  </svg>
+);
+
+// 🎰 Slot Machine/Casino Icon
+export const SlotMachineIcon: React.FC<IconProps> = ({ className = '', size = 24 }) => (
+  <svg 
+    width={size} 
+    height={size} 
+    viewBox="0 0 24 24" 
+    fill="none" 
+    xmlns="http://www.w3.org/2000/svg"
+    className={className}
+  >
+    <rect x="4" y="3" width="16" height="18" rx="2" fill="currentColor" opacity="0.2"/>
+    <rect x="4" y="3" width="16" height="18" rx="2" stroke="currentColor" strokeWidth="2"/>
+    <rect x="6" y="7" width="4" height="6" rx="1" stroke="currentColor" strokeWidth="1.5"/>
+    <rect x="10" y="7" width="4" height="6" rx="1" stroke="currentColor" strokeWidth="1.5"/>
+    <rect x="14" y="7" width="4" height="6" rx="1" stroke="currentColor" strokeWidth="1.5"/>
+    <circle cx="8" cy="10" r="1" fill="currentColor"/>
+    <circle cx="12" cy="10" r="1" fill="currentColor"/>
+    <circle cx="16" cy="10" r="1" fill="currentColor"/>
+    <path d="M6 17h12" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+  </svg>
+);
+
+// 📈 Trending Up Icon (alternative to ChartUpIcon)
+export const TrendingUpIcon: React.FC<IconProps> = ({ className = '', size = 24 }) => (
+  <svg 
+    width={size} 
+    height={size} 
+    viewBox="0 0 24 24" 
+    fill="none" 
+    xmlns="http://www.w3.org/2000/svg"
+    className={className}
+  >
+    <path 
+      d="M3 17l6-6 4 4 8-8" 
+      stroke="currentColor" 
+      strokeWidth="2" 
+      strokeLinecap="round" 
+      strokeLinejoin="round"
+    />
+    <path 
+      d="M17 7h4v4" 
+      stroke="currentColor" 
+      strokeWidth="2" 
+      strokeLinecap="round" 
+      strokeLinejoin="round"
+    />
+  </svg>
+);
+
+// ⏰ Clock/Timer Icon
+export const ClockIcon: React.FC<IconProps> = ({ className = '', size = 24 }) => (
+  <svg 
+    width={size} 
+    height={size} 
+    viewBox="0 0 24 24" 
+    fill="none" 
+    xmlns="http://www.w3.org/2000/svg"
+    className={className}
+  >
+    <circle cx="12" cy="12" r="10" fill="currentColor" opacity="0.2"/>
+    <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2"/>
+    <path 
+      d="M12 6v6l4 2" 
+      stroke="currentColor" 
+      strokeWidth="2" 
+      strokeLinecap="round"
+    />
+  </svg>
+);
+
+// ⚡ Lightning/Boost Icon (different from existing LightningIcon)
+export const BoltIcon: React.FC<IconProps> = ({ className = '', size = 24 }) => (
+  <svg 
+    width={size} 
+    height={size} 
+    viewBox="0 0 24 24" 
+    fill="none" 
+    xmlns="http://www.w3.org/2000/svg"
+    className={className}
+  >
+    <path 
+      d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" 
+      fill="currentColor" 
+      opacity="0.8"
+    />
+    <path 
+      d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" 
+      stroke="currentColor" 
+      strokeWidth="2" 
+      strokeLinejoin="round"
+    />
+  </svg>
+);
+
+// ✨ Sparkles/Stars Icon
+export const StarIcon: React.FC<IconProps> = ({ className = '', size = 24 }) => (
+  <svg 
+    width={size} 
+    height={size} 
+    viewBox="0 0 24 24" 
+    fill="none" 
+    xmlns="http://www.w3.org/2000/svg"
+    className={className}
+  >
+    <path 
+      d="M12 2l2.09 6.26L20 10l-5.91 1.74L12 18l-2.09-6.26L4 10l5.91-1.74L12 2z" 
+      fill="currentColor" 
+      opacity="0.8"
+    />
+    <path 
+      d="M12 2l2.09 6.26L20 10l-5.91 1.74L12 18l-2.09-6.26L4 10l5.91-1.74L12 2z" 
+      stroke="currentColor" 
+      strokeWidth="2" 
+      strokeLinejoin="round"
+    />
+    <circle cx="18" cy="6" r="1" fill="currentColor"/>
+    <circle cx="6" cy="18" r="1" fill="currentColor"/>
+    <path d="M5 5l2 2M19 19l-2-2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+  </svg>
+);
+
+// ❌ Cross/Close Icon
+export const CrossIcon: React.FC<IconProps> = ({ className = '', size = 24 }) => (
+  <svg 
+    width={size} 
+    height={size} 
+    viewBox="0 0 24 24" 
+    fill="none" 
+    xmlns="http://www.w3.org/2000/svg"
+    className={className}
+  >
+    <circle cx="12" cy="12" r="10" fill="currentColor" opacity="0.2"/>
+    <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2"/>
+    <path 
+      d="M15 9l-6 6M9 9l6 6" 
+      stroke="currentColor" 
+      strokeWidth="2" 
+      strokeLinecap="round"
+    />
+  </svg>
+);
+
+// 🛑 Stop Icon
+export const StopIcon: React.FC<IconProps> = ({ className = '', size = 24 }) => (
+  <svg 
+    width={size} 
+    height={size} 
+    viewBox="0 0 24 24" 
+    fill="none" 
+    xmlns="http://www.w3.org/2000/svg"
+    className={className}
+  >
+    <rect x="6" y="6" width="12" height="12" fill="currentColor" opacity="0.8"/>
+    <rect x="6" y="6" width="12" height="12" stroke="currentColor" strokeWidth="2"/>
+  </svg>
+);
+
+// 🌀 Spin/Rotate Icon
+export const SpinIcon: React.FC<IconProps> = ({ className = '', size = 24 }) => (
+  <svg 
+    width={size} 
+    height={size} 
+    viewBox="0 0 24 24" 
+    fill="none" 
+    xmlns="http://www.w3.org/2000/svg"
+    className={className}
+  >
+    <path 
+      d="M3 12a9 9 0 019-9 9.75 9.75 0 016.74 2.74L21 8M21 12a9 9 0 01-9 9 9.75 9.75 0 01-6.74-2.74L3 16" 
+      stroke="currentColor" 
+      strokeWidth="2" 
+      strokeLinecap="round" 
+      strokeLinejoin="round"
+    />
+    <path 
+      d="M18 5l3 3-3 3M6 19l-3-3 3-3" 
+      stroke="currentColor" 
+      strokeWidth="2" 
+      strokeLinecap="round" 
+      strokeLinejoin="round"
+    />
+  </svg>
+);
+
 // Hexagon Badge with House for leaderboard rankings
 interface HexagonBadgeProps {
   rank: 1 | 2 | 3;
@@ -1146,6 +1538,24 @@ export default {
   GalaxyIcon,
   RulerIcon,
   LightbulbIcon,
+  // New emoji replacement icons
+  BriefcaseIcon,
+  BroadcastIcon,
+  ChartUpIcon,
+  UploadIcon,
+  LoadingIcon,
+  // Additional emoji replacement icons  
+  MoneyIcon,
+  StatsIcon,
+  DiamondIcon,
+  SlotMachineIcon,
+  TrendingUpIcon,
+  ClockIcon,
+  BoltIcon,
+  StarIcon,
+  CrossIcon,
+  StopIcon,
+  SpinIcon,
   ACTION_ICONS,
   getActionIcon,
 

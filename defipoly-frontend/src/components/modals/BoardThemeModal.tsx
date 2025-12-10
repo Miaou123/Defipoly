@@ -7,6 +7,7 @@ import { useWallet } from '@solana/wallet-adapter-react';
 import { useNotification } from '@/contexts/NotificationContext';
 import { authenticatedFetch } from '@/contexts/AuthContext';
 import { clearProfileCache } from '@/utils/profileStorage';
+import { GameControllerIcon, LoadingIcon, UploadIcon, LightbulbIcon } from '../icons/UIIcons';
 
 interface BoardThemeModalProps {
   isOpen: boolean;
@@ -192,7 +193,7 @@ export function BoardThemeModal({
           {/* Header */}
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-xl font-bold text-purple-100 flex items-center gap-2">
-              <span>🎮</span>
+              <GameControllerIcon size={20} className="text-purple-400" />
               Customize Board Background
             </h2>
             <button
@@ -248,7 +249,17 @@ export function BoardThemeModal({
                   className="border-2 border-dashed border-purple-500/30 rounded-lg p-4 text-center bg-purple-800/20 cursor-pointer hover:border-purple-500/50 transition-colors"
                 >
                   <p className="text-purple-200 text-xs mb-1">
-                    {uploading ? '⏳ Uploading...' : '📤 Click to upload'}
+                    {uploading ? (
+                      <span className="flex items-center gap-1 justify-center">
+                        <LoadingIcon size={12} className="animate-pulse" />
+                        Uploading...
+                      </span>
+                    ) : (
+                      <span className="flex items-center gap-1 justify-center">
+                        <UploadIcon size={12} />
+                        Click to upload
+                      </span>
+                    )}
                   </p>
                   <small className="text-purple-400 text-[10px]">
                     JPG, PNG, GIF, SVG • Max 5MB
@@ -291,7 +302,10 @@ export function BoardThemeModal({
           {/* Footer */}
           <div className="text-center">
             <div className="text-xs text-purple-400">
-              💡 Your custom board background will be visible during gameplay
+              <span className="flex items-center gap-1 justify-center">
+                <LightbulbIcon size={12} className="text-purple-400" />
+                Your custom board background will be visible during gameplay
+              </span>
             </div>
           </div>
         </div>

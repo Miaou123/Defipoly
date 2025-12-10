@@ -13,7 +13,7 @@ import { useDefipoly } from '@/contexts/DefipolyContext';
 import { useNotification } from '@/contexts/NotificationContext';
 import { PROPERTIES, SET_BONUSES, TOKEN_TICKER } from '@/utils/constants';
 import { CooldownExplanationModal } from '@/components/CooldownExplanationModal';
-import { ChartIcon, CoinsIcon, CheckIcon, TargetIcon } from '@/components/icons/UIIcons';
+import { ChartIcon, CoinsIcon, CheckIcon, TargetIcon, WarningIcon } from '@/components/icons/UIIcons';
 import { useGameState } from '@/contexts/GameStateContext';
 
 interface BuyPropertySectionProps {
@@ -358,7 +358,7 @@ export function BuyPropertySection({
         {/* Insufficient Balance Warning */}
         {!canBuy && !loading && (
           <div className="mt-2 flex items-center justify-center gap-1.5 text-red-400 text-xs">
-            <span>⚠️</span>
+            <WarningIcon size={14} className="text-red-400" />
             <span>
               Insufficient balance. Need <span className="font-bold">{buyCost.toLocaleString()}</span> $TOKEN
               {balance > 0 && (

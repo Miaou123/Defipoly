@@ -13,6 +13,7 @@ interface BoardOnboarding3DProps {
   showClaimHint?: boolean;
   onClaimHintDismiss?: () => void;
   onStartShowcase?: () => void;
+  spectatorMode?: boolean;
 }
 
 /**
@@ -23,7 +24,10 @@ interface BoardOnboarding3DProps {
  * - Connected, no properties: Properties will show golden glow (handled in PropertyTile)
  * - Has properties: Nothing rendered (bank claim handled separately)
  */
-export function BoardOnboarding3D({ hasProperties, showClaimHint = false, onClaimHintDismiss, onStartShowcase }: BoardOnboarding3DProps) {
+export function BoardOnboarding3D({ hasProperties, showClaimHint = false, onClaimHintDismiss, onStartShowcase, spectatorMode }: BoardOnboarding3DProps) {
+  // Early return for spectator mode - no overlay
+  if (spectatorMode) return null;
+  
   const { connected } = useWallet();
   const { visible: walletModalVisible, setVisible } = useWalletModal();
   const [showPropertyHint, setShowPropertyHint] = useState(false);
@@ -139,78 +143,87 @@ export function BoardOnboarding3D({ hasProperties, showClaimHint = false, onClai
             Connect your wallet to start playing
           </div>
 
-          {/* Connect button */}
-          <button
-            onClick={() => setVisible(true)}
-            style={{
-              background: 'linear-gradient(135deg, #9333ea, #7c3aed, #db2777)',
-              border: '2px solid rgba(168, 85, 247, 0.5)',
-              borderRadius: '20px',
-              padding: '18px 40px',
-              color: 'white',
-              fontSize: 'clamp(16px, 2vw, 20px)',
-              fontWeight: 700,
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '14px',
-              boxShadow: '0 0 40px rgba(147, 51, 234, 0.5), 0 8px 30px rgba(0,0,0,0.4)',
-              transition: 'all 0.3s ease',
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.transform = 'scale(1.08)';
-              e.currentTarget.style.boxShadow = '0 0 60px rgba(147, 51, 234, 0.7), 0 12px 40px rgba(0,0,0,0.5)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.transform = 'scale(1)';
-              e.currentTarget.style.boxShadow = '0 0 40px rgba(147, 51, 234, 0.5), 0 8px 30px rgba(0,0,0,0.4)';
-            }}
-          >
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-              <rect x="3" y="6" width="18" height="13" rx="2" stroke="currentColor" strokeWidth="2"/>
-              <path d="M3 10h18" stroke="currentColor" strokeWidth="2"/>
-              <circle cx="17" cy="15" r="1.5" fill="currentColor"/>
-            </svg>
-            Connect Wallet
-          </button>
-
-          {/* Showcase button */}
-          {onStartShowcase && (
+          {/* Buttons container - side by side */}
+          <div style={{
+            display: 'flex',
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: '16px',
+            flexWrap: 'wrap',
+            justifyContent: 'center',
+          }}>
+            {/* Connect button */}
             <button
-              onClick={onStartShowcase}
+              onClick={() => setVisible(true)}
               style={{
-                background: 'transparent',
+                background: 'linear-gradient(135deg, #9333ea, #7c3aed, #db2777)',
                 border: '2px solid rgba(168, 85, 247, 0.5)',
-                borderRadius: '12px',
-                padding: '12px 24px',
-                color: 'rgba(255, 255, 255, 0.8)',
-                fontSize: 'clamp(14px, 1.8vw, 16px)',
-                fontWeight: 600,
+                borderRadius: '20px',
+                padding: '18px 32px',
+                color: 'white',
+                fontSize: 'clamp(16px, 2vw, 20px)',
+                fontWeight: 700,
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
-                gap: '8px',
-                boxShadow: '0 4px 20px rgba(168, 85, 247, 0.2)',
+                gap: '14px',
+                boxShadow: '0 0 40px rgba(147, 51, 234, 0.5), 0 8px 30px rgba(0,0,0,0.4)',
                 transition: 'all 0.3s ease',
-                marginTop: '8px',
               }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.transform = 'scale(1.05)';
-                e.currentTarget.style.borderColor = 'rgba(168, 85, 247, 0.8)';
-                e.currentTarget.style.color = 'white';
-                e.currentTarget.style.boxShadow = '0 6px 25px rgba(168, 85, 247, 0.4)';
+                e.currentTarget.style.transform = 'scale(1.08)';
+                e.currentTarget.style.boxShadow = '0 0 60px rgba(147, 51, 234, 0.7), 0 12px 40px rgba(0,0,0,0.5)';
               }}
               onMouseLeave={(e) => {
                 e.currentTarget.style.transform = 'scale(1)';
-                e.currentTarget.style.borderColor = 'rgba(168, 85, 247, 0.5)';
-                e.currentTarget.style.color = 'rgba(255, 255, 255, 0.8)';
-                e.currentTarget.style.boxShadow = '0 4px 20px rgba(168, 85, 247, 0.2)';
+                e.currentTarget.style.boxShadow = '0 0 40px rgba(147, 51, 234, 0.5), 0 8px 30px rgba(0,0,0,0.4)';
               }}
             >
-              <span style={{ fontSize: '18px' }}>🎬</span>
-              Watch Demo
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                <rect x="3" y="6" width="18" height="13" rx="2" stroke="currentColor" strokeWidth="2"/>
+                <path d="M3 10h18" stroke="currentColor" strokeWidth="2"/>
+                <circle cx="17" cy="15" r="1.5" fill="currentColor"/>
+              </svg>
+              Connect Wallet
             </button>
-          )}
+
+            {/* Showcase button */}
+            {onStartShowcase && (
+              <button
+                onClick={onStartShowcase}
+                style={{
+                  background: 'transparent',
+                  border: '2px solid rgba(168, 85, 247, 0.5)',
+                  borderRadius: '16px',
+                  padding: '18px 24px',
+                  color: 'rgba(255, 255, 255, 0.8)',
+                  fontSize: 'clamp(14px, 1.8vw, 18px)',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  boxShadow: '0 4px 20px rgba(168, 85, 247, 0.2)',
+                  transition: 'all 0.3s ease',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = 'scale(1.05)';
+                  e.currentTarget.style.borderColor = 'rgba(168, 85, 247, 0.8)';
+                  e.currentTarget.style.color = 'white';
+                  e.currentTarget.style.boxShadow = '0 6px 25px rgba(168, 85, 247, 0.4)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = 'scale(1)';
+                  e.currentTarget.style.borderColor = 'rgba(168, 85, 247, 0.5)';
+                  e.currentTarget.style.color = 'rgba(255, 255, 255, 0.8)';
+                  e.currentTarget.style.boxShadow = '0 4px 20px rgba(168, 85, 247, 0.2)';
+                }}
+              >
+                <span style={{ fontSize: '18px' }}>🎬</span>
+                Watch Demo
+              </button>
+            )}
+          </div>
         </div>
 
         <style>{`

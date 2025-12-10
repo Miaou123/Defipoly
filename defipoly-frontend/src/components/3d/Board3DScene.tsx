@@ -16,7 +16,7 @@ import { House5_R3F } from './r3f/House5_R3F';
 import { Pin3D_R3F } from './r3f/Pin3D_R3F';
 import { CornerTile3D } from './CornerTile3D';
 import * as THREE from 'three';
-import { ResetViewIcon, ZoomInIcon, ZoomOutIcon, HideIcon, PointerArrowIcon, ShieldIcon, ShieldCooldownIcon, HourglassIcon, TargetIcon } from '../icons/UIIcons';
+import { ResetViewIcon, ZoomInIcon, ZoomOutIcon, HideIcon, PointerArrowIcon, ShieldIcon, ShieldCooldownIcon, HourglassIcon, TargetIcon, CrossIcon, StopIcon, SpinIcon } from '../icons/UIIcons';
 import { InteractiveBank3D } from './InteractiveBank3D';
 import { IncomeFlow3D } from './IncomeFlow3D';
 import { FloatingCoins3D } from './FloatingCoins3D';
@@ -113,7 +113,7 @@ function BoardSurfaceWithTexture({ customBackground }: { customBackground: strin
     if (customBackground.includes(',') && customBackground.split(',').length === 2) {
       const colors = customBackground.split(',').map(c => c.trim());
       const hexColorRegex = /^#[0-9A-Fa-f]{6}$/;
-      if (hexColorRegex.test(colors[0]) && hexColorRegex.test(colors[1])) {
+      if (colors[0] && colors[1] && hexColorRegex.test(colors[0]) && hexColorRegex.test(colors[1])) {
         console.warn('BoardSurfaceWithTexture: Converting gradient to texture:', customBackground);
         // Generate canvas texture from gradient
         const canvas = document.createElement('canvas');
@@ -349,7 +349,7 @@ function CooldownIndicators3D({
 const CAMERA_POSITIONS = {
   ZOOMED_OUT: {
     position: new THREE.Vector3(0, 18, 25),
-    lookAt: new THREE.Vector3(0, 5, 0),  // Look above board - pushes board lower on screen
+    lookAt: new THREE.Vector3(0, 5, 0),
   },
   ZOOMED_IN: {
     position: new THREE.Vector3(0, 8, 6),  // Much closer!
@@ -366,11 +366,13 @@ const CAMERA_POSITIONS = {
 function CameraController({ 
   connected, 
   controlsRef,
-  showcaseMode 
+  showcaseMode,
+  spectatorMode = false
 }: { 
   connected: boolean; 
   controlsRef: React.RefObject<any>;
   showcaseMode?: boolean;
+  spectatorMode?: boolean;
 }) {
   const targetPosition = useRef(CAMERA_POSITIONS.ZOOMED_OUT.position.clone());
   const targetLookAt = useRef(CAMERA_POSITIONS.ZOOMED_OUT.lookAt.clone());
@@ -383,6 +385,16 @@ function CameraController({
 
   // Handle initial mount and connection changes
   useEffect(() => {
+    // Spectator mode: immediately snap to centered view
+    if (spectatorMode) {
+      targetPosition.current.copy(CAMERA_POSITIONS.ZOOMED_IN.position);
+      targetLookAt.current.copy(CAMERA_POSITIONS.ZOOMED_IN.lookAt);
+      currentLookAt.current.copy(CAMERA_POSITIONS.ZOOMED_IN.lookAt);
+      animationComplete.current = true;
+      needsImmediateSnap.current = true;
+      return;
+    }
+    
     const config = connected ? CAMERA_POSITIONS.ZOOMED_IN : CAMERA_POSITIONS.ZOOMED_OUT;
     targetPosition.current.copy(config.position);
     targetLookAt.current.copy(config.lookAt);
@@ -398,8 +410,8 @@ function CameraController({
     // On initial mount, if already connected, skip animation and snap immediately
     if (isInitialMount.current) {
       isInitialMount.current = false;
-      if (connected) {
-        // Already connected - skip animation, snap to zoomed in position
+      if (connected || spectatorMode) {
+        // Already connected or in spectator mode - skip animation, snap to zoomed in position
         animationComplete.current = true;
         needsImmediateSnap.current = true;
         currentLookAt.current.copy(config.lookAt);
@@ -417,7 +429,7 @@ function CameraController({
     
     // Update showcase mode tracking
     prevShowcaseMode.current = showcaseMode || false;
-  }, [connected, showcaseMode]);
+  }, [connected, showcaseMode, spectatorMode]);
 
   useFrame(({ camera }) => {
     // Handle immediate snap for already-connected users
@@ -507,7 +519,7 @@ function ShowcaseController({
 // Rising income particles for complete sets
 function RisingIncomeParticles({ side, visible = true }: { side: 'top' | 'bottom' | 'left' | 'right'; visible?: boolean }) {
   const particlesRef = useRef<THREE.Group>(null);
-  const particleCount = 8;
+  const particleCount = 2;
   
   const getParticleOffset = () => {
     switch (side) {
@@ -641,7 +653,7 @@ function PropertyTile({
   const fallbackTexture = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChAI9g4ndUwAAAABJRU5ErkJggg==';
   const loadedTexture = useTexture(tileTexture || fallbackTexture);
   
-  let texture = null;
+  let texture: THREE.Texture | null = null;
   if (tileTexture && loadedTexture) {
     texture = loadedTexture;
     texture.colorSpace = THREE.SRGBColorSpace;
@@ -727,7 +739,7 @@ function PropertyTile({
       
       if (isColor) {
         const tileColor = customTexture.includes(',') 
-          ? customTexture.split(',')[0].trim() 
+          ? customTexture.split(',')[0]?.trim() || "#4A2C5A"
           : customTexture;
         return tileColor;
       }
@@ -1081,13 +1093,15 @@ function Scene({
   useEffect(() => {
     if (showcaseMode && showcaseScene && preloadedTextures[showcaseScene.themePresetId]) {
       const textures = preloadedTextures[showcaseScene.themePresetId];
-      // Use requestAnimationFrame to ensure smooth transition
-      requestAnimationFrame(() => {
-        setCurrentTextures({
-          board: textures.board,
-          property: textures.property
+      if (textures) {
+        // Use requestAnimationFrame to ensure smooth transition
+        requestAnimationFrame(() => {
+          setCurrentTextures({
+            board: textures.board,
+            property: textures.property
+          });
         });
-      });
+      }
     }
   }, [showcaseMode, showcaseScene, preloadedTextures]);
   
@@ -1215,7 +1229,7 @@ function Scene({
           connected={connected}
         />
       ) : (
-        <CameraController connected={connected} controlsRef={cameraControlsRef} showcaseMode={showcaseMode} />
+        <CameraController connected={connected} controlsRef={cameraControlsRef} showcaseMode={showcaseMode} spectatorMode={spectatorMode || false} />
       )}
       
       {/* Rotation Controller - only when rotation mode is enabled and not in showcase */}
@@ -1244,7 +1258,7 @@ function Scene({
       
       {/* Board surface with custom background support */}
       <BoardSurface 
-        customBackground={showcaseMode ? showcaseBoardTexture : (customBoardBackground || null)} 
+        customBackground={showcaseMode ? (showcaseBoardTexture || null) : (customBoardBackground || null)} 
         boardPresetId={showcaseMode ? null : (boardPresetId || null)}
       />
       
@@ -1255,7 +1269,7 @@ function Scene({
         cornerType="go" 
         size={cornerSize}
         cornerSquareStyle={cornerSquareStyle || 'property'}
-        customPropertyCardBackground={showcaseMode ? showcasePropertyTexture : (custom3DPropertyTiles || null)}
+        customPropertyCardBackground={showcaseMode ? (showcasePropertyTexture || null) : (custom3DPropertyTiles || null)}
         profilePicture={profilePicture || null}
       />
       <CornerTile3D 
@@ -1263,7 +1277,7 @@ function Scene({
         cornerType="jail" 
         size={cornerSize}
         cornerSquareStyle={cornerSquareStyle || 'property'}
-        customPropertyCardBackground={showcaseMode ? showcasePropertyTexture : (custom3DPropertyTiles || null)}
+        customPropertyCardBackground={showcaseMode ? (showcasePropertyTexture || null) : (custom3DPropertyTiles || null)}
         profilePicture={profilePicture || null}
       />
       <CornerTile3D 
@@ -1271,7 +1285,7 @@ function Scene({
         cornerType="parking" 
         size={cornerSize}
         cornerSquareStyle={cornerSquareStyle || 'property'}
-        customPropertyCardBackground={showcaseMode ? showcasePropertyTexture : (custom3DPropertyTiles || null)}
+        customPropertyCardBackground={showcaseMode ? (showcasePropertyTexture || null) : (custom3DPropertyTiles || null)}
         profilePicture={profilePicture || null}
       />
       <CornerTile3D 
@@ -1279,7 +1293,7 @@ function Scene({
         cornerType="gotojail" 
         size={cornerSize}
         cornerSquareStyle={cornerSquareStyle || 'property'}
-        customPropertyCardBackground={showcaseMode ? showcasePropertyTexture : (custom3DPropertyTiles || null)}
+        customPropertyCardBackground={showcaseMode ? (showcasePropertyTexture || null) : (custom3DPropertyTiles || null)}
         profilePicture={profilePicture || null}
       />
       
@@ -1309,7 +1323,7 @@ function Scene({
             isStealOnCooldown={spectatorMode ? () => false : isStealOnCooldown || (() => false)}
             spectatorMode={spectatorMode || false}
             cameraDistance={cameraDistance}
-            customTexture={showcaseMode ? showcasePropertyTexture : (custom3DPropertyTiles || null)}
+            customTexture={showcaseMode ? (showcasePropertyTexture || null) : (custom3DPropertyTiles || null)}
             tilePresetId={showcaseMode ? null : (tilePresetId || null)}
             themeCategory={themeCategory || null}
             writingStyle={writingStyle || 'light'}
@@ -1341,7 +1355,7 @@ function Scene({
             isStealOnCooldown={spectatorMode ? () => false : isStealOnCooldown || (() => false)}
             spectatorMode={spectatorMode || false}
             cameraDistance={cameraDistance}
-            customTexture={showcaseMode ? showcasePropertyTexture : (custom3DPropertyTiles || null)}
+            customTexture={showcaseMode ? (showcasePropertyTexture || null) : (custom3DPropertyTiles || null)}
             tilePresetId={showcaseMode ? null : (tilePresetId || null)}
             themeCategory={themeCategory || null}
             writingStyle={writingStyle || 'light'}
@@ -1373,7 +1387,7 @@ function Scene({
             isStealOnCooldown={spectatorMode ? () => false : isStealOnCooldown || (() => false)}
             spectatorMode={spectatorMode || false}
             cameraDistance={cameraDistance}
-            customTexture={showcaseMode ? showcasePropertyTexture : (custom3DPropertyTiles || null)}
+            customTexture={showcaseMode ? (showcasePropertyTexture || null) : (custom3DPropertyTiles || null)}
             tilePresetId={showcaseMode ? null : (tilePresetId || null)}
             themeCategory={themeCategory || null}
             writingStyle={writingStyle || 'light'}
@@ -1405,7 +1419,7 @@ function Scene({
             isStealOnCooldown={spectatorMode ? () => false : isStealOnCooldown || (() => false)}
             spectatorMode={spectatorMode || false}
             cameraDistance={cameraDistance}
-            customTexture={showcaseMode ? showcasePropertyTexture : (custom3DPropertyTiles || null)}
+            customTexture={showcaseMode ? (showcasePropertyTexture || null) : (custom3DPropertyTiles || null)}
             tilePresetId={showcaseMode ? null : (tilePresetId || null)}
             themeCategory={themeCategory || null}
             writingStyle={writingStyle || 'light'}
@@ -1443,6 +1457,7 @@ function Scene({
           showClaimHint={showClaimHint}
           onClaimHintDismiss={handleClaimHintDismiss}
           onStartShowcase={onStartShowcase}
+          spectatorMode={spectatorMode}
         />
       )}
       
@@ -1707,7 +1722,7 @@ export function Board3DScene({ onSelectProperty, onCoinClick, spectatorMode, spe
             >
               {showcaseMode ? (
                 <>
-                  <span style={{ fontSize: '14px' }}>❌</span>
+                  <CrossIcon size={14} style={{ color: 'white' }} />
                   <span>Exit</span>
                 </>
               ) : (
@@ -1758,7 +1773,11 @@ export function Board3DScene({ onSelectProperty, onCoinClick, spectatorMode, spe
             onMouseOver={(e) => (e.target as HTMLButtonElement).style.background = rotationMode ? '#f59e0b' : '#7c3aed'}
             onMouseOut={(e) => (e.target as HTMLButtonElement).style.background = rotationMode ? '#eab308' : '#6d28d9'}
           >
-            <span style={{ fontSize: '16px' }}>{rotationMode ? '🛑' : '🌀'}</span>
+            {rotationMode ? (
+              <StopIcon size={16} style={{ color: 'white' }} />
+            ) : (
+              <SpinIcon size={16} style={{ color: 'white' }} />
+            )}
           </button>
           <button
             onClick={resetView}
@@ -1834,7 +1853,7 @@ export function Board3DScene({ onSelectProperty, onCoinClick, spectatorMode, spe
           ...(customSceneBackground ? 
             // Check if it's a gradient format (contains comma)
             customSceneBackground.includes(',') ? {
-              background: `linear-gradient(180deg, ${customSceneBackground.split(',')[0]} 0%, ${customSceneBackground.split(',')[1]} 50%, ${customSceneBackground.split(',')[0]} 100%)`,
+              background: `linear-gradient(180deg, ${customSceneBackground.split(',')[0] || '#0a0015'} 0%, ${customSceneBackground.split(',')[1] || '#1a0a2e'} 50%, ${customSceneBackground.split(',')[0] || '#0a0015'} 100%)`,
             } : 
             // Check if it's a single hex color
             /^#[0-9A-Fa-f]{6}$/.test(customSceneBackground) ? {

@@ -6,7 +6,7 @@ import { useEffect, useState, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useRouter } from 'next/navigation';
 import { useGameState } from '@/contexts/GameStateContext';
-import { PointerArrowIcon } from './icons/UIIcons';
+import { PointerArrowIcon, LoadingIcon, UserIcon } from './icons/UIIcons';
 
 interface ProfileWalletProps {
   scaleFactor?: number;
@@ -151,7 +151,7 @@ export function ProfileWallet({ scaleFactor = 1 }: ProfileWalletProps) {
             style={{ width: profilePicSize, height: profilePicSize }}
           >
             {gameState.loading ? (
-              <span className="text-xs animate-pulse">⏳</span>
+              <LoadingIcon size={12} className="text-yellow-400 animate-pulse" />
             ) : gameState.profile.profilePicture ? (
               <img 
                 src={gameState.profile.profilePicture} 
@@ -159,7 +159,7 @@ export function ProfileWallet({ scaleFactor = 1 }: ProfileWalletProps) {
                 className="w-full h-full object-cover"
               />
             ) : (
-              <span style={{ fontSize: `${Math.round(20 * scaleFactor)}px` }}>👤</span>
+              <UserIcon size={Math.round(20 * scaleFactor)} className="text-purple-300" />
             )}
           </div>
           

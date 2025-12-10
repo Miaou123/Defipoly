@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { TrophyIcon, HexagonBadge, PointerArrowIcon } from './icons/UIIcons';
+import { TrophyIcon, HexagonBadge, PointerArrowIcon, LoadingIcon } from './icons/UIIcons';
 import { ProfileData } from '@/utils/profileStorage';
 import { setCachedSpectator } from '@/utils/spectatorCache';
 import { useWebSocket } from '@/contexts/WebSocketContext';
@@ -296,7 +296,7 @@ export function Leaderboard({ scaleFactor = 1 }: LeaderboardProps) {
         <div className="flex-1 overflow-y-auto" style={{ padding: `0 ${headerPadding}px ${headerPadding}px` }}>
         {loading ? (
             <div className="text-center" style={{ padding: `${headerPadding * 2}px 0` }}>
-              <div style={{ fontSize: `${Math.round(20 * scaleFactor)}px`, marginBottom: `${Math.round(4 * scaleFactor)}px` }}>⏳</div>
+              <LoadingIcon size={Math.round(20 * scaleFactor)} className="text-yellow-400 animate-pulse mx-auto" style={{ marginBottom: `${Math.round(4 * scaleFactor)}px` }} />
               <div className="text-purple-300" style={{ fontSize: `${subtitleSize}px` }}>Loading...</div>
             </div>
           ) : !leaderboardData || leaderboardData.leaderboard.length === 0 ? (

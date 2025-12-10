@@ -9,6 +9,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { getProfile } from '@/utils/profileStorage';
 import { StyledWalletButton } from './StyledWalletButton';
+import { LoadingIcon, UserIcon } from './icons/UIIcons';
 
 export function SideHeader() {
   const { connected, publicKey } = useWallet();
@@ -80,7 +81,7 @@ export function SideHeader() {
             {/* Profile Picture or Default Avatar */}
             <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center overflow-hidden flex-shrink-0">
               {loadingProfile ? (
-                <span className="text-xs animate-pulse">⏳</span>
+                <LoadingIcon size={12} className="text-yellow-400 animate-pulse" />
               ) : profileData.profilePicture ? (
                 <img 
                   src={profileData.profilePicture} 
@@ -88,7 +89,7 @@ export function SideHeader() {
                   className="w-full h-full object-cover"
                 />
               ) : (
-                <span className="text-xl">👤</span>
+                <UserIcon size={20} className="text-purple-300" />
               )}
             </div>
             

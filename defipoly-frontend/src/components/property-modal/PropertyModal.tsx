@@ -22,6 +22,7 @@ import {
 } from '../MechanicsExplanationModals';
 import { useGameState } from '@/contexts/GameStateContext';
 import { fetchPropertyState } from '@/services/api';
+import { StarIcon } from '../icons/UIIcons';
 
 interface PropertyModalProps {
   propertyId: number | null;
@@ -295,14 +296,20 @@ export function PropertyModal({ propertyId, onClose }: PropertyModalProps) {
                   </div>
                   {hasSetBonus && (
                     <div className="mt-2 px-2 py-1 bg-green-500/20 rounded border border-green-500/30 flex items-center justify-between">
-                      <span className="text-[9px] lg:text-xs text-green-300 font-semibold">✨ Complete Set Bonus Active</span>
+                      <span className="text-[9px] lg:text-xs text-green-300 font-semibold flex items-center gap-1">
+                        <StarIcon size={10} className="text-green-400" />
+                        Complete Set Bonus Active
+                      </span>
                       <span className="text-[9px] lg:text-xs text-green-400">+{(setBonusBps / 100).toFixed(2)}% on {setBonusInfo?.boostedSlots || 0} slots</span>
                     </div>
                   )}
                   {!hasSetBonus && (
                     <div className="mt-2 px-2 py-1 bg-amber-500/10 rounded border border-amber-500/30">
                       <div className="flex items-center gap-1.5 text-amber-300">
-                        <span className="text-[10px] lg:text-xs">✨ Complete this set for +{(setBonusBps / 100).toFixed(2)}% bonus</span>
+                        <span className="text-[10px] lg:text-xs flex items-center gap-1">
+                          <StarIcon size={8} className="text-green-400" />
+                          Complete this set for +{(setBonusBps / 100).toFixed(2)}% bonus
+                        </span>
                       </div>
                     </div>
                   )}

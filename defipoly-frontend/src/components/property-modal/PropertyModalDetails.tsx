@@ -6,6 +6,7 @@
 // ============================================
 
 import { TOKEN_TICKER } from '@/utils/constants';
+import { MoneyIcon, StatsIcon, DiamondIcon, SlotMachineIcon, TrendingUpIcon, ClockIcon, BoltIcon, StarIcon, ShieldIcon } from '../icons/UIIcons';
 
 interface PropertyModalDetailsProps {
   property: any;
@@ -31,11 +32,17 @@ export function PropertyModalDetails({ property, propertyData, setBonusInfo }: P
     <div className="bg-purple-900/20 rounded-xl p-3 border border-purple-500/20 space-y-2.5">
       {/* Income Calculation Row */}
       <div>
-        <div className="text-[9px] text-purple-400 mb-1.5 uppercase tracking-wider">💰 Income</div>
+        <div className="text-[9px] text-purple-400 mb-1.5 uppercase tracking-wider flex items-center gap-1">
+          <MoneyIcon size={10} className="text-purple-400" />
+          Income
+        </div>
         <div className="flex items-center gap-2 bg-purple-950/50 rounded-lg p-1.5">
           {/* Base */}
           <div className="flex flex-col flex-1">
-            <div className="text-[8px] text-purple-400 uppercase">📊 Base</div>
+            <div className="text-[8px] text-purple-400 uppercase flex items-center gap-1">
+              <StatsIcon size={8} className="text-purple-400" />
+              Base
+            </div>
             <div className="text-sm font-bold text-purple-100">{baseIncomePerSlot.toLocaleString()}</div>
           </div>
           
@@ -44,7 +51,8 @@ export function PropertyModalDetails({ property, propertyData, setBonusInfo }: P
           {/* Boost */}
           <div className="flex flex-col flex-1">
             <div className="text-[8px] text-purple-400 uppercase flex items-center gap-1">
-              ⚡ Boost <span className={`px-1 py-0.5 rounded text-[7px] font-bold ${hasSetBonus ? 'bg-amber-500 text-amber-950' : 'bg-gray-600 text-gray-300 opacity-60'}`}>+40%</span>
+              <BoltIcon size={8} className="text-purple-400" />
+              Boost <span className={`px-1 py-0.5 rounded text-[7px] font-bold ${hasSetBonus ? 'bg-amber-500 text-amber-950' : 'bg-gray-600 text-gray-300 opacity-60'}`}>+40%</span>
             </div>
             <div className={`text-sm font-bold ${hasSetBonus ? 'text-purple-100' : 'text-purple-100/50 line-through'}`}>
               {bonusAmount.toLocaleString()}
@@ -55,7 +63,10 @@ export function PropertyModalDetails({ property, propertyData, setBonusInfo }: P
           
           {/* Total */}
           <div className={`flex flex-col flex-[1.2] rounded-lg p-1.5 border-2 ${hasSetBonus ? 'bg-green-900/15 border-green-500/30' : 'bg-gray-900/15 border-gray-500/30'}`}>
-            <div className="text-[8px] text-purple-400 uppercase">💎 Total</div>
+            <div className="text-[8px] text-purple-400 uppercase flex items-center gap-1">
+              <DiamondIcon size={8} className="text-purple-400" />
+              Total
+            </div>
             <div className={`text-lg font-bold ${hasSetBonus ? 'text-green-400' : 'text-gray-400'}`}>
               {hasSetBonus ? totalIncome.toLocaleString() : baseIncomePerSlot.toLocaleString()}
             </div>
@@ -67,7 +78,10 @@ export function PropertyModalDetails({ property, propertyData, setBonusInfo }: P
           <div className="mt-2 px-2 py-1.5 bg-amber-500/10 border border-amber-500/30 rounded-lg">
             <div className="flex items-center justify-between text-[10px]">
               <span className="text-amber-400 font-medium">
-                ✨ Complete Set Bonus Active
+                <span className="flex items-center gap-1">
+                  <StarIcon size={10} className="text-amber-400" />
+                  Complete Set Bonus Active
+                </span>
               </span>
               <span className="text-amber-300">
                 +40% on {setBonusInfo.boostedSlots} slot{setBonusInfo.boostedSlots !== 1 ? 's' : ''}
@@ -79,7 +93,10 @@ export function PropertyModalDetails({ property, propertyData, setBonusInfo }: P
 
       {/* Slot Distribution */}
       <div>
-        <div className="text-[9px] text-purple-400 mb-1.5 uppercase tracking-wider">🎰 Slots ({totalSlots} total)</div>
+        <div className="text-[9px] text-purple-400 mb-1.5 uppercase tracking-wider flex items-center gap-1">
+          <SlotMachineIcon size={10} className="text-purple-400" />
+          Slots ({totalSlots} total)
+        </div>
         
         {/* Visual Bar */}
         <div className="h-4 bg-gray-800/50 rounded-full overflow-hidden flex border border-gray-700/50">
@@ -137,22 +154,34 @@ export function PropertyModalDetails({ property, propertyData, setBonusInfo }: P
       {/* Property Stats */}
       <div className="grid grid-cols-2 gap-2">
         <div className="bg-purple-950/30 rounded-lg p-2 border border-purple-500/10">
-          <div className="text-[8px] text-purple-400 uppercase mb-0.5">💰 Price</div>
+          <div className="text-[8px] text-purple-400 uppercase mb-0.5 flex items-center gap-1">
+            <MoneyIcon size={8} className="text-purple-400" />
+            Price
+          </div>
           <div className="text-sm font-bold text-purple-100">{property.price.toLocaleString()} ${TOKEN_TICKER}</div>
         </div>
         
         <div className="bg-purple-950/30 rounded-lg p-2 border border-purple-500/10">
-          <div className="text-[8px] text-purple-400 uppercase mb-0.5">📈 Daily Yield</div>
+          <div className="text-[8px] text-purple-400 uppercase mb-0.5 flex items-center gap-1">
+            <TrendingUpIcon size={8} className="text-purple-400" />
+            Daily Yield
+          </div>
           <div className="text-sm font-bold text-purple-100">{(property.yieldBps / 100).toFixed(1)}%</div>
         </div>
         
         <div className="bg-purple-950/30 rounded-lg p-2 border border-purple-500/10">
-          <div className="text-[8px] text-purple-400 uppercase mb-0.5">🛡️ Shield Cost</div>
+          <div className="text-[8px] text-purple-400 uppercase mb-0.5 flex items-center gap-1">
+            <ShieldIcon size={8} className="text-purple-400" />
+            Shield Cost
+          </div>
           <div className="text-sm font-bold text-purple-100">{(property.shieldCostBps / 100).toFixed(0)}%</div>
         </div>
         
         <div className="bg-purple-950/30 rounded-lg p-2 border border-purple-500/10">
-          <div className="text-[8px] text-purple-400 uppercase mb-0.5">⏰ Cooldown</div>
+          <div className="text-[8px] text-purple-400 uppercase mb-0.5 flex items-center gap-1">
+            <ClockIcon size={8} className="text-purple-400" />
+            Cooldown
+          </div>
           <div className="text-sm font-bold text-purple-100">{property.cooldown}h</div>
         </div>
       </div>

@@ -6,6 +6,7 @@ import { useWallet } from '@solana/wallet-adapter-react';
 import { useNotification } from '@/contexts/NotificationContext';
 import { clearProfileCache } from '@/utils/profileStorage';
 import { authenticatedFetch } from '@/contexts/AuthContext';
+import { LoadingIcon, UploadIcon, LightbulbIcon } from '../icons/UIIcons';
 
 interface PropertyThemeModalProps {
   isOpen: boolean;
@@ -346,7 +347,17 @@ export function PropertyThemeModal({
                   className="border-2 border-dashed border-purple-500/30 rounded-lg p-4 text-center bg-purple-800/20 cursor-pointer hover:border-purple-500/50 transition-colors"
                 >
                   <p className="text-purple-200 text-xs mb-1">
-                    {uploading ? '⏳ Uploading...' : '📤 Click to upload'}
+                    {uploading ? (
+                      <span className="flex items-center gap-1 justify-center">
+                        <LoadingIcon size={12} className="animate-pulse" />
+                        Uploading...
+                      </span>
+                    ) : (
+                      <span className="flex items-center gap-1 justify-center">
+                        <UploadIcon size={12} />
+                        Click to upload
+                      </span>
+                    )}
                   </p>
                   <small className="text-purple-400 text-[10px]">
                     JPG, PNG, GIF, SVG • Max 5MB
@@ -389,7 +400,10 @@ export function PropertyThemeModal({
           {/* Footer */}
           <div className="text-center">
             <div className="text-xs text-purple-400">
-              💡 Your custom style will apply to all property cards on the board
+              <span className="flex items-center gap-1 justify-center">
+                <LightbulbIcon size={12} className="text-purple-400" />
+                Your custom style will apply to all property cards on the board
+              </span>
             </div>
           </div>
         </div>

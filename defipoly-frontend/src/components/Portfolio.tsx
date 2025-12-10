@@ -8,7 +8,7 @@ import { useDefipoly } from '@/contexts/DefipolyContext';
 import type { PropertyOwnership } from '@/types/accounts';
 import { Shield, ChevronDown, ChevronRight, Award, Zap, Wallet } from 'lucide-react';
 import { ShieldAllModal } from './ShieldAllModal';
-import { BuildingIcon } from './icons/UIIcons';
+import { BuildingIcon, ChartUpIcon, LoadingIcon } from './icons/UIIcons';
 import { useRewards } from '@/contexts/RewardsContext';
 import { useGameState } from '@/contexts/GameStateContext';
 
@@ -259,7 +259,7 @@ export function Portfolio({ onSelectProperty, scaleFactor = 1 }: PortfolioProps)
                 <div className="text-right">
                   <div className="text-purple-400 uppercase tracking-wide" style={{ fontSize: `${smallTextSize}px` }}>Daily Rewards</div>
                   <div className="font-bold text-green-400 flex items-center" style={{ fontSize: `${subtitleSize}px`, gap: `${Math.round(4 * scaleFactor)}px` }}>
-                    <span>📈</span>
+                    <ChartUpIcon size={14} className="text-green-400" />
                     <span>+{stats.dailyIncome > 0 ? stats.dailyIncome.toLocaleString() : '0'}/day</span>
                   </div>
                 </div>
@@ -276,7 +276,7 @@ export function Portfolio({ onSelectProperty, scaleFactor = 1 }: PortfolioProps)
         {/* Loading State */}
         {loading && ownedProperties.length === 0 && (
           <div className="text-center" style={{ padding: `${padding * 3}px 0` }}>
-            <div style={{ fontSize: `${Math.round(32 * scaleFactor)}px`, marginBottom: `${Math.round(8 * scaleFactor)}px` }}>⏳</div>
+            <LoadingIcon size={Math.round(32 * scaleFactor)} className="text-yellow-400 animate-pulse mx-auto" style={{ marginBottom: `${Math.round(8 * scaleFactor)}px` }} />
             <div className="text-purple-300" style={{ fontSize: `${subtitleSize}px` }}>Loading portfolio...</div>
           </div>
         )}

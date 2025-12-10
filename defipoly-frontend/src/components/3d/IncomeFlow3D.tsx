@@ -11,8 +11,8 @@ import * as THREE from 'three';
 // CONSTANTS
 // ============================================================
 
-const MAX_BILLS = 60;
-const MAX_DIAMONDS = 40;
+const MAX_BILLS = 18;
+const MAX_DIAMONDS = 12;
 const PARTICLE_SPEED = 0.6;
 
 // Board dimensions
