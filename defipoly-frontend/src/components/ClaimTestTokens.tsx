@@ -149,8 +149,35 @@ export function ClaimTestTokens() {
     );
   }
 
-  // Not whitelisted - don't show
-  if (!status || !status.isWhitelisted) return null;
+  // Not whitelisted - show form message
+  if (!status || !status.isWhitelisted) {
+    return (
+      <div className="bg-gradient-to-r from-amber-900/40 to-orange-900/30 backdrop-blur-lg rounded-xl border border-amber-500/30 p-4">
+        <h3 className="text-lg font-bold text-white mb-2 flex items-center gap-2">
+          <AlertCircle className="w-5 h-5 text-amber-400" />
+          Whitelist Required
+        </h3>
+        
+        <p className="text-sm text-amber-200 mb-4">
+          To receive test tokens, you need to be whitelisted. Please fill out our quick form and you'll be added to the whitelist shortly.
+        </p>
+
+        <a
+          href="https://docs.google.com/forms/d/e/1FAIpQLSfq8ZcVmFP_rS3dwWouZX9RFAmcja3LjOhySdVxHXxJ-XWgsg/viewform"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="w-full px-4 py-3 bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 rounded-lg font-semibold text-white transition-all flex items-center justify-center gap-2"
+        >
+          <Gift className="w-5 h-5" />
+          Fill Whitelist Form
+        </a>
+        
+        <p className="text-xs text-amber-300/70 mt-3 text-center">
+          After submitting, check back here in a few hours to claim your tokens.
+        </p>
+      </div>
+    );
+  }
 
     // Already completed
     if (status.completed && status.step === 'completed') {
