@@ -9,6 +9,7 @@ import { createContext, useContext, useState, useEffect, useCallback } from 'rea
 import { useWallet } from '@solana/wallet-adapter-react';
 import { jwtDecode } from 'jwt-decode';
 import bs58 from 'bs58';
+import { DevnetConfirmationModal } from '@/components/DevnetConfirmationModal';
 
 const API_BASE_URL = process.env['NEXT_PUBLIC_API_BASE_URL'] || 'http://localhost:3101';
 
@@ -25,6 +26,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const { publicKey, signMessage, connected } = useWallet();
   const [token, setToken] = useState<string | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  
+  // Devnet confirmation modal state
+  const [pendingAuthToken, setPendingAuthToken] = useState<string | null>(null);
+  const [showDevnetModal, setShowDevnetModal] = useState(false);
+
+  // Check if user has already confirmed devnet for this wallet
+  const hasDevnetConfirmation = useCallback((walletAddress: string): boolean => {
+    const confirmationKey = 'defipoly_devnet_confirmed';
+    const confirmedWallet = localStorage.getItem(confirmationKey);
+    return confirmedWallet === walletAddress;
+  }, []);
 
   // Load token from localStorage on mount
   useEffect(() => {
@@ -83,26 +95,58 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       const { token: jwtToken } = await verifyResponse.json();
 
-      // Save token
-      localStorage.setItem('defipoly_auth_token', jwtToken);
-      setToken(jwtToken);
-      setIsAuthenticated(true);
+      // Step 4: Check if user needs devnet confirmation
+      if (hasDevnetConfirmation(walletAddress)) {
+        // User already confirmed devnet for this wallet, complete auth immediately
+        localStorage.setItem('defipoly_auth_token', jwtToken);
+        setToken(jwtToken);
+        setIsAuthenticated(true);
+      } else {
+        // User needs to confirm devnet settings, show modal
+        setPendingAuthToken(jwtToken);
+        setShowDevnetModal(true);
+      }
       
     } catch (error) {
       console.error('Authentication error:', error);
       throw error;
     }
-  }, [publicKey, signMessage]);
+  }, [publicKey, signMessage, hasDevnetConfirmation]);
+
+  // Handle devnet confirmation
+  const handleDevnetConfirmed = useCallback(() => {
+    if (pendingAuthToken) {
+      // Complete the auth process
+      localStorage.setItem('defipoly_auth_token', pendingAuthToken);
+      setToken(pendingAuthToken);
+      setIsAuthenticated(true);
+      
+      // Clean up modal state
+      setPendingAuthToken(null);
+      setShowDevnetModal(false);
+    }
+  }, [pendingAuthToken]);
 
   const logout = useCallback(() => {
     localStorage.removeItem('defipoly_auth_token');
     setToken(null);
     setIsAuthenticated(false);
+    
+    // Clean up modal state
+    setPendingAuthToken(null);
+    setShowDevnetModal(false);
   }, []);
 
   return (
     <AuthContext.Provider value={{ token, isAuthenticated, login, logout }}>
       {children}
+      
+      {/* Devnet Confirmation Modal */}
+      <DevnetConfirmationModal
+        isOpen={showDevnetModal}
+        walletAddress={publicKey?.toString() || ''}
+        onConfirm={handleDevnetConfirmed}
+      />
     </AuthContext.Provider>
   );
 }

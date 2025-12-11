@@ -222,7 +222,7 @@ export function FloatingCoins3D({ rewardsAmount, position = [0, 1.95, 0], onCoin
     coinRefs.current.forEach((coinRef, i) => {
       if (!coinRef || !coinData[i]) return;
       
-      const data = coinData[i];
+      const data = coinData[i]!;
       const isHovered = hoveredCoin === i;
       const isHintCoin = data.isHintCoin;
 
