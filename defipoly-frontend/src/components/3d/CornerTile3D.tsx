@@ -456,7 +456,7 @@ function CornerTextureOverlay({ textureUrl, size, cornerSquareStyle, profilePict
     });
 
     return (
-      <mesh position={[0, tileThickness + 0.001, 0]} rotation={[-Math.PI/2, 0, 0]} receiveShadow>
+      <mesh position={[0, tileThickness/2 + 0.025, 0]} rotation={[-Math.PI/2, 0, 0]} receiveShadow>
         <planeGeometry args={[size, size]} />
         <primitive object={material} attach="material" />
       </mesh>
@@ -465,7 +465,7 @@ function CornerTextureOverlay({ textureUrl, size, cornerSquareStyle, profilePict
 
   // For property card style, use regular texture
   return (
-    <mesh position={[0, tileThickness + 0.001, 0]} rotation={[-Math.PI/2, 0, 0]} receiveShadow>
+    <mesh position={[0, tileThickness/2 + 0.025, 0]} rotation={[-Math.PI/2, 0, 0]} receiveShadow>
       <planeGeometry args={[size, size]} />
       <meshStandardMaterial map={texture} roughness={0.8} metalness={0.1} />
     </mesh>

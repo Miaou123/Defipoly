@@ -1,10 +1,10 @@
 export const THEME_CONSTANTS = {
   // Board center background (the middle area where the bank sits)
-  DEFAULT_BOARD_BACKGROUND: 'linear-gradient(135deg, #5E3D6E, #4A2C5A)', 
+  DEFAULT_BOARD_BACKGROUND: 'linear-gradient(135deg, #3d2a4d, #5a4070)', 
   
   // Property card background (individual property cards)
-  DEFAULT_PROPERTY_CARD_BACKGROUND: 'linear-gradient(135deg, #1f2937, #111827)',
+  DEFAULT_PROPERTY_CARD_BACKGROUND: 'linear-gradient(135deg, #3d2a4d, #5a4070)',
   
   // Scene background (the gradient behind the 3D board)
-  DEFAULT_SCENE_BACKGROUND: 'linear-gradient(180deg, #0a0015 0%, #1a0a2e 50%, #0a0015 100%)',
+  DEFAULT_SCENE_BACKGROUND: 'linear-gradient(180deg, #3d2a4d 0%, #5a4070 50%, #3d2a4d 100%)',
 };

@@ -26,6 +26,7 @@ import { usePreloadedShowcaseTextures } from '@/hooks/usePreloadedShowcaseTextur
 import { useBoardPresetTexture, useTilePresetTexture, useScenePresetTexture } from '@/hooks/usePresetTexture';
 import { ShowcaseScene } from '@/utils/showcaseScenes';
 import { ShowcaseCameraController } from './ShowcaseMode';
+import { GeometryCacheProvider } from './GeometryCache';
 
 
 interface Board3DSceneProps {
@@ -114,7 +115,6 @@ function BoardSurfaceWithTexture({ customBackground }: { customBackground: strin
       const colors = customBackground.split(',').map(c => c.trim());
       const hexColorRegex = /^#[0-9A-Fa-f]{6}$/;
       if (colors[0] && colors[1] && hexColorRegex.test(colors[0]) && hexColorRegex.test(colors[1])) {
-        console.warn('BoardSurfaceWithTexture: Converting gradient to texture:', customBackground);
         // Generate canvas texture from gradient
         const canvas = document.createElement('canvas');
         canvas.width = 512;
@@ -1064,15 +1064,6 @@ function Scene({
   rotationMode
 }: SceneProps) {
   
-  // Debug log showcase props (only when in showcase mode)
-  if (showcaseMode) {
-    console.log('🎭 [SCENE] Scene component props:', {
-      showcaseMode,
-      showcaseScene: showcaseScene ? { id: showcaseScene.id, name: showcaseScene.name } : null,
-      onExitShowcase: !!onExitShowcase,
-      onStartShowcase: !!onStartShowcase
-    });
-  }
   
   const gameState = useGameState();
   const { unclaimedRewards } = useRewards();
@@ -1221,6 +1212,7 @@ function Scene({
   
   return (
     <>
+      
       {/* Camera Controller */}
       {showcaseMode && showcaseScene ? (
         <ShowcaseCameraController 
@@ -1299,8 +1291,8 @@ function Scene({
       
       {/* ===== PROPERTY TILES WITH SUSPENSE FOR TEXTURE LOADING ===== */}
       <Suspense fallback={null}>
-        {/* ===== TOP ROW (properties 11-16) ===== */}
-        {[11, 12, 13, 14, 15, 16].map((id, i) => {
+            {/* ===== TOP ROW (properties 11-16) ===== */}
+            {[11, 12, 13, 14, 15, 16].map((id, i) => {
         const prop = PROPERTIES.find(p => p.id === id)!;
         const x = -halfW + cornerSize + tileLong/2 + i * tileLong;
         const z = -halfH + tileShort/2;
@@ -1424,8 +1416,8 @@ function Scene({
             themeCategory={themeCategory || null}
             writingStyle={writingStyle || 'light'}
           />
-        );
-      })}
+            );
+            })}
       </Suspense>
       
       {/* ===== BANK (show in showcase mode with fake values, or when connected) ===== */}
@@ -1481,16 +1473,6 @@ function Scene({
 
 export function Board3DScene({ onSelectProperty, onCoinClick, spectatorMode, spectatorOwnerships, customBoardBackground, custom3DPropertyTiles, customSceneBackground, boardPresetId, tilePresetId, themeCategory, writingStyle, profilePicture, cornerSquareStyle, isMobile = false, showcaseMode = false, showcaseScene, onExitShowcase, onStartShowcase }: Board3DSceneProps) {
   
-  // Debug log Board3DScene props (only when showcase state changes)
-  if (showcaseMode) {
-    console.log('🎭 [BOARD3D] Board3DScene props:', {
-      showcaseMode,
-      showcaseScene: showcaseScene ? { id: showcaseScene.id, name: showcaseScene.name } : null,
-      onExitShowcase: !!onExitShowcase,
-      onStartShowcase: !!onStartShowcase,
-      isMobile
-    });
-  }
   
   const containerRef = useRef<HTMLDivElement>(null);
   const [mounted, setMounted] = useState(false);
@@ -1498,6 +1480,7 @@ export function Board3DScene({ onSelectProperty, onCoinClick, spectatorMode, spe
   const [showClaimHint, setShowClaimHint] = useState(false);
   const [rotationMode, setRotationMode] = useState(false);
   const [webglError, setWebglError] = useState<string | null>(null);
+  
   const cameraControlsRef = useRef<any>(null);
   const { publicKey, connected } = useWallet();
   const gameState = useGameState();
@@ -1895,7 +1878,6 @@ export function Board3DScene({ onSelectProperty, onCoinClick, spectatorMode, spe
             }
             
           } catch (error) {
-            console.error('Failed to setup WebGL context:', error);
             setWebglError(error instanceof Error ? error.message : 'Unknown WebGL error');
           }
         }}
@@ -1909,7 +1891,8 @@ export function Board3DScene({ onSelectProperty, onCoinClick, spectatorMode, spe
         }}
       >
         <Suspense fallback={null}>
-          <Scene 
+          <GeometryCacheProvider>
+            <Scene 
             onSelectProperty={onSelectProperty}
             {...(onCoinClick && { onCoinClick })}
             spectatorMode={spectatorMode || false}
@@ -1933,9 +1916,11 @@ export function Board3DScene({ onSelectProperty, onCoinClick, spectatorMode, spe
             profilePicture={profilePicture || gameState?.profile?.profilePicture}
             cornerSquareStyle={cornerSquareStyle || gameState?.profile?.cornerSquareStyle || 'property'}
             rotationMode={rotationMode}
-          />
+            />
+          </GeometryCacheProvider>
         </Suspense>
       </Canvas>
+
     </div>
   );
 }
