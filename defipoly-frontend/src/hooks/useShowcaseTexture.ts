@@ -33,11 +33,12 @@ export function useShowcaseTexture(
     
     // Parse gradient parameters
     const gradientParams = gradientMatch[1];
+    if (!gradientParams) return null;
     const parts = gradientParams.split(/,\s*/);
     
     // Create canvas gradient
     let gradient;
-    if (parts[0].includes('deg')) {
+    if (parts[0] && parts[0].includes('deg')) {
       // Handle angle
       const angle = parseFloat(parts[0]) * (Math.PI / 180);
       const x1 = size / 2 - Math.cos(angle + Math.PI / 2) * size / 2;
@@ -51,8 +52,8 @@ export function useShowcaseTexture(
     }
     
     // Extract colors and add color stops
-    const colors = parts.slice(parts[0].includes('deg') ? 1 : 0);
-    if (colors.length === 2) {
+    const colors = parts.slice(parts[0] && parts[0].includes('deg') ? 1 : 0);
+    if (colors.length === 2 && colors[0] && colors[1]) {
       // Clean color values by removing percentage values
       const color1 = colors[0].trim().replace(/\s+\d+%/, '');
       const color2 = colors[1].trim().replace(/\s+\d+%/, '');

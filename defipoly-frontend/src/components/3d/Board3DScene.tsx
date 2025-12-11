@@ -1429,7 +1429,7 @@ function Scene({
           showClaimHint={showClaimHint && !showcaseMode}
           onClaimHintDismiss={handleClaimHintDismiss}
           displayOnly={showcaseMode}
-          displayValue={showcaseMode && showcaseScene ? showcaseScene.bankDisplayValue : undefined}
+          {...(showcaseMode && showcaseScene && showcaseScene.bankDisplayValue !== undefined && { displayValue: showcaseScene.bankDisplayValue })}
         />
       ) : null}
       
@@ -1448,8 +1448,8 @@ function Scene({
           hasProperties={hasProperties} 
           showClaimHint={showClaimHint}
           onClaimHintDismiss={handleClaimHintDismiss}
-          onStartShowcase={onStartShowcase}
-          spectatorMode={spectatorMode}
+          {...(onStartShowcase && { onStartShowcase })}
+          spectatorMode={spectatorMode || false}
         />
       )}
       
@@ -1464,7 +1464,7 @@ function Scene({
             }
           }}
           showcaseMode={showcaseMode}
-          showcaseOwnerships={showcaseMode ? showcaseScene?.mockOwnerships : undefined}
+          {...(showcaseMode && showcaseScene?.mockOwnerships && { showcaseOwnerships: showcaseScene.mockOwnerships })}
         />
       )}
     </>
@@ -1705,7 +1705,7 @@ export function Board3DScene({ onSelectProperty, onCoinClick, spectatorMode, spe
             >
               {showcaseMode ? (
                 <>
-                  <CrossIcon size={14} style={{ color: 'white' }} />
+                  <CrossIcon size={14} className="text-white" />
                   <span>Exit</span>
                 </>
               ) : (
@@ -1757,9 +1757,9 @@ export function Board3DScene({ onSelectProperty, onCoinClick, spectatorMode, spe
             onMouseOut={(e) => (e.target as HTMLButtonElement).style.background = rotationMode ? '#eab308' : '#6d28d9'}
           >
             {rotationMode ? (
-              <StopIcon size={16} style={{ color: 'white' }} />
+              <StopIcon size={16} className="text-white" />
             ) : (
-              <SpinIcon size={16} style={{ color: 'white' }} />
+              <SpinIcon size={16} className="text-white" />
             )}
           </button>
           <button
@@ -1904,9 +1904,9 @@ export function Board3DScene({ onSelectProperty, onCoinClick, spectatorMode, spe
             connected={connected}
             hasProperties={hasProperties}
             showcaseMode={showcaseMode}
-            showcaseScene={showcaseScene}
-            onExitShowcase={onExitShowcase}
-            onStartShowcase={onStartShowcase}
+            showcaseScene={showcaseScene || null}
+            {...(onExitShowcase && { onExitShowcase })}
+            {...(onStartShowcase && { onStartShowcase })}
             customBoardBackground={customBoardBackground || null}
             custom3DPropertyTiles={custom3DPropertyTiles || null}
             boardPresetId={boardPresetId || null}

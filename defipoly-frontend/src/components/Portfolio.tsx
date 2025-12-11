@@ -276,7 +276,9 @@ export function Portfolio({ onSelectProperty, scaleFactor = 1 }: PortfolioProps)
         {/* Loading State */}
         {loading && ownedProperties.length === 0 && (
           <div className="text-center" style={{ padding: `${padding * 3}px 0` }}>
-            <LoadingIcon size={Math.round(32 * scaleFactor)} className="text-yellow-400 animate-pulse mx-auto" style={{ marginBottom: `${Math.round(8 * scaleFactor)}px` }} />
+            <div style={{ marginBottom: `${Math.round(8 * scaleFactor)}px` }}>
+              <LoadingIcon size={Math.round(32 * scaleFactor)} className="text-yellow-400 animate-pulse mx-auto" />
+            </div>
             <div className="text-purple-300" style={{ fontSize: `${subtitleSize}px` }}>Loading portfolio...</div>
           </div>
         )}

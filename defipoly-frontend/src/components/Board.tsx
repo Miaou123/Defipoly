@@ -68,9 +68,9 @@ export function Board({
         cornerSquareStyle={cornerSquareStyle}
         isMobile={isMobile}
         showcaseMode={showcaseMode}
-        showcaseScene={showcaseScene}
-        onExitShowcase={onExitShowcase}
-        onStartShowcase={onStartShowcase}
+        showcaseScene={showcaseScene || null}
+        {...(onExitShowcase && { onExitShowcase })}
+        {...(onStartShowcase && { onStartShowcase })}
       />
     </div>
   );

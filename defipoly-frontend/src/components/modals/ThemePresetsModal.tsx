@@ -79,9 +79,7 @@ export function ThemePresetsModal({
       
       {/* Preset info */}
       <div className="flex-1 min-w-0">
-        <div className={`text-sm font-medium truncate ${
-          preset.category === 'light' ? 'text-gray-900' : 'text-white'
-        }`}>
+        <div className="text-sm font-medium truncate text-purple-100">
           {preset.name}
         </div>
       </div>
@@ -94,18 +92,18 @@ export function ThemePresetsModal({
   return createPortal(
     <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-[9999] p-4" onClick={onClose}>
       <div 
-        className="bg-gray-900/95 backdrop-blur-xl rounded-2xl shadow-2xl max-w-4xl w-full max-h-[80vh] overflow-hidden" 
+        className="bg-gradient-to-br from-purple-950/95 via-purple-900/95 to-purple-950/95 backdrop-blur-xl rounded-2xl border-2 border-purple-500/30 shadow-2xl shadow-purple-500/20 max-w-4xl w-full max-h-[80vh] overflow-hidden" 
         onClick={e => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="p-6 border-b border-white/10">
+        <div className="p-6 border-b border-purple-500/20">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-semibold text-white">
+            <h2 className="text-xl font-bold text-purple-100">
               Theme Presets
             </h2>
             <button
               onClick={onClose}
-              className="p-2 text-gray-400 hover:text-white transition-colors rounded-lg hover:bg-white/5"
+              className="p-2 text-purple-400 hover:text-white transition-colors rounded-lg hover:bg-purple-800/30"
             >
               <X size={20} />
             </button>
@@ -120,7 +118,7 @@ export function ThemePresetsModal({
                 className={`px-4 py-2 rounded-lg capitalize transition-colors ${
                   selectedCategory === category
                     ? 'bg-purple-600 text-white'
-                    : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                    : 'bg-purple-800/40 text-purple-300 hover:bg-purple-700/50'
                 }`}
               >
                 {category}
@@ -132,7 +130,7 @@ export function ThemePresetsModal({
         {/* Split Panel Content */}
         <div className="flex h-[500px]">
           {/* Left Panel - Preset List */}
-          <div className="w-2/5 border-r border-white/10 bg-gradient-to-b from-gray-800/50 to-gray-900/50">
+          <div className="w-2/5 border-r border-purple-500/20 bg-gradient-to-b from-purple-800/30 to-purple-900/50">
             <div className="h-full p-3 overflow-y-auto">
               <div className="space-y-1">
                 {presetsInCategory.map(preset => (
@@ -143,20 +141,16 @@ export function ThemePresetsModal({
           </div>
 
           {/* Right Panel - Live Preview */}
-          <div className="w-3/5 bg-gradient-to-br from-gray-800/30 to-gray-900/30 flex flex-col">
+          <div className="w-3/5 bg-gradient-to-br from-purple-800/20 to-purple-900/30 flex flex-col">
             <div className="flex-1 p-6 flex flex-col items-center justify-center">
               {selectedPreset && (
                 <>
                   {/* Preset name */}
                   <div className="text-center mb-6">
-                    <h3 className={`text-xl font-semibold mb-1 ${
-                      selectedPreset.category === 'light' ? 'text-gray-900' : 'text-white'
-                    }`}>
+                    <h3 className="text-xl font-semibold mb-1 text-purple-100">
                       {selectedPreset.name}
                     </h3>
-                    <p className={`capitalize text-sm ${
-                      selectedPreset.category === 'light' ? 'text-gray-700' : 'text-gray-400'
-                    }`}>
+                    <p className="capitalize text-sm text-purple-400">
                       {selectedPreset.category} theme
                     </p>
                   </div>
@@ -177,7 +171,7 @@ export function ThemePresetsModal({
                       {onReset && (
                         <button
                           onClick={handleReset}
-                          className="flex-1 py-2 px-4 bg-gray-600 hover:bg-gray-500 transition-all duration-200 text-white font-medium rounded-lg text-sm"
+                          className="flex-1 py-2 px-4 bg-red-600/80 hover:bg-red-600 transition-all duration-200 text-white font-medium rounded-lg text-sm"
                         >
                           Reset
                         </button>
@@ -185,7 +179,7 @@ export function ThemePresetsModal({
                       <button
                         onClick={handleApply}
                         disabled={!selectedPreset}
-                        className="flex-1 py-2 px-4 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 disabled:from-gray-600 disabled:to-gray-600 disabled:cursor-not-allowed transition-all duration-200 text-white font-medium rounded-lg text-sm"
+                        className="flex-1 py-2 px-4 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 disabled:from-purple-800 disabled:to-purple-800 disabled:cursor-not-allowed transition-all duration-200 text-white font-medium rounded-lg text-sm"
                       >
                         Apply
                       </button>

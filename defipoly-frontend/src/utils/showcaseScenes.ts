@@ -43,7 +43,7 @@ export function generateShowcaseScene(config: ShowcaseSceneConfig): ShowcaseScen
       avgLevel: ownershipConfig.avgLevel,
       coverage: ownershipConfig.coverage,
       brownToGreenBias: ownershipConfig.brownToGreenBias || false,
-      level5Percentage: ownershipConfig.level5Percentage,
+      ...(ownershipConfig.level5Percentage !== undefined && { level5Percentage: ownershipConfig.level5Percentage }),
     });
   } else {
     mockOwnerships = generateMockOwnerships({
@@ -88,12 +88,12 @@ export function generateMockOwnerships(config: {
   const propertyIds = Array.from({ length: totalProperties }, (_, i) => i);
   for (let i = propertyIds.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
-    [propertyIds[i], propertyIds[j]] = [propertyIds[j], propertyIds[i]];
+    [propertyIds[i], propertyIds[j]] = [propertyIds[j]!, propertyIds[i]!];
   }
   
   // Generate ownerships for the owned properties
   for (let i = 0; i < ownedCount; i++) {
-    const propertyId = propertyIds[i];
+    const propertyId = propertyIds[i]!;
     
     // Generate level with improved variance around avgLevel for better showcase
     let level = avgLevel;
@@ -120,7 +120,7 @@ export function generateMockOwnerships(config: {
     ownerships.push({
       propertyId,
       slotsOwned: level,
-      owner: MOCK_WALLETS[Math.floor(Math.random() * MOCK_WALLETS.length)],
+      owner: MOCK_WALLETS[Math.floor(Math.random() * MOCK_WALLETS.length)]!,
     });
   }
   
@@ -157,7 +157,7 @@ export function generateFocusedMockOwnerships(config: {
     const shuffledBrownGreen = [...brownToGreenProperties];
     for (let i = shuffledBrownGreen.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
-      [shuffledBrownGreen[i], shuffledBrownGreen[j]] = [shuffledBrownGreen[j], shuffledBrownGreen[i]];
+      [shuffledBrownGreen[i], shuffledBrownGreen[j]] = [shuffledBrownGreen[j]!, shuffledBrownGreen[i]!];
     }
     
     // Add prioritized brown-green properties
@@ -168,7 +168,7 @@ export function generateFocusedMockOwnerships(config: {
       const shuffledOthers = [...darkBlueProperties];
       for (let i = shuffledOthers.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
-        [shuffledOthers[i], shuffledOthers[j]] = [shuffledOthers[j], shuffledOthers[i]];
+        [shuffledOthers[i], shuffledOthers[j]] = [shuffledOthers[j]!, shuffledOthers[i]!];
       }
       propertyIds.push(...shuffledOthers.slice(0, Math.min(otherOwned, 2)));
     }
@@ -177,14 +177,14 @@ export function generateFocusedMockOwnerships(config: {
     const allProperties = Array.from({ length: totalProperties }, (_, i) => i);
     for (let i = allProperties.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
-      [allProperties[i], allProperties[j]] = [allProperties[j], allProperties[i]];
+      [allProperties[i], allProperties[j]] = [allProperties[j]!, allProperties[i]!];
     }
     propertyIds.push(...allProperties.slice(0, ownedCount));
   }
   
   // Generate ownerships for the selected properties
   for (let i = 0; i < propertyIds.length; i++) {
-    const propertyId = propertyIds[i];
+    const propertyId = propertyIds[i]!;
     const isBrownToGreen = propertyId >= 0 && propertyId <= 19;
     
     let level = avgLevel;
@@ -232,7 +232,7 @@ export function generateFocusedMockOwnerships(config: {
     ownerships.push({
       propertyId,
       slotsOwned: level,
-      owner: MOCK_WALLETS[Math.floor(Math.random() * MOCK_WALLETS.length)],
+      owner: MOCK_WALLETS[Math.floor(Math.random() * MOCK_WALLETS.length)]!,
     });
   }
   
@@ -263,7 +263,7 @@ export const SHOWCASE_SCENE_CONFIGS: ShowcaseSceneConfig[] = [
     id: 'intro',
     name: 'Welcome to Defipoly',
     duration: 1.5,
-    themePresetId: 'current-purple',
+    themePresetId: 'dusty-purple',
     ownershipConfig: { avgLevel: 0, coverage: 0 },
     bankDisplayValue: 0,
     cameraAnimation: 'orbit',
@@ -272,7 +272,7 @@ export const SHOWCASE_SCENE_CONFIGS: ShowcaseSceneConfig[] = [
     id: 'first-purchase',
     name: 'First Properties',
     duration: 1.2,
-    themePresetId: 'midnight',
+    themePresetId: 'dusty-purple',
     ownershipConfig: { avgLevel: 1, coverage: 0.2 },
     bankDisplayValue: 500,
     cameraAnimation: 'orbit',
@@ -385,7 +385,7 @@ function createEmpireOwnerships(): MockOwnership[] {
   
   // All 22 properties owned, with focus on level 5 in brown-green (0-19)
   for (let i = 0; i < 22; i++) {
-    const property = PROPERTIES[i];
+    const property = PROPERTIES[i]!;
     const maxPerPlayer = property.maxPerPlayer;
     
     let slotsOwned: number;
@@ -412,7 +412,7 @@ function createEmpireOwnerships(): MockOwnership[] {
     ownerships.push({
       propertyId: i,
       slotsOwned,
-      owner: MOCK_WALLETS[i % MOCK_WALLETS.length],
+      owner: MOCK_WALLETS[i % MOCK_WALLETS.length]!,
     });
   }
   
@@ -426,7 +426,7 @@ function createSkyscraperOwnerships(): MockOwnership[] {
   const ownedProperties = [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19]; // All brown-green
   
   for (const propertyId of ownedProperties) {
-    const property = PROPERTIES[propertyId];
+    const property = PROPERTIES[propertyId]!;
     const maxPerPlayer = property.maxPerPlayer;
     
     let slotsOwned: number;
@@ -443,7 +443,7 @@ function createSkyscraperOwnerships(): MockOwnership[] {
     ownerships.push({
       propertyId,
       slotsOwned,
-      owner: MOCK_WALLETS[propertyId % MOCK_WALLETS.length],
+      owner: MOCK_WALLETS[propertyId % MOCK_WALLETS.length]!,
     });
   }
   
@@ -457,7 +457,7 @@ function createMansionOwnerships(): MockOwnership[] {
   const ownedProperties = [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16]; // Mix of brown-green
   
   for (const propertyId of ownedProperties) {
-    const property = PROPERTIES[propertyId];
+    const property = PROPERTIES[propertyId]!;
     const maxPerPlayer = property.maxPerPlayer;
     
     let slotsOwned: number;
@@ -484,7 +484,7 @@ function createMansionOwnerships(): MockOwnership[] {
     ownerships.push({
       propertyId,
       slotsOwned,
-      owner: MOCK_WALLETS[propertyId % MOCK_WALLETS.length],
+      owner: MOCK_WALLETS[propertyId % MOCK_WALLETS.length]!,
     });
   }
   

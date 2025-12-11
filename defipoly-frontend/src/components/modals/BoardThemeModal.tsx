@@ -60,7 +60,6 @@ export function BoardThemeModal({
 
       if (response.ok) {
         onCustomBackgroundChange(colorGradient);
-        onPresetChange(null); // Clear preset when using custom color
         onThemeChange('custom');
         showSuccess('Applied', 'Custom color applied');
         
@@ -116,7 +115,6 @@ export function BoardThemeModal({
       if (response.ok) {
         const data = await response.json();
         onCustomBackgroundChange(data.backgroundUrl);
-        onPresetChange(null); // Clear preset when uploading custom image
         onThemeChange('custom');
         showSuccess('Upload Success', 'Board theme updated');
         
@@ -173,7 +171,6 @@ export function BoardThemeModal({
       
       // Update local state
       onCustomBackgroundChange(null);
-      onPresetChange(null);
       onThemeChange('dark');
       showSuccess('Removed', 'Custom background removed');
       

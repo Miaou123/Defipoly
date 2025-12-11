@@ -318,12 +318,16 @@ export function LiveFeed({ scaleFactor = 1 }: LiveFeedProps) {
         <div className="flex-1 overflow-y-auto" style={{ padding: `0 ${padding}px ${Math.round(padding * 1.5)}px` }}>
           {loading ? (
             <div className="text-center" style={{ padding: `${padding * 2}px 0` }}>
-              <LoadingIcon size={Math.round(20 * scaleFactor)} className="text-yellow-400 animate-pulse mx-auto" style={{ marginBottom: `${Math.round(4 * scaleFactor)}px` }} />
+              <div style={{ marginBottom: `${Math.round(4 * scaleFactor)}px` }}>
+                <LoadingIcon size={Math.round(20 * scaleFactor)} className="text-yellow-400 animate-pulse mx-auto" />
+              </div>
               <div className="text-purple-300" style={{ fontSize: `${subtitleSize}px` }}>Loading activity...</div>
             </div>
           ) : feed.length === 0 ? (
             <div className="text-center" style={{ padding: `${padding * 2}px 0` }}>
-              <BroadcastIcon size={Math.round(30 * scaleFactor)} className="text-purple-400 opacity-50 mx-auto" style={{ marginBottom: `${Math.round(8 * scaleFactor)}px` }} />
+              <div style={{ marginBottom: `${Math.round(8 * scaleFactor)}px` }}>
+                <BroadcastIcon size={Math.round(30 * scaleFactor)} className="text-purple-400 opacity-50 mx-auto" />
+              </div>
               <div className="text-gray-400" style={{ fontSize: `${subtitleSize}px` }}>
                 No activity yet<br />
                 Be the first to make a move!

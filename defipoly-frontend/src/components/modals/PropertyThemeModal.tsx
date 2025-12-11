@@ -99,7 +99,6 @@ export function PropertyThemeModal({
       if (response.ok) {
         const data = await response.json();
         onCustomBackgroundChange(data.backgroundUrl);
-        onPresetChange(null); // Clear preset when using gradient
         onThemeChange('custom');
         showSuccess('Applied', 'Gradient theme applied');
         
@@ -140,7 +139,6 @@ export function PropertyThemeModal({
 
       if (response.ok) {
         onCustomBackgroundChange(colorGradient);
-        onPresetChange(null); // Clear preset when using custom color
         onThemeChange('custom');
         showSuccess('Applied', 'Custom color applied');
         
@@ -196,7 +194,6 @@ export function PropertyThemeModal({
       if (response.ok) {
         const data = await response.json();
         onCustomBackgroundChange(data.backgroundUrl);
-        onPresetChange(null); // Clear preset when uploading custom image
         onThemeChange('custom');
         showSuccess('Upload Success', 'Property cards theme updated');
         
@@ -253,7 +250,6 @@ export function PropertyThemeModal({
       
       // Update local state
       onCustomBackgroundChange(null);
-      onPresetChange(null);
       onThemeChange('dark');
       showSuccess('Removed', 'Custom background removed');
       

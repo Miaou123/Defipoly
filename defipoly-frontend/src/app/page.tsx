@@ -130,7 +130,7 @@ export default function Home() {
     // Always start from the beginning (scene 0) when showcase mode starts
     let sceneIndex = 0;
     console.log('🎭 [SHOWCASE] Starting fresh - Setting initial scene:', SHOWCASE_SCENES[0]?.name);
-    setCurrentShowcaseScene(SHOWCASE_SCENES[0]);
+    setCurrentShowcaseScene(SHOWCASE_SCENES[0] || null);
     
     let timeoutId: NodeJS.Timeout | null = null;
     
@@ -155,7 +155,7 @@ export default function Home() {
         
         // Use requestAnimationFrame for smooth transition
         requestAnimationFrame(() => {
-          setCurrentShowcaseScene(nextScene);
+          setCurrentShowcaseScene(nextScene || null);
           scheduleNextScene(); // Schedule the next transition
         });
       }, currentScene.duration * 1000);

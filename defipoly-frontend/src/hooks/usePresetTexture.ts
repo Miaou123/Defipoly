@@ -27,7 +27,7 @@ export function usePresetTexture(
         const colors = customUrl.split(',').map(c => c.trim());
         // Validate that both parts look like hex colors
         const hexColorRegex = /^#[0-9A-Fa-f]{6}$/;
-        if (hexColorRegex.test(colors[0]) && hexColorRegex.test(colors[1])) {
+        if (colors[0] && colors[1] && hexColorRegex.test(colors[0]) && hexColorRegex.test(colors[1])) {
           // Generate canvas texture from gradient colors
           const canvas = document.createElement('canvas');
           canvas.width = size;
