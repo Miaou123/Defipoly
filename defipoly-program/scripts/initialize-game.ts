@@ -190,7 +190,7 @@ async function main() {
 
   try {
     await program.methods
-      .adminUpdateAccumulationBonus(
+      .adminUpdateAccumulationBonusV2(
         new BN(10_000 * DECIMALS),    // Tier 1: 10k tokens
         100,                           // 1% bonus
         new BN(25_000 * DECIMALS),   // Tier 2: 25k tokens

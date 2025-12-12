@@ -1,5 +1,5 @@
 {
-  "address": "5pmt4n2ge5ywu1Bc9tU1qjjtGbeNoFvVJpomSjvU1PwV",
+  "address": "3khmZfY9k3ushNLet2cCMU3vQEer7g8KAnhKHBEF2ib3",
   "metadata": {
     "name": "defipoly_program",
     "version": "0.1.0",
@@ -24,11 +24,8 @@
           "name": "property"
         },
         {
-          "name": "ownership",
+          "name": "player_account",
           "writable": true
-        },
-        {
-          "name": "player_account"
         },
         {
           "name": "player_token_account",
@@ -67,16 +64,16 @@
       ]
     },
     {
-      "name": "admin_adjust_rewards",
+      "name": "admin_clear_cooldown",
       "discriminator": [
-        20,
-        225,
-        59,
-        92,
-        163,
-        126,
-        43,
-        33
+        250,
+        255,
+        172,
+        116,
+        53,
+        40,
+        105,
+        42
       ],
       "accounts": [
         {
@@ -93,37 +90,10 @@
       ],
       "args": [
         {
-          "name": "adjustment",
-          "type": "i64"
+          "name": "set_id",
+          "type": "u8"
         }
       ]
-    },
-    {
-      "name": "admin_clear_cooldown",
-      "discriminator": [
-        250,
-        255,
-        172,
-        116,
-        53,
-        40,
-        105,
-        42
-      ],
-      "accounts": [
-        {
-          "name": "set_cooldown",
-          "writable": true
-        },
-        {
-          "name": "game_config"
-        },
-        {
-          "name": "authority",
-          "signer": true
-        }
-      ],
-      "args": []
     },
     {
       "name": "admin_clear_steal_cooldown",
@@ -139,7 +109,7 @@
       ],
       "accounts": [
         {
-          "name": "steal_cooldown",
+          "name": "player_account",
           "writable": true
         },
         {
@@ -150,7 +120,12 @@
           "signer": true
         }
       ],
-      "args": []
+      "args": [
+        {
+          "name": "property_id",
+          "type": "u8"
+        }
+      ]
     },
     {
       "name": "admin_close_player_account",
@@ -167,9 +142,6 @@
       "accounts": [
         {
           "name": "player_account",
-          "docs": [
-            "We verify it's owned by our program in the instruction handler"
-          ],
           "writable": true
         },
         {
@@ -245,37 +217,6 @@
           "writable": true
         },
         {
-          "name": "ownership",
-          "writable": true,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  111,
-                  119,
-                  110,
-                  101,
-                  114,
-                  115,
-                  104,
-                  105,
-                  112
-                ]
-              },
-              {
-                "kind": "arg",
-                "path": "target_player"
-              },
-              {
-                "kind": "account",
-                "path": "property.property_id",
-                "account": "Property"
-              }
-            ]
-          }
-        },
-        {
           "name": "player_account",
           "writable": true
         },
@@ -286,15 +227,11 @@
           "name": "authority",
           "writable": true,
           "signer": true
-        },
-        {
-          "name": "system_program",
-          "address": "11111111111111111111111111111111"
         }
       ],
       "args": [
         {
-          "name": "target_player",
+          "name": "_target_player",
           "type": "pubkey"
         },
         {
@@ -317,7 +254,7 @@
       ],
       "accounts": [
         {
-          "name": "ownership",
+          "name": "player_account",
           "writable": true
         },
         {
@@ -329,6 +266,10 @@
         }
       ],
       "args": [
+        {
+          "name": "property_id",
+          "type": "u8"
+        },
         {
           "name": "duration_hours",
           "type": "u16"
@@ -350,10 +291,6 @@
       "accounts": [
         {
           "name": "property",
-          "writable": true
-        },
-        {
-          "name": "ownership",
           "writable": true
         },
         {
@@ -401,6 +338,160 @@
         {
           "name": "new_authority",
           "type": "pubkey"
+        }
+      ]
+    },
+    {
+      "name": "admin_update_accumulation_bonus",
+      "discriminator": [
+        140,
+        88,
+        242,
+        198,
+        145,
+        244,
+        231,
+        200
+      ],
+      "accounts": [
+        {
+          "name": "game_config",
+          "writable": true
+        },
+        {
+          "name": "authority",
+          "signer": true
+        }
+      ],
+      "args": [
+        {
+          "name": "tier1_threshold",
+          "type": "u64"
+        },
+        {
+          "name": "tier1_bonus_bps",
+          "type": "u16"
+        },
+        {
+          "name": "tier2_threshold",
+          "type": "u64"
+        },
+        {
+          "name": "tier2_bonus_bps",
+          "type": "u16"
+        },
+        {
+          "name": "tier3_threshold",
+          "type": "u64"
+        },
+        {
+          "name": "tier3_bonus_bps",
+          "type": "u16"
+        },
+        {
+          "name": "tier4_threshold",
+          "type": "u64"
+        },
+        {
+          "name": "tier4_bonus_bps",
+          "type": "u16"
+        },
+        {
+          "name": "tier5_threshold",
+          "type": "u64"
+        },
+        {
+          "name": "tier5_bonus_bps",
+          "type": "u16"
+        }
+      ]
+    },
+    {
+      "name": "admin_update_accumulation_bonus_v2",
+      "discriminator": [
+        47,
+        11,
+        148,
+        182,
+        73,
+        76,
+        185,
+        204
+      ],
+      "accounts": [
+        {
+          "name": "game_config",
+          "writable": true
+        },
+        {
+          "name": "authority",
+          "signer": true
+        }
+      ],
+      "args": [
+        {
+          "name": "tier1_threshold",
+          "type": "u64"
+        },
+        {
+          "name": "tier1_bonus_bps",
+          "type": "u16"
+        },
+        {
+          "name": "tier2_threshold",
+          "type": "u64"
+        },
+        {
+          "name": "tier2_bonus_bps",
+          "type": "u16"
+        },
+        {
+          "name": "tier3_threshold",
+          "type": "u64"
+        },
+        {
+          "name": "tier3_bonus_bps",
+          "type": "u16"
+        },
+        {
+          "name": "tier4_threshold",
+          "type": "u64"
+        },
+        {
+          "name": "tier4_bonus_bps",
+          "type": "u16"
+        },
+        {
+          "name": "tier5_threshold",
+          "type": "u64"
+        },
+        {
+          "name": "tier5_bonus_bps",
+          "type": "u16"
+        },
+        {
+          "name": "tier6_threshold",
+          "type": "u64"
+        },
+        {
+          "name": "tier6_bonus_bps",
+          "type": "u16"
+        },
+        {
+          "name": "tier7_threshold",
+          "type": "u64"
+        },
+        {
+          "name": "tier7_bonus_bps",
+          "type": "u16"
+        },
+        {
+          "name": "tier8_threshold",
+          "type": "u64"
+        },
+        {
+          "name": "tier8_bonus_bps",
+          "type": "u16"
         }
       ]
     },
@@ -577,102 +668,6 @@
         {
           "name": "property",
           "writable": true
-        },
-        {
-          "name": "ownership",
-          "writable": true,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  111,
-                  119,
-                  110,
-                  101,
-                  114,
-                  115,
-                  104,
-                  105,
-                  112
-                ]
-              },
-              {
-                "kind": "account",
-                "path": "player"
-              },
-              {
-                "kind": "account",
-                "path": "property.property_id",
-                "account": "Property"
-              }
-            ]
-          }
-        },
-        {
-          "name": "set_cooldown",
-          "writable": true,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  99,
-                  111,
-                  111,
-                  108,
-                  100,
-                  111,
-                  119,
-                  110
-                ]
-              },
-              {
-                "kind": "account",
-                "path": "player"
-              },
-              {
-                "kind": "account",
-                "path": "property.set_id",
-                "account": "Property"
-              }
-            ]
-          }
-        },
-        {
-          "name": "set_ownership",
-          "writable": true,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  115,
-                  101,
-                  116,
-                  95,
-                  111,
-                  119,
-                  110,
-                  101,
-                  114,
-                  115,
-                  104,
-                  105,
-                  112
-                ]
-              },
-              {
-                "kind": "account",
-                "path": "player"
-              },
-              {
-                "kind": "account",
-                "path": "property.set_id",
-                "account": "Property"
-              }
-            ]
-          }
         },
         {
           "name": "set_stats",
@@ -1282,10 +1277,6 @@
           "writable": true
         },
         {
-          "name": "ownership",
-          "writable": true
-        },
-        {
           "name": "player_account",
           "writable": true
         },
@@ -1319,10 +1310,6 @@
     },
     {
       "name": "steal_property_instant",
-      "docs": [
-        "Instant steal with cooldown protection (SINGLE TRANSACTION - 33% success rate)",
-        "Randomly selects target from eligible owners passed in remaining_accounts"
-      ],
       "discriminator": [
         213,
         104,
@@ -1336,73 +1323,6 @@
       "accounts": [
         {
           "name": "property"
-        },
-        {
-          "name": "attacker_ownership",
-          "writable": true,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  111,
-                  119,
-                  110,
-                  101,
-                  114,
-                  115,
-                  104,
-                  105,
-                  112
-                ]
-              },
-              {
-                "kind": "account",
-                "path": "attacker"
-              },
-              {
-                "kind": "account",
-                "path": "property.property_id",
-                "account": "Property"
-              }
-            ]
-          }
-        },
-        {
-          "name": "steal_cooldown",
-          "writable": true,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  115,
-                  116,
-                  101,
-                  97,
-                  108,
-                  95,
-                  99,
-                  111,
-                  111,
-                  108,
-                  100,
-                  111,
-                  119,
-                  110
-                ]
-              },
-              {
-                "kind": "account",
-                "path": "attacker"
-              },
-              {
-                "kind": "account",
-                "path": "property.property_id",
-                "account": "Property"
-              }
-            ]
-          }
         },
         {
           "name": "player_account",
@@ -1439,10 +1359,6 @@
         {
           "name": "token_program",
           "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
-        },
-        {
-          "name": "system_program",
-          "address": "11111111111111111111111111111111"
         }
       ],
       "args": [
@@ -1644,45 +1560,6 @@
       ]
     },
     {
-      "name": "PlayerSetCooldown",
-      "discriminator": [
-        135,
-        20,
-        47,
-        188,
-        17,
-        159,
-        96,
-        123
-      ]
-    },
-    {
-      "name": "PlayerSetOwnership",
-      "discriminator": [
-        246,
-        100,
-        31,
-        189,
-        6,
-        148,
-        229,
-        99
-      ]
-    },
-    {
-      "name": "PlayerStealCooldown",
-      "discriminator": [
-        133,
-        168,
-        157,
-        46,
-        40,
-        81,
-        149,
-        245
-      ]
-    },
-    {
       "name": "Property",
       "discriminator": [
         195,
@@ -1693,19 +1570,6 @@
         47,
         152,
         19
-      ]
-    },
-    {
-      "name": "PropertyOwnership",
-      "discriminator": [
-        245,
-        240,
-        179,
-        197,
-        116,
-        60,
-        248,
-        94
       ]
     },
     {
@@ -2116,6 +1980,11 @@
       "code": 6041,
       "name": "InvalidClaimInterval",
       "msg": "Invalid claim interval"
+    },
+    {
+      "code": 6042,
+      "name": "InvalidBonus",
+      "msg": "Invalid bonus percentage (max 50%)"
     }
   ],
   "types": [
@@ -2277,6 +2146,10 @@
     },
     {
       "name": "GameConfig",
+      "serialization": "bytemuck",
+      "repr": {
+        "kind": "c"
+      },
       "type": {
         "kind": "struct",
         "fields": [
@@ -2313,12 +2186,40 @@
             "type": "u64"
           },
           {
-            "name": "current_phase",
-            "type": "u8"
+            "name": "min_claim_interval_minutes",
+            "type": "i64"
           },
           {
-            "name": "game_paused",
-            "type": "bool"
+            "name": "accumulation_tier1_threshold",
+            "type": "u64"
+          },
+          {
+            "name": "accumulation_tier2_threshold",
+            "type": "u64"
+          },
+          {
+            "name": "accumulation_tier3_threshold",
+            "type": "u64"
+          },
+          {
+            "name": "accumulation_tier4_threshold",
+            "type": "u64"
+          },
+          {
+            "name": "accumulation_tier5_threshold",
+            "type": "u64"
+          },
+          {
+            "name": "accumulation_tier6_threshold",
+            "type": "u64"
+          },
+          {
+            "name": "accumulation_tier7_threshold",
+            "type": "u64"
+          },
+          {
+            "name": "accumulation_tier8_threshold",
+            "type": "u64"
           },
           {
             "name": "steal_chance_targeted_bps",
@@ -2337,12 +2238,48 @@
             "type": "u16"
           },
           {
-            "name": "max_properties_per_claim",
+            "name": "accumulation_tier1_bonus_bps",
+            "type": "u16"
+          },
+          {
+            "name": "accumulation_tier2_bonus_bps",
+            "type": "u16"
+          },
+          {
+            "name": "accumulation_tier3_bonus_bps",
+            "type": "u16"
+          },
+          {
+            "name": "accumulation_tier4_bonus_bps",
+            "type": "u16"
+          },
+          {
+            "name": "accumulation_tier5_bonus_bps",
+            "type": "u16"
+          },
+          {
+            "name": "accumulation_tier6_bonus_bps",
+            "type": "u16"
+          },
+          {
+            "name": "accumulation_tier7_bonus_bps",
+            "type": "u16"
+          },
+          {
+            "name": "accumulation_tier8_bonus_bps",
+            "type": "u16"
+          },
+          {
+            "name": "current_phase",
             "type": "u8"
           },
           {
-            "name": "min_claim_interval_minutes",
-            "type": "i64"
+            "name": "game_paused",
+            "type": "u8"
+          },
+          {
+            "name": "max_properties_per_claim",
+            "type": "u8"
           },
           {
             "name": "bump",
@@ -2353,11 +2290,11 @@
             "type": "u8"
           },
           {
-            "name": "padding",
+            "name": "_padding",
             "type": {
               "array": [
                 "u8",
-                128
+                3
               ]
             }
           }
@@ -2366,16 +2303,16 @@
     },
     {
       "name": "PlayerAccount",
+      "serialization": "bytemuck",
+      "repr": {
+        "kind": "c"
+      },
       "type": {
         "kind": "struct",
         "fields": [
           {
             "name": "owner",
             "type": "pubkey"
-          },
-          {
-            "name": "total_slots_owned",
-            "type": "u16"
           },
           {
             "name": "total_base_daily_income",
@@ -2386,16 +2323,16 @@
             "type": "i64"
           },
           {
+            "name": "last_accumulation_timestamp",
+            "type": "i64"
+          },
+          {
             "name": "total_rewards_claimed",
             "type": "u64"
           },
           {
-            "name": "complete_sets_owned",
-            "type": "u8"
-          },
-          {
-            "name": "properties_owned_count",
-            "type": "u8"
+            "name": "pending_rewards",
+            "type": "u64"
           },
           {
             "name": "total_steals_attempted",
@@ -2406,98 +2343,23 @@
             "type": "u32"
           },
           {
-            "name": "bump",
-            "type": "u8"
-          },
-          {
-            "name": "pending_rewards",
-            "type": "u64"
-          },
-          {
-            "name": "padding",
-            "type": {
-              "array": [
-                "u8",
-                56
-              ]
-            }
-          }
-        ]
-      }
-    },
-    {
-      "name": "PlayerSetCooldown",
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "player",
-            "type": "pubkey"
-          },
-          {
-            "name": "set_id",
-            "type": "u8"
-          },
-          {
-            "name": "last_purchase_timestamp",
-            "type": "i64"
-          },
-          {
-            "name": "cooldown_duration",
-            "type": "i64"
-          },
-          {
-            "name": "last_purchased_property_id",
-            "type": "u8"
-          },
-          {
-            "name": "properties_owned_in_set",
-            "type": {
-              "array": [
-                "u8",
-                3
-              ]
-            }
-          },
-          {
-            "name": "properties_count",
-            "type": "u8"
-          },
-          {
-            "name": "bump",
-            "type": "u8"
-          },
-          {
-            "name": "padding",
-            "type": {
-              "array": [
-                "u8",
-                32
-              ]
-            }
-          }
-        ]
-      }
-    },
-    {
-      "name": "PlayerSetOwnership",
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "player",
-            "type": "pubkey"
-          },
-          {
-            "name": "set_id",
-            "type": "u8"
-          },
-          {
-            "name": "total_slots_in_set",
+            "name": "total_slots_owned",
             "type": "u16"
           },
           {
-            "name": "properties_owned_ids",
+            "name": "complete_sets_owned",
+            "type": "u8"
+          },
+          {
+            "name": "properties_owned_count",
+            "type": "u8"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          },
+          {
+            "name": "_padding1",
             "type": {
               "array": [
                 "u8",
@@ -2506,64 +2368,101 @@
             }
           },
           {
-            "name": "properties_count",
-            "type": "u8"
-          },
-          {
-            "name": "has_complete_set",
-            "type": "bool"
-          },
-          {
-            "name": "first_property_timestamp",
-            "type": "i64"
-          },
-          {
-            "name": "bump",
-            "type": "u8"
-          },
-          {
-            "name": "padding",
+            "name": "property_purchase_timestamp",
             "type": {
               "array": [
-                "u8",
-                32
+                "i64",
+                22
               ]
             }
-          }
-        ]
-      }
-    },
-    {
-      "name": "PlayerStealCooldown",
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "player",
-            "type": "pubkey"
           },
           {
-            "name": "property_id",
-            "type": "u8"
+            "name": "property_shield_expiry",
+            "type": {
+              "array": [
+                "i64",
+                22
+              ]
+            }
           },
           {
-            "name": "last_steal_attempt_timestamp",
-            "type": "i64"
+            "name": "property_shield_cooldown",
+            "type": {
+              "array": [
+                "i64",
+                22
+              ]
+            }
           },
           {
-            "name": "cooldown_duration",
-            "type": "i64"
+            "name": "property_steal_protection_expiry",
+            "type": {
+              "array": [
+                "i64",
+                22
+              ]
+            }
           },
           {
-            "name": "bump",
-            "type": "u8"
+            "name": "set_cooldown_timestamp",
+            "type": {
+              "array": [
+                "i64",
+                8
+              ]
+            }
           },
           {
-            "name": "padding",
+            "name": "set_cooldown_duration",
+            "type": {
+              "array": [
+                "i64",
+                8
+              ]
+            }
+          },
+          {
+            "name": "steal_cooldown_timestamp",
+            "type": {
+              "array": [
+                "i64",
+                22
+              ]
+            }
+          },
+          {
+            "name": "property_slots",
+            "type": {
+              "array": [
+                "u16",
+                22
+              ]
+            }
+          },
+          {
+            "name": "property_shielded",
+            "type": {
+              "array": [
+                "u16",
+                22
+              ]
+            }
+          },
+          {
+            "name": "set_last_purchased_property",
             "type": {
               "array": [
                 "u8",
-                32
+                8
+              ]
+            }
+          },
+          {
+            "name": "set_properties_mask",
+            "type": {
+              "array": [
+                "u8",
+                8
               ]
             }
           }
@@ -2659,59 +2558,6 @@
           {
             "name": "total_slots_owned",
             "type": "u16"
-          }
-        ]
-      }
-    },
-    {
-      "name": "PropertyOwnership",
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "player",
-            "type": "pubkey"
-          },
-          {
-            "name": "property_id",
-            "type": "u8"
-          },
-          {
-            "name": "slots_owned",
-            "type": "u16"
-          },
-          {
-            "name": "slots_shielded",
-            "type": "u16"
-          },
-          {
-            "name": "purchase_timestamp",
-            "type": "i64"
-          },
-          {
-            "name": "shield_expiry",
-            "type": "i64"
-          },
-          {
-            "name": "shield_cooldown_duration",
-            "type": "i64"
-          },
-          {
-            "name": "steal_protection_expiry",
-            "type": "i64"
-          },
-          {
-            "name": "bump",
-            "type": "u8"
-          },
-          {
-            "name": "padding",
-            "type": {
-              "array": [
-                "u8",
-                32
-              ]
-            }
           }
         ]
       }
