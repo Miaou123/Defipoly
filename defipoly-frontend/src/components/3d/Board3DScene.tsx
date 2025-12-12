@@ -597,6 +597,72 @@ function RisingIncomeParticles({ side, visible = true }: { side: 'top' | 'bottom
 }
 
 
+// Separate component for texture loading to avoid hooks issues
+function TileTextureOverlay({ 
+  tileTexture, 
+  side, 
+  width, 
+  depth, 
+  tileThickness 
+}: { 
+  tileTexture: string; 
+  side: 'top' | 'bottom' | 'left' | 'right'; 
+  width: number; 
+  depth: number; 
+  tileThickness: number;
+}) {
+  const texture = useTexture(tileTexture);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  texture.wrapS = texture.wrapT = THREE.ClampToEdgeWrapping;
+  texture.repeat.set(1, 1);
+  texture.offset.set(0, 0);
+
+  // Calculate texture rotation based on tile side
+  let textureRotation: [number, number, number] = [-Math.PI/2, 0, 0];
+  
+  switch (side) {
+    case 'top':
+      textureRotation = [-Math.PI/2, 0, Math.PI];
+      break;
+    case 'left':
+      textureRotation = [-Math.PI/2, 0, -Math.PI/2];
+      break;
+    case 'right':
+      textureRotation = [-Math.PI/2, 0, Math.PI/2];
+      break;
+    case 'bottom':
+    default:
+      textureRotation = [-Math.PI/2, 0, 0];
+      break;
+  }
+  
+  let planeWidth = width * 0.9;
+  let planeHeight = depth * 0.9;
+  let offsetX = 0;
+  let offsetZ = 0;
+  
+  if (side === 'left' || side === 'right') {
+    planeWidth = depth * 0.9;
+    planeHeight = width * 0.9;
+  }
+  
+  const paddingOffset = 0.05;
+  
+  switch (side) {
+    case 'top': offsetZ = -paddingOffset; break;
+    case 'bottom': offsetZ = paddingOffset; break;
+    case 'left': offsetX = -paddingOffset; break;
+    case 'right': offsetX = paddingOffset; break;
+  }
+  
+  return (
+    <mesh position={[offsetX, tileThickness/2 + 0.001, offsetZ]} rotation={textureRotation} receiveShadow>
+      <planeGeometry args={[planeWidth, planeHeight]} />
+      <meshStandardMaterial map={texture} roughness={0.8} metalness={0.1} />
+    </mesh>
+  );
+}
+
 interface PropertyTileProps {
   position: [number, number, number];
   width: number;
@@ -647,20 +713,6 @@ function PropertyTile({
   
   // Use preset texture hook to get the final texture URL
   const tileTexture = useTilePresetTexture(tilePresetId ?? null, customTexture ?? null);
-  
-  // Load texture - always call hook to maintain hook order
-  // Use a data URL for transparent 1x1 pixel as fallback when no texture
-  const fallbackTexture = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChAI9g4ndUwAAAABJRU5ErkJggg==';
-  const loadedTexture = useTexture(tileTexture || fallbackTexture);
-  
-  let texture: THREE.Texture | null = null;
-  if (tileTexture && loadedTexture) {
-    texture = loadedTexture;
-    texture.colorSpace = THREE.SRGBColorSpace;
-    texture.wrapS = texture.wrapT = THREE.ClampToEdgeWrapping;
-    texture.repeat.set(1, 1);
-    texture.offset.set(0, 0);
-  }
   
   const getColorHex = (colorClass: string) => {
     const colorMap: { [key: string]: string } = {
@@ -730,8 +782,8 @@ function PropertyTile({
 
   // Determine tile base color
   const getTileBaseColor = () => {
-    // If we have a custom color, use it
-    if (customTexture && !texture) {
+    // If we have a custom color (not a texture URL), use it
+    if (customTexture && !tileTexture) {
       const hexColorRegex = /^#[0-9A-Fa-f]{6}$/;
       const isColor = hexColorRegex.test(customTexture) || 
                      (customTexture.includes(',') && 
@@ -769,76 +821,15 @@ function PropertyTile({
       </mesh>
 
       {/* Texture overlay on top of tile (only if texture exists) */}
-      {texture && (() => {
-        // Calculate texture rotation based on tile side
-        let textureRotation: [number, number, number] = [-Math.PI/2, 0, 0]; // default (bottom row)
-        
-        switch (side) {
-          case 'top':
-            // Top row: rotate 180° so text is readable from bottom of board
-            textureRotation = [-Math.PI/2, 0, Math.PI];
-            break;
-          case 'left':
-            // Left side: rotate 90° more (was 90° clockwise, now 180°)
-            textureRotation = [-Math.PI/2, 0, -Math.PI/2];
-            break;
-          case 'right':
-            // Right side: rotate 90° more (was -90°, now 0°)
-            textureRotation = [-Math.PI/2, 0, Math.PI/2];
-            break;
-          case 'bottom':
-          default:
-            // Bottom row: no additional rotation (default orientation)
-            textureRotation = [-Math.PI/2, 0, 0];
-            break;
-        }
-        
-        // Adjust plane dimensions and position to add more padding toward center
-        let planeWidth = width * 0.9;
-        let planeHeight = depth * 0.9;
-        let offsetX = 0;
-        let offsetZ = 0;
-        
-        // For 90° rotations, swap dimensions to maintain visual consistency
-        if (side === 'left' || side === 'right') {
-          // Swap width and height for rotated tiles to maintain same visual footprint
-          planeWidth = depth * 0.9;
-          planeHeight = width * 0.9;
-        }
-        
-        // Add offset to move texture away from board center (more inner padding)
-        const paddingOffset = 0.05; // Adjust this value to control how much offset
-        
-        switch (side) {
-          case 'top':
-            // Move texture toward the top edge (away from center)
-            offsetZ = -paddingOffset;
-            break;
-          case 'bottom':
-            // Move texture toward the bottom edge (away from center)
-            offsetZ = paddingOffset;
-            break;
-          case 'left':
-            // Move texture toward the left edge (away from center)
-            offsetX = -paddingOffset;
-            break;
-          case 'right':
-            // Move texture toward the right edge (away from center)
-            offsetX = paddingOffset;
-            break;
-        }
-        
-        return (
-          <mesh position={[offsetX, tileThickness/2 + 0.001, offsetZ]} rotation={textureRotation} receiveShadow>
-            <planeGeometry args={[planeWidth, planeHeight]} />
-            <meshStandardMaterial 
-              map={texture}
-              roughness={0.8}
-              metalness={0.1}
-            />
-          </mesh>
-        );
-      })()}
+      {tileTexture && (
+        <TileTextureOverlay 
+          tileTexture={tileTexture} 
+          side={side} 
+          width={width} 
+          depth={depth} 
+          tileThickness={tileThickness} 
+        />
+      )}
       
       {/* Color strip */}
       <mesh position={stripPosition} castShadow>
