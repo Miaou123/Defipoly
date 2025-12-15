@@ -15,7 +15,6 @@ import {
   getOwnershipPDA, 
   getSetCooldownPDA,
   getSetOwnershipPDA,
-  getSetStatsPDA,
   fetchPlayerData
 } from '@/utils/program';
 import { 
@@ -88,7 +87,6 @@ export const usePropertyActions = (
       const [ownershipPDA] = getOwnershipPDA(wallet.publicKey, propertyId);
       const [setCooldownPDA] = getSetCooldownPDA(wallet.publicKey, setId);
       const [setOwnershipPDA] = getSetOwnershipPDA(wallet.publicKey, setId);
-      const [setStatsPDA] = getSetStatsPDA(setId);
 
       console.log('📍 Adding buy property instruction...');
       
@@ -104,7 +102,6 @@ export const usePropertyActions = (
           ownership: ownershipPDA,
           setCooldown: setCooldownPDA,
           setOwnership: setOwnershipPDA,
-          setStats: setStatsPDA,
           playerAccount: playerPDA,
           player: wallet.publicKey,
           playerTokenAccount,

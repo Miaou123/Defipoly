@@ -518,12 +518,22 @@ async function syncPropertyState(propertyId) {
   }
 }
 
+/**
+ * Sync all 22 properties state
+ */
+async function syncAllPropertiesState() {
+  console.log('   Syncing all 22 properties...');
+  for (let propertyId = 0; propertyId < 22; propertyId++) {
+    await syncPropertyState(propertyId);
+  }
+}
 
 module.exports = {
   syncPropertyOwnership,
   syncPlayerSetCooldown,
   syncPlayerStealCooldown,
   syncPropertyState,
+  syncAllPropertiesState,  // ADD THIS
   deserializeOwnership,
   deserializeSetCooldown,
   deserializeStealCooldown,

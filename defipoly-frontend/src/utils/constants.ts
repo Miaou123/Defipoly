@@ -1,7 +1,7 @@
 // ============================================
 // AUTO-GENERATED - DO NOT EDIT
 // Source: defipoly-program/scripts/property-config.ts
-// Generated: 2025-12-12T16:19:02.045Z
+// Generated: 2025-12-15T20:07:04.801Z
 // ============================================
 
 import { PublicKey } from "@solana/web3.js";

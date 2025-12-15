@@ -35,7 +35,6 @@ function LazyView3DComponent({
 
     // For modals, immediately set as visible since they're always in the viewport
     if (inModal) {
-      console.log('🎯 LazyView3D: Modal detected, setting immediately visible');
       setIsVisible(true);
       return;
     }
@@ -44,17 +43,14 @@ function LazyView3DComponent({
     
     if (rect.top < window.innerHeight && rect.bottom > 0 &&
         rect.left < window.innerWidth && rect.right > 0) {
-      console.log('🎯 LazyView3D: Element in viewport, setting visible');
       setIsVisible(true);
       return;
     }
 
-    console.log('🎯 LazyView3D: Setting up intersection observer');
     const observer = new IntersectionObserver(
       (entries) => {
         const entry = entries[0];
         if (entry && entry.isIntersecting) {
-          console.log('🎯 LazyView3D: Element intersecting, setting visible');
           setIsVisible(true);
           observer.disconnect();
         }

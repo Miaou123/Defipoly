@@ -120,16 +120,13 @@ export default function Home() {
 
   // Showcase controller logic with smooth transitions - resets on each start
   useEffect(() => {
-    console.log('🎭 [SHOWCASE] useEffect triggered, showcaseMode:', showcaseMode);
     if (!showcaseMode) {
-      console.log('🎭 [SHOWCASE] Not in showcase mode, clearing scene');
       setCurrentShowcaseScene(null); // Reset scene when stopping
       return;
     }
     
     // Always start from the beginning (scene 0) when showcase mode starts
     let sceneIndex = 0;
-    console.log('🎭 [SHOWCASE] Starting fresh - Setting initial scene:', SHOWCASE_SCENES[0]?.name);
     setCurrentShowcaseScene(SHOWCASE_SCENES[0] || null);
     
     let timeoutId: NodeJS.Timeout | null = null;
@@ -143,7 +140,6 @@ export default function Home() {
         
         // If we completed all scenes and wallet is not connected, exit demo
         if (nextIndex === 0 && !publicKey) {
-          console.log('🎭 [SHOWCASE] Completed full cycle for non-connected user, auto-exiting');
           setShowcaseMode(false);
           setCurrentShowcaseScene(null);
           return;
@@ -151,7 +147,6 @@ export default function Home() {
         
         sceneIndex = nextIndex;
         const nextScene = SHOWCASE_SCENES[sceneIndex];
-        console.log('🎭 [SHOWCASE] Smoothly transitioning to scene:', sceneIndex, nextScene?.name);
         
         // Use requestAnimationFrame for smooth transition
         requestAnimationFrame(() => {
@@ -164,10 +159,8 @@ export default function Home() {
     // Start the scheduling chain
     scheduleNextScene();
     
-    console.log('🎭 [SHOWCASE] Smooth transition system set up - starting fresh');
     
     return () => {
-      console.log('🎭 [SHOWCASE] Clearing showcase transition system and resetting');
       if (timeoutId) {
         clearTimeout(timeoutId);
       }
@@ -178,16 +171,9 @@ export default function Home() {
   // Auto-exit showcase if user connects wallet (only on wallet connection change, not on showcase start)
   useEffect(() => {
     const isWalletConnected = !!publicKey;
-    console.log('🎭 [SHOWCASE] Wallet connection check:', { 
-      showcaseMode, 
-      wasConnected: prevWalletConnected.current,
-      isConnected: isWalletConnected,
-      justConnected: !prevWalletConnected.current && isWalletConnected
-    });
     
     // Only exit if wallet was just connected (not already connected)
     if (showcaseMode && !prevWalletConnected.current && isWalletConnected) {
-      console.log('🚪 [SHOWCASE] Auto-exiting because user just connected wallet');
       setShowcaseMode(false);
       setCurrentShowcaseScene(null);
     }
@@ -198,22 +184,12 @@ export default function Home() {
 
   // Showcase handlers
   const handleStartShowcase = () => {
-    console.log('🎭 [SHOWCASE] Starting showcase mode...', {
-      currentMode: showcaseMode,
-      scenesAvailable: SHOWCASE_SCENES.length
-    });
     setShowcaseMode(true);
-    console.log('🎭 [SHOWCASE] Showcase mode set to true');
   };
 
   const handleExitShowcase = () => {
-    console.log('🚪 [SHOWCASE] Exiting showcase mode...', {
-      currentMode: showcaseMode,
-      currentScene: currentShowcaseScene?.name
-    });
     setShowcaseMode(false);
     setCurrentShowcaseScene(null);
-    console.log('🚪 [SHOWCASE] Showcase mode exited');
   };
 
   // Mobile Layout

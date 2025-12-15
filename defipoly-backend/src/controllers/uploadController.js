@@ -67,7 +67,7 @@ const uploadProfilePicture = [
               
               res.json({ 
                 success: true, 
-                profilePicture: fileUrl,
+                profilePicture: `${process.env.API_BASE_URL || 'https://api.defipoly.app'}${fileUrl}`,
                 message: 'Profile picture uploaded successfully'
               });
             }
@@ -163,7 +163,7 @@ const uploadThemeBackground = [
             console.log('Board theme saved to database:', fileUrl);
             res.json({ 
               success: true, 
-              backgroundUrl: fileUrl,
+              backgroundUrl: `${process.env.API_BASE_URL || 'https://api.defipoly.app'}${fileUrl}`,
               message: `${themeType} background uploaded successfully`
             });
           }
@@ -188,7 +188,7 @@ const uploadThemeBackground = [
             console.log('Property card theme saved to database:', fileUrl);
             res.json({ 
               success: true, 
-              backgroundUrl: fileUrl,
+              backgroundUrl: `${process.env.API_BASE_URL || 'https://api.defipoly.app'}${fileUrl}`,
               message: `${themeType} background uploaded successfully`
             });
           }
@@ -212,7 +212,7 @@ const uploadThemeBackground = [
             console.log('Scene background saved to database:', fileUrl);
             res.json({ 
               success: true, 
-              backgroundUrl: fileUrl,
+              backgroundUrl: `${process.env.API_BASE_URL || 'https://api.defipoly.app'}${fileUrl}`,
               message: `${themeType} background uploaded successfully`
             });
           }

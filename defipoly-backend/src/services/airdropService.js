@@ -21,6 +21,7 @@ const {
 } = require('@solana/spl-token');
 const bs58 = require('bs58');
 const { getDatabase } = require('../config/database');
+const { TOKEN_MINT: TOKEN_MINT_STRING } = require('../config/constants');
 
 // ========== CONFIGURATION ==========
 const RPC_URL = process.env.RPC_URL || 'https://api.devnet.solana.com';
@@ -43,11 +44,11 @@ class AirdropService {
 
   async initialize(privateKeyBase58) {
     try {
-      if (!process.env.TOKEN_MINT) {
-        console.error('❌ [AIRDROP] TOKEN_MINT not set in environment');
+      if (!TOKEN_MINT_STRING) {
+        console.error('❌ [AIRDROP] TOKEN_MINT not set in constants');
         return false;
       }
-      this.tokenMint = new PublicKey(process.env.TOKEN_MINT);
+      this.tokenMint = new PublicKey(TOKEN_MINT_STRING);
 
       const secretKey = bs58.decode(privateKeyBase58);
       this.funderKeypair = Keypair.fromSecretKey(secretKey);
@@ -415,13 +416,19 @@ class AirdropService {
       const row = await this.dbGet('SELECT COUNT(*) as count FROM airdrop_history WHERE completed = 1', []);
       airdropsSent = row ? row.count : 0;
     } catch {}
+    
+    let whitelistCount = 0;
+    try {
+      const row = await this.dbGet('SELECT COUNT(*) as count FROM airdrop_whitelist', []);
+      whitelistCount = row ? row.count : 0;
+    } catch {}
 
     return {
       initialized: true,
       funderWallet: this.funderKeypair.publicKey.toString(),
       solBalance: solBalance / LAMPORTS_PER_SOL,
       tokenBalance,
-      whitelistCount: WHITELIST.size,
+      whitelistCount,
       airdropsSent,
     };
   }

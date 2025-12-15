@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { PublicKey } from '@solana/web3.js';
 import BN from 'bn.js';
@@ -8,6 +8,15 @@ import { useWebSocket } from './WebSocketContext';
 import { PROPERTIES } from '@/utils/constants';
 import { useAuth, authenticatedFetch } from '@/contexts/AuthContext';
 import { API_BASE_URL } from '@/utils/config';
+
+// ========== DEBOUNCE UTILITY ==========
+function debounce<T extends (...args: any[]) => any>(func: T, delay: number): T {
+  let timeoutId: NodeJS.Timeout;
+  return ((...args: any[]) => {
+    clearTimeout(timeoutId);
+    timeoutId = setTimeout(() => func.apply(null, args), delay);
+  }) as T;
+}
 
 // ========== TYPES ==========
 
@@ -161,6 +170,9 @@ export function GameStateProvider({ children }: { children: React.ReactNode }) {
   
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  
+  // Store pending profile updates for debouncing
+  const pendingUpdatesRef = useRef<Partial<ProfileData>>({});
 
   // ========== FETCH GAME STATE ==========
   const fetchGameState = useCallback(async () => {
@@ -247,41 +259,69 @@ export function GameStateProvider({ children }: { children: React.ReactNode }) {
     }
   }, [publicKey]);
 
-  // ========== UPDATE PROFILE ==========
-  const updateProfile = useCallback(async (updates: Partial<ProfileData>): Promise<boolean> => {
-    if (!publicKey || !isAuthenticated) return false;
+  // ========== UPDATE PROFILE (DEBOUNCED) ==========
+  
+  // The actual API call function
+  const performProfileUpdate = useCallback(async (allUpdates: Partial<ProfileData>): Promise<boolean> => {
+    if (!publicKey || !isAuthenticated || Object.keys(allUpdates).length === 0) return false;
   
     try {
       const response = await authenticatedFetch(`${API_BASE_URL}/api/profile`, {
         method: 'POST',
         body: JSON.stringify({
           wallet: publicKey.toString(),
-          ...updates,
+          ...allUpdates,
         }),
       });
   
       if (!response.ok) {
         const errorText = await response.text();
         console.error('GameStateContext updateProfile failed:', response.status, errorText);
-        console.error('Failed updates:', updates);
+        console.error('Failed updates:', allUpdates);
         throw new Error(`Failed to update profile: ${response.status} - ${errorText}`);
       }
   
-      // Update local state immediately for better UX
-      setGameState(prev => ({
-        ...prev,
-        profile: {
-          ...prev.profile,
-          ...updates,
-        },
-      }));
-  
+      // Clear pending updates after successful API call
+      pendingUpdatesRef.current = {};
       return true;
     } catch (error) {
       console.error('Error updating profile:', error);
       return false;
     }
   }, [publicKey, isAuthenticated]);
+
+  // Debounced version of the API call
+  const debouncedProfileUpdate = useMemo(
+    () => debounce((updates: Partial<ProfileData>) => {
+      performProfileUpdate(updates);
+    }, 500), // 500ms delay
+    [performProfileUpdate]
+  );
+
+  // Public updateProfile function that accumulates updates and triggers debounced API call
+  const updateProfile = useCallback(async (updates: Partial<ProfileData>): Promise<boolean> => {
+    if (!publicKey || !isAuthenticated) return false;
+  
+    // Update local state immediately for better UX
+    setGameState(prev => ({
+      ...prev,
+      profile: {
+        ...prev.profile,
+        ...updates,
+      },
+    }));
+
+    // Accumulate updates for the API call
+    pendingUpdatesRef.current = {
+      ...pendingUpdatesRef.current,
+      ...updates,
+    };
+
+    // Trigger the debounced API call with all accumulated updates
+    debouncedProfileUpdate(pendingUpdatesRef.current);
+    
+    return true;
+  }, [publicKey, isAuthenticated, debouncedProfileUpdate]);
 
   // ========== LOAD GAME STATE WHEN WALLET CHANGES ==========
   useEffect(() => {

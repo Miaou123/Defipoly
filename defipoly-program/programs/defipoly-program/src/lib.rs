@@ -1,6 +1,5 @@
-// Defipoly Solana Program - v8 Consolidated (Single Player Account)
+// Defipoly Solana Program - v9 Cleaned (Unused Code Removed)
 // Anchor 0.31.1 - Zero-Copy with proper field alignment
-// Stack overflow fix: manual validation instead of constraint validation
 
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, Token, TokenAccount, Transfer, Mint};
@@ -10,8 +9,6 @@ declare_id!("3khmZfY9k3ushNLet2cCMU3vQEer7g8KAnhKHBEF2ib3");
 
 const DEV_WALLET: &str = "CgWTFX7JJQHed3qyMDjJkNCxK4sFe3wbDFABmWAAmrdS";
 const MARKETING_WALLET: &str = "FoPKSQ5HDSVyZgaQobX64YEBVQ2iiKMZp8VHWtd6jLQE";
-const MAX_PROPERTIES_PER_CLAIM: u8 = 22;
-const MIN_CLAIM_INTERVAL_MINUTES: i64 = 1;
 const MAX_PROPERTIES: usize = 22;
 const MAX_SETS: usize = 8;
 
@@ -48,7 +45,7 @@ pub mod defipoly_program {
 
     pub fn initialize_game(
         ctx: Context<InitializeGame>,
-        initial_reward_pool_amount: u64,
+        _initial_reward_pool_amount: u64,
     ) -> Result<()> {
         let game_config = &mut ctx.accounts.game_config.load_init()?;
         game_config.authority = ctx.accounts.authority.key();
@@ -56,10 +53,7 @@ pub mod defipoly_program {
         game_config.marketing_wallet = MARKETING_WALLET.parse().unwrap();
         game_config.token_mint = ctx.accounts.token_mint.key();
         game_config.reward_pool_vault = ctx.accounts.reward_pool_vault.key();
-        game_config.total_supply = 1_000_000_000;
-        game_config.circulating_supply = 500_000_000;
-        game_config.reward_pool_initial = initial_reward_pool_amount;
-        game_config.min_claim_interval_minutes = MIN_CLAIM_INTERVAL_MINUTES;
+        game_config.min_claim_interval_minutes = 1;
         game_config.accumulation_tier1_threshold = 0;
         game_config.accumulation_tier2_threshold = 0;
         game_config.accumulation_tier3_threshold = 0;
@@ -68,10 +62,18 @@ pub mod defipoly_program {
         game_config.accumulation_tier6_threshold = 0;
         game_config.accumulation_tier7_threshold = 0;
         game_config.accumulation_tier8_threshold = 0;
-        game_config.steal_chance_targeted_bps = 2500;
-        game_config.steal_chance_random_bps = 3300;
-        game_config.steal_cost_percent_bps = 5000;
-        game_config.set_bonus_bps = 4000;
+        game_config.steal_chance_bps = 3300; // 33%
+        game_config.steal_cost_percent_bps = 5000; // 50%
+        game_config.set_bonus_bps = [
+            3000,  // Set 0 (Brown) - 30%
+            3286,  // Set 1 (Light Blue) - 32.86%
+            3571,  // Set 2 (Pink) - 35.71%
+            3857,  // Set 3 (Orange) - 38.57%
+            4143,  // Set 4 (Red) - 41.43%
+            4429,  // Set 5 (Yellow) - 44.29%
+            4714,  // Set 6 (Green) - 47.14%
+            5000,  // Set 7 (Dark Blue) - 50%
+        ];
         game_config.accumulation_tier1_bonus_bps = 0;
         game_config.accumulation_tier2_bonus_bps = 0;
         game_config.accumulation_tier3_bonus_bps = 0;
@@ -80,14 +82,12 @@ pub mod defipoly_program {
         game_config.accumulation_tier6_bonus_bps = 0;
         game_config.accumulation_tier7_bonus_bps = 0;
         game_config.accumulation_tier8_bonus_bps = 0;
-        game_config.current_phase = 1;
         game_config.game_paused = 0;
-        game_config.max_properties_per_claim = MAX_PROPERTIES_PER_CLAIM;
         game_config.bump = ctx.bumps.game_config;
         game_config.reward_pool_vault_bump = ctx.bumps.reward_pool_vault;
-        game_config._padding = [0u8; 3];
+        game_config._padding = [0u8; 5];
 
-        msg!("Game initialized - Phase 1");
+        msg!("Game initialized");
         Ok(())
     }
 
@@ -139,7 +139,6 @@ pub mod defipoly_program {
         player.bump = ctx.bumps.player_account;
         player._padding1 = [0u8; 3];
         
-        // Initialize all arrays to zero
         player.property_slots = [0u16; MAX_PROPERTIES];
         player.property_shielded = [0u16; MAX_PROPERTIES];
         player.property_purchase_timestamp = [0i64; MAX_PROPERTIES];
@@ -165,10 +164,8 @@ pub mod defipoly_program {
         let game_config = &ctx.accounts.game_config.load()?;
         let property = &mut ctx.accounts.property;
         let player = &mut ctx.accounts.player_account.load_mut()?;
-        let set_stats = &mut ctx.accounts.set_stats;
         let clock = Clock::get()?;
 
-        // Manual ownership validation (moved from constraint)
         require!(player.owner == ctx.accounts.player.key(), ErrorCode::Unauthorized);
 
         let property_id = property.property_id as usize;
@@ -176,7 +173,6 @@ pub mod defipoly_program {
 
         update_pending_rewards(player, clock.unix_timestamp)?;
     
-        // Validation
         require!(game_config.game_paused == 0, ErrorCode::GamePaused);
         require!(slots > 0, ErrorCode::InvalidSlotAmount);
         require!(property.available_slots >= slots, ErrorCode::NoSlotsAvailable);
@@ -241,28 +237,16 @@ pub mod defipoly_program {
             .checked_add(total_daily_income_increase)
             .ok_or(ErrorCode::Overflow)?;
     
-        let required_properties = Property::get_properties_in_set(property.set_id);
-        let owned_count = count_properties_in_set(player.set_properties_mask[set_id], property.set_id);
+        // Check for complete set bonus
+        let required_properties = get_properties_in_set(property.set_id);
+        let owned_count = count_properties_in_set(player.set_properties_mask[set_id]);
         let was_complete = player.complete_sets_owned > 0 && is_set_complete(player, property.set_id);
         
         if owned_count >= required_properties && !was_complete {
             player.complete_sets_owned += 1;
         }
     
-        if set_stats.set_id == 0 && set_stats.total_slots_sold == 0 {
-            set_stats.set_id = property.set_id;
-            set_stats.total_players = 1;
-            set_stats.bump = ctx.bumps.set_stats;
-        } else if is_new_ownership {
-            set_stats.total_players = set_stats.total_players
-                .checked_add(1)
-                .ok_or(ErrorCode::Overflow)?;
-        }
-        
-        set_stats.total_slots_sold = set_stats.total_slots_sold
-            .checked_add(slots as u64)
-            .ok_or(ErrorCode::Overflow)?;
-    
+        // Update cooldown
         player.set_cooldown_timestamp[set_id] = clock.unix_timestamp;
         player.set_cooldown_duration[set_id] = property.cooldown_seconds;
         player.set_last_purchased_property[set_id] = property.property_id;
@@ -283,6 +267,7 @@ pub mod defipoly_program {
     }
 
     // ========== SHIELD SYSTEM ==========
+
     pub fn activate_shield(
         ctx: Context<ActivateShield>,
         shield_duration_hours: u16,
@@ -292,7 +277,6 @@ pub mod defipoly_program {
         let player = &mut ctx.accounts.player_account.load_mut()?;
         let clock = Clock::get()?;
         
-        // Manual ownership validation
         require!(player.owner == ctx.accounts.player.key(), ErrorCode::Unauthorized);
         
         let property_id = property.property_id as usize;
@@ -368,15 +352,13 @@ pub mod defipoly_program {
         
         let property_id = property.property_id as usize;
 
-        // Load game config and extract needed values, then drop
-        let (game_paused, steal_cost_percent_bps, steal_chance_random_bps) = {
+        let (game_paused, steal_cost_percent_bps, steal_chance_bps) = {
             let game_config = ctx.accounts.game_config.load()?;
-            (game_config.game_paused, game_config.steal_cost_percent_bps, game_config.steal_chance_random_bps)
+            (game_config.game_paused, game_config.steal_cost_percent_bps, game_config.steal_chance_bps)
         };
 
         require!(game_paused == 0, ErrorCode::GamePaused);
 
-        // Load attacker and validate ownership
         let player = &mut ctx.accounts.player_account.load_mut()?;
         require!(player.owner == ctx.accounts.attacker.key(), ErrorCode::Unauthorized);
 
@@ -434,6 +416,7 @@ pub mod defipoly_program {
         );
         require!(!has_steal_protection, ErrorCode::StealProtectionActive);
 
+        // Cooldown check
         let cooldown_duration = property.cooldown_seconds / 2;
         if player.steal_cooldown_timestamp[property_id] != 0 {
             let time_since_last_steal = clock.unix_timestamp - player.steal_cooldown_timestamp[property_id];
@@ -457,7 +440,8 @@ pub mod defipoly_program {
             &ctx.accounts.token_program,
         )?;
 
-        let success_threshold = steal_chance_random_bps as u64;
+        // Determine success
+        let success_threshold = steal_chance_bps as u64;
         let success_random = u64::from_le_bytes(combined_entropy[8..16].try_into().unwrap());
         let success = (success_random % 10000) < success_threshold;
 
@@ -506,7 +490,6 @@ pub mod defipoly_program {
                 target: target_player,
                 property_id: property.property_id,
                 steal_cost,
-                targeted: false,
                 vrf_result: random_u64,
             });
 
@@ -518,7 +501,6 @@ pub mod defipoly_program {
                 target: target_player,
                 property_id: property.property_id,
                 steal_cost,
-                targeted: false,
                 vrf_result: random_u64,
             });
 
@@ -526,6 +508,7 @@ pub mod defipoly_program {
                  ctx.accounts.attacker.key(), target_player);
         }
 
+        // Apply 6-hour steal protection
         target_account.property_steal_protection_expiry[property_id] = clock.unix_timestamp + (6 * 3600);
 
         msg!("Steal protection applied to {} until {}", 
@@ -543,9 +526,7 @@ pub mod defipoly_program {
         let player = &mut ctx.accounts.player_account.load_mut()?;
         let clock = Clock::get()?;
     
-        // Manual ownership validation
         require!(player.owner == ctx.accounts.player.key(), ErrorCode::Unauthorized);
-
         require!(game_config.game_paused == 0, ErrorCode::GamePaused);
         
         require!(
@@ -559,10 +540,26 @@ pub mod defipoly_program {
         
         require!(base_rewards > 0, ErrorCode::NoRewardsToClaim);
         
-        let bonus_amount = calculate_progressive_bonus(base_rewards, &game_config)?;
+        // Calculate accumulation tier bonus
+        let accumulation_bonus = calculate_progressive_bonus(base_rewards, &game_config)?;
+        
+        // Calculate set completion bonus
+        let mut set_bonus: u64 = 0;
+        for set_id in 0..8u8 {
+            if is_set_complete(player, set_id) {
+                let bonus = (base_rewards as u128)
+                    .checked_mul(game_config.set_bonus_bps[set_id as usize] as u128)
+                    .and_then(|r| r.checked_div(10000))
+                    .and_then(|r| u64::try_from(r).ok())
+                    .ok_or(ErrorCode::Overflow)?;
+                set_bonus = set_bonus.checked_add(bonus).ok_or(ErrorCode::Overflow)?;
+            }
+        }
         
         let total_rewards = base_rewards
-            .checked_add(bonus_amount)
+            .checked_add(accumulation_bonus)
+            .ok_or(ErrorCode::Overflow)?
+            .checked_add(set_bonus)
             .ok_or(ErrorCode::Overflow)?;
         
         require!(
@@ -570,8 +567,8 @@ pub mod defipoly_program {
             ErrorCode::InsufficientRewardPool
         );
         
-        msg!("Claiming {} base + {} bonus = {} total", 
-             base_rewards, bonus_amount, total_rewards);
+        msg!("Claiming {} base + {} accumulation + {} set = {} total", 
+             base_rewards, accumulation_bonus, set_bonus, total_rewards);
         
         let game_config_key = ctx.accounts.game_config.key();
         let seeds = &[
@@ -618,7 +615,6 @@ pub mod defipoly_program {
         let player = &mut ctx.accounts.player_account.load_mut()?;
         let clock = Clock::get()?;
         
-        // Manual ownership validation
         require!(player.owner == ctx.accounts.player.key(), ErrorCode::Unauthorized);
         
         let property_id = property.property_id as usize;
@@ -746,16 +742,13 @@ pub mod defipoly_program {
         Ok(())
     }
 
-    pub fn update_steal_chances(
+    pub fn update_steal_chance(
         ctx: Context<AdminUpdateGame>,
-        targeted_bps: u16,
-        random_bps: u16,
+        chance_bps: u16,
     ) -> Result<()> {
         let game_config = &mut ctx.accounts.game_config.load_mut()?;
-        game_config.steal_chance_targeted_bps = targeted_bps;
-        game_config.steal_chance_random_bps = random_bps;
-        msg!("Steal chances updated: targeted {}%, random {}%", 
-             targeted_bps / 100, random_bps / 100);
+        game_config.steal_chance_bps = chance_bps;
+        msg!("Steal chance updated to {}%", chance_bps / 100);
         Ok(())
     }
 
@@ -773,22 +766,9 @@ pub mod defipoly_program {
         Ok(())
     }
 
-    pub fn update_phase(
-        ctx: Context<AdminUpdateGame>,
-        new_phase: u8,
-    ) -> Result<()> {
-        let game_config = &mut ctx.accounts.game_config.load_mut()?;
-        game_config.current_phase = new_phase;
-        msg!("Phase updated to {}", new_phase);
-        Ok(())
-    }
-
     pub fn close_player_account(ctx: Context<ClosePlayerAccount>) -> Result<()> {
         let player = ctx.accounts.player_account.load()?;
-        
-        // Manual ownership validation
         require!(player.owner == ctx.accounts.player.key(), ErrorCode::Unauthorized);
-        
         msg!("Closing player account: {}", player.owner);
         Ok(())
     }
@@ -830,7 +810,6 @@ pub mod defipoly_program {
         require!(game_config.game_paused == 0, ErrorCode::GamePaused);
         require!(slots > 0, ErrorCode::InvalidSlotAmount);
         require!(property.available_slots >= slots, ErrorCode::NoSlotsAvailable);
-
         require!(
             player.property_slots[property_id] + slots <= property.max_per_player,
             ErrorCode::MaxSlotsReached
@@ -990,6 +969,21 @@ pub mod defipoly_program {
         Ok(())
     }
 
+    pub fn admin_update_set_bonus(
+        ctx: Context<AdminUpdateGame>,
+        set_id: u8,
+        bonus_bps: u16,
+    ) -> Result<()> {
+        require!(set_id < 8, ErrorCode::InvalidSetId);
+        require!(bonus_bps <= 10000, ErrorCode::InvalidBonus);
+        
+        let game_config = &mut ctx.accounts.game_config.load_mut()?;
+        game_config.set_bonus_bps[set_id as usize] = bonus_bps;
+        
+        msg!("Set {} bonus updated to {}bps ({}%)", set_id, bonus_bps, bonus_bps / 100);
+        Ok(())
+    }
+
     pub fn admin_clear_cooldown(
         ctx: Context<AdminClearCooldown>,
         set_id: u8,
@@ -1114,8 +1108,6 @@ pub mod defipoly_program {
     pub fn admin_update_global_rates(
         ctx: Context<AdminUpdateGame>,
         steal_cost_bps: Option<u16>,
-        set_bonus_bps: Option<u16>,
-        max_properties_claim: Option<u8>,
         min_claim_interval: Option<i64>,
     ) -> Result<()> {
         let game_config = &mut ctx.accounts.game_config.load_mut()?;
@@ -1123,16 +1115,6 @@ pub mod defipoly_program {
         if let Some(cost) = steal_cost_bps {
             require!(cost <= 10000, ErrorCode::InvalidStealCost);
             game_config.steal_cost_percent_bps = cost;
-        }
-        
-        if let Some(bonus) = set_bonus_bps {
-            require!(bonus <= 10000, ErrorCode::InvalidSetBonus);
-            game_config.set_bonus_bps = bonus;
-        }
-        
-        if let Some(max_props) = max_properties_claim {
-            require!(max_props > 0 && max_props <= 22, ErrorCode::InvalidPropertyCount);
-            game_config.max_properties_per_claim = max_props;
         }
         
         if let Some(interval) = min_claim_interval {
@@ -1144,42 +1126,6 @@ pub mod defipoly_program {
     }
 
     pub fn admin_update_accumulation_bonus(
-        ctx: Context<AdminUpdateGame>,
-        tier1_threshold: u64,
-        tier1_bonus_bps: u16,
-        tier2_threshold: u64,
-        tier2_bonus_bps: u16,
-        tier3_threshold: u64,
-        tier3_bonus_bps: u16,
-        tier4_threshold: u64,
-        tier4_bonus_bps: u16,
-        tier5_threshold: u64,
-        tier5_bonus_bps: u16,
-    ) -> Result<()> {
-        let game_config = &mut ctx.accounts.game_config.load_mut()?;
-        
-        require!(tier1_bonus_bps <= 5000, ErrorCode::InvalidBonus);
-        require!(tier2_bonus_bps <= 5000, ErrorCode::InvalidBonus);
-        require!(tier3_bonus_bps <= 5000, ErrorCode::InvalidBonus);
-        require!(tier4_bonus_bps <= 5000, ErrorCode::InvalidBonus);
-        require!(tier5_bonus_bps <= 5000, ErrorCode::InvalidBonus);
-        
-        game_config.accumulation_tier1_threshold = tier1_threshold;
-        game_config.accumulation_tier1_bonus_bps = tier1_bonus_bps;
-        game_config.accumulation_tier2_threshold = tier2_threshold;
-        game_config.accumulation_tier2_bonus_bps = tier2_bonus_bps;
-        game_config.accumulation_tier3_threshold = tier3_threshold;
-        game_config.accumulation_tier3_bonus_bps = tier3_bonus_bps;
-        game_config.accumulation_tier4_threshold = tier4_threshold;
-        game_config.accumulation_tier4_bonus_bps = tier4_bonus_bps;
-        game_config.accumulation_tier5_threshold = tier5_threshold;
-        game_config.accumulation_tier5_bonus_bps = tier5_bonus_bps;
-        
-        msg!("Accumulation bonuses updated (5 tiers)");
-        Ok(())
-    }
-
-    pub fn admin_update_accumulation_bonus_v2(
         ctx: Context<AdminUpdateGame>,
         tier1_threshold: u64,
         tier1_bonus_bps: u16,
@@ -1226,7 +1172,7 @@ pub mod defipoly_program {
         game_config.accumulation_tier8_threshold = tier8_threshold;
         game_config.accumulation_tier8_bonus_bps = tier8_bonus_bps;
         
-        msg!("Accumulation bonuses updated (8 tiers)");
+        msg!("Accumulation bonuses updated");
         Ok(())
     }
 }
@@ -1243,18 +1189,9 @@ fn distribute_payment<'info>(
     authority: &Signer<'info>,
     token_program: &Program<'info, Token>,
 ) -> Result<()> {
-    let to_reward_pool = amount.checked_mul(95)
-        .ok_or(ErrorCode::Overflow)?
-        .checked_div(100)
-        .ok_or(ErrorCode::Overflow)?;
-    let to_marketing = amount.checked_mul(3)
-        .ok_or(ErrorCode::Overflow)?
-        .checked_div(100)
-        .ok_or(ErrorCode::Overflow)?;
-    let to_dev = amount.checked_mul(2)
-        .ok_or(ErrorCode::Overflow)?
-        .checked_div(100)
-        .ok_or(ErrorCode::Overflow)?;
+    let to_reward_pool = amount * 95 / 100;
+    let to_marketing = amount * 3 / 100;
+    let to_dev = amount * 2 / 100;
 
     token::transfer(
         CpiContext::new(
@@ -1342,18 +1279,24 @@ fn get_property_bit_in_set(property_id: u8, set_id: u8) -> u8 {
     }
 }
 
-fn count_properties_in_set(mask: u8, _set_id: u8) -> u8 {
+fn get_properties_in_set(set_id: u8) -> u8 {
+    match set_id {
+        0 | 7 => 2,
+        _ => 3,
+    }
+}
+
+fn count_properties_in_set(mask: u8) -> u8 {
     mask.count_ones() as u8
 }
 
 fn is_set_complete(player: &PlayerAccount, set_id: u8) -> bool {
-    let required = Property::get_properties_in_set(set_id);
-    let owned = count_properties_in_set(player.set_properties_mask[set_id as usize], set_id);
+    let required = get_properties_in_set(set_id);
+    let owned = count_properties_in_set(player.set_properties_mask[set_id as usize]);
     owned >= required
 }
 
 // ========== ACCOUNT CONTEXTS ==========
-// Removed constraint validations with .load() to reduce stack usage
 
 #[derive(Accounts)]
 pub struct InitializeGame<'info> {
@@ -1449,15 +1392,6 @@ pub struct InitializePlayer<'info> {
 pub struct BuyProperty<'info> {
     #[account(mut)]
     pub property: Account<'info, Property>,
-    
-    #[account(
-        init_if_needed,
-        payer = player,
-        space = 8 + SetStats::SIZE,
-        seeds = [b"set_stats_v2", property.set_id.to_le_bytes().as_ref()], 
-        bump
-    )]
-    pub set_stats: Account<'info, SetStats>,
     
     #[account(mut)]
     pub player_account: AccountLoader<'info, PlayerAccount>,
@@ -1719,9 +1653,6 @@ pub struct GameConfig {
     pub token_mint: Pubkey,
     pub reward_pool_vault: Pubkey,
     
-    pub total_supply: u64,
-    pub circulating_supply: u64,
-    pub reward_pool_initial: u64,
     pub min_claim_interval_minutes: i64,
     pub accumulation_tier1_threshold: u64,
     pub accumulation_tier2_threshold: u64,
@@ -1732,10 +1663,10 @@ pub struct GameConfig {
     pub accumulation_tier7_threshold: u64,
     pub accumulation_tier8_threshold: u64,
     
-    pub steal_chance_targeted_bps: u16,
-    pub steal_chance_random_bps: u16,
+    pub set_bonus_bps: [u16; 8],
+    
+    pub steal_chance_bps: u16,
     pub steal_cost_percent_bps: u16,
-    pub set_bonus_bps: u16,
     pub accumulation_tier1_bonus_bps: u16,
     pub accumulation_tier2_bonus_bps: u16,
     pub accumulation_tier3_bonus_bps: u16,
@@ -1745,12 +1676,10 @@ pub struct GameConfig {
     pub accumulation_tier7_bonus_bps: u16,
     pub accumulation_tier8_bonus_bps: u16,
     
-    pub current_phase: u8,
     pub game_paused: u8,
-    pub max_properties_per_claim: u8,
     pub bump: u8,
     pub reward_pool_vault_bump: u8,
-    pub _padding: [u8; 3],
+    pub _padding: [u8; 5],
 }
 
 #[account]
@@ -1771,27 +1700,6 @@ pub struct Property {
 
 impl Property {
     pub const SIZE: usize = 29 + 64;
-    
-    pub fn get_properties_in_set(set_id: u8) -> u8 {
-        match set_id {
-            0 | 7 => 2,
-            _ => 3,
-        }
-    }
-    
-    pub fn get_set_bonus_bps(set_id: u8) -> u16 {
-        match set_id {
-            0 => 3000,
-            1 => 3286,
-            2 => 3571,
-            3 => 3857,
-            4 => 4143,
-            5 => 4429,
-            6 => 4714,
-            7 => 5000,
-            _ => 4000,
-        }
-    }
 }
 
 #[account(zero_copy)]
@@ -1830,22 +1738,6 @@ pub struct PlayerAccount {
     pub set_properties_mask: [u8; MAX_SETS],
 }
 
-#[account]
-pub struct SetStats {
-    pub set_id: u8,
-    pub total_slots_sold: u64,
-    pub total_revenue: u64,
-    pub unique_owners: u32,
-    pub total_players: u32,
-    pub bump: u8,
-    
-    pub padding: [u8; 32],
-}
-
-impl SetStats {
-    pub const SIZE: usize = 26 + 32;
-}
-
 // ========== EVENTS ==========
 
 #[event]
@@ -1869,22 +1761,11 @@ pub struct ShieldActivatedEvent {
 }
 
 #[event]
-pub struct StealAttemptEvent {
-    pub attacker: Pubkey,
-    pub target: Pubkey,
-    pub property_id: u8,
-    pub steal_cost: u64,
-    pub is_targeted: bool,
-    pub request_slot: u64,
-}
-
-#[event]
 pub struct StealSuccessEvent {
     pub attacker: Pubkey,
     pub target: Pubkey,
     pub property_id: u8,
     pub steal_cost: u64,
-    pub targeted: bool,
     pub vrf_result: u64,
 }
 
@@ -1894,7 +1775,6 @@ pub struct StealFailedEvent {
     pub target: Pubkey,
     pub property_id: u8,
     pub steal_cost: u64,
-    pub targeted: bool,
     pub vrf_result: u64,
 }
 
@@ -1939,14 +1819,6 @@ pub struct AdminRevokeEvent {
 }
 
 #[event]
-pub struct AdminPlayerAdjustEvent {
-    pub admin: Pubkey,
-    pub player: Pubkey,
-    pub adjustment_type: String,
-    pub value: i64,
-}
-
-#[event]
 pub struct AdminShieldGrantEvent {
     pub admin: Pubkey,
     pub player: Pubkey,
@@ -1988,14 +1860,10 @@ pub enum ErrorCode {
     CooldownActive,
     #[msg("Player does not own this property")]
     DoesNotOwnProperty,
-    #[msg("Invalid number of slots to shield")]
-    InvalidShieldSlots,
     #[msg("Target does not own this property")]
     TargetDoesNotOwnProperty,
     #[msg("No eligible targets found")]
     NoEligibleTargets,
-    #[msg("All slots are protected (shielded or steal protection active)")]
-    AllSlotsProtected,
     #[msg("Cannot steal from yourself")]
     CannotStealFromSelf,
     #[msg("All slots are shielded")]
@@ -2006,32 +1874,12 @@ pub enum ErrorCode {
     NoRewardsToClaim,
     #[msg("Game is paused")]
     GamePaused,
-    #[msg("Unauthorized - ownership does not match player")]
+    #[msg("Unauthorized")]
     Unauthorized,
-    #[msg("Invalid account count in remaining_accounts")]
-    InvalidAccountCount,
-    #[msg("Property mismatch between ownership and property account")]
-    PropertyMismatch,
-    #[msg("No properties provided")]
-    NoProperties,
-    #[msg("Invalid target player")]
-    InvalidTarget,
     #[msg("Insufficient reward pool balance")]
     InsufficientRewardPool,
-    #[msg("Too many properties in single claim (max 22)")]
-    TooManyProperties,
-    #[msg("Claim too soon - wait at least 1 minutes")]
+    #[msg("Claim too soon - wait at least 1 minute")]
     ClaimTooSoon,
-    #[msg("VRF result already fulfilled")]
-    AlreadyFulfilled,
-    #[msg("VRF result not ready yet - wait at least 1 slot")]
-    VrfNotReady,
-    #[msg("Pending steal request exists - wait 5 minutes or until fulfilled")]
-    PendingStealExists,
-    #[msg("Steal request not fulfilled yet - cannot close")]
-    NotFulfilled,
-    #[msg("Steal request expired - must fulfill within 150 slots (~60 sec)")]
-    StealRequestExpired,
     #[msg("Steal cooldown active - wait before attempting again")]
     StealCooldownActive,
     #[msg("Slot hash unavailable - try again")]
@@ -2050,10 +1898,6 @@ pub enum ErrorCode {
     InvalidCooldown,
     #[msg("Invalid steal cost")]
     InvalidStealCost,
-    #[msg("Invalid set bonus")]
-    InvalidSetBonus,
-    #[msg("Invalid property count")]
-    InvalidPropertyCount,
     #[msg("Invalid claim interval")]
     InvalidClaimInterval,
     #[msg("Invalid bonus percentage (max 50%)")]

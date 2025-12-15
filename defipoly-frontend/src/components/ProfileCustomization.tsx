@@ -156,11 +156,10 @@ export function ProfileCustomization({
       });
 
       if (response.ok) {
-        const data = await response.json();
-        setProfilePicture(data.profilePicture);
-        // Clear profile cache so other components refresh
+        // Don't call setProfilePicture - it triggers another API save
+        // The upload endpoint already saved it to the database
+        // Just clear cache and trigger refresh
         clearProfileCache(publicKey.toString());
-        // Trigger profile update event for other components
         window.dispatchEvent(new Event('profileUpdated'));
         showSuccess('Upload Success', 'Profile picture updated');
       } else {

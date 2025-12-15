@@ -55,11 +55,11 @@ export function RewardsProvider({ children }: { children: React.ReactNode }) {
       }
 
       // Get blockchain stored pending rewards (already calculated)
-      const storedRewards = (playerData.pendingRewards?.toNumber() || 0) / 1e9;
+      const storedRewards = Number(playerData.pendingRewards?.toString() || '0') / 1e9;
       
       // Get player income and last claim info
-      const totalBaseDailyIncome = (playerData.totalBaseDailyIncome?.toNumber() || 0) / 1e9;
-      const lastClaimTimestamp = playerData.lastClaimTimestamp?.toNumber() || 0;
+      const totalBaseDailyIncome = Number(playerData.totalBaseDailyIncome?.toString() || '0') / 1e9;
+      const lastClaimTimestamp = Number(playerData.lastClaimTimestamp?.toString() || '0');
       
       // Calculate time-based rewards since last update
       const currentTimestamp = Math.floor(Date.now() / 1000);

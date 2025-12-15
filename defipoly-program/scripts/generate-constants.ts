@@ -105,7 +105,7 @@ export function getSetBonus(setId: number) {
  * Generate Backend Constants (JavaScript)
  * Includes only what the backend actually needs - no blockchain addresses
  */
-function generateBackendConstants(): string {
+function generateBackendConstants(deployment: DeploymentInfo): string {
   // Derive PROPERTY_SETS from PROPERTIES
   const propertySets: { [key: number]: number[] } = {};
   PROPERTY_CONFIG.forEach(prop => {
@@ -125,6 +125,11 @@ function generateBackendConstants(): string {
 // Blockchain addresses (PROGRAM_ID, etc.) are read from the IDL file.
 //
 // ============================================
+
+// ========================================
+// BLOCKCHAIN ADDRESSES
+// ========================================
+const TOKEN_MINT = "${deployment.tokenMint}";
 
 // ========================================
 // WALLET ADDRESSES
@@ -184,6 +189,9 @@ function getCooldownDurationForSet(setId) {
 // ========================================
 
 module.exports = {
+  // Blockchain addresses
+  TOKEN_MINT,
+  
   // Wallet addresses
   DEV_WALLET,
   MARKETING_WALLET,
@@ -260,7 +268,7 @@ async function generate() {
   // ========================================
   
   console.log("\n2️⃣  Exporting to backend...");
-  const backendContent = generateBackendConstants();
+  const backendContent = generateBackendConstants(deployment);
   const backendPath = path.join(__dirname, "../../defipoly-backend/src/config/constants.js");
   
   fs.mkdirSync(path.dirname(backendPath), { recursive: true });

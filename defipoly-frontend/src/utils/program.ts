@@ -52,12 +52,6 @@ export function getSetOwnershipPDA(playerPubkey: PublicKey, setId: number): [Pub
   );
 }
 
-export function getSetStatsPDA(setId: number): [PublicKey, number] {
-  return PublicKey.findProgramAddressSync(
-    [Buffer.from('set_stats_v2'), Buffer.from([setId])],
-    PROGRAM_ID
-  );
-}
 
 export function getStealRequestPDA(attackerPubkey: PublicKey, propertyId: number): [PublicKey, number] {
   return PublicKey.findProgramAddressSync(

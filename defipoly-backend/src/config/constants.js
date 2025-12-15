@@ -1,13 +1,18 @@
 // ============================================
 // AUTO-GENERATED - DO NOT EDIT
 // Source: defipoly-program/scripts/property-config.ts
-// Generated: 2025-12-12T16:19:02.045Z
+// Generated: 2025-12-15T20:07:04.801Z
 // ============================================
 // 
 // This file contains game configuration data only.
 // Blockchain addresses (PROGRAM_ID, etc.) are read from the IDL file.
 //
 // ============================================
+
+// ========================================
+// BLOCKCHAIN ADDRESSES
+// ========================================
+const TOKEN_MINT = "HPugDVPx8y9F5DpLYDiKgz5Zuko7rhPQjqssoCm8Gcm";
 
 // ========================================
 // WALLET ADDRESSES
@@ -426,6 +431,9 @@ function getCooldownDurationForSet(setId) {
 // ========================================
 
 module.exports = {
+  // Blockchain addresses
+  TOKEN_MINT,
+  
   // Wallet addresses
   DEV_WALLET,
   MARKETING_WALLET,
