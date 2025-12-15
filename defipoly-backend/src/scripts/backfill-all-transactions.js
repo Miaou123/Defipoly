@@ -21,11 +21,12 @@ async function backfillAllTransactions() {
   const db = getDatabase();
 
   // Setup connection
+  const idl = require('../idl/defipoly_program.json');
   const RPC_URL = process.env.RPC_URL;
-  const PROGRAM_ID = process.env.PROGRAM_ID;
+  const PROGRAM_ID = idl.address;
 
   if (!RPC_URL || !PROGRAM_ID) {
-    throw new Error('RPC_URL and PROGRAM_ID must be set in .env');
+    throw new Error('RPC_URL must be set in .env and IDL must contain program address');
   }
 
   console.log('🌐 Connecting to Solana...');

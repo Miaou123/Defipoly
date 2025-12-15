@@ -20,8 +20,8 @@ const __dirname = path.dirname(__filename);
 // Load environment variables
 dotenv.config({ path: path.join(__dirname, '../.env') });
 
-const DEV_WALLET = new anchor.web3.PublicKey("CgWTFX7JJQHed3qyMDjJkNCxK4sFe3wbDFABmWAAmrdS");
-const MARKETING_WALLET = new anchor.web3.PublicKey("FoPKSQ5HDSVyZgaQobX64YEBVQ2iiKMZp8VHWtd6jLQE");
+const DEV_WALLET = new anchor.web3.PublicKey(process.env.DEV_WALLET || "CgWTFX7JJQHed3qyMDjJkNCxK4sFe3wbDFABmWAAmrdS");
+const MARKETING_WALLET = new anchor.web3.PublicKey(process.env.MARKETING_WALLET || "FoPKSQ5HDSVyZgaQobX64YEBVQ2iiKMZp8VHWtd6jLQE");
 
 async function main() {
   // Set defaults for environment

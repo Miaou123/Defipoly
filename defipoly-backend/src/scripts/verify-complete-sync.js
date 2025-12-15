@@ -8,8 +8,10 @@ const { Connection, PublicKey } = require('@solana/web3.js');
 const { initDatabase, getDatabase, closeDatabase } = require('../config/database');
 require('dotenv').config();
 
+const idl = require('../idl/defipoly_program.json');
+
 const RPC_URL = process.env.RPC_URL;
-const PROGRAM_ID = new PublicKey(process.env.PROGRAM_ID);
+const PROGRAM_ID = new PublicKey(idl.address);
 
 // ========== PDA DERIVATION FUNCTIONS ==========
 

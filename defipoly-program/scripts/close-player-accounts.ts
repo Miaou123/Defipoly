@@ -6,8 +6,12 @@ import * as anchor from "@coral-xyz/anchor";
 import { Program } from "@coral-xyz/anchor";
 import { Connection, PublicKey, Keypair } from '@solana/web3.js';
 import * as fs from 'fs';
+import dotenv from 'dotenv';
 
-const RPC_URL = 'https://api.devnet.solana.com';
+// Load environment variables
+dotenv.config();
+
+const RPC_URL = process.env.RPC_URL || 'https://api.devnet.solana.com';
 
 // All the old player accounts (69 bytes)
 const OLD_ACCOUNTS = [

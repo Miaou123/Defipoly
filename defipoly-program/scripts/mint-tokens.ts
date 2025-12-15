@@ -18,8 +18,8 @@ async function main() {
   const rpcUrl = process.env.RPC_URL || "https://api.devnet.solana.com";
   const walletPath = process.env.ANCHOR_WALLET || path.join(homedir(), ".config/solana/id.json");
   
-  // Your wallet and token mint
-  const recipientAddress = new anchor.web3.PublicKey("FoPKSQ5HDSVyZgaQobX64YEBVQ2iiKMZp8VHWtd6jLQE");
+  // Get recipient from environment or use default
+  const recipientAddress = new anchor.web3.PublicKey(process.env.RECIPIENT_ADDRESS || "FoPKSQ5HDSVyZgaQobX64YEBVQ2iiKMZp8VHWtd6jLQE");
   const tokenMint = new anchor.web3.PublicKey(process.env.TOKEN_MINT || "8SVK8CUtNbwCsBz1NUtdeCKbMN4kn9h7AoMc6MvmgGrN");
   
   // Amount to mint (10,000,000 tokens with 9 decimals)

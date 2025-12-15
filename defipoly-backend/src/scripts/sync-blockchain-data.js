@@ -14,8 +14,10 @@ const {
 } = require('../services/blockchainSyncService');
 require('dotenv').config();
 
+const idl = require('../idl/defipoly_program.json');
+
 const RPC_URL = process.env.RPC_URL;
-const PROGRAM_ID = new PublicKey(process.env.PROGRAM_ID);
+const PROGRAM_ID = new PublicKey(idl.address);
 
 async function fullBlockchainSync() {
   console.log('🔄 Starting Full Blockchain Data Sync\n');

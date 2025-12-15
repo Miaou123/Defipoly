@@ -147,6 +147,17 @@ async function main() {
     console.log(`   Error: ${error}`);
   }
 
+  // Step 11: Sync blockchain data to database
+  console.log("\n1️⃣1️⃣ Syncing blockchain data to database...");
+  try {
+    console.log("   🔄 Running blockchain sync...");
+    execSync('node src/scripts/sync-blockchain-data.js', { stdio: 'inherit', cwd: backendDir });
+    console.log("   ✅ Blockchain data synced to database");
+  } catch (error) {
+    console.log(`   ⚠️  Could not sync blockchain data: run 'node src/scripts/sync-blockchain-data.js' manually in defipoly-backend folder`);
+    console.log(`   Error: ${error}`);
+  }
+
   console.log("\n✅ Fresh deployment complete!");
   console.log(`\n📋 New Program ID: ${programId}`);
   console.log(`\n🎮 Your game is ready to use with the new program!`);

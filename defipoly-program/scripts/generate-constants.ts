@@ -18,8 +18,8 @@ dotenv.config({ path: path.join(__dirname, '../.env') });
 // ========================================
 // WALLET ADDRESSES (Match program constants)
 // ========================================
-const DEV_WALLET = "CgWTFX7JJQHed3qyMDjJkNCxK4sFe3wbDFABmWAAmrdS";
-const MARKETING_WALLET = "FoPKSQ5HDSVyZgaQobX64YEBVQ2iiKMZp8VHWtd6jLQE";
+const DEV_WALLET = process.env.DEV_WALLET || "CgWTFX7JJQHed3qyMDjJkNCxK4sFe3wbDFABmWAAmrdS";
+const MARKETING_WALLET = process.env.MARKETING_WALLET || "FoPKSQ5HDSVyZgaQobX64YEBVQ2iiKMZp8VHWtd6jLQE";
 
 interface DeploymentInfo {
   programId: string;

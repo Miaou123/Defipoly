@@ -199,6 +199,13 @@ htmlcov/
 .hypothesis/
 
 # ================================
+# DEPLOYMENT SCRIPTS (don't commit to public repo)
+# ================================
+scripts/
+scripts/*
+!scripts/.gitkeep
+
+# ================================
 # MISC
 # ================================
 *.pid

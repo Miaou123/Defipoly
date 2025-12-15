@@ -17,7 +17,10 @@ const __dirname = path.dirname(__filename);
 // Load environment variables
 dotenv.config({ path: path.join(__dirname, '../.env') });
 
-const PROGRAM_ID = new anchor.web3.PublicKey("H1zzYzWPReWJ4W2JNiBrYbsrHDxFDGJ9n9jAyYG2VhLQ");
+// Read program ID from IDL
+const idlPath = path.join(__dirname, '../target/idl/defipoly_program.json');
+const idl = JSON.parse(fs.readFileSync(idlPath, 'utf8'));
+const PROGRAM_ID = new anchor.web3.PublicKey(idl.address);
 const BACKEND_URL = process.env.BACKEND_URL || "http://YOUR_DROPLET_IP:3005";
 
 interface GameAction {

@@ -75,7 +75,7 @@ DATABASE_PATH=./defipoly.db
 # Solana Configuration
 RPC_URL=https://api.mainnet-beta.solana.com
 SOLANA_WS_URL=wss://api.mainnet-beta.solana.com
-PROGRAM_ID=your_program_id_here
+# PROGRAM_ID is automatically read from IDL file
 
 # API Keys (optional but recommended)
 HELIUS_API_KEY=your_helius_api_key_here

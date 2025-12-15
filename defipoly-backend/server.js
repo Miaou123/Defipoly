@@ -166,7 +166,7 @@ app.get('/health', (req, res) => {
     timestamp: Date.now(),
     version: '2.0.1', // Bumped version for security update
     mode: 'wss',
-    programId: process.env.PROGRAM_ID || idl.address,
+    programId: idl.address,
     features: [
       'profiles', 
       'actions', 
