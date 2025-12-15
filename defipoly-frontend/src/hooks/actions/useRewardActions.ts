@@ -20,7 +20,8 @@ export const useRewardActions = (
   connection: Connection,
   eventParser: EventParser | null,
   playerInitialized: boolean,
-  setLoading: (loading: boolean) => void
+  setLoading: (loading: boolean) => void,
+  refreshTokenBalance?: () => Promise<void>
 ) => {
   const claimRewards = useCallback(async () => {
     if (!program || !wallet) throw new Error('Wallet not connected');
@@ -58,6 +59,11 @@ export const useRewardActions = (
   
   
       // ✅ WEBHOOK HANDLES ALL STORAGE AUTOMATICALLY - No manual storage needed!
+      
+      // Refresh token balance after successful claim
+      if (refreshTokenBalance) {
+        await refreshTokenBalance();
+      }
   
       return tx;
     } catch (error: any) {

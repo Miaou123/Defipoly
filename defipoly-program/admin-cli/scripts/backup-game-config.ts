@@ -3,6 +3,11 @@
 import { loadProgram } from '../utils/program.js';
 import { getGameConfigPDA, getPropertyPDA } from '../utils/pda.js';
 import fs from 'fs/promises';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 interface GameConfigBackup {
   timestamp: string;
@@ -86,11 +91,12 @@ async function backupGameConfig(): Promise<void> {
     
     // Save backup
     const filename = `game-config-backup-${Date.now()}.json`;
-    const filepath = `/home/olivierb/Documents/crypto/Projects/monopoly/defipoly/defipoly-program/admin-cli/backups/${filename}`;
+    const backupsDir = path.join(__dirname, '../backups');
+    const filepath = path.join(backupsDir, filename);
     
     // Create backups directory if it doesn't exist
     try {
-      await fs.mkdir('/home/olivierb/Documents/crypto/Projects/monopoly/defipoly/defipoly-program/admin-cli/backups', { recursive: true });
+      await fs.mkdir(backupsDir, { recursive: true });
     } catch (error) {
       // Directory might already exist
     }

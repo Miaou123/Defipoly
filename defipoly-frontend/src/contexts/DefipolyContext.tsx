@@ -45,6 +45,7 @@ interface DefipolyContextType {
   activateShield: (propertyId: number, cycles: number) => Promise<string>;
   claimRewards: () => Promise<string>;
   stealPropertyInstant: (propertyId: number) => Promise<any>;
+  refreshTokenBalance: () => Promise<void>;
 }
 
 const DefipolyContext = createContext<DefipolyContextType | null>(null);
@@ -151,6 +152,22 @@ export function DefipolyProvider({ children }: { children: React.ReactNode }) {
     }
   }, [wallet, provider]);
 
+  // Refresh token balance
+  const refreshTokenBalance = useCallback(async () => {
+    if (!wallet || !connection) return;
+    
+    try {
+      const tokenAccount = await getAssociatedTokenAddress(
+        TOKEN_MINT,
+        wallet.publicKey
+      );
+      const balance = await connection.getTokenAccountBalance(tokenAccount);
+      setTokenBalance(Number(balance.value.amount) / 1e9);
+    } catch (error) {
+      console.error('Error refreshing balance:', error);
+    }
+  }, [wallet, connection]);
+
   const initializePlayer = useCallback(async () => {
     if (!program || !wallet) throw new Error('Wallet not connected');
     const methods = program?.methods;
@@ -186,7 +203,7 @@ export function DefipolyProvider({ children }: { children: React.ReactNode }) {
   const propertyActions = usePropertyActions(
     program, wallet, provider, connection, eventParser,
     playerInitialized, tokenAccountExists, setLoading,
-    setTokenAccountExists, setPlayerInitialized
+    setTokenAccountExists, setPlayerInitialized, refreshTokenBalance
   );
   
   const shieldActions = useShieldActions(
@@ -196,7 +213,7 @@ export function DefipolyProvider({ children }: { children: React.ReactNode }) {
   
   const rewardActions = useRewardActions(
     program, wallet, connection, eventParser,
-    playerInitialized, setLoading
+    playerInitialized, setLoading, refreshTokenBalance
   );
   
   const stealActions = useStealActions(
@@ -212,6 +229,7 @@ export function DefipolyProvider({ children }: { children: React.ReactNode }) {
     loading,
     createTokenAccount,
     initializePlayer,
+    refreshTokenBalance,
     ...propertyActions,
     ...shieldActions,
     ...rewardActions,
@@ -224,6 +242,7 @@ export function DefipolyProvider({ children }: { children: React.ReactNode }) {
     loading,
     createTokenAccount,
     initializePlayer,
+    refreshTokenBalance,
     propertyActions,
     shieldActions,
     rewardActions,

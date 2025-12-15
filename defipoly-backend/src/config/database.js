@@ -21,7 +21,7 @@ function initDatabase() {
 function createTables() {
   return new Promise((resolve, reject) => {
     let completed = 0;
-    const totalTables = 8;
+    const totalTables = 10;
     let hasError = false;
 
     const checkCompletion = () => {
@@ -227,6 +227,47 @@ function createTables() {
         return reject(err);
       }
       console.log('✅ Processed transactions table ready');
+      checkCompletion();
+    });
+
+    // Airdrop Whitelist table
+    db.run(`
+      CREATE TABLE IF NOT EXISTS airdrop_whitelist (
+        wallet TEXT PRIMARY KEY,
+        added_at INTEGER DEFAULT (strftime('%s', 'now') * 1000)
+      )
+    `, (err) => {
+      if (err) {
+        console.error('Error creating airdrop_whitelist table:', err);
+        hasError = true;
+        return reject(err);
+      }
+      console.log('✅ Airdrop whitelist table ready');
+      checkCompletion();
+    });
+
+    // Airdrop History table
+    db.run(`
+      CREATE TABLE IF NOT EXISTS airdrop_history (
+        wallet TEXT PRIMARY KEY,
+        gas_sent INTEGER DEFAULT 0,
+        gas_signature TEXT,
+        gas_sent_at INTEGER,
+        completed INTEGER DEFAULT 0,
+        completed_at INTEGER,
+        verification_tx TEXT,
+        sol_signature TEXT,
+        token_signature TEXT,
+        sol_amount REAL,
+        token_amount REAL
+      )
+    `, (err) => {
+      if (err) {
+        console.error('Error creating airdrop_history table:', err);
+        hasError = true;
+        return reject(err);
+      }
+      console.log('✅ Airdrop history table ready');
       checkCompletion();
     });
   });

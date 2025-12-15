@@ -36,7 +36,8 @@ export const usePropertyActions = (
   tokenAccountExists: boolean,
   setLoading: (loading: boolean) => void,
   setTokenAccountExists: (exists: boolean) => void,
-  setPlayerInitialized: (initialized: boolean) => void
+  setPlayerInitialized: (initialized: boolean) => void,
+  refreshTokenBalance?: () => Promise<void>
 ) => {
 
   // ============================================
@@ -127,6 +128,11 @@ export const usePropertyActions = (
       // Update states
       if (!playerData) setPlayerInitialized(true);
       
+      // Refresh token balance after successful purchase
+      if (refreshTokenBalance) {
+        await refreshTokenBalance();
+      }
+      
       return signature;
       
     } catch (error: any) {
@@ -179,6 +185,12 @@ export const usePropertyActions = (
         .rpc();
 
       await connection.confirmTransaction(tx, 'confirmed');
+      
+      // Refresh token balance after successful sale
+      if (refreshTokenBalance) {
+        await refreshTokenBalance();
+      }
+      
       return tx;
       
     } catch (error: any) {

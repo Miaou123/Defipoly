@@ -11,7 +11,7 @@ import { jwtDecode } from 'jwt-decode';
 import bs58 from 'bs58';
 import { DevnetConfirmationModal } from '@/components/DevnetConfirmationModal';
 
-const API_BASE_URL = process.env['NEXT_PUBLIC_API_BASE_URL'] || 'http://localhost:3101';
+import { API_BASE_URL } from '@/utils/config';
 
 interface AuthContextType {
   token: string | null;

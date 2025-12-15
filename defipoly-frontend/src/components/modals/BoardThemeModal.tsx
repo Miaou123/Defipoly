@@ -6,6 +6,7 @@ import { X } from 'lucide-react';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { useNotification } from '@/contexts/NotificationContext';
 import { authenticatedFetch } from '@/contexts/AuthContext';
+import { API_BASE_URL } from '@/utils/config';
 import { clearProfileCache } from '@/utils/profileStorage';
 import { GameControllerIcon, LoadingIcon, UploadIcon, LightbulbIcon } from '../icons/UIIcons';
 
@@ -48,7 +49,7 @@ export function BoardThemeModal({
       // Store as gradient format for consistency
       const colorGradient = `${customColor},${customColor}`;
       
-      const response = await authenticatedFetch(`${process.env['NEXT_PUBLIC_API_BASE_URL'] || 'http://localhost:3101'}/api/profile`, {
+      const response = await authenticatedFetch(`${API_BASE_URL}/api/profile`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -107,7 +108,7 @@ export function BoardThemeModal({
         formData.append('oldBackgroundUrl', customBackground);
       }
 
-      const response = await authenticatedFetch(`${process.env['NEXT_PUBLIC_API_BASE_URL'] || 'http://localhost:3101'}/api/profile/upload/theme`, {
+      const response = await authenticatedFetch(`${API_BASE_URL}/api/profile/upload/theme`, {
         method: 'POST',
         body: formData,
       });
@@ -140,7 +141,7 @@ export function BoardThemeModal({
     try {
       // Delete the file from server if it's an upload
       if (customBackground && customBackground.startsWith('/uploads/')) {
-        await authenticatedFetch(`${process.env['NEXT_PUBLIC_API_BASE_URL'] || 'http://localhost:3101'}/api/profile/upload/delete`, {
+        await authenticatedFetch(`${API_BASE_URL}/api/profile/upload/delete`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -151,7 +152,7 @@ export function BoardThemeModal({
       }
       
       // Save to backend - set customBoardBackground to null
-      const response = await authenticatedFetch(`${process.env['NEXT_PUBLIC_API_BASE_URL'] || 'http://localhost:3101'}/api/profile`, {
+      const response = await authenticatedFetch(`${API_BASE_URL}/api/profile`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

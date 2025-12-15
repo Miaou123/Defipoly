@@ -8,6 +8,7 @@ import { useNotification } from '@/contexts/NotificationContext';
 import { clearProfileCache, getProfile } from '@/utils/profileStorage';
 import { CornerSquare } from '../BoardHelpers';
 import { authenticatedFetch } from '@/contexts/AuthContext';
+import { API_BASE_URL } from '@/utils/config';
 
 interface CornerSquareModalProps {
   isOpen: boolean;
@@ -50,7 +51,7 @@ export function CornerSquareModal({
     
     setSaving(true);
     try {
-      const response = await authenticatedFetch(`${process.env['NEXT_PUBLIC_API_BASE_URL'] || 'http://localhost:3101'}/api/profile/themes`, {
+      const response = await authenticatedFetch(`${API_BASE_URL}/api/profile/themes`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

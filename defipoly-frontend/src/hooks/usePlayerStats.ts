@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { useWebSocket } from '@/contexts/WebSocketContext';
+import { API_BASE_URL } from '@/utils/config';
 
 export function usePlayerStats() {
   const { publicKey } = useWallet();
@@ -19,7 +20,6 @@ export function usePlayerStats() {
     const fetchInitialStats = async () => {
       setLoading(true);
       try {
-        const API_BASE_URL = process.env['NEXT_PUBLIC_API_BASE_URL'] || 'http://localhost:3101';
         const response = await fetch(`${API_BASE_URL}/api/stats/${publicKey.toString()}`);
         
         if (response.ok) {

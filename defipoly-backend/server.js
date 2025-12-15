@@ -76,8 +76,8 @@ app.use(apiCounter.middleware());
 app.use(blockListMiddleware);
 
 const ALLOWED_ORIGINS = [
-  'http://localhost:3100',
-  'http://localhost:3000',
+  process.env.FRONTEND_URL || 'http://localhost:3100',
+  'http://localhost:3000', // Keep as backup for dev
   'https://defipoly.app',
   'https://www.defipoly.app',
 ];

@@ -16,7 +16,12 @@ import {
   ClearStealCooldownCommand
 } from '../commands/index.js';
 import fs from 'fs/promises';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import { PublicKey } from '@solana/web3.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 interface TestResult {
   command: string;
@@ -195,10 +200,11 @@ class AdminCommandTester {
 
     // Save detailed report
     const reportFilename = `admin-commands-test-report-${Date.now()}.json`;
-    const reportPath = `/home/olivierb/Documents/crypto/Projects/monopoly/defipoly/defipoly-program/admin-cli/test-reports/${reportFilename}`;
+    const reportsDir = path.join(__dirname, '../test-reports');
+    const reportPath = path.join(reportsDir, reportFilename);
     
     try {
-      await fs.mkdir('/home/olivierb/Documents/crypto/Projects/monopoly/defipoly/defipoly-program/admin-cli/test-reports', { recursive: true });
+      await fs.mkdir(reportsDir, { recursive: true });
     } catch (error) {
       // Directory might already exist
     }

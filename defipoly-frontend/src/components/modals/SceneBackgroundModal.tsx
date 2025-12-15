@@ -7,6 +7,7 @@ import { useWallet } from '@solana/wallet-adapter-react';
 import { useNotification } from '@/contexts/NotificationContext';
 import { authenticatedFetch } from '@/contexts/AuthContext';
 import { clearProfileCache } from '@/utils/profileStorage';
+import { API_BASE_URL } from '@/utils/config';
 import { THEME_CONSTANTS } from '@/utils/themeConstants';
 import { createSceneGradientStyle, parseGradient } from '@/utils/themePresets';
 
@@ -55,7 +56,7 @@ export function SceneBackgroundModal({
       // Store gradient colors in our format
       const gradientValue = `${customColor1},${customColor2}`;
       
-      const response = await authenticatedFetch(`${process.env['NEXT_PUBLIC_API_BASE_URL'] || 'http://localhost:3101'}/api/profile`, {
+      const response = await authenticatedFetch(`${API_BASE_URL}/api/profile`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -92,7 +93,7 @@ export function SceneBackgroundModal({
     
     setSaving(true);
     try {
-      const response = await authenticatedFetch(`${process.env['NEXT_PUBLIC_API_BASE_URL'] || 'http://localhost:3101'}/api/profile`, {
+      const response = await authenticatedFetch(`${API_BASE_URL}/api/profile`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

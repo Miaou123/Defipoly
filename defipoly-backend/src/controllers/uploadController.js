@@ -356,7 +356,7 @@ const uploadThemeBatch = [
         fs.unlinkSync(finalPath);
 
         // Generate URL
-        const baseUrl = process.env.NODE_ENV === 'production' ? '' : 'http://localhost:3101';
+        const baseUrl = process.env.NODE_ENV === 'production' ? '' : (process.env.API_BASE_URL || 'http://localhost:3101');
         const fileUrl = `${baseUrl}${UPLOAD_URL_PREFIX}/${subDir}/${optimizedFilename}`;
         
         console.log(`${themeType} file optimized and moved to:`, fileUrl);

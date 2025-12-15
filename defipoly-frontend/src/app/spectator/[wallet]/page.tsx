@@ -8,7 +8,7 @@ import { LiveFeed } from '@/components/LiveFeed';
 import { getProfilesBatch, ProfileData } from '@/utils/profileStorage';
 import { getCachedSpectator, setCachedSpectator } from '@/utils/spectatorCache';
 
-const API_BASE_URL = process.env['NEXT_PUBLIC_API_BASE_URL'] || 'http://localhost:3101';
+import { API_BASE_URL } from '@/utils/config';
 
 interface PlayerStats {
   walletAddress: string;

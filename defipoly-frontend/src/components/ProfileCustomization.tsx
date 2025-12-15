@@ -15,6 +15,7 @@ import { UserIcon, PaletteIcon, GameControllerIcon, HouseIcon, GalaxyIcon, Ruler
 import { authenticatedFetch } from '@/contexts/AuthContext';
 import { THEME_CONSTANTS } from '@/utils/themeConstants';
 import { ThemePreset, getSceneGradient, getBoardGradient, createGradientStyle, createSceneGradientStyle } from '@/utils/themePresets';
+import { API_BASE_URL } from '@/utils/config';
 
 interface ProfileCustomizationProps {
   // Profile picture props
@@ -54,7 +55,6 @@ interface ProfileCustomizationProps {
   walletAddress: string;
 }
 
-const API_BASE_URL = process.env['NEXT_PUBLIC_API_BASE_URL'] || 'http://localhost:3101';
 
 export function ProfileCustomization({
   profilePicture,

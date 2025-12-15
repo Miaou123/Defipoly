@@ -27,12 +27,20 @@ async function main() {
 
   if (response === 'y') {
     try {
+      // Stop backend first to release database lock
+      try {
+        execSync('pm2 stop defipoly-backend', { stdio: 'pipe' });
+        console.log(`   ✅ Backend stopped`);
+      } catch {
+        console.log(`   ℹ️  Backend not running or pm2 not found`);
+      }
+
       const dbPath = path.join(backendDir, 'defipoly.db');
       if (fs.existsSync(dbPath)) {
         fs.unlinkSync(dbPath);
-        console.log(`   ✅ Database reset successfully`);
+        console.log(`   ✅ Database deleted: ${dbPath}`);
       } else {
-        console.log(`   ℹ️  No database file found (fresh start)`);
+        console.log(`   ℹ️  No database file found at ${dbPath}`);
       }
     } catch (error) {
       console.error(`   ❌ Database reset failed:`, error);
@@ -111,6 +119,32 @@ async function main() {
   } catch (error) {
     console.error(`   ❌ Constants generation failed:`, error);
     process.exit(1);
+  }
+
+  // Step 9: Restart backend
+  console.log("\n9️⃣  Restarting backend...");
+  try {
+    execSync('pm2 restart defipoly-backend', { stdio: 'inherit' });
+    console.log(`   ✅ Backend restarted`);
+  } catch {
+    console.log(`   ⚠️  Could not restart backend: run 'pm2 restart defipoly-backend' manually`);
+  }
+
+  // Step 10: Build and restart frontend
+  console.log("\n🔟 Building and restarting frontend...");
+  try {
+    // Build frontend with new constants
+    console.log("   📦 Building frontend...");
+    execSync('npm run build', { stdio: 'inherit', cwd: '../defipoly-frontend' });
+    console.log("   ✅ Frontend built");
+    
+    // Restart frontend
+    console.log("   🔄 Restarting frontend...");
+    execSync('pm2 restart defipoly-frontend', { stdio: 'inherit' });
+    console.log("   ✅ Frontend restarted");
+  } catch (error) {
+    console.log(`   ⚠️  Could not build/restart frontend: run 'npm run build && pm2 restart defipoly-frontend' manually in defipoly-frontend folder`);
+    console.log(`   Error: ${error}`);
   }
 
   console.log("\n✅ Fresh deployment complete!");

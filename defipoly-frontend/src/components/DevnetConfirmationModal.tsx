@@ -54,7 +54,7 @@ export function DevnetConfirmationModal({ isOpen, walletAddress, onConfirm }: De
               <div>
                 <h3 className="text-amber-200 font-semibold mb-1">Important Network Requirement</h3>
                 <p className="text-amber-200 text-sm">
-                  <strong>Defipoly runs on Solana DEVNET only.</strong> Using mainnet will cause transaction failures and may trigger "malicious dApp" warnings in Phantom.
+                  <strong>Defipoly runs on Solana DEVNET only.</strong> Using mainnet will cause transaction failures and may trigger warnings in Phantom.
                 </p>
               </div>
             </div>
@@ -79,7 +79,7 @@ export function DevnetConfirmationModal({ isOpen, walletAddress, onConfirm }: De
                 <span className="bg-purple-500/30 text-purple-300 rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold flex-shrink-0">
                   2
                 </span>
-                <span>Click the <strong>Settings</strong> icon (gear icon) in the bottom right</span>
+                <span>Click the <strong>Settings</strong> icon (gear icon) in the bottom left</span>
               </li>
               
               <li className="flex items-start gap-3">

@@ -9,9 +9,10 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useWallet, useConnection } from '@solana/wallet-adapter-react';
 import { Transaction, SystemProgram, LAMPORTS_PER_SOL } from '@solana/web3.js';
 import { useNotification } from '@/contexts/NotificationContext';
+import { useDefipoly } from '@/contexts/DefipolyContext';
 import { Loader2, Gift, CheckCircle, AlertCircle } from 'lucide-react';
 
-const API_BASE_URL = process.env['NEXT_PUBLIC_API_BASE_URL'] || 'http://localhost:3101';
+import { API_BASE_URL } from '@/utils/config';
 
 interface EligibilityStatus {
   wallet: string;
@@ -29,6 +30,7 @@ export function ClaimTestTokens() {
   const { publicKey, connected, signTransaction } = useWallet();
   const { connection } = useConnection();
   const { showSuccess, showError, showInfo } = useNotification();
+  const { refreshTokenBalance } = useDefipoly();
 
   const [status, setStatus] = useState<EligibilityStatus | null>(null);
   const [loading, setLoading] = useState(false);
@@ -115,6 +117,8 @@ export function ClaimTestTokens() {
           `Received ${result.solAmount} SOL and ${(result.tokenAmount || 0).toLocaleString()} tokens!`,
           result.tokenSignature
         );
+        // Refresh the balance after successful claim
+        await refreshTokenBalance();
         await checkEligibility();
       } else {
         showError('Claim Failed', result.error || 'Unknown error');
@@ -188,9 +192,9 @@ export function ClaimTestTokens() {
               <span className="font-semibold">Test tokens claimed!</span>
             </div>
             <p className="text-sm text-green-300/70 mt-2">Start by buying a property!</p>
-            <p className="text-xs text-green-300/50 mt-2">
-              You can play directly from Mainnet. However if you want to see transaction previews and token balances in your Phantom wallet, switch to Devnet in Settings → Developer Settings.
-            </p>
+              <p className="text-xs text-green-300/50 mt-2">
+                Make sure your wallet is set to Devnet to see your token balance and send transactions. In Phantom: Settings → Developer Settings → Testnet Mode → Devnet.
+              </p>
           </div>
         );
       }

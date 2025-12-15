@@ -96,7 +96,7 @@ const optimizeImage = async (req, res, next) => {
       fs.renameSync(filePath, finalPath);
       
       req.file.path = finalPath;
-      const baseUrl = process.env.NODE_ENV === 'production' ? '' : 'http://localhost:3101';
+      const baseUrl = process.env.NODE_ENV === 'production' ? '' : (process.env.API_BASE_URL || 'http://localhost:3101');
       req.file.url = `${baseUrl}${UPLOAD_URL_PREFIX}/${subDir}/${filename}`;
       
       console.log('SVG file moved to:', req.file.url);
@@ -115,7 +115,7 @@ const optimizeImage = async (req, res, next) => {
       fs.renameSync(filePath, finalPath);
       req.file.path = finalPath;
       // Use full URL for frontend access
-      const baseUrl = process.env.NODE_ENV === 'production' ? '' : 'http://localhost:3101';
+      const baseUrl = process.env.NODE_ENV === 'production' ? '' : (process.env.API_BASE_URL || 'http://localhost:3101');
       req.file.url = `${baseUrl}${UPLOAD_URL_PREFIX}/${subDir}/${filename}`;
       console.log('GIF moved to:', req.file.url);
       return next();
@@ -183,7 +183,7 @@ const optimizeImage = async (req, res, next) => {
       fs.renameSync(req.file.path, finalPath);
       req.file.path = finalPath;
       // Use full URL for frontend access
-      const baseUrl = process.env.NODE_ENV === 'production' ? '' : 'http://localhost:3101';
+      const baseUrl = process.env.NODE_ENV === 'production' ? '' : (process.env.API_BASE_URL || 'http://localhost:3101');
       req.file.url = `${baseUrl}${UPLOAD_URL_PREFIX}/${subDir}/${req.file.filename}`;
       
       console.log('File moved without optimization to:', req.file.url);

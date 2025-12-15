@@ -18,7 +18,7 @@ interface Activity {
   propertyId?: number;
 }
 
-const API_BASE_URL = process.env['NEXT_PUBLIC_API_BASE_URL'] || 'http://localhost:3101';
+import { API_BASE_URL } from '@/utils/config';
 
 export default function ProfilePage() {
   const { publicKey, connected, disconnect } = useWallet();

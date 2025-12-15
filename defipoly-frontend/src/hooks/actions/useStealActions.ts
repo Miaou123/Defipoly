@@ -25,6 +25,7 @@ import {
 } from '@/utils/constants';
 // ✅ NEW: Import API service
 import { fetchOwnershipData } from '@/services/api';
+import { API_BASE_URL } from '@/utils/config';
 
 interface StealResult {
   tx: string;
@@ -55,7 +56,6 @@ export const useStealActions = (
       // ✅ NEW: Fetch ALL ownerships for this property from backend API
       // This gets us ALL owners with their steal_protection_expiry data!
       
-      const API_BASE_URL = process.env['NEXT_PUBLIC_API_BASE_URL'] || 'http://localhost:3005';
       const response = await fetch(`${API_BASE_URL}/api/properties/${propertyId}/owners`);
       
       if (!response.ok) {
