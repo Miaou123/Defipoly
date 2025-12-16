@@ -85,7 +85,7 @@ pub mod defipoly_program {
         game_config.game_paused = 0;
         game_config.bump = ctx.bumps.game_config;
         game_config.reward_pool_vault_bump = ctx.bumps.reward_pool_vault;
-        game_config._padding = [0u8; 5];
+        game_config._padding = [0u8; 1];
 
         msg!("Game initialized");
         Ok(())
@@ -1679,7 +1679,7 @@ pub struct GameConfig {
     pub game_paused: u8,
     pub bump: u8,
     pub reward_pool_vault_bump: u8,
-    pub _padding: [u8; 5],
+    pub _padding: [u8; 1],
 }
 
 #[account]

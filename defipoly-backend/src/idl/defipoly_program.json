@@ -403,71 +403,6 @@
         {
           "name": "tier5_bonus_bps",
           "type": "u16"
-        }
-      ]
-    },
-    {
-      "name": "admin_update_accumulation_bonus_v2",
-      "discriminator": [
-        47,
-        11,
-        148,
-        182,
-        73,
-        76,
-        185,
-        204
-      ],
-      "accounts": [
-        {
-          "name": "game_config",
-          "writable": true
-        },
-        {
-          "name": "authority",
-          "signer": true
-        }
-      ],
-      "args": [
-        {
-          "name": "tier1_threshold",
-          "type": "u64"
-        },
-        {
-          "name": "tier1_bonus_bps",
-          "type": "u16"
-        },
-        {
-          "name": "tier2_threshold",
-          "type": "u64"
-        },
-        {
-          "name": "tier2_bonus_bps",
-          "type": "u16"
-        },
-        {
-          "name": "tier3_threshold",
-          "type": "u64"
-        },
-        {
-          "name": "tier3_bonus_bps",
-          "type": "u16"
-        },
-        {
-          "name": "tier4_threshold",
-          "type": "u64"
-        },
-        {
-          "name": "tier4_bonus_bps",
-          "type": "u16"
-        },
-        {
-          "name": "tier5_threshold",
-          "type": "u64"
-        },
-        {
-          "name": "tier5_bonus_bps",
-          "type": "u16"
         },
         {
           "name": "tier6_threshold",
@@ -561,18 +496,6 @@
           }
         },
         {
-          "name": "set_bonus_bps",
-          "type": {
-            "option": "u16"
-          }
-        },
-        {
-          "name": "max_properties_claim",
-          "type": {
-            "option": "u8"
-          }
-        },
-        {
           "name": "min_claim_interval",
           "type": {
             "option": "i64"
@@ -612,6 +535,39 @@
         },
         {
           "name": "new_yield_bps",
+          "type": "u16"
+        }
+      ]
+    },
+    {
+      "name": "admin_update_set_bonus",
+      "discriminator": [
+        201,
+        217,
+        57,
+        16,
+        227,
+        165,
+        226,
+        202
+      ],
+      "accounts": [
+        {
+          "name": "game_config",
+          "writable": true
+        },
+        {
+          "name": "authority",
+          "signer": true
+        }
+      ],
+      "args": [
+        {
+          "name": "set_id",
+          "type": "u8"
+        },
+        {
+          "name": "bonus_bps",
           "type": "u16"
         }
       ]
@@ -668,36 +624,6 @@
         {
           "name": "property",
           "writable": true
-        },
-        {
-          "name": "set_stats",
-          "writable": true,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  115,
-                  101,
-                  116,
-                  95,
-                  115,
-                  116,
-                  97,
-                  116,
-                  115,
-                  95,
-                  118,
-                  50
-                ]
-              },
-              {
-                "kind": "account",
-                "path": "property.set_id",
-                "account": "Property"
-              }
-            ]
-          }
         },
         {
           "name": "player_account",
@@ -1096,7 +1022,7 @@
       ],
       "args": [
         {
-          "name": "initial_reward_pool_amount",
+          "name": "_initial_reward_pool_amount",
           "type": "u64"
         }
       ]
@@ -1398,35 +1324,6 @@
       "args": []
     },
     {
-      "name": "update_phase",
-      "discriminator": [
-        192,
-        90,
-        97,
-        235,
-        207,
-        129,
-        59,
-        5
-      ],
-      "accounts": [
-        {
-          "name": "game_config",
-          "writable": true
-        },
-        {
-          "name": "authority",
-          "signer": true
-        }
-      ],
-      "args": [
-        {
-          "name": "new_phase",
-          "type": "u8"
-        }
-      ]
-    },
-    {
       "name": "update_property_max_slots",
       "discriminator": [
         248,
@@ -1499,16 +1396,16 @@
       ]
     },
     {
-      "name": "update_steal_chances",
+      "name": "update_steal_chance",
       "discriminator": [
-        76,
-        217,
-        146,
-        47,
-        85,
-        209,
-        173,
-        3
+        253,
+        186,
+        208,
+        250,
+        2,
+        53,
+        98,
+        244
       ],
       "accounts": [
         {
@@ -1522,11 +1419,7 @@
       ],
       "args": [
         {
-          "name": "targeted_bps",
-          "type": "u16"
-        },
-        {
-          "name": "random_bps",
+          "name": "chance_bps",
           "type": "u16"
         }
       ]
@@ -1571,19 +1464,6 @@
         152,
         19
       ]
-    },
-    {
-      "name": "SetStats",
-      "discriminator": [
-        94,
-        47,
-        130,
-        178,
-        226,
-        11,
-        2,
-        222
-      ]
     }
   ],
   "events": [
@@ -1611,19 +1491,6 @@
         35,
         13,
         146
-      ]
-    },
-    {
-      "name": "AdminPlayerAdjustEvent",
-      "discriminator": [
-        157,
-        191,
-        86,
-        172,
-        99,
-        47,
-        201,
-        67
       ]
     },
     {
@@ -1731,19 +1598,6 @@
       ]
     },
     {
-      "name": "StealAttemptEvent",
-      "discriminator": [
-        17,
-        164,
-        32,
-        158,
-        5,
-        217,
-        200,
-        87
-      ]
-    },
-    {
       "name": "StealFailedEvent",
       "discriminator": [
         102,
@@ -1813,176 +1667,106 @@
     },
     {
       "code": 6008,
-      "name": "InvalidShieldSlots",
-      "msg": "Invalid number of slots to shield"
-    },
-    {
-      "code": 6009,
       "name": "TargetDoesNotOwnProperty",
       "msg": "Target does not own this property"
     },
     {
-      "code": 6010,
+      "code": 6009,
       "name": "NoEligibleTargets",
       "msg": "No eligible targets found"
     },
     {
-      "code": 6011,
-      "name": "AllSlotsProtected",
-      "msg": "All slots are protected (shielded or steal protection active)"
-    },
-    {
-      "code": 6012,
+      "code": 6010,
       "name": "CannotStealFromSelf",
       "msg": "Cannot steal from yourself"
     },
     {
-      "code": 6013,
+      "code": 6011,
       "name": "AllSlotsShielded",
       "msg": "All slots are shielded"
     },
     {
-      "code": 6014,
+      "code": 6012,
       "name": "InsufficientSlots",
       "msg": "Insufficient slots"
     },
     {
-      "code": 6015,
+      "code": 6013,
       "name": "NoRewardsToClaim",
       "msg": "No rewards to claim"
     },
     {
-      "code": 6016,
+      "code": 6014,
       "name": "GamePaused",
       "msg": "Game is paused"
     },
     {
-      "code": 6017,
+      "code": 6015,
       "name": "Unauthorized",
-      "msg": "Unauthorized - ownership does not match player"
+      "msg": "Unauthorized"
     },
     {
-      "code": 6018,
-      "name": "InvalidAccountCount",
-      "msg": "Invalid account count in remaining_accounts"
-    },
-    {
-      "code": 6019,
-      "name": "PropertyMismatch",
-      "msg": "Property mismatch between ownership and property account"
-    },
-    {
-      "code": 6020,
-      "name": "NoProperties",
-      "msg": "No properties provided"
-    },
-    {
-      "code": 6021,
-      "name": "InvalidTarget",
-      "msg": "Invalid target player"
-    },
-    {
-      "code": 6022,
+      "code": 6016,
       "name": "InsufficientRewardPool",
       "msg": "Insufficient reward pool balance"
     },
     {
-      "code": 6023,
-      "name": "TooManyProperties",
-      "msg": "Too many properties in single claim (max 22)"
-    },
-    {
-      "code": 6024,
+      "code": 6017,
       "name": "ClaimTooSoon",
-      "msg": "Claim too soon - wait at least 1 minutes"
+      "msg": "Claim too soon - wait at least 1 minute"
     },
     {
-      "code": 6025,
-      "name": "AlreadyFulfilled",
-      "msg": "VRF result already fulfilled"
-    },
-    {
-      "code": 6026,
-      "name": "VrfNotReady",
-      "msg": "VRF result not ready yet - wait at least 1 slot"
-    },
-    {
-      "code": 6027,
-      "name": "PendingStealExists",
-      "msg": "Pending steal request exists - wait 5 minutes or until fulfilled"
-    },
-    {
-      "code": 6028,
-      "name": "NotFulfilled",
-      "msg": "Steal request not fulfilled yet - cannot close"
-    },
-    {
-      "code": 6029,
-      "name": "StealRequestExpired",
-      "msg": "Steal request expired - must fulfill within 150 slots (~60 sec)"
-    },
-    {
-      "code": 6030,
+      "code": 6018,
       "name": "StealCooldownActive",
       "msg": "Steal cooldown active - wait before attempting again"
     },
     {
-      "code": 6031,
+      "code": 6019,
       "name": "SlotHashUnavailable",
       "msg": "Slot hash unavailable - try again"
     },
     {
-      "code": 6032,
+      "code": 6020,
       "name": "InvalidShieldDuration",
       "msg": "Invalid shield duration. Must be between 1 and 48 hours."
     },
     {
-      "code": 6033,
+      "code": 6021,
       "name": "ShieldAlreadyActive",
       "msg": "Shield is already active. Wait for expiry before reactivating."
     },
     {
-      "code": 6034,
+      "code": 6022,
       "name": "StealProtectionActive",
       "msg": "Steal protection is active on this property"
     },
     {
-      "code": 6035,
+      "code": 6023,
       "name": "InvalidYield",
       "msg": "Invalid yield percentage (must be <= 100%)"
     },
     {
-      "code": 6036,
+      "code": 6024,
       "name": "InvalidShieldCost",
       "msg": "Invalid shield cost percentage"
     },
     {
-      "code": 6037,
+      "code": 6025,
       "name": "InvalidCooldown",
       "msg": "Invalid cooldown duration"
     },
     {
-      "code": 6038,
+      "code": 6026,
       "name": "InvalidStealCost",
       "msg": "Invalid steal cost"
     },
     {
-      "code": 6039,
-      "name": "InvalidSetBonus",
-      "msg": "Invalid set bonus"
-    },
-    {
-      "code": 6040,
-      "name": "InvalidPropertyCount",
-      "msg": "Invalid property count"
-    },
-    {
-      "code": 6041,
+      "code": 6027,
       "name": "InvalidClaimInterval",
       "msg": "Invalid claim interval"
     },
     {
-      "code": 6042,
+      "code": 6028,
       "name": "InvalidBonus",
       "msg": "Invalid bonus percentage (max 50%)"
     }
@@ -2024,30 +1808,6 @@
           {
             "name": "slots",
             "type": "u16"
-          }
-        ]
-      }
-    },
-    {
-      "name": "AdminPlayerAdjustEvent",
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "admin",
-            "type": "pubkey"
-          },
-          {
-            "name": "player",
-            "type": "pubkey"
-          },
-          {
-            "name": "adjustment_type",
-            "type": "string"
-          },
-          {
-            "name": "value",
-            "type": "i64"
           }
         ]
       }
@@ -2174,18 +1934,6 @@
             "type": "pubkey"
           },
           {
-            "name": "total_supply",
-            "type": "u64"
-          },
-          {
-            "name": "circulating_supply",
-            "type": "u64"
-          },
-          {
-            "name": "reward_pool_initial",
-            "type": "u64"
-          },
-          {
             "name": "min_claim_interval_minutes",
             "type": "i64"
           },
@@ -2222,19 +1970,20 @@
             "type": "u64"
           },
           {
-            "name": "steal_chance_targeted_bps",
-            "type": "u16"
+            "name": "set_bonus_bps",
+            "type": {
+              "array": [
+                "u16",
+                8
+              ]
+            }
           },
           {
-            "name": "steal_chance_random_bps",
+            "name": "steal_chance_bps",
             "type": "u16"
           },
           {
             "name": "steal_cost_percent_bps",
-            "type": "u16"
-          },
-          {
-            "name": "set_bonus_bps",
             "type": "u16"
           },
           {
@@ -2270,15 +2019,7 @@
             "type": "u16"
           },
           {
-            "name": "current_phase",
-            "type": "u8"
-          },
-          {
             "name": "game_paused",
-            "type": "u8"
-          },
-          {
-            "name": "max_properties_per_claim",
             "type": "u8"
           },
           {
@@ -2294,7 +2035,7 @@
             "type": {
               "array": [
                 "u8",
-                3
+                1
               ]
             }
           }
@@ -2615,47 +2356,6 @@
       }
     },
     {
-      "name": "SetStats",
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "set_id",
-            "type": "u8"
-          },
-          {
-            "name": "total_slots_sold",
-            "type": "u64"
-          },
-          {
-            "name": "total_revenue",
-            "type": "u64"
-          },
-          {
-            "name": "unique_owners",
-            "type": "u32"
-          },
-          {
-            "name": "total_players",
-            "type": "u32"
-          },
-          {
-            "name": "bump",
-            "type": "u8"
-          },
-          {
-            "name": "padding",
-            "type": {
-              "array": [
-                "u8",
-                32
-              ]
-            }
-          }
-        ]
-      }
-    },
-    {
       "name": "ShieldActivatedEvent",
       "type": {
         "kind": "struct",
@@ -2684,38 +2384,6 @@
       }
     },
     {
-      "name": "StealAttemptEvent",
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "attacker",
-            "type": "pubkey"
-          },
-          {
-            "name": "target",
-            "type": "pubkey"
-          },
-          {
-            "name": "property_id",
-            "type": "u8"
-          },
-          {
-            "name": "steal_cost",
-            "type": "u64"
-          },
-          {
-            "name": "is_targeted",
-            "type": "bool"
-          },
-          {
-            "name": "request_slot",
-            "type": "u64"
-          }
-        ]
-      }
-    },
-    {
       "name": "StealFailedEvent",
       "type": {
         "kind": "struct",
@@ -2735,10 +2403,6 @@
           {
             "name": "steal_cost",
             "type": "u64"
-          },
-          {
-            "name": "targeted",
-            "type": "bool"
           },
           {
             "name": "vrf_result",
@@ -2767,10 +2431,6 @@
           {
             "name": "steal_cost",
             "type": "u64"
-          },
-          {
-            "name": "targeted",
-            "type": "bool"
           },
           {
             "name": "vrf_result",
