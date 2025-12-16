@@ -13,11 +13,9 @@ export interface GameConfig {
   rewardPoolInitial: BN;
   currentPhase: number;
   gamePaused: boolean;
-  stealChanceTargetedBps: number;
-  stealChanceRandomBps: number;
+  stealChanceBps: number;
   stealCostPercentBps: number;
-  setBonusBps: number;
-  maxPropertiesPerClaim: number;
+  setBonusBps: number[];
   minClaimIntervalMinutes: BN;
   bump: number;
   rewardPoolVaultBump: number;
@@ -140,7 +138,6 @@ export interface StealSuccessEvent {
   target: PublicKey;
   propertyId: number;
   stealCost: BN;
-  targeted: boolean;
   vrfResult: BN;
 }
 
@@ -149,7 +146,6 @@ export interface StealFailedEvent {
   target: PublicKey;
   propertyId: number;
   stealCost: BN;
-  targeted: boolean;
   vrfResult: BN;
 }
 

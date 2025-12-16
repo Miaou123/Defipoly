@@ -16,18 +16,6 @@ export function getPropertyPDA(programId: PublicKey, propertyId: number): Public
   return pda;
 }
 
-export function getOwnershipPDA(programId: PublicKey, player: PublicKey, propertyId: number): PublicKey {
-  const [pda] = PublicKey.findProgramAddressSync(
-    [
-      Buffer.from('ownership'),
-      player.toBuffer(),
-      Buffer.from([propertyId])
-    ],
-    programId
-  );
-  return pda;
-}
-
 export function getPlayerPDA(programId: PublicKey, player: PublicKey): PublicKey {
   const [pda] = PublicKey.findProgramAddressSync(
     [Buffer.from('player'), player.toBuffer()],
@@ -44,26 +32,12 @@ export function getRewardPoolVaultPDA(programId: PublicKey, gameConfig: PublicKe
   return pda;
 }
 
-export function getSetCooldownPDA(programId: PublicKey, player: PublicKey, setId: number): PublicKey {
-  const [pda] = PublicKey.findProgramAddressSync(
-    [
-      Buffer.from('cooldown'),
-      player.toBuffer(),
-      Buffer.from([setId])
-    ],
-    programId
-  );
-  return pda;
-}
-
-export function getStealCooldownPDA(programId: PublicKey, player: PublicKey, propertyId: number): PublicKey {
-  const [pda] = PublicKey.findProgramAddressSync(
-    [
-      Buffer.from('steal_cooldown'),
-      player.toBuffer(),
-      Buffer.from([propertyId])
-    ],
-    programId
-  );
-  return pda;
-}
+// ============================================
+// DEPRECATED v0.8 PDA functions - removed in v0.9
+// These PDAs are now managed internally by the program:
+// - getOwnershipPDA (ownership)
+// - getSetCooldownPDA (cooldown) 
+// - getStealCooldownPDA (steal_cooldown)
+// - getSetOwnershipPDA (set_ownership)
+// - getSetStatsPDA (set_stats)
+// ============================================

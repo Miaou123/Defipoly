@@ -1,6 +1,7 @@
 'use client';
 
 import { THEME_CONSTANTS } from '@/utils/themeConstants';
+import { getImageUrl } from '@/utils/config';
 
 export interface CornerSquareProps {
   icon: string;
@@ -69,11 +70,11 @@ export function CornerSquare({ icon, label, bgColor, profilePicture, cornerSquar
       }}
     >
       {/* Card content */}
-      {cornerSquareStyle === 'profile' && profilePicture ? (
+      {cornerSquareStyle === 'profile' && getImageUrl(profilePicture) ? (
         // Profile Picture Mode - Show profile picture
         <div className="w-full h-full flex items-center justify-center" style={{ padding }}>
           <img 
-            src={profilePicture} 
+            src={getImageUrl(profilePicture)!} 
             alt="Profile" 
             className="w-full h-full object-cover rounded"
           />

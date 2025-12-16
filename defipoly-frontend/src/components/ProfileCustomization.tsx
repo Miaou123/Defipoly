@@ -15,7 +15,7 @@ import { UserIcon, PaletteIcon, GameControllerIcon, HouseIcon, GalaxyIcon, Ruler
 import { authenticatedFetch } from '@/contexts/AuthContext';
 import { THEME_CONSTANTS } from '@/utils/themeConstants';
 import { ThemePreset, getSceneGradient, getBoardGradient, createGradientStyle, createSceneGradientStyle } from '@/utils/themePresets';
-import { API_BASE_URL } from '@/utils/config';
+import { API_BASE_URL, getImageUrl } from '@/utils/config';
 
 interface ProfileCustomizationProps {
   // Profile picture props
@@ -400,9 +400,9 @@ export function ProfileCustomization({
       <div className="text-center pb-5 mb-5 border-b border-purple-500/20">
         <div className="relative w-24 h-24 mx-auto mb-3 group">
           <div className="w-full h-full rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center overflow-hidden border-3 border-purple-500/30">
-            {profilePicture ? (
+            {getImageUrl(profilePicture) ? (
               <img 
-                src={profilePicture} 
+                src={getImageUrl(profilePicture)!} 
                 alt="Profile" 
                 className="w-full h-full object-cover"
               />

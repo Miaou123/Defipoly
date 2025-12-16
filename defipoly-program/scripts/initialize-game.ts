@@ -26,13 +26,24 @@ const MARKETING_WALLET = new anchor.web3.PublicKey(process.env.MARKETING_WALLET 
 async function main() {
   // Set defaults for environment
   const rpcUrl = process.env.RPC_URL || "https://api.devnet.solana.com";
-  const walletPath = process.env.ANCHOR_WALLET || path.join(homedir(), ".config/solana/id.json");
   
-  // Create connection and wallet
-  const connection = new anchor.web3.Connection(rpcUrl, "confirmed");
+  // Get wallet path from environment or use default
+  const walletPath = process.env.WALLET_PATH || process.env.ANCHOR_WALLET || path.join(homedir(), ".config/solana/id.json");
+  
+  console.log(`🔑 Looking for wallet at: ${walletPath}`);
+  
+  if (!fs.existsSync(walletPath)) {
+    throw new Error(`Wallet file not found at: ${walletPath}. Set WALLET_PATH in .env file.`);
+  }
+  
   const walletKeypair = anchor.web3.Keypair.fromSecretKey(
     Buffer.from(JSON.parse(fs.readFileSync(walletPath, "utf-8")))
   );
+  
+  console.log(`✅ Using wallet: ${walletPath}`);
+  
+  // Create connection and wallet
+  const connection = new anchor.web3.Connection(rpcUrl, "confirmed");
   const wallet = new anchor.Wallet(walletKeypair);
   
   // Create provider
@@ -190,7 +201,7 @@ async function main() {
 
   try {
     await program.methods
-      .adminUpdateAccumulationBonusV2(
+      .adminUpdateAccumulationBonus(
         new BN(10_000 * DECIMALS),    // Tier 1: 10k tokens
         100,                           // 1% bonus
         new BN(25_000 * DECIMALS),   // Tier 2: 25k tokens

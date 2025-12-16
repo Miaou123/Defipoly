@@ -10,6 +10,7 @@ import { useRouter } from 'next/navigation';
 import { getProfile } from '@/utils/profileStorage';
 import { StyledWalletButton } from './StyledWalletButton';
 import { LoadingIcon, UserIcon } from './icons/UIIcons';
+import { getImageUrl } from '@/utils/config';
 
 export function SideHeader() {
   const { connected, publicKey } = useWallet();
@@ -82,9 +83,9 @@ export function SideHeader() {
             <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center overflow-hidden flex-shrink-0">
               {loadingProfile ? (
                 <LoadingIcon size={12} className="text-yellow-400 animate-pulse" />
-              ) : profileData.profilePicture ? (
+              ) : getImageUrl(profileData.profilePicture) ? (
                 <img 
-                  src={profileData.profilePicture} 
+                  src={getImageUrl(profileData.profilePicture)!} 
                   alt="Profile" 
                   className="w-full h-full object-cover"
                 />

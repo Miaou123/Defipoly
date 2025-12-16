@@ -7,7 +7,8 @@
     "deploy:existing": "npm run build && npm run deploy && npm run initialize && npm run generate:constants",
     "initialize": "tsx scripts/initialize-game.ts",
     "generate:constants": "tsx scripts/generate-constants.ts",
-    "test": "anchor test"
+    "test": "anchor test",
+    "admin": "cd admin-cli && npm run dev"
   },
   "dependencies": {
     "@coral-xyz/anchor": "^0.31.1",

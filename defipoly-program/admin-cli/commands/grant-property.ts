@@ -1,7 +1,7 @@
 import * as anchor from "@coral-xyz/anchor";
 import { PublicKey } from '@solana/web3.js';
 import type { ProgramContext, AdminCommand } from '../types.js';
-import { getGameConfigPDA, getPropertyPDA, getOwnershipPDA, getPlayerPDA } from '../utils/pda.js';
+import { getGameConfigPDA, getPropertyPDA, getPlayerPDA } from '../utils/pda.js';
 
 export class GrantPropertyCommand implements AdminCommand {
   async execute(ctx: ProgramContext, propertyId: number, playerAddress: string, slots: number): Promise<void> {
@@ -14,7 +14,6 @@ export class GrantPropertyCommand implements AdminCommand {
     const targetPlayer = new PublicKey(playerAddress);
     
     const propertyPDA = getPropertyPDA(programId, propertyId);
-    const ownershipPDA = getOwnershipPDA(programId, targetPlayer, propertyId);
     const playerPDA = getPlayerPDA(programId, targetPlayer);
 
     console.log(`Property ID: ${propertyId}`);
@@ -24,14 +23,12 @@ export class GrantPropertyCommand implements AdminCommand {
 
     try {
       const tx = await program.methods
-        .adminGrantProperty(targetPlayer, slots)
+        .adminGrantProperty(targetPlayer, propertyId, slots)
         .accounts({
           property: propertyPDA,
-          ownership: ownershipPDA,
           playerAccount: playerPDA,
           gameConfig: gameConfig,
           authority: authority.publicKey,
-          systemProgram: anchor.web3.SystemProgram.programId,
         })
         .signers([authority])
         .rpc();

@@ -1,7 +1,7 @@
 import * as anchor from "@coral-xyz/anchor";
 import { PublicKey } from '@solana/web3.js';
 import type { ProgramContext, AdminCommand } from '../types.js';
-import { getGameConfigPDA, getSetCooldownPDA, getStealCooldownPDA } from '../utils/pda.js';
+import { getGameConfigPDA, getPlayerPDA } from '../utils/pda.js';
 
 export class ClearCooldownCommand implements AdminCommand {
   async execute(ctx: ProgramContext, playerAddress: string, setId: number): Promise<void> {
@@ -12,7 +12,7 @@ export class ClearCooldownCommand implements AdminCommand {
     const programId = program.programId;
     const gameConfig = getGameConfigPDA(programId);
     const player = new PublicKey(playerAddress);
-    const setCooldownPDA = getSetCooldownPDA(programId, player, setId);
+    const playerPDA = getPlayerPDA(programId, player);
 
     console.log(`Player: ${playerAddress}`);
     console.log(`Set ID: ${setId}`);
@@ -20,9 +20,9 @@ export class ClearCooldownCommand implements AdminCommand {
 
     try {
       const tx = await program.methods
-        .adminClearCooldown()
+        .adminClearCooldown(setId)
         .accounts({
-          setCooldown: setCooldownPDA,
+          playerAccount: playerPDA,
           gameConfig: gameConfig,
           authority: authority.publicKey,
         })
@@ -47,7 +47,7 @@ export class ClearStealCooldownCommand implements AdminCommand {
     const programId = program.programId;
     const gameConfig = getGameConfigPDA(programId);
     const player = new PublicKey(playerAddress);
-    const stealCooldownPDA = getStealCooldownPDA(programId, player, propertyId);
+    const playerPDA = getPlayerPDA(programId, player);
 
     console.log(`Player: ${playerAddress}`);
     console.log(`Property ID: ${propertyId}`);
@@ -55,9 +55,9 @@ export class ClearStealCooldownCommand implements AdminCommand {
 
     try {
       const tx = await program.methods
-        .adminClearStealCooldown()
+        .adminClearStealCooldown(propertyId)
         .accounts({
-          stealCooldown: stealCooldownPDA,
+          playerAccount: playerPDA,
           gameConfig: gameConfig,
           authority: authority.publicKey,
         })

@@ -13,8 +13,6 @@ import { EventParser } from '@coral-xyz/anchor';
 import { 
   getPropertyPDA,
   getPlayerPDA,
-  getOwnershipPDA,
-  getStealCooldownPDA,
 } from '@/utils/program';
 import { 
   GAME_CONFIG, 
@@ -103,17 +101,11 @@ export const useStealActions = (
       }
 
 
-      // Prepare remaining_accounts (pairs of ownership + player account)
+      // Prepare remaining_accounts (just player accounts in v0.9)
       const remainingAccounts = [];
       for (const targetPubkey of eligibleTargets) {
-        const [targetOwnershipPDA] = getOwnershipPDA(targetPubkey, propertyId);
         const [targetPlayerPDA] = getPlayerPDA(targetPubkey);
         
-        remainingAccounts.push({
-          pubkey: targetOwnershipPDA,
-          isWritable: true,
-          isSigner: false,
-        });
         remainingAccounts.push({
           pubkey: targetPlayerPDA,
           isWritable: true,
@@ -129,8 +121,6 @@ export const useStealActions = (
       
       const [propertyPDA] = getPropertyPDA(propertyId);
       const [playerPDA] = getPlayerPDA(wallet.publicKey);
-      const [attackerOwnershipPDA] = getOwnershipPDA(wallet.publicKey, propertyId);
-      const [stealCooldownPDA] = getStealCooldownPDA(wallet.publicKey, propertyId);
 
       // Generate user randomness
       const userRandomness = new Uint8Array(32);
@@ -147,8 +137,6 @@ export const useStealActions = (
         )
         .accountsPartial({
           property: propertyPDA,
-          attackerOwnership: attackerOwnershipPDA,
-          stealCooldown: stealCooldownPDA,
           playerAccount: playerPDA,
           playerTokenAccount,
           rewardPoolVault: REWARD_POOL,

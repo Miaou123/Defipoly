@@ -12,9 +12,6 @@ import { EventParser } from '@coral-xyz/anchor';
 import { 
   getPropertyPDA, 
   getPlayerPDA, 
-  getOwnershipPDA, 
-  getSetCooldownPDA,
-  getSetOwnershipPDA,
   fetchPlayerData
 } from '@/utils/program';
 import { 
@@ -79,15 +76,6 @@ export const usePropertyActions = (
         transaction.add(initPlayerIx);
       }
 
-      // Fetch property to get setId
-      const propertyData = await (program.account as any).property.fetch(propertyPDA);
-      const setId = propertyData.setId;
-
-      // Get all set-related PDAs
-      const [ownershipPDA] = getOwnershipPDA(wallet.publicKey, propertyId);
-      const [setCooldownPDA] = getSetCooldownPDA(wallet.publicKey, setId);
-      const [setOwnershipPDA] = getSetOwnershipPDA(wallet.publicKey, setId);
-
       console.log('📍 Adding buy property instruction...');
       
       // Add buy property instruction
@@ -99,9 +87,6 @@ export const usePropertyActions = (
         ['buyProperty']!(slots)
         .accountsPartial({
           property: propertyPDA,
-          ownership: ownershipPDA,
-          setCooldown: setCooldownPDA,
-          setOwnership: setOwnershipPDA,
           playerAccount: playerPDA,
           player: wallet.publicKey,
           playerTokenAccount,
@@ -161,7 +146,6 @@ export const usePropertyActions = (
       const playerTokenAccount = await getAssociatedTokenAddress(TOKEN_MINT, wallet.publicKey);
       const [propertyPDA] = getPropertyPDA(propertyId);
       const [playerPDA] = getPlayerPDA(wallet.publicKey);
-      const [ownershipPDA] = getOwnershipPDA(wallet.publicKey, propertyId);
 
       const methods = program?.methods;
       if (!methods) {
@@ -171,7 +155,6 @@ export const usePropertyActions = (
         ['sellProperty']!(slots)
         .accountsPartial({
           property: propertyPDA,
-          ownership: ownershipPDA,
           playerAccount: playerPDA,
           playerTokenAccount,
           rewardPoolVault: REWARD_POOL,

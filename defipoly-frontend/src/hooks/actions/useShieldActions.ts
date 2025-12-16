@@ -8,7 +8,7 @@ import { TOKEN_PROGRAM_ID, getAssociatedTokenAddress } from '@solana/spl-token';
 import { Program, AnchorProvider } from '@coral-xyz/anchor';
 import { Connection } from '@solana/web3.js';
 import { EventParser } from '@coral-xyz/anchor';
-import { getPropertyPDA, getPlayerPDA, getOwnershipPDA } from '@/utils/program';
+import { getPropertyPDA, getPlayerPDA } from '@/utils/program';
 import { 
   GAME_CONFIG, 
   REWARD_POOL, 
@@ -43,9 +43,7 @@ export const useShieldActions = (
 
       const [propertyPDA] = getPropertyPDA(propertyId);
       const [playerPDA] = getPlayerPDA(wallet.publicKey);
-      const [ownershipPDA] = getOwnershipPDA(wallet.publicKey, propertyId);
 
-      // ✅ FIX: Include marketingTokenAccount in the accounts
       const methods = program?.methods;
       if (!methods) {
         throw new Error('Program not initialized');
@@ -54,13 +52,12 @@ export const useShieldActions = (
         ['activateShield']!(cycles)
         .accountsPartial({
           property: propertyPDA,
-          ownership: ownershipPDA,
           playerAccount: playerPDA,
           player: wallet.publicKey,
           playerTokenAccount,
           rewardPoolVault: REWARD_POOL,
           devTokenAccount: devTokenAccount,
-          marketingTokenAccount: marketingTokenAccount, // ✅ CRITICAL FIX!
+          marketingTokenAccount: marketingTokenAccount,
           gameConfig: GAME_CONFIG,
           tokenProgram: TOKEN_PROGRAM_ID,
         })

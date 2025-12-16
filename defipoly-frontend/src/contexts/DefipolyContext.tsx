@@ -163,6 +163,9 @@ export function DefipolyProvider({ children }: { children: React.ReactNode }) {
       );
       const balance = await connection.getTokenAccountBalance(tokenAccount);
       setTokenBalance(Number(balance.value.amount) / 1e9);
+      
+      setTokenAccountExists(true);
+      
     } catch (error) {
       console.error('Error refreshing balance:', error);
     }

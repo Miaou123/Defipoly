@@ -17,3 +17,11 @@ export const API_CONFIG = {
 
 // Re-export for backwards compatibility with existing code
 export const API_BASE_URL = API_CONFIG.BASE_URL;
+
+// Utility function to get full image URL
+export const getImageUrl = (path: string | null | undefined): string | null => {
+  if (!path) return null;
+  if (path === 'NO') return null; // Backend sends 'NO' for no profile picture
+  if (path.startsWith('http')) return path; // Already a full URL
+  return `${API_BASE_URL}${path}`; // Prepend API base URL
+};
