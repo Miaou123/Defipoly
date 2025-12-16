@@ -8,7 +8,7 @@ import { LiveFeed } from '@/components/LiveFeed';
 import { getProfilesBatch, ProfileData } from '@/utils/profileStorage';
 import { getCachedSpectator, setCachedSpectator } from '@/utils/spectatorCache';
 
-import { API_BASE_URL } from '@/utils/config';
+import { API_BASE_URL, getImageUrl } from '@/utils/config';
 
 interface PlayerStats {
   walletAddress: string;
@@ -228,9 +228,9 @@ export default function SpectatorPage() {
                   {/* Profile Picture */}
                   <div className="flex justify-center">
                     <div className="w-24 h-24 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-3xl overflow-hidden border-4 border-purple-500/30">
-                      {profile?.profilePicture ? (
+                      {getImageUrl(profile?.profilePicture) ? (
                         <img 
-                          src={profile.profilePicture} 
+                          src={getImageUrl(profile?.profilePicture)!} 
                           alt="Profile" 
                           className="w-full h-full object-cover"
                         />

@@ -90,20 +90,28 @@ export default function Home() {
         });
 
       // Listen for profile updates
-      const handleProfileUpdate = async () => {
-        try {
-          // Clear cache to force fresh API call
-          clearProfileCache(publicKey.toString());
-          const updatedProfile = await getProfile(publicKey.toString());
-          setProfilePicture(updatedProfile.profilePicture);
-          setCornerSquareStyle(updatedProfile.cornerSquareStyle || 'property');
-          setCustomBoardBackground(updatedProfile.customBoardBackground || null);
-          setCustomPropertyCardBackground(updatedProfile.customPropertyCardBackground || null);
-          setCustomSceneBackground(updatedProfile.customSceneBackground || null);
-          setThemeCategory(updatedProfile.themeCategory || null);
-          setWritingStyle(updatedProfile.writingStyle || 'light');
-        } catch (error) {
-          console.error('Error updating profile:', error);
+      const handleProfileUpdate = async (event: Event) => {
+        const customEvent = event as CustomEvent;
+        const detail = customEvent.detail;
+        
+        // Use event data directly if available (no API call)
+        if (detail?.wallet === publicKey.toString() && detail?.profilePicture !== undefined) {
+          setProfilePicture(detail.profilePicture);
+        } else if (!detail?.wallet || detail?.wallet === publicKey.toString()) {
+          // Fallback: refetch (only if no data in event)
+          try {
+            clearProfileCache(publicKey.toString());
+            const updatedProfile = await getProfile(publicKey.toString());
+            setProfilePicture(updatedProfile.profilePicture);
+            setCornerSquareStyle(updatedProfile.cornerSquareStyle || 'property');
+            setCustomBoardBackground(updatedProfile.customBoardBackground || null);
+            setCustomPropertyCardBackground(updatedProfile.customPropertyCardBackground || null);
+            setCustomSceneBackground(updatedProfile.customSceneBackground || null);
+            setThemeCategory(updatedProfile.themeCategory || null);
+            setWritingStyle(updatedProfile.writingStyle || 'light');
+          } catch (error) {
+            console.error('Error updating profile:', error);
+          }
         }
       };
 

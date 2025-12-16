@@ -7,9 +7,9 @@
 const { Connection, PublicKey } = require('@solana/web3.js');
 const { initDatabase, getDatabase } = require('../config/database');
 const {
-  syncPropertyOwnership,
-  syncPlayerSetCooldown,
-  syncPlayerStealCooldown,
+  syncPropertyOwnership,      // ⚠️ [v9] DEPRECATED - PropertyOwnership PDAs no longer exist
+  syncPlayerSetCooldown,      // ⚠️ [v9] DEPRECATED - PlayerSetCooldown PDAs no longer exist 
+  syncPlayerStealCooldown,    // ⚠️ [v9] DEPRECATED - PlayerStealCooldown PDAs no longer exist
   syncAllPropertiesState
 } = require('../services/blockchainSyncService');
 require('dotenv').config();

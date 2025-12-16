@@ -1,9 +1,9 @@
 {
-  "programId": "3khmZfY9k3ushNLet2cCMU3vQEer7g8KAnhKHBEF2ib3",
-  "tokenMint": "HPugDVPx8y9F5DpLYDiKgz5Zuko7rhPQjqssoCm8Gcm",
-  "gameConfig": "2XrR5JthqyVyTNdejAfAMZmhipE9mWHmeGYRiB1ZrPFA",
-  "rewardPoolVault": "9LYJG6tUzC3Bv4tYCWCb1AqMiJXF39xUnZ5umwPgTa5b",
+  "programId": "A3NESRFzmph9W4EvCyYA7mmSMQU1uDjrenT2u4mid1s4",
+  "tokenMint": "EE3ZeH3ioJz6KaNSFyXbAXEbfdiSjAhCEJQCvTU4DsG",
+  "gameConfig": "Dff3x1uVGWnUzqKAsyRq68fxYGqDLEpVr9ShEAMuWu6J",
+  "rewardPoolVault": "9DxGS87V9quxkdRGxSzthsx7hZdfAKtoXw4LsWgRaqZ1",
   "rewardPool": "200000000000000000",
-  "deployedAt": "2025-12-12T16:19:01.799Z",
+  "deployedAt": "2025-12-16T17:30:43.806Z",
   "network": "devnet"
 }

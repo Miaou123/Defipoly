@@ -5,7 +5,7 @@ use anchor_lang::prelude::*;
 use anchor_spl::token::{self, Token, TokenAccount, Transfer, Mint};
 use anchor_spl::associated_token::AssociatedToken;
 
-declare_id!("3khmZfY9k3ushNLet2cCMU3vQEer7g8KAnhKHBEF2ib3");
+declare_id!("A3NESRFzmph9W4EvCyYA7mmSMQU1uDjrenT2u4mid1s4");
 
 const DEV_WALLET: &str = "CgWTFX7JJQHed3qyMDjJkNCxK4sFe3wbDFABmWAAmrdS";
 const MARKETING_WALLET: &str = "FoPKSQ5HDSVyZgaQobX64YEBVQ2iiKMZp8VHWtd6jLQE";

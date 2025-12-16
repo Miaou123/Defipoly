@@ -111,41 +111,62 @@ export async function fetchOwnershipData(program: MemeopolyProgram, playerPubkey
 export async function fetchPlayerData(program: MemeopolyProgram, playerPubkey: PublicKey): Promise<PlayerAccount | null> {
   const [playerPDA] = getPlayerPDA(playerPubkey);
   
-  // Add retry logic with exponential backoff
+  console.log('🔍 fetchPlayerData called for:', playerPubkey.toString());
+  console.log('🔍 Derived PlayerPDA:', playerPDA.toString());
+  console.log('🔍 Program ID:', PROGRAM_ID.toString());
+  
   const maxRetries = 3;
   let lastError: any = null;
   
   for (let attempt = 0; attempt < maxRetries; attempt++) {
     try {
       const connection = program.provider.connection;
+      console.log('🔍 Attempt', attempt + 1, '- Fetching account info...');
+      
       const accountInfo = await connection.getAccountInfo(playerPDA);
       
       if (!accountInfo) {
-        // Account doesn't exist - no need to retry
+        console.warn('⚠️ No account found at PDA:', playerPDA.toString());
+        console.warn('⚠️ This means the player account does not exist on-chain');
         return null;
       }
       
-      const playerAccount = deserializePlayer(accountInfo.data);
+      console.log('✅ Account found! Data length:', accountInfo.data.length, 'bytes');
+      console.log('🔍 Account owner:', accountInfo.owner.toString());
+      console.log('🔍 Expected owner (program):', PROGRAM_ID.toString());
       
-      // Success - log retry if it took multiple attempts
-      if (attempt > 0) {
+      // Log first 100 bytes as hex for debugging
+      console.log('🔍 First 100 bytes:', accountInfo.data.slice(0, 100).toString('hex'));
+      
+      try {
+        const playerAccount = deserializePlayer(accountInfo.data);
+        console.log('✅ Deserialization successful!');
+        console.log('🔍 Player data:', {
+          owner: playerAccount.owner.toString(),
+          totalBaseDailyIncome: playerAccount.totalBaseDailyIncome.toString(),
+          lastClaimTimestamp: playerAccount.lastClaimTimestamp.toString(),
+          pendingRewards: playerAccount.pendingRewards.toString(),
+          totalSlotsOwned: playerAccount.totalSlotsOwned,
+        });
+        return playerAccount;
+      } catch (deserializeError) {
+        console.error('❌ Deserialization FAILED:', deserializeError);
+        console.error('❌ This likely means deserialize.ts field order doesnt match on-chain data');
+        throw deserializeError;
       }
-      
-      return playerAccount;
     } catch (error) {
       lastError = error;
+      console.error('❌ Attempt', attempt + 1, 'failed:', error);
       
-      // If this isn't the last attempt, wait and retry
       if (attempt < maxRetries - 1) {
-        const delay = Math.pow(2, attempt) * 1000; // 1s, 2s, 4s
-        console.warn(`⚠️ fetchPlayerData attempt ${attempt + 1} failed, retrying in ${delay}ms...`, error);
+        const delay = Math.pow(2, attempt) * 1000;
+        console.log('⏳ Retrying in', delay, 'ms...');
         await new Promise(resolve => setTimeout(resolve, delay));
       }
     }
   }
   
-  // All retries failed
-  console.error(`❌ fetchPlayerData failed after ${maxRetries} attempts:`, lastError);
+  console.error('❌ All retries failed. Last error:', lastError);
   return null;
 }
 

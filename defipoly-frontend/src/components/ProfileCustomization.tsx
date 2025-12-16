@@ -111,10 +111,13 @@ export function ProfileCustomization({
 
       if (response.ok) {
         setProfilePicture(null);
-        // Clear profile cache so other components refresh
         clearProfileCache(publicKey.toString());
-        // Trigger profile update event for other components
-        window.dispatchEvent(new Event('profileUpdated'));
+        window.dispatchEvent(new CustomEvent('profileUpdated', { 
+          detail: { 
+            wallet: publicKey.toString(),
+            profilePicture: null 
+          } 
+        }));
         showSuccess('Removed', 'Profile picture removed');
       } else {
         showError('Remove Failed', 'Failed to remove profile picture');
@@ -156,11 +159,22 @@ export function ProfileCustomization({
       });
 
       if (response.ok) {
-        // Don't call setProfilePicture - it triggers another API save
-        // The upload endpoint already saved it to the database
-        // Just clear cache and trigger refresh
+        const data = await response.json();
+        const newProfilePicture = data.profilePicture; // Backend returns full URL
+        
         clearProfileCache(publicKey.toString());
-        window.dispatchEvent(new Event('profileUpdated'));
+        
+        // Update local state immediately
+        setProfilePicture(newProfilePicture);
+        
+        // Dispatch event WITH the new data - no API refetch needed
+        window.dispatchEvent(new CustomEvent('profileUpdated', { 
+          detail: { 
+            wallet: publicKey.toString(),
+            profilePicture: newProfilePicture 
+          } 
+        }));
+        
         showSuccess('Upload Success', 'Profile picture updated');
       } else {
         showError('Upload Failed', 'Failed to upload profile picture');
@@ -296,7 +310,10 @@ export function ProfileCustomization({
           wallet: publicKey.toString(),
           customSceneBackground: null,
           customBoardBackground: null,
-          customPropertyCardBackground: null
+          customPropertyCardBackground: null,
+          boardPresetId: null,      // ← ADD THIS
+          tilePresetId: null,       // ← ADD THIS
+          themeCategory: null       // ← ADD THIS (optional, clears category too)
         }),
       });
 
@@ -305,6 +322,8 @@ export function ProfileCustomization({
         setCustomSceneBackground(null);
         setCustomBoardBackground(null);
         setCustomPropertyCardBackground(null);
+        setBoardPresetId(null);      // ← ADD THIS
+        setTilePresetId(null);       // ← ADD THIS
         
         // Clear profile cache and trigger update
         clearProfileCache(publicKey.toString());

@@ -5,6 +5,7 @@ import { useFrame } from '@react-three/fiber';
 import { useTexture } from '@react-three/drei';
 // import { Text } from '@react-three/drei'; // REMOVED: Text component causes WebGL context loss
 import * as THREE from 'three';
+import { getImageUrl } from '@/utils/config';
 
 // Corner tile dimensions (matching Board3DScene)
 const tileThickness = 0.15;
@@ -384,6 +385,13 @@ function CornerTextureOverlay({ textureUrl, size, cornerSquareStyle, profilePict
 }) {
   // Generate texture URL - handle single colors by creating canvas texture
   const finalTextureUrl = useMemo(() => {
+    // For profile pictures, transform the URL first
+    if (cornerSquareStyle === 'profile' && profilePicture) {
+      const transformedUrl = getImageUrl(profilePicture);
+      if (!transformedUrl) return textureUrl; // fallback if transformation fails
+      return transformedUrl;
+    }
+    
     // Check if textureUrl is a single hex color
     const hexColorRegex = /^#[0-9A-Fa-f]{6}$/;
     if (hexColorRegex.test(textureUrl)) {
@@ -408,7 +416,7 @@ function CornerTextureOverlay({ textureUrl, size, cornerSquareStyle, profilePict
     
     // If not a hex color, treat as regular URL
     return textureUrl;
-  }, [textureUrl]);
+  }, [textureUrl, cornerSquareStyle, profilePicture]);
 
   const texture = useTexture(finalTextureUrl);
   texture.colorSpace = THREE.SRGBColorSpace;

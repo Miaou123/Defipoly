@@ -37,16 +37,17 @@ export interface Property {
 
 export interface PlayerAccount {
   owner: PublicKey;
-  totalSlotsOwned: number;
   totalBaseDailyIncome: BN;
   lastClaimTimestamp: BN;
+  lastAccumulationTimestamp: BN;  // ADD THIS - new in v9
   totalRewardsClaimed: BN;
-  completeSetsOwned: number;
-  propertiesOwnedCount: number;
+  pendingRewards: BN;
   totalStealsAttempted: number;
   totalStealsSuccessful: number;
+  totalSlotsOwned: number;
+  completeSetsOwned: number;
+  propertiesOwnedCount: number;
   bump: number;
-  pendingRewards: BN;
 }
 
 export interface PropertyOwnership {

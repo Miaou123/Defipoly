@@ -16,7 +16,12 @@ const connection = new Connection(RPC_URL, 'confirmed');
 
 // ========== PDA DERIVATION FUNCTIONS ==========
 
+/**
+ * @deprecated PropertyOwnership PDAs don't exist in v9. Use PlayerAccount arrays instead.
+ * Data is now consolidated into PlayerAccount.property_* arrays.
+ */
 function getOwnershipPDA(walletAddress, propertyId) {
+  console.warn('⚠️ [v9] getOwnershipPDA is deprecated. PropertyOwnership PDAs no longer exist.');
   const [pda] = PublicKey.findProgramAddressSync(
     [
       Buffer.from('ownership'),
@@ -28,7 +33,12 @@ function getOwnershipPDA(walletAddress, propertyId) {
   return pda;
 }
 
+/**
+ * @deprecated PlayerSetCooldown PDAs don't exist in v9. Use PlayerAccount arrays instead.
+ * Data is now consolidated into PlayerAccount.set_cooldown_timestamp array.
+ */
 function getSetCooldownPDA(walletAddress, setId) {
+  console.warn('⚠️ [v9] getSetCooldownPDA is deprecated. PlayerSetCooldown PDAs no longer exist.');
   const [pda] = PublicKey.findProgramAddressSync(
     [
       Buffer.from('cooldown'),
@@ -40,7 +50,12 @@ function getSetCooldownPDA(walletAddress, setId) {
   return pda;
 }
 
+/**
+ * @deprecated PlayerStealCooldown PDAs don't exist in v9. Use PlayerAccount arrays instead.
+ * Data is now consolidated into PlayerAccount.property_steal_protection_expiry array.
+ */
 function getStealCooldownPDA(walletAddress, propertyId) {
+  console.warn('⚠️ [v9] getStealCooldownPDA is deprecated. PlayerStealCooldown PDAs no longer exist.');
   const [pda] = PublicKey.findProgramAddressSync(
     [
       Buffer.from('steal_cooldown'),
@@ -322,10 +337,13 @@ function readU64LE(buffer, offset) {
 // ========== SYNC FUNCTIONS ==========
 
 /**
+ * @deprecated PropertyOwnership PDAs don't exist in v9. Use PlayerAccount arrays instead.
  * Sync PropertyOwnership account to database
  * Fetches from blockchain and updates all 9 fields
  */
 async function syncPropertyOwnership(walletAddress, propertyId) {
+  console.warn('⚠️ [v9] syncPropertyOwnership is deprecated. PropertyOwnership PDAs no longer exist.');
+  console.warn('💡 Use PlayerAccount arrays to get property ownership data.');
   try {
     const ownershipPDA = getOwnershipPDA(walletAddress, propertyId);
     const accountInfo = await connection.getAccountInfo(ownershipPDA);
@@ -379,9 +397,12 @@ async function syncPropertyOwnership(walletAddress, propertyId) {
 }
 
 /**
+ * @deprecated PlayerSetCooldown PDAs don't exist in v9. Use PlayerAccount arrays instead.
  * Sync PlayerSetCooldown account to database
  */
 async function syncPlayerSetCooldown(walletAddress, setId) {
+  console.warn('⚠️ [v9] syncPlayerSetCooldown is deprecated. PlayerSetCooldown PDAs no longer exist.');
+  console.warn('💡 Use PlayerAccount.set_cooldown_timestamp array instead.');
   try {
     const cooldownPDA = getSetCooldownPDA(walletAddress, setId);
     const accountInfo = await connection.getAccountInfo(cooldownPDA);
@@ -431,9 +452,12 @@ async function syncPlayerSetCooldown(walletAddress, setId) {
 }
 
 /**
+ * @deprecated PlayerStealCooldown PDAs don't exist in v9. Use PlayerAccount arrays instead.
  * Sync PlayerStealCooldown account to database
  */
 async function syncPlayerStealCooldown(walletAddress, propertyId) {
+  console.warn('⚠️ [v9] syncPlayerStealCooldown is deprecated. PlayerStealCooldown PDAs no longer exist.');
+  console.warn('💡 Use PlayerAccount.property_steal_protection_expiry array instead.');
   try {
     const cooldownPDA = getStealCooldownPDA(walletAddress, propertyId);
     const accountInfo = await connection.getAccountInfo(cooldownPDA);

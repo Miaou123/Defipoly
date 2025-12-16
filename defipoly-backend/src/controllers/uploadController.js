@@ -67,7 +67,7 @@ const uploadProfilePicture = [
               
               res.json({ 
                 success: true, 
-                profilePicture: `${process.env.API_BASE_URL || 'https://api.defipoly.app'}${fileUrl}`,
+                profilePicture: fileUrl,  // Just the relative path: /uploads/profiles/xxx.webp
                 message: 'Profile picture uploaded successfully'
               });
             }
@@ -163,7 +163,7 @@ const uploadThemeBackground = [
             console.log('Board theme saved to database:', fileUrl);
             res.json({ 
               success: true, 
-              backgroundUrl: `${process.env.API_BASE_URL || 'https://api.defipoly.app'}${fileUrl}`,
+              backgroundUrl: fileUrl,  // Just the relative path: /uploads/boards/xxx.webp
               message: `${themeType} background uploaded successfully`
             });
           }
@@ -188,7 +188,7 @@ const uploadThemeBackground = [
             console.log('Property card theme saved to database:', fileUrl);
             res.json({ 
               success: true, 
-              backgroundUrl: `${process.env.API_BASE_URL || 'https://api.defipoly.app'}${fileUrl}`,
+              backgroundUrl: fileUrl,  // Just the relative path: /uploads/boards/xxx.webp
               message: `${themeType} background uploaded successfully`
             });
           }
@@ -212,7 +212,7 @@ const uploadThemeBackground = [
             console.log('Scene background saved to database:', fileUrl);
             res.json({ 
               success: true, 
-              backgroundUrl: `${process.env.API_BASE_URL || 'https://api.defipoly.app'}${fileUrl}`,
+              backgroundUrl: fileUrl,  // Just the relative path: /uploads/boards/xxx.webp
               message: `${themeType} background uploaded successfully`
             });
           }
@@ -356,8 +356,7 @@ const uploadThemeBatch = [
         fs.unlinkSync(finalPath);
 
         // Generate URL
-        const baseUrl = process.env.NODE_ENV === 'production' ? '' : (process.env.API_BASE_URL || 'http://localhost:3101');
-        const fileUrl = `${baseUrl}${UPLOAD_URL_PREFIX}/${subDir}/${optimizedFilename}`;
+        const fileUrl = `${UPLOAD_URL_PREFIX}/${subDir}/${optimizedFilename}`;  // Just relative path
         
         console.log(`${themeType} file optimized and moved to:`, fileUrl);
         return fileUrl;

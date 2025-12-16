@@ -3,6 +3,7 @@
 import { useRef, Suspense } from 'react';
 import { Text, useTexture } from '@react-three/drei';
 import * as THREE from 'three';
+import { getImageUrl } from '@/utils/config';
 
 interface Bank3D_V2Props {
   rewardsAmount?: number;
@@ -384,7 +385,7 @@ export function Bank3D_V2({
           </mesh>
         }>
           {profilePicture ? (
-            <ProfilePictureMesh url={profilePicture} />
+            <ProfilePictureMesh url={getImageUrl(profilePicture)!} />
           ) : (
             <LogoFallback />
           )}

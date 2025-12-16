@@ -40,7 +40,12 @@ export function RewardsProvider({ children }: { children: React.ReactNode }) {
 
   // ✅ Calculate actual pending rewards (blockchain + time-based calculation)
   const fetchBlockchainRewards = async () => {
+    console.log('🏦 fetchBlockchainRewards called');
+    console.log('🏦 publicKey:', publicKey?.toString());
+    console.log('🏦 program:', program ? 'exists' : 'null');
+    
     if (!publicKey || !program) {
+      console.warn('🏦 Missing publicKey or program, returning null');
       return null;
     }
 

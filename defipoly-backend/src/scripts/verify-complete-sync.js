@@ -14,8 +14,14 @@ const RPC_URL = process.env.RPC_URL;
 const PROGRAM_ID = new PublicKey(idl.address);
 
 // ========== PDA DERIVATION FUNCTIONS ==========
+// ⚠️ [v9] These PDA functions are for verification only. In v9, PropertyOwnership,
+// PlayerSetCooldown, and PlayerStealCooldown PDAs no longer exist.
 
+/**
+ * @deprecated PropertyOwnership PDAs don't exist in v9. Use PlayerAccount arrays instead.
+ */
 function getOwnershipPDA(walletAddress, propertyId) {
+  console.warn('⚠️ [v9] getOwnershipPDA: PropertyOwnership PDAs no longer exist.');
   const [pda] = PublicKey.findProgramAddressSync(
     [
       Buffer.from('ownership'),
@@ -27,7 +33,11 @@ function getOwnershipPDA(walletAddress, propertyId) {
   return pda;
 }
 
+/**
+ * @deprecated PlayerSetCooldown PDAs don't exist in v9. Use PlayerAccount arrays instead.
+ */
 function getSetCooldownPDA(walletAddress, setId) {
+  console.warn('⚠️ [v9] getSetCooldownPDA: PlayerSetCooldown PDAs no longer exist.');
   const [pda] = PublicKey.findProgramAddressSync(
     [
       Buffer.from('cooldown'),
@@ -39,7 +49,11 @@ function getSetCooldownPDA(walletAddress, setId) {
   return pda;
 }
 
+/**
+ * @deprecated PlayerStealCooldown PDAs don't exist in v9. Use PlayerAccount arrays instead.
+ */
 function getStealCooldownPDA(walletAddress, propertyId) {
+  console.warn('⚠️ [v9] getStealCooldownPDA: PlayerStealCooldown PDAs no longer exist.');
   const [pda] = PublicKey.findProgramAddressSync(
     [
       Buffer.from('steal_cooldown'),

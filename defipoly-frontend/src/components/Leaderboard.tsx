@@ -29,7 +29,7 @@ interface LeaderboardData {
   };
 }
 
-import { API_BASE_URL } from '@/utils/config';
+import { API_BASE_URL, getImageUrl } from '@/utils/config';
 
 interface LeaderboardProps {
   scaleFactor?: number;
@@ -343,9 +343,9 @@ export function Leaderboard({ scaleFactor = 1 }: LeaderboardProps) {
                     
                     {/* Profile Picture */}
                     <div className="w-8 h-8 rounded-full overflow-hidden bg-purple-500/10 flex-shrink-0">
-                      {profiles[leader.walletAddress]?.profilePicture ? (
+                      {getImageUrl(profiles[leader.walletAddress]?.profilePicture) ? (
                         <img 
-                          src={profiles[leader.walletAddress]?.profilePicture || undefined} 
+                          src={getImageUrl(profiles[leader.walletAddress]?.profilePicture)!} 
                           alt="Profile"
                           className="w-full h-full object-cover"
                         />

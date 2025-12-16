@@ -47,15 +47,27 @@ export function SideHeader() {
         });
 
       // Listen for profile updates
-      const handleProfileUpdate = async () => {
-        try {
-          const updatedProfile = await getProfile(publicKey.toString());
-          setProfileData({
-            username: updatedProfile.username,
-            profilePicture: updatedProfile.profilePicture,
-          });
-        } catch (error) {
-          console.error('Error updating profile:', error);
+      const handleProfileUpdate = async (event: Event) => {
+        const customEvent = event as CustomEvent;
+        const detail = customEvent.detail;
+        
+        // If event has our wallet's data, use it directly (no API call)
+        if (detail?.wallet === publicKey.toString() && detail?.profilePicture !== undefined) {
+          setProfileData(prev => ({
+            ...prev,
+            profilePicture: detail.profilePicture
+          }));
+        } else if (!detail?.wallet || detail?.wallet === publicKey.toString()) {
+          // Fallback: refetch (only if no data in event)
+          try {
+            const updatedProfile = await getProfile(publicKey.toString());
+            setProfileData({
+              username: updatedProfile.username,
+              profilePicture: updatedProfile.profilePicture,
+            });
+          } catch (error) {
+            console.error('Error updating profile:', error);
+          }
         }
       };
 

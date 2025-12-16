@@ -1,7 +1,7 @@
 // ============================================
 // AUTO-GENERATED - DO NOT EDIT
 // Source: defipoly-program/scripts/property-config.ts
-// Generated: 2025-12-15T20:07:04.801Z
+// Generated: 2025-12-16T17:30:44.047Z
 // ============================================
 
 import { PublicKey } from "@solana/web3.js";
@@ -11,10 +11,10 @@ import { PublicKey } from "@solana/web3.js";
 // ========================================
 // These come from deployment-info.json which is created by initialize-game.ts
 
-export const PROGRAM_ID = new PublicKey("3khmZfY9k3ushNLet2cCMU3vQEer7g8KAnhKHBEF2ib3");
-export const TOKEN_MINT = new PublicKey("HPugDVPx8y9F5DpLYDiKgz5Zuko7rhPQjqssoCm8Gcm");
-export const GAME_CONFIG = new PublicKey("2XrR5JthqyVyTNdejAfAMZmhipE9mWHmeGYRiB1ZrPFA");
-export const REWARD_POOL_VAULT = new PublicKey("9LYJG6tUzC3Bv4tYCWCb1AqMiJXF39xUnZ5umwPgTa5b");
+export const PROGRAM_ID = new PublicKey("A3NESRFzmph9W4EvCyYA7mmSMQU1uDjrenT2u4mid1s4");
+export const TOKEN_MINT = new PublicKey("EE3ZeH3ioJz6KaNSFyXbAXEbfdiSjAhCEJQCvTU4DsG");
+export const GAME_CONFIG = new PublicKey("Dff3x1uVGWnUzqKAsyRq68fxYGqDLEpVr9ShEAMuWu6J");
+export const REWARD_POOL_VAULT = new PublicKey("9DxGS87V9quxkdRGxSzthsx7hZdfAKtoXw4LsWgRaqZ1");
 export const REWARD_POOL = REWARD_POOL_VAULT; // ✅ FIXED: Use vault address, not numeric amount
 export const NETWORK = "devnet";
 export const TOKEN_TICKER = "DEFI";

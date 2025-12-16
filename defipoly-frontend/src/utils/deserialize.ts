@@ -116,11 +116,7 @@ export function deserializePlayer(data: Buffer): PlayerAccount {
   const owner = new PublicKey(data.slice(offset, offset + 32));
   offset += 32;
 
-  // total_slots_owned: u16
-  const totalSlotsOwned = data.readUInt16LE(offset);
-  offset += 2;
-
-  // ⭐ NEW: total_base_daily_income: u64 (8 bytes)
+  // total_base_daily_income: u64 (8 bytes)
   const totalBaseDailyIncome = new BN(data.slice(offset, offset + 8), 'le');
   offset += 8;
 
@@ -128,45 +124,60 @@ export function deserializePlayer(data: Buffer): PlayerAccount {
   const lastClaimTimestamp = new BN(data.slice(offset, offset + 8), 'le');
   offset += 8;
 
+  // last_accumulation_timestamp: i64 (8 bytes) - NEW in v9
+  const lastAccumulationTimestamp = new BN(data.slice(offset, offset + 8), 'le');
+  offset += 8;
+
   // total_rewards_claimed: u64 (8 bytes)
   const totalRewardsClaimed = new BN(data.slice(offset, offset + 8), 'le');
   offset += 8;
-
-  // complete_sets_owned: u8
-  const completeSetsOwned = data.readUInt8(offset);
-  offset += 1;
-
-  // properties_owned_count: u8
-  const propertiesOwnedCount = data.readUInt8(offset);
-  offset += 1;
-
-  // total_steals_attempted: u32
-  const totalStealsAttempted = data.readUInt32LE(offset);
-  offset += 4;
-
-  // total_steals_successful: u32
-  const totalStealsSuccessful = data.readUInt32LE(offset);
-  offset += 4;
-
-  // bump: u8
-  const bump = data.readUInt8(offset);
-  offset += 1;
 
   // pending_rewards: u64 (8 bytes)
   const pendingRewards = new BN(data.slice(offset, offset + 8), 'le');
   offset += 8;
 
+  // total_steals_attempted: u32 (4 bytes)
+  const totalStealsAttempted = data.readUInt32LE(offset);
+  offset += 4;
+
+  // total_steals_successful: u32 (4 bytes)
+  const totalStealsSuccessful = data.readUInt32LE(offset);
+  offset += 4;
+
+  // total_slots_owned: u16 (2 bytes)
+  const totalSlotsOwned = data.readUInt16LE(offset);
+  offset += 2;
+
+  // complete_sets_owned: u8 (1 byte)
+  const completeSetsOwned = data.readUInt8(offset);
+  offset += 1;
+
+  // properties_owned_count: u8 (1 byte)
+  const propertiesOwnedCount = data.readUInt8(offset);
+  offset += 1;
+
+  // bump: u8 (1 byte)
+  const bump = data.readUInt8(offset);
+  offset += 1;
+
+  // _padding1: [u8; 3] (3 bytes) - skip
+  offset += 3;
+
+  // Skip all the arrays for now - we just need the basic fields for rewards
+  // If you need the arrays, continue parsing...
+
   return {
     owner,
-    totalSlotsOwned,
     totalBaseDailyIncome,
     lastClaimTimestamp,
+    lastAccumulationTimestamp,
     totalRewardsClaimed,
-    completeSetsOwned,
-    propertiesOwnedCount,
+    pendingRewards,
     totalStealsAttempted,
     totalStealsSuccessful,
+    totalSlotsOwned,
+    completeSetsOwned,
+    propertiesOwnedCount,
     bump,
-    pendingRewards,
   };
 }
