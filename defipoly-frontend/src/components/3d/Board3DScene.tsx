@@ -1,6 +1,6 @@
 'use client';
 
-import { Canvas, useFrame } from '@react-three/fiber';
+import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { useMemo, useEffect, useRef, useState, Suspense, useCallback } from 'react';
 import { OrbitControls, Text, PerspectiveCamera, Html, useTexture } from '@react-three/drei';
 import { useGameState } from '@/contexts/GameStateContext';
@@ -27,6 +27,54 @@ import { useBoardPresetTexture, useTilePresetTexture, useScenePresetTexture } fr
 import { ShowcaseScene } from '@/utils/showcaseScenes';
 import { ShowcaseCameraController } from './ShowcaseMode';
 import { GeometryCacheProvider } from './GeometryCache';
+
+// WebGL Context and Tab Visibility Handler
+function VisibilityHandler({ 
+  setParticlesVisible 
+}: { 
+  setParticlesVisible: (v: boolean) => void 
+}) {
+  const { gl } = useThree();
+  
+  useEffect(() => {
+    const handleVisibility = () => {
+      if (document.hidden) {
+        // Tab hidden - pause rendering to prevent WebGL context loss
+        gl.setAnimationLoop(null);
+        setParticlesVisible(false);
+        console.log('🔇 Tab hidden - paused WebGL rendering and particles');
+      } else {
+        // Tab visible - resume
+        gl.setAnimationLoop(() => {});
+        setParticlesVisible(true);
+        console.log('🔊 Tab visible - resumed WebGL rendering and particles');
+        // RewardsContext will auto-refresh from blockchain
+      }
+    };
+    
+    const handleContextLost = (e: Event) => {
+      e.preventDefault();
+      console.warn('⚠️ WebGL context lost - prevented default behavior');
+    };
+    
+    const handleContextRestored = () => {
+      console.log('✅ WebGL context restored');
+      // Context restored, rendering should resume automatically
+    };
+    
+    document.addEventListener('visibilitychange', handleVisibility);
+    gl.domElement.addEventListener('webglcontextlost', handleContextLost);
+    gl.domElement.addEventListener('webglcontextrestored', handleContextRestored);
+    
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibility);
+      gl.domElement.removeEventListener('webglcontextlost', handleContextLost);
+      gl.domElement.removeEventListener('webglcontextrestored', handleContextRestored);
+    };
+  }, [gl, setParticlesVisible]);
+  
+  return null;
+}
 
 
 interface Board3DSceneProps {
@@ -1220,13 +1268,17 @@ function Scene({
         <ShowcaseController enabled={rotationMode} controlsRef={cameraControlsRef} />
       )}
       
-      {/* Lighting */}
-      <ambientLight intensity={0.8} />
-      <directionalLight position={[10, 20, 10]} intensity={1.2} castShadow />
-      <directionalLight position={[-5, 10, -5]} intensity={0.5} color="#9333ea" />
-      <directionalLight position={[0, 15, 0]} intensity={0.4} color="#ffffff" />
-      <pointLight position={[5, 8, 5]} intensity={0.3} color="#facc15" />
-      <pointLight position={[-5, 8, -5]} intensity={0.3} color="#22c55e" />
+      {/* Enhanced Lighting Setup */}
+      <ambientLight intensity={1.1} />
+      <directionalLight position={[10, 20, 10]} intensity={1.6} castShadow />
+      <directionalLight position={[-5, 10, -5]} intensity={0.7} color="#9333ea" />
+      <directionalLight position={[0, 15, 0]} intensity={0.5} color="#ffffff" />
+      <directionalLight position={[15, 8, 0]} intensity={0.4} color="#ffffff" />
+      <directionalLight position={[-15, 8, 0]} intensity={0.4} color="#ffffff" />
+      <pointLight position={[5, 8, 5]} intensity={0.5} color="#facc15" />
+      <pointLight position={[-5, 8, -5]} intensity={0.5} color="#22c55e" />
+      <pointLight position={[0, 12, 0]} intensity={0.6} color="#ffffff" />
+      <hemisphereLight color="#ffffff" groundColor="#444444" intensity={0.4} />
       
       <OrbitControls
         ref={cameraControlsRef}
@@ -1881,6 +1933,9 @@ export function Board3DScene({ onSelectProperty, onCoinClick, spectatorMode, spe
           stencil: false
         }}
       >
+        {/* WebGL Context and Tab Visibility Handler */}
+        <VisibilityHandler setParticlesVisible={setParticlesVisible} />
+        
         <Suspense fallback={null}>
           <GeometryCacheProvider>
             <Scene 

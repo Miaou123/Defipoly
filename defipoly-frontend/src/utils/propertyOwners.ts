@@ -1,80 +1,59 @@
 // utils/propertyOwners.ts
-// Utility to fetch all players who own slots in a property
-// UPDATED for v9: Now reads from PlayerAccount arrays instead of separate ownership PDAs
+// v9 UPDATE: Now fetches from backend API instead of on-chain PDAs
+// PropertyOwnership PDAs no longer exist - data is in PlayerAccount arrays
+// Backend syncs this data to database for efficient querying
 
-import { Connection, PublicKey, GetProgramAccountsFilter } from '@solana/web3.js';
-import { Program, Idl, BN } from '@coral-xyz/anchor';
-import { PROGRAM_ID } from './constants';
-import { deserializePlayer } from './deserialize';
+import { PublicKey } from '@solana/web3.js';
+import { API_BASE_URL } from '@/utils/config';
+
+export interface PropertyOwner {
+  owner: PublicKey;
+  slotsOwned: number;
+  unshieldedSlots: number;
+  stealProtectionExpiry: number;
+  stealProtectionActive: boolean;
+  shieldActive: boolean;
+}
+
+export interface StealTarget {
+  walletAddress: string;
+  slotsOwned: number;
+  unshieldedSlots: number;
+  stealProtectionExpiry: number;
+  isValidTarget: boolean;
+}
 
 /**
- * Fetch all players who own unshielded slots in a property
- * V9 UPDATE: Now reads from PlayerAccount arrays instead of PropertyOwnership PDAs
- * 
- * WARNING: In v9, PropertyOwnership PDAs no longer exist. All ownership data
- * is stored in PlayerAccount arrays. For better performance, consider using
- * the backend API instead of parsing all PlayerAccounts on-chain.
+ * Fetch all owners of a property with unshielded slots
+ * v9: Uses backend API instead of on-chain PDA fetching
  */
 export async function fetchPropertyOwners(
-  connection: Connection,
-  program: Program<Idl>,
-  propertyId: number
-): Promise<{ 
-  owner: PublicKey; 
-  slotsOwned: number; 
-  unshieldedSlots: number;
-  stealProtectionExpiry: number; 
-}[]> {
+  propertyId: number,
+  excludeWallet?: string
+): Promise<PropertyOwner[]> {
   try {
-    console.warn('⚠️ [v9] fetchPropertyOwners: Consider using backend API for better performance');
-    
-    // In v9: Fetch all PlayerAccount PDAs instead of PropertyOwnership PDAs
-    const filters: GetProgramAccountsFilter[] = [
-      {
-        // PlayerAccount discriminator + minimum size check
-        dataSize: 1500, // PlayerAccount with arrays is much larger than old 110 byte ownership accounts
-      }
-    ];
-
-    const accounts = await connection.getProgramAccounts(PROGRAM_ID, {
-      filters,
-    });
-
-    console.log(`Found ${accounts.length} potential PlayerAccount accounts`);
-
-    const owners: { 
-      owner: PublicKey; 
-      slotsOwned: number; 
-      unshieldedSlots: number;
-      stealProtectionExpiry: number;
-    }[] = [];
-    const currentTime = Math.floor(Date.now() / 1000);
-
-    for (const { pubkey, account } of accounts) {
-      try {
-        // Try to deserialize as PlayerAccount
-        const playerAccount = deserializePlayer(account.data);
-        
-        // Skip if no properties owned
-        if (playerAccount.propertiesOwnedCount === 0) {
-          continue;
-        }
-
-        // Parse the arrays to check this specific property
-        // Note: This requires implementing array parsing in deserializePlayer
-        // For now, we'll skip the complex array parsing and recommend using backend API
-        
-        console.warn('⚠️ [v9] Complex array parsing not implemented. Use backend API instead.');
-        continue;
-        
-      } catch (error) {
-        // Skip accounts that fail to decode (not PlayerAccount)
-        continue;
-      }
+    let url = `${API_BASE_URL}/api/properties/${propertyId}/owners`;
+    if (excludeWallet) {
+      url += `?excludeWallet=${excludeWallet}`;
     }
 
-    console.warn('⚠️ [v9] On-chain property owner fetching is complex in v9. Use backend API: /api/properties/{propertyId}/owners');
-    return owners;
+    const response = await fetch(url);
+    if (!response.ok) {
+      console.error(`Failed to fetch property owners: ${response.statusText}`);
+      return [];
+    }
+
+    const data = await response.json();
+    
+    // Transform to expected format
+    return (data.owners || []).map((owner: any) => ({
+      owner: new PublicKey(owner.walletAddress),
+      slotsOwned: owner.slotsOwned,
+      unshieldedSlots: owner.unshieldedSlots,
+      stealProtectionExpiry: owner.stealProtectionExpiry,
+      stealProtectionActive: owner.stealProtectionActive,
+      shieldActive: owner.shieldActive,
+    }));
   } catch (error) {
     console.error('Error fetching property owners:', error);
     return [];
@@ -82,103 +61,49 @@ export async function fetchPropertyOwners(
 }
 
 /**
- * Alternative: Use ownership PDA derivation to check specific players
- * This is more reliable but requires knowing which players to check
- * 🆕 UPDATED: Now reads steal_protection_expiry
+ * Fetch valid steal targets for a property
+ * Excludes attacker and players with active steal protection
+ * v9: Uses backend API
  */
-export async function fetchPropertyOwnersViaPDA(
-  connection: Connection,
+export async function fetchStealTargets(
   propertyId: number,
-  playerAddresses: PublicKey[]
-): Promise<{ 
-  owner: PublicKey; 
-  slotsOwned: number; 
-  unshieldedSlots: number;
-  stealProtectionExpiry: number;
-}[]> {
-  const owners: { 
-    owner: PublicKey; 
-    slotsOwned: number; 
-    unshieldedSlots: number;
-    stealProtectionExpiry: number;
-  }[] = [];
-  const currentTime = Math.floor(Date.now() / 1000);
-
-  for (const player of playerAddresses) {
-    try {
-      // Derive ownership PDA
-      const [ownershipPDA] = PublicKey.findProgramAddressSync(
-        [Buffer.from('ownership'), player.toBuffer(), Buffer.from([propertyId])],
-        PROGRAM_ID
-      );
-
-      // Fetch account
-      const accountInfo = await connection.getAccountInfo(ownershipPDA);
-      if (!accountInfo) continue;
-
-      const data = accountInfo.data;
-      
-      // Parse data
-      let offset = 8;
-      const ownerPubkey = new PublicKey(data.slice(offset, offset + 32));
-      offset += 32;
-      
-      const accountPropertyId = data.readUInt8(offset);
-      offset += 1;
-      
-      if (accountPropertyId !== propertyId) continue;
-      
-      const slotsOwned = data.readUInt16LE(offset);
-      offset += 2;
-      
-      if (slotsOwned === 0) continue;
-      
-      const slotsShielded = data.readUInt16LE(offset);
-      offset += 2;
-      offset += 8; // skip purchase_timestamp
-      
-      const shieldExpiryLow = data.readUInt32LE(offset);
-      const shieldExpiryHigh = data.readUInt32LE(offset + 4);
-      const shieldExpiry = shieldExpiryLow + (shieldExpiryHigh * 0x100000000);
-      offset += 8;
-
-      offset += 8; // skip shield_cooldown_duration
-
-      // 🆕 NEW: Read steal_protection_expiry
-      const stealProtectionExpiryLow = data.readUInt32LE(offset);
-      const stealProtectionExpiryHigh = data.readUInt32LE(offset + 4);
-      const stealProtectionExpiry = stealProtectionExpiryLow + (stealProtectionExpiryHigh * 0x100000000);
-
-      const shieldActive = shieldExpiry > currentTime;
-      const effectiveShieldedSlots = shieldActive ? slotsShielded : 0;
-      const unshieldedSlots = slotsOwned - effectiveShieldedSlots;
-
-      if (unshieldedSlots > 0) {
-        owners.push({
-          owner: ownerPubkey,
-          slotsOwned,
-          unshieldedSlots,
-          stealProtectionExpiry,
-        });
-      }
-    } catch (error) {
-      continue;
+  attackerWallet: string
+): Promise<StealTarget[]> {
+  try {
+    const url = `${API_BASE_URL}/api/properties/${propertyId}/steal-targets?attackerWallet=${attackerWallet}`;
+    
+    const response = await fetch(url);
+    if (!response.ok) {
+      console.error(`Failed to fetch steal targets: ${response.statusText}`);
+      return [];
     }
-  }
 
-  return owners;
+    const data = await response.json();
+    return data.targets || [];
+  } catch (error) {
+    console.error('Error fetching steal targets:', error);
+    return [];
+  }
 }
 
 /**
- * 🆕 NEW: Get count of owners by protection status
+ * Check if a property has any valid steal targets
+ * Quick check before showing steal UI
+ */
+export async function hasStealTargets(
+  propertyId: number,
+  attackerWallet: string
+): Promise<boolean> {
+  const targets = await fetchStealTargets(propertyId, attackerWallet);
+  return targets.length > 0;
+}
+
+/**
+ * Get count of owners by protection status
+ * Utility function to analyze owner protection states
  */
 export function getOwnerProtectionStats(
-  owners: { 
-    owner: PublicKey; 
-    slotsOwned: number; 
-    unshieldedSlots: number;
-    stealProtectionExpiry: number;
-  }[]
+  owners: PropertyOwner[]
 ): {
   total: number;
   withUnshieldedSlots: number;
@@ -219,16 +144,11 @@ export function getOwnerProtectionStats(
 }
 
 /**
- * 🆕 NEW: Filter owners to get only eligible steal targets
+ * Filter owners to get only eligible steal targets
  * (unshielded slots AND no steal protection)
  */
 export function getEligibleStealTargets(
-  owners: { 
-    owner: PublicKey; 
-    slotsOwned: number; 
-    unshieldedSlots: number;
-    stealProtectionExpiry: number;
-  }[],
+  owners: PropertyOwner[],
   excludePlayer?: PublicKey
 ): PublicKey[] {
   const currentTime = Math.floor(Date.now() / 1000);
@@ -254,4 +174,26 @@ export function getEligibleStealTargets(
   }
 
   return eligible;
+}
+
+// ============================================
+// DEPRECATED FUNCTIONS - Keep for backwards compatibility
+// These will log warnings and return empty results
+// ============================================
+
+/**
+ * @deprecated Use fetchPropertyOwners() instead - this used on-chain PDAs that no longer exist
+ */
+export async function fetchPropertyOwnersOnChain(): Promise<PropertyOwner[]> {
+  console.warn('⚠️ [v9] fetchPropertyOwnersOnChain is deprecated. PropertyOwnership PDAs no longer exist.');
+  console.warn('💡 Use fetchPropertyOwners() which fetches from backend API.');
+  return [];
+}
+
+/**
+ * @deprecated PropertyOwnership PDAs don't exist in v9
+ */
+export async function fetchPropertyOwnersViaPDA(): Promise<PropertyOwner[]> {
+  console.warn('⚠️ [v9] fetchPropertyOwnersViaPDA is deprecated. Use fetchPropertyOwners() instead.');
+  return [];
 }

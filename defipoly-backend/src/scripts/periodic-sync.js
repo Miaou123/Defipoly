@@ -7,9 +7,7 @@
 const { Connection, PublicKey } = require('@solana/web3.js');
 const { initDatabase, getDatabase } = require('../config/database');
 const {
-  syncPropertyOwnership,      // ⚠️ [v9] DEPRECATED - PropertyOwnership PDAs no longer exist
-  syncPlayerSetCooldown,      // ⚠️ [v9] DEPRECATED - PlayerSetCooldown PDAs no longer exist 
-  syncPlayerStealCooldown,    // ⚠️ [v9] DEPRECATED - PlayerStealCooldown PDAs no longer exist
+  syncPlayerCooldownsFromAccount,  // ✅ [v9] NEW - unified sync from PlayerAccount arrays
   syncAllPropertiesState
 } = require('../services/blockchainSyncService');
 require('dotenv').config();
@@ -78,9 +76,7 @@ async function performIncrementalSync() {
     }
 
     let syncStats = {
-      ownership: 0,
-      setCooldown: 0,
-      stealCooldown: 0,
+      playerAccounts: 0,
       properties: 0
     };
 
@@ -93,86 +89,12 @@ async function performIncrementalSync() {
     console.log(`   📍 Syncing ${activePlayers.length} active players...`);
     
     for (const player of activePlayers) {
-      // Sync owned properties only
-      const ownedProperties = await new Promise((resolve, reject) => {
-        db.all(
-          `SELECT DISTINCT property_id 
-           FROM property_ownership 
-           WHERE wallet_address = ? AND slots_owned > 0`,
-          [player],
-          (err, rows) => {
-            if (err) reject(err);
-            else resolve(rows.map(r => r.property_id));
-          }
-        );
-      });
-
-      // Sync PropertyOwnership for owned properties
-      for (const propertyId of ownedProperties) {
-        try {
-          const success = await syncPropertyOwnership(player, propertyId);
-          if (success) syncStats.ownership++;
-        } catch (error) {
-          // Silently continue
-        }
-      }
-
-      // Sync active buy cooldowns (check recent purchases)
-      const recentBuys = await new Promise((resolve, reject) => {
-        db.all(
-          `SELECT DISTINCT property_id 
-           FROM game_actions 
-           WHERE player_address = ? 
-             AND action_type = 'buy' 
-             AND block_time > ?
-           LIMIT 3`,
-          [player, cutoffTime],
-          (err, rows) => {
-            if (err) reject(err);
-            else resolve(rows.map(r => r.property_id));
-          }
-        );
-      });
-
-      // Sync set cooldowns for recent purchases
-      const { PROPERTIES } = require('../config/constants');
-      const recentSets = [...new Set(
-        recentBuys.map(propId => PROPERTIES.find(p => p.id === propId)?.setId).filter(Boolean)
-      )];
-
-      for (const setId of recentSets) {
-        try {
-          const success = await syncPlayerSetCooldown(player, setId);
-          if (success) syncStats.setCooldown++;
-        } catch (error) {
-          // Silently continue
-        }
-      }
-
-      // Sync active steal cooldowns (check recent steals)
-      const recentSteals = await new Promise((resolve, reject) => {
-        db.all(
-          `SELECT DISTINCT property_id 
-           FROM game_actions 
-           WHERE player_address = ? 
-             AND action_type IN ('steal_success', 'steal_failed')
-             AND block_time > ?
-           LIMIT 5`,
-          [player, cutoffTime],
-          (err, rows) => {
-            if (err) reject(err);
-            else resolve(rows.map(r => r.property_id));
-          }
-        );
-      });
-
-      for (const propertyId of recentSteals) {
-        try {
-          const success = await syncPlayerStealCooldown(player, propertyId);
-          if (success) syncStats.stealCooldown++;
-        } catch (error) {
-          // Silently continue
-        }
+      try {
+        // ✅ [v9] Use unified PlayerAccount sync instead of separate PDAs
+        const success = await syncPlayerCooldownsFromAccount(player);
+        if (success) syncStats.playerAccounts++;
+      } catch (error) {
+        // Silently continue
       }
 
       // Small delay to avoid rate limiting
@@ -184,9 +106,7 @@ async function performIncrementalSync() {
     console.log(`\n   ✅ Periodic sync complete in ${duration}s`);
     console.log(`   📊 Stats:`);
     console.log(`      - Properties: ${syncStats.properties}`);
-    console.log(`      - Ownerships: ${syncStats.ownership}`);
-    console.log(`      - Buy Cooldowns: ${syncStats.setCooldown}`);
-    console.log(`      - Steal Cooldowns: ${syncStats.stealCooldown}`);
+    console.log(`      - PlayerAccounts: ${syncStats.playerAccounts}`);
     console.log();
 
   } catch (error) {

@@ -21,9 +21,8 @@ import {
   DEV_WALLET,
   MARKETING_WALLET 
 } from '@/utils/constants';
-// ✅ NEW: Import API service
-import { fetchOwnershipData } from '@/services/api';
-import { API_BASE_URL } from '@/utils/config';
+// ✅ NEW: Import property owners utilities  
+import { fetchStealTargets } from '@/utils/propertyOwners';
 
 interface StealResult {
   tx: string;
@@ -51,54 +50,15 @@ export const useStealActions = (
     setLoading(true);
     try {
 
-      // ✅ NEW: Fetch ALL ownerships for this property from backend API
-      // This gets us ALL owners with their steal_protection_expiry data!
+      // ✅ v9: Use dedicated steal targets API endpoint
+      const stealTargetsData = await fetchStealTargets(propertyId, wallet.publicKey.toString());
       
-      const response = await fetch(`${API_BASE_URL}/api/properties/${propertyId}/owners`);
-      
-      if (!response.ok) {
-        throw new Error('Failed to fetch ownership data from backend');
-      }
-      
-      const data = await response.json();
-      const allOwnerships = data.owners || [];
-      
-      // Filter for this specific property
-      const propertyOwners = allOwnerships.filter((o: any) => o.property_id === propertyId);
-      
-
-      // ✅ NEW: Filter for eligible targets using backend data
-      const currentTime = Math.floor(Date.now() / 1000);
-      const eligibleTargets = [];
-
-      for (const ownership of propertyOwners) {
-        // Skip self
-        if (ownership.wallet_address === wallet.publicKey.toString()) {
-          continue;
-        }
-
-        // Calculate unshielded slots
-        const shieldActive = currentTime < ownership.shield_expiry;
-        const shieldedSlots = shieldActive ? ownership.slots_shielded : 0;
-        const unshieldedSlots = ownership.slots_owned - shieldedSlots;
-
-        // Skip if no unshielded slots
-        if (unshieldedSlots <= 0) {
-          continue;
-        }
-
-        // ✅ CRITICAL FIX: Check steal_protection_expiry from backend!
-        if (currentTime < ownership.steal_protection_expiry) {
-          continue;
-        }
-
-        // This target is eligible!
-        eligibleTargets.push(new PublicKey(ownership.wallet_address));
-      }
-
-      if (eligibleTargets.length === 0) {
+      if (stealTargetsData.length === 0) {
         throw new Error('No eligible targets found. All owners are either shielded or have steal protection active.');
       }
+
+      // Convert to PublicKey array for transaction
+      const eligibleTargets = stealTargetsData.map(target => new PublicKey(target.walletAddress));
 
 
       // Prepare remaining_accounts (just player accounts in v0.9)

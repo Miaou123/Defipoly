@@ -18,6 +18,7 @@ function ProfilePictureMesh({ url }: { url: string }) {
   const material = new THREE.ShaderMaterial({
     uniforms: {
       map: { value: texture },
+      brightness: { value: 1.8 }, // Moderately brighter for profile pictures
     },
     vertexShader: `
       varying vec2 vUv;
@@ -28,6 +29,7 @@ function ProfilePictureMesh({ url }: { url: string }) {
     `,
     fragmentShader: `
       uniform sampler2D map;
+      uniform float brightness;
       varying vec2 vUv;
       void main() {
         // Convert UV to centered coordinates (-1 to 1)
@@ -45,7 +47,9 @@ function ProfilePictureMesh({ url }: { url: string }) {
         float alpha = 1.0 - smoothstep(0.48, 0.5, dist);
         
         vec4 texColor = texture2D(map, vUv);
-        gl_FragColor = vec4(texColor.rgb, texColor.a * alpha);
+        // Apply brightness multiplier to make profile pictures brighter
+        vec3 brightColor = texColor.rgb * brightness;
+        gl_FragColor = vec4(brightColor, texColor.a * alpha);
       }
     `,
     side: THREE.DoubleSide,
@@ -378,6 +382,17 @@ export function Bank3D_V2({
 
       {/* Profile picture circle */}
       <group position={[0, roofBaseY + peakHeight * 0.48, roofDepth / 2 + 0.3]}>
+        {/* Dedicated lighting for profile picture */}
+        {profilePicture && (
+          <pointLight 
+            position={[0, 0, 2]} 
+            intensity={0.5} 
+            distance={4} 
+            decay={1.2} 
+            color="#ffffff" 
+          />
+        )}
+        
         <Suspense fallback={
           <mesh>
             <circleGeometry args={[2.0, 32]} />

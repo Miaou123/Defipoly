@@ -169,6 +169,24 @@ export function RewardsProvider({ children }: { children: React.ReactNode }) {
     return () => clearInterval(interval);
   }, [stats.dailyIncome, initialFetchDone]); // Restart when dailyIncome changes OR after initial blockchain fetch
 
+  // ✅ Handle tab visibility - refresh from blockchain when tab becomes visible
+  useEffect(() => {
+    const handleVisibility = async () => {
+      if (!document.hidden && publicKey && program && initialFetchDone) {
+        // Tab became visible - refresh from blockchain to get accurate value
+        console.log('🔊 Tab visible - refreshing rewards from blockchain');
+        const blockchainRewards = await fetchBlockchainRewards();
+        if (blockchainRewards !== null) {
+          setUnclaimedRewards(blockchainRewards);
+          lastFetchTime.current = Date.now();
+        }
+      }
+    };
+    
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => document.removeEventListener('visibilitychange', handleVisibility);
+  }, [publicKey, program, initialFetchDone, fetchBlockchainRewards]);
+
   // ✅ WebSocket listeners for real-time updates
   useEffect(() => {
     if (!socket || !connected || !publicKey) return;

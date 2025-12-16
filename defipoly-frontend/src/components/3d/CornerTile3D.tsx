@@ -429,6 +429,7 @@ function CornerTextureOverlay({ textureUrl, size, cornerSquareStyle, profilePict
     const material = new THREE.ShaderMaterial({
       uniforms: {
         map: { value: texture },
+        brightness: { value: 1.8 }, // Moderately brighter for profile pictures
       },
       vertexShader: `
         varying vec2 vUv;
@@ -439,6 +440,7 @@ function CornerTextureOverlay({ textureUrl, size, cornerSquareStyle, profilePict
       `,
       fragmentShader: `
         uniform sampler2D map;
+        uniform float brightness;
         varying vec2 vUv;
         void main() {
           // Convert UV to centered coordinates
@@ -456,7 +458,9 @@ function CornerTextureOverlay({ textureUrl, size, cornerSquareStyle, profilePict
           float alpha = 1.0 - smoothstep(0.48, 0.5, dist);
           
           vec4 texColor = texture2D(map, vUv);
-          gl_FragColor = vec4(texColor.rgb, texColor.a * alpha);
+          // Apply brightness multiplier to make profile pictures brighter
+          vec3 brightColor = texColor.rgb * brightness;
+          gl_FragColor = vec4(brightColor, texColor.a * alpha);
         }
       `,
       side: THREE.DoubleSide,
@@ -540,6 +544,17 @@ export function CornerTile3D({
           emissiveIntensity={0.3}
         />
       </mesh>
+
+      {/* Dedicated lighting for profile pictures */}
+      {cornerSquareStyle === 'profile' && profilePicture && (
+        <pointLight 
+          position={[0, 1.5, 0]} 
+          intensity={1.2} 
+          distance={3} 
+          decay={1.5} 
+          color="#ffffff" 
+        />
+      )}
 
       {/* Texture overlay (if any) */}
       {textureUrl && (

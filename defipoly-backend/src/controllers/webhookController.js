@@ -12,7 +12,8 @@ const {
   syncPropertyOwnership, 
   syncPlayerSetCooldown, 
   syncPlayerStealCooldown, 
-  syncPropertyState 
+  syncPropertyState,
+  syncPlayerCooldownsFromAccount  // ✅ [v9] NEW - unified sync from PlayerAccount arrays
 } = require('../services/blockchainSyncService');
 const { PROPERTIES } = require('../config/constants');
 
@@ -105,14 +106,8 @@ async function processWebhook(payload) {
             case 'buy':
               console.log('   🔄 [SYNC] Syncing buy action data...');
               
-              // Sync PropertyOwnership (includes purchase_timestamp)
-              await syncPropertyOwnership(action.playerAddress, action.propertyId);
-              
-              // Sync buy cooldown for this set
-              const property = PROPERTIES.find(p => p.id === action.propertyId);
-              if (property) {
-                await syncPlayerSetCooldown(action.playerAddress, property.setId);
-              }
+              // ✅ [v9] Use unified PlayerAccount sync instead of separate PDAs
+              await syncPlayerCooldownsFromAccount(action.playerAddress);
               
               // Sync property available slots
               await syncPropertyState(action.propertyId);
@@ -123,8 +118,8 @@ async function processWebhook(payload) {
             case 'sell':
               console.log('   🔄 [SYNC] Syncing sell action data...');
               
-              // Sync PropertyOwnership (slots_owned decreased)
-              await syncPropertyOwnership(action.playerAddress, action.propertyId);
+              // ✅ [v9] Use unified PlayerAccount sync instead of separate PDAs
+              await syncPlayerCooldownsFromAccount(action.playerAddress);
               
               // Sync property available slots
               await syncPropertyState(action.propertyId);
@@ -135,8 +130,8 @@ async function processWebhook(payload) {
             case 'shield':
               console.log('   🔄 [SYNC] Syncing shield action data...');
               
-              // Sync PropertyOwnership (includes shield_cooldown_duration)
-              await syncPropertyOwnership(action.playerAddress, action.propertyId);
+              // ✅ [v9] Use unified PlayerAccount sync instead of separate PDAs
+              await syncPlayerCooldownsFromAccount(action.playerAddress);
               
               console.log('   ✅ [SYNC] Shield data synced');
               break;
@@ -144,16 +139,13 @@ async function processWebhook(payload) {
             case 'steal_success':
               console.log('   🔄 [SYNC] Syncing steal success data...');
               
-              // Sync attacker's new ownership
-              await syncPropertyOwnership(action.playerAddress, action.propertyId);
+              // ✅ [v9] Use unified PlayerAccount sync instead of separate PDAs
+              await syncPlayerCooldownsFromAccount(action.playerAddress);
               
-              // Sync target's updated ownership (steal_protection_expiry set)
+              // Sync target player too (steal_protection_expiry set)
               if (action.targetAddress) {
-                await syncPropertyOwnership(action.targetAddress, action.propertyId);
+                await syncPlayerCooldownsFromAccount(action.targetAddress);
               }
-              
-              // Sync steal cooldown for attacker
-              await syncPlayerStealCooldown(action.playerAddress, action.propertyId);
               
               console.log('   ✅ [SYNC] Steal success data synced');
               break;
@@ -161,12 +153,12 @@ async function processWebhook(payload) {
             case 'steal_failed':
               console.log('   🔄 [SYNC] Syncing steal failed data...');
               
-              // Sync steal cooldown for attacker (still on cooldown even if failed)
-              await syncPlayerStealCooldown(action.playerAddress, action.propertyId);
+              // ✅ [v9] Use unified PlayerAccount sync instead of separate PDAs
+              await syncPlayerCooldownsFromAccount(action.playerAddress);
               
-              // Sync target's ownership (steal_protection_expiry set even on failed attempt)
+              // Sync target player too (steal_protection_expiry set even on failed attempt)
               if (action.targetAddress) {
-                await syncPropertyOwnership(action.targetAddress, action.propertyId);
+                await syncPlayerCooldownsFromAccount(action.targetAddress);
               }
               
               console.log('   ✅ [SYNC] Steal failed data synced');

@@ -3,14 +3,34 @@
 import { Canvas } from '@react-three/fiber';
 import { View } from '@react-three/drei';
 import { ReactNode, useRef, Suspense, memo } from 'react';
+import { GeometryCacheProvider } from './GeometryCache';
 
 function SharedLighting() {
   return (
     <>
-      <ambientLight intensity={1.2} />
-      <directionalLight position={[5, 10, 7]} intensity={1.5} />
-      <directionalLight position={[-5, 5, -5]} intensity={0.5} color="#ffeedd" />
-      <directionalLight position={[0, -5, 5]} intensity={0.3} />
+      {/* Ambient light - overall illumination */}
+      <ambientLight intensity={0.8} />
+      
+      {/* Main directional lights - key lighting */}
+      <directionalLight position={[5, 10, 7]} intensity={2.0} />
+      <directionalLight position={[-5, 5, -5]} intensity={0.8} color="#ffeedd" />
+      <directionalLight position={[0, -5, 5]} intensity={0.6} />
+      
+      {/* Additional directional lights for more coverage */}
+      <directionalLight position={[10, 2, 0]} intensity={0.4} color="#ffffff" />
+      <directionalLight position={[-10, 2, 0]} intensity={0.4} color="#ffffff" />
+      
+      {/* Point lights for focused illumination */}
+      <pointLight position={[0, 8, 0]} intensity={0.8} distance={20} decay={2} />
+      <pointLight position={[8, 6, 8]} intensity={0.5} distance={15} decay={2} color="#f0f8ff" />
+      <pointLight position={[-8, 6, -8]} intensity={0.5} distance={15} decay={2} color="#fff5ee" />
+      
+      {/* Hemisphere light for natural lighting */}
+      <hemisphereLight 
+        color="#ffffff" 
+        groundColor="#444444" 
+        intensity={0.6} 
+      />
     </>
   );
 }
@@ -52,7 +72,9 @@ export function SharedCanvasProvider({ children }: SharedCanvasProviderProps) {
           powerPreference: 'default',
         }}
       >
-        <View.Port />
+        <GeometryCacheProvider>
+          <View.Port />
+        </GeometryCacheProvider>
       </Canvas>
     </div>
   );

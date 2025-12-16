@@ -18,13 +18,7 @@ interface PropertyThemeModalProps {
   onCustomBackgroundChange: (bg: string | null) => void;
 }
 
-const GRADIENT_PRESETS = [
-  "linear-gradient(135deg, #9333ea, #ec4899)", // Purple Night
-  "linear-gradient(135deg, #000000, #1e1e1e)", // Deep Space
-  "linear-gradient(135deg, #dc2626, #fb923c)", // Sunset
-  "linear-gradient(135deg, #0891b2, #064e3b)", // Ocean
-  "linear-gradient(135deg, #22c55e, #15803d)", // Forest
-];
+// Gradient presets removed - only solid colors and custom images allowed
 
 export function PropertyThemeModal({
   isOpen,
@@ -40,82 +34,7 @@ export function PropertyThemeModal({
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleGradientSelect = async (gradientValue: string) => {
-    if (!publicKey) {
-      showError('No Wallet', 'Please connect your wallet first');
-      return;
-    }
-    
-    setUploading(true);
-    try {
-      // Generate gradient image instead of storing gradient string
-      const canvas = document.createElement('canvas');
-      canvas.width = 400;
-      canvas.height = 300;
-      const ctx = canvas.getContext('2d');
-      if (!ctx) {
-        throw new Error('Unable to get canvas context');
-      }
-      
-      // Create gradient from CSS string
-      const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
-      
-      // Parse gradient colors from CSS string
-      const colorMatches = gradientValue.match(/#[0-9a-fA-F]{6}/g);
-      if (colorMatches && colorMatches.length >= 2) {
-        gradient.addColorStop(0, colorMatches[0]!);
-        gradient.addColorStop(1, colorMatches[1]!);
-      } else {
-        // Fallback to solid color if parsing fails
-        const singleColor = colorMatches?.[0] || '#9333ea';
-        gradient.addColorStop(0, singleColor);
-        gradient.addColorStop(1, singleColor);
-      }
-      
-      ctx.fillStyle = gradient;
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-      
-      // Convert to PNG blob
-      const blob = await new Promise<Blob>((resolve) => {
-        canvas.toBlob((blob) => {
-          if (blob) resolve(blob);
-        }, 'image/png', 1.0);
-      });
-      const file = new File([blob], 'gradient-theme.png', { type: 'image/png' });
-      
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('wallet', publicKey.toString());
-      formData.append('uploadType', 'card');
-      formData.append('themeType', 'card');
-      if (customBackground) {
-        formData.append('oldBackgroundUrl', customBackground);
-      }
-
-      const response = await authenticatedFetch(`${API_BASE_URL}/api/profile/upload/theme`, {
-        method: 'POST',
-        body: formData,
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        onCustomBackgroundChange(data.backgroundUrl);
-        onThemeChange('custom');
-        showSuccess('Applied', 'Gradient theme applied');
-        
-        // Clear profile cache and trigger update
-        clearProfileCache(publicKey.toString());
-        window.dispatchEvent(new Event('profileUpdated'));
-      } else {
-        showError('Upload Failed', 'Failed to apply gradient theme');
-      }
-    } catch (error) {
-      console.error('Error applying gradient theme:', error);
-      showError('Apply Error', 'Error applying gradient theme');
-    } finally {
-      setUploading(false);
-    }
-  };
+  // handleGradientSelect function removed - no longer needed
 
   const handleCustomColorApply = async () => {
     if (!publicKey) {
@@ -290,25 +209,8 @@ export function PropertyThemeModal({
           <div className="grid grid-cols-2 gap-5 mb-4">
             {/* Controls */}
             <div className="flex flex-col gap-3">
-              {/* Gradient Presets */}
-              <div>
-                <div className="text-sm font-semibold text-purple-200 mb-3">Gradient Presets</div>
-                <div className="grid grid-cols-3 gap-2 mb-4">
-                  {GRADIENT_PRESETS.map((preset, index) => (
-                    <button
-                      key={index}
-                      onClick={() => handleGradientSelect(preset)}
-                      disabled={uploading}
-                      className="aspect-square rounded border border-purple-500/30 hover:border-purple-500/60 transition-colors"
-                      style={{ background: preset }}
-                      title={`Preset ${index + 1}`}
-                    />
-                  ))}
-                </div>
-              </div>
-
               {/* Solid Color */}
-              <div className="border-t border-purple-500/20 pt-3">
+              <div>
                 <div className="text-sm font-semibold text-purple-200 mb-3">Solid Color</div>
                 <div className="flex gap-2 items-center">
                   <input

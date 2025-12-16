@@ -6,6 +6,7 @@
 const { Connection, PublicKey } = require('@solana/web3.js');
 const { getDatabase } = require('../config/database');
 const idl = require('../idl/defipoly_program.json');
+const { deserializePlayerAccount } = require('./deserializePlayerAccount');
 require('dotenv').config();
 
 const RPC_URL = process.env.RPC_URL;
@@ -73,6 +74,17 @@ function getPropertyPDA(propertyId) {
       Buffer.from('property'),
       Buffer.from([propertyId])
     ],
+    PROGRAM_ID
+  );
+  return pda;
+}
+
+/**
+ * Get PlayerAccount PDA
+ */
+function getPlayerPDA(walletAddress) {
+  const [pda] = PublicKey.findProgramAddressSync(
+    [Buffer.from('player'), new PublicKey(walletAddress).toBuffer()],
     PROGRAM_ID
   );
   return pda;
@@ -552,12 +564,153 @@ async function syncAllPropertiesState() {
   }
 }
 
+/**
+ * v9: Sync all cooldowns from PlayerAccount arrays
+ * Replaces deprecated syncPlayerSetCooldown and syncPlayerStealCooldown
+ */
+async function syncPlayerCooldownsFromAccount(walletAddress) {
+  try {
+    const playerPDA = getPlayerPDA(walletAddress);
+    const accountInfo = await connection.getAccountInfo(playerPDA);
+
+    if (!accountInfo) {
+      console.log(`   No PlayerAccount found for ${walletAddress.substring(0, 8)}...`);
+      return false;
+    }
+
+    const playerAccount = deserializePlayerAccount(accountInfo.data);
+    const db = getDatabase();
+    const now = Math.floor(Date.now() / 1000);
+
+    // Sync SET COOLDOWNS (8 sets)
+    for (let setId = 0; setId < 8; setId++) {
+      const timestamp = playerAccount.setCooldownTimestamp[setId];
+      const duration = playerAccount.setCooldownDuration[setId];
+      const lastPurchasedPropertyId = playerAccount.setLastPurchasedProperty[setId];
+      
+      // Only sync if there's actual cooldown data
+      if (timestamp > 0 || duration > 0) {
+        // Find which properties are owned in this set
+        const { PROPERTIES } = require('../config/constants');
+        const setProperties = PROPERTIES.filter(p => p.setId === setId).map(p => p.id);
+        const propertiesOwnedInSet = setProperties.filter(propId => playerAccount.propertySlots[propId] > 0);
+        
+        await new Promise((resolve, reject) => {
+          db.run(`
+            INSERT INTO player_set_cooldowns 
+            (wallet_address, set_id, last_purchase_timestamp, cooldown_duration,
+             last_purchased_property_id, properties_owned_in_set, properties_count, last_synced)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(wallet_address, set_id) DO UPDATE SET
+              last_purchase_timestamp = excluded.last_purchase_timestamp,
+              cooldown_duration = excluded.cooldown_duration,
+              last_purchased_property_id = excluded.last_purchased_property_id,
+              properties_owned_in_set = excluded.properties_owned_in_set,
+              properties_count = excluded.properties_count,
+              last_synced = excluded.last_synced
+          `, [
+            walletAddress,
+            setId,
+            timestamp,
+            duration,
+            lastPurchasedPropertyId === 255 ? null : lastPurchasedPropertyId, // 255 = unset
+            JSON.stringify(propertiesOwnedInSet),
+            propertiesOwnedInSet.length,
+            now
+          ], (err) => {
+            if (err) reject(err);
+            else resolve();
+          });
+        });
+      }
+    }
+
+    // Sync STEAL COOLDOWNS (22 properties)
+    for (let propertyId = 0; propertyId < 22; propertyId++) {
+      const timestamp = playerAccount.stealCooldownTimestamp[propertyId];
+      
+      // Only sync if there's actual cooldown data
+      if (timestamp > 0) {
+        // Default steal cooldown is 1 hour (3600 seconds) - adjust if different in your program
+        const cooldownDuration = 3600;
+        
+        await new Promise((resolve, reject) => {
+          db.run(`
+            INSERT INTO player_steal_cooldowns 
+            (wallet_address, property_id, last_steal_attempt_timestamp, cooldown_duration, last_synced)
+            VALUES (?, ?, ?, ?, ?)
+            ON CONFLICT(wallet_address, property_id) DO UPDATE SET
+              last_steal_attempt_timestamp = excluded.last_steal_attempt_timestamp,
+              cooldown_duration = excluded.cooldown_duration,
+              last_synced = excluded.last_synced
+          `, [
+            walletAddress,
+            propertyId,
+            timestamp,
+            cooldownDuration,
+            now
+          ], (err) => {
+            if (err) reject(err);
+            else resolve();
+          });
+        });
+      }
+    }
+
+    // Also sync PROPERTY OWNERSHIP from PlayerAccount arrays
+    for (let propertyId = 0; propertyId < 22; propertyId++) {
+      const slotsOwned = playerAccount.propertySlots[propertyId];
+      
+      if (slotsOwned > 0) {
+        await new Promise((resolve, reject) => {
+          db.run(`
+            INSERT INTO property_ownership 
+            (wallet_address, property_id, slots_owned, slots_shielded, shield_expiry,
+             purchase_timestamp, shield_cooldown_duration, steal_protection_expiry, bump, last_updated)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(wallet_address, property_id) DO UPDATE SET
+              slots_owned = excluded.slots_owned,
+              slots_shielded = excluded.slots_shielded,
+              shield_expiry = excluded.shield_expiry,
+              purchase_timestamp = excluded.purchase_timestamp,
+              shield_cooldown_duration = excluded.shield_cooldown_duration,
+              steal_protection_expiry = excluded.steal_protection_expiry,
+              last_updated = excluded.last_updated
+          `, [
+            walletAddress,
+            propertyId,
+            slotsOwned,
+            playerAccount.propertyShielded[propertyId],
+            playerAccount.propertyShieldExpiry[propertyId],
+            playerAccount.propertyPurchaseTimestamp[propertyId],
+            playerAccount.propertyShieldCooldown[propertyId],
+            playerAccount.propertyStealProtectionExpiry[propertyId],
+            playerAccount.bump,
+            now
+          ], (err) => {
+            if (err) reject(err);
+            else resolve();
+          });
+        });
+      }
+    }
+
+    console.log(`   ✅ Synced PlayerAccount data for ${walletAddress.substring(0, 8)}...`);
+    return true;
+  } catch (error) {
+    console.error(`   ❌ Error syncing PlayerAccount for ${walletAddress}:`, error.message);
+    return false;
+  }
+}
+
 module.exports = {
   syncPropertyOwnership,
-  syncPlayerSetCooldown,
-  syncPlayerStealCooldown,
+  syncPlayerSetCooldown,      // ⚠️ [v9] DEPRECATED - use syncPlayerCooldownsFromAccount
+  syncPlayerStealCooldown,    // ⚠️ [v9] DEPRECATED - use syncPlayerCooldownsFromAccount
+  syncPlayerCooldownsFromAccount,  // ✅ [v9] NEW - unified sync from PlayerAccount arrays
   syncPropertyState,
-  syncAllPropertiesState,  // ADD THIS
+  syncAllPropertiesState,
+  getPlayerPDA,              // ✅ [v9] NEW - PlayerAccount PDA helper
   deserializeOwnership,
   deserializeSetCooldown,
   deserializeStealCooldown,
