@@ -300,11 +300,13 @@ export default function Home() {
             </div>
           </div>
 
-          <PropertyModal 
-            propertyId={selectedProperty}
-            onClose={() => setSelectedProperty(null)}
-          />
-          
+          {selectedProperty !== null && (
+            <PropertyModal 
+              propertyId={selectedProperty}
+              onClose={() => setSelectedProperty(null)}
+            />
+          )}
+                    
           <FloatingCoinsModal
             isOpen={showCoinModal}
             onClose={() => setShowCoinModal(false)}

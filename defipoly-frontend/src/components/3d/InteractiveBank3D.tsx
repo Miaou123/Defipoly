@@ -233,11 +233,13 @@ export const InteractiveBank3D = forwardRef<{ handleParticleArrive: (incomeValue
     
     if (claiming || claimingRef.current || rewardsLoading || animatedRewards === 0 || (now - lastClickTimeRef.current < 1000)) {
       if (now - lastClickTimeRef.current < 1000) {
+        console.log('🏦 Bank click ignored - too soon after last click');
       }
       return;
     }
     
     lastClickTimeRef.current = now;
+    console.log('🏦 3D Bank clicked - starting claim process');
     claimingRef.current = true;
     setClaiming(true);
     

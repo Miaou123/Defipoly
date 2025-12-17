@@ -272,7 +272,7 @@ export function MobileLayout({
     if (selectedProperty !== null) {
       // Switch to property tab and expand panel to mid-screen
       setActiveTab('property');
-      const midScreenHeight = Math.floor(window.innerHeight * 0.5);
+      const midScreenHeight = Math.floor(window.innerHeight * 0.7);
       setPanelHeight(midScreenHeight);
     }
   }, [selectedProperty]);

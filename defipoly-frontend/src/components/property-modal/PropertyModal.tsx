@@ -60,7 +60,7 @@ export function PropertyModal({ propertyId, onClose }: PropertyModalProps) {
   const [isMobile, setIsMobile] = useState(false);
   
   // Mobile swipe state
-  const [activeTab, setActiveTab] = useState(0); // 0: info, 1: buy, 2: shield, 3: sell, 4: steal
+  const [activeTab, setActiveTab] = useState(0); // 0: buy, 1: shield, 2: sell, 3: steal
   const [isDragging, setIsDragging] = useState(false);
   const [startY, setStartY] = useState<number | null>(null);
   const [dragOffset, setDragOffset] = useState(0);
@@ -271,7 +271,6 @@ export function PropertyModal({ propertyId, onClose }: PropertyModalProps) {
   const hasSetBonus = setBonusInfo?.hasCompleteSet || false;
   
   const tabs = [
-    { id: 'info', label: 'Info', icon: '📊' },
     { id: 'buy', label: 'Buy', icon: '🛒' },
     { id: 'shield', label: 'Shield', icon: '🛡️' },
     { id: 'sell', label: 'Sell', icon: '💰' },

@@ -445,6 +445,7 @@ export function MobilePropertyPanel({ selectedProperty, onSelectProperty }: Mobi
             loading={loading}
             setLoading={setLoading}
             onClose={() => {}}
+            isMobile={true}
           />
         </div>
         
@@ -458,6 +459,7 @@ export function MobilePropertyPanel({ selectedProperty, onSelectProperty }: Mobi
             loading={loading}
             setLoading={setLoading}
             onClose={() => {}}
+            isMobile={true}
           />
         </div>
         
@@ -470,6 +472,7 @@ export function MobilePropertyPanel({ selectedProperty, onSelectProperty }: Mobi
             loading={loading}
             setLoading={setLoading}
             onClose={() => {}}
+            isMobile={true}
           />
         </div>
         
@@ -483,6 +486,7 @@ export function MobilePropertyPanel({ selectedProperty, onSelectProperty }: Mobi
             loading={loading}
             setLoading={setLoading}
             onClose={() => {}}
+            isMobile={true}
           />
         </div>
       </div>
