@@ -20,6 +20,7 @@ interface StealPropertySectionProps {
   loading: boolean;
   setLoading: (loading: boolean) => void;
   onClose: () => void;
+  isMobile?: boolean;
 }
 
 export function StealPropertySection({
@@ -29,7 +30,8 @@ export function StealPropertySection({
   balance,
   loading,
   setLoading,
-  onClose
+  onClose,
+  isMobile = false,
 }: StealPropertySectionProps) {
   const { stealPropertyInstant } = useDefipoly();
   const { showSuccess, showError, showInfo } = useNotification();
@@ -134,7 +136,11 @@ export function StealPropertySection({
   };
 
   return (
-    <div className="bg-gradient-to-br from-purple-900/40 to-indigo-900/40 rounded-xl p-4 border border-purple-500/30">
+    <div className={`${
+      isMobile 
+        ? '' // No box styling on mobile
+        : 'bg-gradient-to-br from-purple-900/40 to-indigo-900/40 rounded-xl p-4 border border-purple-500/30'
+    }`}>
       {/* Cost & Success Rate Display */}
       <div className="grid grid-cols-2 gap-3 mb-3 bg-black/20 rounded-lg p-2.5 border border-purple-500/20">
         {/* Cost Display */}

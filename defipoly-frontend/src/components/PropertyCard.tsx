@@ -350,17 +350,17 @@ export function PropertyCard({
         </div>
 
         <div 
-          className="flex-1 flex items-start justify-center min-h-0 relative z-50"
+          className="flex-1 flex items-center justify-center min-h-0 relative z-50"
           style={{
             padding: `0 ${Math.round(4 * scaleFactor)}px`,
             paddingTop: modalView ? '5%' : '5%',
-            minHeight: modalView ? '160px' : undefined,
+            minHeight: modalView ? '80px' : undefined,
           }}
         >
                   
 
         {buildingLevel === 0 ? (
-          <div className="w-full h-full flex items-start justify-center relative" style={{ paddingTop: '5%', zIndex: 101 }}>
+          <div className="w-full h-full flex items-center justify-center relative" style={{ zIndex: 101 }}>
             <div style={{ transform: modalView ? 'scale(1)' : `scale(${iconScale})` }}>
               <div>
                 <div style={{ transform: 'translateZ(15px)', transformStyle: 'preserve-3d' }}>
@@ -378,7 +378,7 @@ export function PropertyCard({
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              zIndex: 101
+              zIndex: 1
             }}
           >
             <div style={{ 

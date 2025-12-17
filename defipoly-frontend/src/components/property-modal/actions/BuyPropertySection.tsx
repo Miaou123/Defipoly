@@ -24,6 +24,7 @@ interface BuyPropertySectionProps {
   loading: boolean;
   setLoading: (loading: boolean) => void;
   onClose: () => void;
+  isMobile?: boolean;
 }
 
 export function BuyPropertySection({
@@ -34,6 +35,7 @@ export function BuyPropertySection({
   loading,
   setLoading,
   onClose,
+  isMobile = false,
 }: BuyPropertySectionProps) {
   const wallet = useWallet();
   const { buyProperty } = useDefipoly();
@@ -233,7 +235,11 @@ export function BuyPropertySection({
 
   return (
     <>
-      <div className="bg-purple-900/20 rounded-xl p-3 border border-purple-500/20 space-y-2.5">
+      <div className={`space-y-2.5 ${
+        isMobile 
+          ? '' // No box styling on mobile
+          : 'bg-purple-900/20 rounded-xl p-3 border border-purple-500/20'
+      }`}>
         {/* Header with Slots and Cost */}
         <div className="flex items-center justify-between mb-2.5">
           {/* Slots Control */}

@@ -22,6 +22,7 @@ interface SellPropertySectionProps {
   loading: boolean;
   setLoading: (loading: boolean) => void;
   onClose: () => void;
+  isMobile?: boolean;
 }
 
 export function SellPropertySection({
@@ -30,7 +31,8 @@ export function SellPropertySection({
   propertyData,
   loading,
   setLoading,
-  onClose
+  onClose,
+  isMobile = false,
 }: SellPropertySectionProps) {
   const { sellProperty } = useDefipoly();
   const { showSuccess, showError, showInfo } = useNotification();
@@ -144,7 +146,11 @@ export function SellPropertySection({
   // Show mock data if user doesn't own any slots
   if (!propertyData || propertyData.owned === 0) {
     const mockContent = (
-      <div className="mt-2 p-3 bg-gradient-to-br from-purple-900/40 to-indigo-900/40 rounded-xl border border-purple-500/30">
+      <div className={`${
+        isMobile 
+          ? 'mt-2' // Minimal styling on mobile
+          : 'mt-2 p-3 bg-gradient-to-br from-purple-900/40 to-indigo-900/40 rounded-xl border border-purple-500/30'
+      }`}>
         {/* Header with Slots and Value */}
         <div className="flex items-center justify-between mb-2.5">
           {/* Slots Control */}
@@ -212,7 +218,11 @@ export function SellPropertySection({
   }
 
   return (
-    <div className="mt-2 p-3 bg-gradient-to-br from-purple-900/40 to-indigo-900/40 rounded-xl border border-purple-500/30">
+    <div className={`${
+      isMobile 
+        ? 'mt-2' // Minimal styling on mobile
+        : 'mt-2 p-3 bg-gradient-to-br from-purple-900/40 to-indigo-900/40 rounded-xl border border-purple-500/30'
+    }`}>
       {/* Header with Slots and Value */}
       <div className="flex items-center justify-between mb-2.5">
         {/* Slots Control */}

@@ -253,12 +253,12 @@ export function MobileLayout({
     return () => window.removeEventListener('resize', updateScaleFactor);
   }, []);
 
-  // Always show property tab
+  // Always show property tab - moved to leftmost position
   const tabs = [
+    { id: 'property' as TabType, icon: BuildingIcon, label: 'Property' },
     { id: 'portfolio' as TabType, icon: BriefcaseIcon, label: 'Portfolio' },
     { id: 'leaderboard' as TabType, icon: TrophyIcon, label: 'Ranks' },
     { id: 'feed' as TabType, icon: BroadcastIcon, label: 'Feed' },
-    { id: 'property' as TabType, icon: BuildingIcon, label: 'Property' },
   ];
 
   // Handle tab switching
@@ -272,7 +272,7 @@ export function MobileLayout({
     if (selectedProperty !== null) {
       // Switch to property tab and expand panel to mid-screen
       setActiveTab('property');
-      const midScreenHeight = Math.floor(window.innerHeight * 0.6); // 60% of screen height
+      const midScreenHeight = Math.floor(window.innerHeight * 0.5);
       setPanelHeight(midScreenHeight);
     }
   }, [selectedProperty]);

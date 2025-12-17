@@ -18,6 +18,7 @@ interface ShieldPropertySectionProps {
   loading: boolean;
   setLoading: (loading: boolean) => void;
   onClose: () => void;
+  isMobile?: boolean;
 }
 
 export function ShieldPropertySection({
@@ -27,7 +28,8 @@ export function ShieldPropertySection({
   balance,
   loading,
   setLoading,
-  onClose
+  onClose,
+  isMobile = false,
 }: ShieldPropertySectionProps) {
   const { activateShield } = useDefipoly();
   const { showSuccess, showError, showInfo } = useNotification();
@@ -140,7 +142,11 @@ export function ShieldPropertySection({
   // Show mock data if user doesn't own any slots
   if (!propertyData || totalSlots === 0) {
     const mockContent = (
-      <div className="mt-2 p-3 bg-gradient-to-br from-purple-900/40 to-indigo-900/40 rounded-xl border border-purple-500/30">
+      <div className={`${
+        isMobile 
+          ? 'mt-2' // Minimal styling on mobile
+          : 'mt-2 p-3 bg-gradient-to-br from-purple-900/40 to-indigo-900/40 rounded-xl border border-purple-500/30'
+      }`}>
         {/* Header with Duration, Cost, and Cooldown */}
         <div className="flex items-center justify-between mb-2.5">
           {/* Duration Control */}
@@ -212,7 +218,11 @@ export function ShieldPropertySection({
 
   // Shield selection - Purple theme matching buy section
   return (
-    <div className="mt-2 p-3 bg-gradient-to-br from-purple-900/40 to-indigo-900/40 rounded-xl border border-purple-500/30">
+    <div className={`${
+      isMobile 
+        ? 'mt-2' // Minimal styling on mobile
+        : 'mt-2 p-3 bg-gradient-to-br from-purple-900/40 to-indigo-900/40 rounded-xl border border-purple-500/30'
+    }`}>
       {/* Header with Duration, Cost, and Cooldown */}
       <div className="flex items-center justify-between mb-2.5">
         {/* Duration Control */}

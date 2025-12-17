@@ -194,6 +194,69 @@ export function PropertyModal({ propertyId, onClose }: PropertyModalProps) {
     calculateSetBonus();
   }, [property, propertyData?.owned]); // Only re-run when owned slots change
 
+  // Swipe-to-close handlers - MUST be before early return to maintain hook order
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    if (!isMobile || !property) return;
+    const touch = e.touches[0];
+    if (touch) {
+      setStartY(touch.clientY);
+      setIsDragging(true);
+    }
+  }, [isMobile, property]);
+  
+  const handleTouchMove = useCallback((e: React.TouchEvent) => {
+    if (!isMobile || !startY || !isDragging || !property) return;
+    const touch = e.touches[0];
+    if (touch) {
+      const deltaY = touch.clientY - startY;
+      if (deltaY > 0) { // Only allow downward swipe
+        setDragOffset(deltaY);
+      }
+    }
+  }, [isMobile, startY, isDragging, property]);
+  
+  const handleTouchEnd = useCallback(() => {
+    if (!isMobile || !isDragging || !property) return;
+    
+    // Close if dragged down more than 100px
+    if (dragOffset > 100) {
+      onClose();
+    } else {
+      setDragOffset(0);
+    }
+    
+    setIsDragging(false);
+    setStartY(null);
+  }, [isMobile, isDragging, dragOffset, onClose, property]);
+  
+  // Handle tab scroll sync
+  const handleScroll = useCallback(() => {
+    if (!scrollRef.current || isDragging || !property) return;
+    
+    const container = scrollRef.current;
+    const scrollLeft = container.scrollLeft;
+    const tabWidth = container.clientWidth;
+    const newActiveTab = Math.round(scrollLeft / tabWidth);
+    
+    if (newActiveTab !== activeTab && newActiveTab >= 0 && newActiveTab <= 4) {
+      setActiveTab(newActiveTab);
+    }
+  }, [activeTab, isDragging, property]);
+  
+  // Scroll to tab programmatically
+  const scrollToTab = useCallback((tabIndex: number) => {
+    if (!scrollRef.current || !property) return;
+    
+    const container = scrollRef.current;
+    const tabWidth = container.clientWidth;
+    container.scrollTo({
+      left: tabIndex * tabWidth,
+      behavior: 'smooth'
+    });
+    setActiveTab(tabIndex);
+  }, [property]);
+
+  // Early return AFTER all hooks to avoid hook order issues
   if (propertyId === null || !property) return null;
 
   const baseIncomePerSlot = Math.floor((property.price * property.yieldBps) / 10000);
@@ -206,68 +269,6 @@ export function PropertyModal({ propertyId, onClose }: PropertyModalProps) {
   const othersOwned = totalSlots - availableSlots - personalOwned;
 
   const hasSetBonus = setBonusInfo?.hasCompleteSet || false;
-  
-  // Swipe-to-close handler
-  const handleTouchStart = useCallback((e: React.TouchEvent) => {
-    if (!isMobile) return;
-    const touch = e.touches[0];
-    if (touch) {
-      setStartY(touch.clientY);
-      setIsDragging(true);
-    }
-  }, [isMobile]);
-  
-  const handleTouchMove = useCallback((e: React.TouchEvent) => {
-    if (!isMobile || !startY || !isDragging) return;
-    const touch = e.touches[0];
-    if (touch) {
-      const deltaY = touch.clientY - startY;
-      if (deltaY > 0) { // Only allow downward swipe
-        setDragOffset(deltaY);
-      }
-    }
-  }, [isMobile, startY, isDragging]);
-  
-  const handleTouchEnd = useCallback(() => {
-    if (!isMobile || !isDragging) return;
-    
-    // Close if dragged down more than 100px
-    if (dragOffset > 100) {
-      onClose();
-    } else {
-      setDragOffset(0);
-    }
-    
-    setIsDragging(false);
-    setStartY(null);
-  }, [isMobile, isDragging, dragOffset, onClose]);
-  
-  // Handle tab scroll sync
-  const handleScroll = useCallback(() => {
-    if (!scrollRef.current || isDragging) return;
-    
-    const container = scrollRef.current;
-    const scrollLeft = container.scrollLeft;
-    const tabWidth = container.clientWidth;
-    const newActiveTab = Math.round(scrollLeft / tabWidth);
-    
-    if (newActiveTab !== activeTab && newActiveTab >= 0 && newActiveTab <= 4) {
-      setActiveTab(newActiveTab);
-    }
-  }, [activeTab, isDragging]);
-  
-  // Scroll to tab programmatically
-  const scrollToTab = useCallback((tabIndex: number) => {
-    if (!scrollRef.current) return;
-    
-    const container = scrollRef.current;
-    const tabWidth = container.clientWidth;
-    container.scrollTo({
-      left: tabIndex * tabWidth,
-      behavior: 'smooth'
-    });
-    setActiveTab(tabIndex);
-  }, []);
   
   const tabs = [
     { id: 'info', label: 'Info', icon: '📊' },

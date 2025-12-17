@@ -209,6 +209,7 @@ export function PropertyActionsBar({
             loading={loading}
             setLoading={setLoading}
             onClose={onClose}
+            isMobile={isMobile}
           />
         )}
 
@@ -221,6 +222,7 @@ export function PropertyActionsBar({
             loading={loading}
             setLoading={setLoading}
             onClose={onClose}
+            isMobile={isMobile}
           />
         )}
 
@@ -232,6 +234,7 @@ export function PropertyActionsBar({
             loading={loading}
             setLoading={setLoading}
             onClose={onClose}
+            isMobile={isMobile}
           />
         )}
 
@@ -244,6 +247,7 @@ export function PropertyActionsBar({
             loading={loading}
             setLoading={setLoading}
             onClose={onClose}
+            isMobile={isMobile}
           />
         )}
       </div>
