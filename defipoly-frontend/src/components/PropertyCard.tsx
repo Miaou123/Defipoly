@@ -34,6 +34,7 @@ interface PropertyCardProps {
   gridColumn?: number;
   gridRow?: number;
   disableAnimations?: boolean;
+  disableHover?: boolean;
 }
 
 export function PropertyCard({ 
@@ -51,6 +52,7 @@ export function PropertyCard({
   gridColumn,
   gridRow,
   disableAnimations = false,
+  disableHover = false,
 }: PropertyCardProps) {
   const { connected, publicKey } = useWallet();
   
@@ -247,9 +249,9 @@ export function PropertyCard({
     <button
       data-property-id={propertyId}
       onClick={() => onSelect(propertyId)}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
-      className="w-full h-full relative overflow-hidden cursor-pointer group m-0 p-0 border-0"
+      onMouseEnter={disableHover ? undefined : () => setIsHovered(true)}
+      onMouseLeave={disableHover ? undefined : () => setIsHovered(false)}
+      className={`w-full h-full relative overflow-hidden cursor-pointer m-0 p-0 border-0 ${disableHover ? '' : 'group'}`}
       style={{
         ...getStyleProps(),
         margin: 0,
@@ -259,7 +261,7 @@ export function PropertyCard({
       }}
     >
       <div 
-        className="absolute top-0 left-0 w-full h-full pointer-events-none z-10 opacity-0 group-hover:opacity-100"
+        className={`absolute top-0 left-0 w-full h-full pointer-events-none z-10 opacity-0 ${disableHover ? '' : 'group-hover:opacity-100'}`}
         style={{
           background: 'linear-gradient(45deg, transparent, rgba(255, 255, 255, 0.1), transparent)',
           transform: 'translateX(-100%) translateY(-100%) rotate(45deg)',
@@ -429,14 +431,14 @@ export function PropertyCard({
       </div>
 
       <style jsx>{`
-        button:hover {
+        ${!disableHover ? `button:hover {
           transform: scale(1.10);
           box-shadow: 
             0 0 50px ${colorHex}cc,
             0 0 100px ${colorHex}80,
             inset 0 0 40px ${colorHex}33 !important;
           z-index: 50 !important;
-        }
+        }` : ''}
 
         @keyframes shine-sweep {
           0% {

@@ -26,7 +26,7 @@ const calculateDailyIncome = (price: number, yieldBps: number): number => {
   return Math.floor((price * yieldBps) / 10000);
 };
 
-type TabType = 'portfolio' | 'leaderboard' | 'feed' | 'property';
+type TabType = 'portfolio' | 'leaderboard' | 'feed';
 
 interface MobileLayoutProps {
   onSelectProperty: (propertyId: number) => void;
@@ -239,6 +239,11 @@ export function MobileLayout({
   const [isDragging, setIsDragging] = useState(false);
   const [panelHeight, setPanelHeight] = useState(60);
   
+  // Property modal swipe state
+  const [modalStartY, setModalStartY] = useState<number | null>(null);
+  const [modalTranslateY, setModalTranslateY] = useState(0);
+  const [isModalSwiping, setIsModalSwiping] = useState(false);
+  
   // Calculate scaleFactor based on screen width for mobile
   useEffect(() => {
     const updateScaleFactor = () => {
@@ -253,9 +258,7 @@ export function MobileLayout({
     return () => window.removeEventListener('resize', updateScaleFactor);
   }, []);
 
-  // Always show property tab - moved to leftmost position
   const tabs = [
-    { id: 'property' as TabType, icon: BuildingIcon, label: 'Property' },
     { id: 'portfolio' as TabType, icon: BriefcaseIcon, label: 'Portfolio' },
     { id: 'leaderboard' as TabType, icon: TrophyIcon, label: 'Ranks' },
     { id: 'feed' as TabType, icon: BroadcastIcon, label: 'Feed' },
@@ -267,15 +270,6 @@ export function MobileLayout({
     if (panelHeight < 300) setPanelHeight(300);
   };
 
-  // Auto-expand panel when property is selected
-  useEffect(() => {
-    if (selectedProperty !== null) {
-      // Switch to property tab and expand panel to mid-screen
-      setActiveTab('property');
-      const midScreenHeight = Math.floor(window.innerHeight * 0.7);
-      setPanelHeight(midScreenHeight);
-    }
-  }, [selectedProperty]);
 
   const handleTouchStart = (e: React.TouchEvent) => {
     const clientY = e.touches[0]?.clientY;
@@ -297,6 +291,43 @@ export function MobileLayout({
     setIsDragging(false);
     setStartY(null);
     setCurrentY(null);
+  };
+
+  // Property modal touch handlers
+  const handleModalTouchStart = (e: React.TouchEvent) => {
+    const touch = e.touches[0];
+    if (touch) {
+      setModalStartY(touch.clientY);
+      setIsModalSwiping(true);
+      setModalTranslateY(0);
+    }
+  };
+
+  const handleModalTouchMove = (e: React.TouchEvent) => {
+    if (!modalStartY || !isModalSwiping) return;
+    
+    const touch = e.touches[0];
+    if (touch) {
+      const deltaY = touch.clientY - modalStartY;
+      // Only allow downward movement
+      if (deltaY > 0) {
+        setModalTranslateY(deltaY);
+      }
+    }
+  };
+
+  const handleModalTouchEnd = () => {
+    if (!isModalSwiping) return;
+    
+    // Close modal if swiped down more than 150px
+    if (modalTranslateY > 150) {
+      onCloseProperty();
+    }
+    
+    // Reset state
+    setModalStartY(null);
+    setModalTranslateY(0);
+    setIsModalSwiping(false);
   };
 
   return (
@@ -408,15 +439,44 @@ export function MobileLayout({
           {activeTab === 'feed' && (
             <LiveFeed scaleFactor={scaleFactor} isMobile={true} />
           )}
-
-          {activeTab === 'property' && (
-            <MobilePropertyPanel 
-              selectedProperty={selectedProperty}
-              onSelectProperty={onSelectProperty}
-            />
-          )}
         </div>
       </div>
+
+      {/* Property Panel Overlay - same style as bottom panel but separate */}
+      {selectedProperty !== null && (
+        <div 
+          className="absolute inset-0 z-40 flex items-end"
+          onClick={(e) => {
+            // Close when clicking outside the modal (on the backdrop)
+            if (e.target === e.currentTarget) {
+              onCloseProperty();
+            }
+          }}
+        >
+          <div 
+            className="w-full h-[70vh] bg-black/90 backdrop-blur-lg border-t border-purple-500/20 transition-transform duration-300 ease-out"
+            style={{
+              transform: `translateY(${modalTranslateY}px)`,
+            }}
+            onTouchStart={handleModalTouchStart}
+            onTouchMove={handleModalTouchMove}
+            onTouchEnd={handleModalTouchEnd}
+          >
+            {/* Drag Handle */}
+            <div className="flex justify-center py-2 cursor-grab active:cursor-grabbing">
+              <div className="w-10 h-1 bg-purple-500/60 rounded-full"></div>
+            </div>
+            
+            {/* Property Panel Content */}
+            <div className="h-full">
+              <MobilePropertyPanel 
+                selectedProperty={selectedProperty}
+                onSelectProperty={onSelectProperty}
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
