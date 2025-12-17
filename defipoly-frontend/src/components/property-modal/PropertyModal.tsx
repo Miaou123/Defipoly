@@ -238,7 +238,7 @@ export function PropertyModal({ propertyId, onClose }: PropertyModalProps) {
     const tabWidth = container.clientWidth;
     const newActiveTab = Math.round(scrollLeft / tabWidth);
     
-    if (newActiveTab !== activeTab && newActiveTab >= 0 && newActiveTab <= 4) {
+    if (newActiveTab !== activeTab && newActiveTab >= 0 && newActiveTab <= 3) {
       setActiveTab(newActiveTab);
     }
   }, [activeTab, isDragging, property]);
@@ -364,19 +364,20 @@ export function PropertyModal({ propertyId, onClose }: PropertyModalProps) {
 
           {/* Content - Scrollable or Swipeable */}
           {isMobile ? (
-            <div 
-              ref={scrollRef}
-              className="flex-1 flex overflow-x-auto scroll-smooth snap-x snap-mandatory"
-              style={{ scrollSnapType: 'x mandatory' }}
-              onScroll={handleScroll}
-            >
-              {/* Info Panel */}
-              <div className="min-w-full snap-center flex flex-col p-4 space-y-3 overflow-y-auto">
-                {/* Property Card + Details */}
-                <div className="flex flex-col gap-3">
-                  {/* Property Card */}
-                  <div className="w-full flex justify-center">
-                    <div className="w-[140px] h-[180px]">
+            <div className="flex-1 flex flex-col overflow-hidden">
+              {/* Action panels with horizontal scrolling */}
+              <div 
+                ref={scrollRef}
+                className="flex overflow-x-auto scroll-smooth snap-x snap-mandatory"
+                style={{ scrollSnapType: 'x mandatory' }}
+                onScroll={handleScroll}
+              >
+                {/* Buy Panel */}
+                <div className="min-w-full snap-center flex flex-col p-4 space-y-3 overflow-y-auto">
+                  {/* Compact Info Section */}
+                  <div className="flex gap-3 mb-4">
+                    {/* Property Card - Smaller */}
+                    <div className="w-[100px] h-[130px] flex-shrink-0">
                       <PropertyCard 
                         propertyId={propertyId} 
                         onSelect={() => {}} 
@@ -384,350 +385,463 @@ export function PropertyModal({ propertyId, onClose }: PropertyModalProps) {
                         customPropertyCardBackground={gameState.profile.customPropertyCardBackground}
                       />
                     </div>
-                  </div>
-
-                  {/* Details */}
-                  <div className="flex flex-col gap-2">
-                    {/* Income Section */}
-                    <div className="bg-purple-950/40 rounded-lg p-2 border border-purple-500/20">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs text-purple-400 uppercase">💰 Daily Income</span>
-                      </div>
-                      
-                      {/* Always show full calculation */}
-                      <div className="grid grid-cols-[1fr_auto_1fr_auto_1fr] items-center gap-1 mt-1 w-full">
-                        <div className="flex flex-col">
-                          <span className="text-[10px] text-purple-400 uppercase">Base</span>
-                          <span className="text-base font-bold text-yellow-300">{baseIncomePerSlot.toLocaleString()}</span>
-                        </div>
-                        <span className="text-purple-400 text-lg px-1">+</span>
-                        <div className="flex flex-col">
-                          <span className={`text-[10px] uppercase ${hasSetBonus ? 'text-green-400' : 'text-gray-500'}`}>
-                            Boost <span className={hasSetBonus ? 'text-green-300' : 'text-gray-500'}>+{(setBonusBps / 100).toFixed(2)}%</span>
-                          </span>
-                          <span className={`text-base font-bold ${hasSetBonus ? 'text-green-400' : 'text-gray-500'}`}>
-                            {Math.floor(baseIncomePerSlot * setBonusBps / 10000).toLocaleString()}
-                          </span>
-                        </div>
-                        <span className="text-purple-400 text-lg px-1">=</span>
-                        <div className={`flex flex-col rounded px-3 py-1 items-end ${hasSetBonus ? 'bg-purple-800/40' : 'bg-gray-800/20'}`}>
-                          <span className="text-[10px] text-purple-300 uppercase">Total</span>
-                          <span className={`text-base font-black ${hasSetBonus ? 'text-green-300' : 'text-gray-400'}`}>
+                    
+                    {/* Details - Horizontal Layout */}
+                    <div className="flex-1 space-y-2">
+                      {/* Income - Compact */}
+                      <div className="bg-purple-950/40 rounded-lg p-2 border border-purple-500/20">
+                        <div className="text-[10px] text-purple-400 uppercase mb-1">💰 Daily Income</div>
+                        <div className="flex items-center gap-1">
+                          <span className="text-sm font-bold text-yellow-300">{baseIncomePerSlot.toLocaleString()}</span>
+                          {hasSetBonus && <span className="text-xs text-green-400">+{(setBonusBps / 100).toFixed(0)}%</span>}
+                          <span className="text-xs text-purple-300">=</span>
+                          <span className={`text-sm font-black ${hasSetBonus ? 'text-green-300' : 'text-yellow-300'}`}>
                             {hasSetBonus ? Math.floor(baseIncomePerSlot * (10000 + setBonusBps) / 10000).toLocaleString() : baseIncomePerSlot.toLocaleString()}
                           </span>
                         </div>
                       </div>
-                      {hasSetBonus && (
-                        <div className="mt-2 px-2 py-1 bg-green-500/20 rounded border border-green-500/30 flex items-center justify-between">
-                          <span className="text-xs text-green-300 font-semibold flex items-center gap-1">
-                            <StarIcon size={10} className="text-green-400" />
-                            Complete Set Bonus Active
-                          </span>
-                          <span className="text-xs text-green-400">+{(setBonusBps / 100).toFixed(2)}% on {setBonusInfo?.boostedSlots || 0} slots</span>
-                        </div>
-                      )}
-                      {!hasSetBonus && (
-                        <div className="mt-2 px-2 py-1 bg-amber-500/10 rounded border border-amber-500/30">
-                          <div className="flex items-center gap-1.5 text-amber-300">
-                            <span className="text-xs flex items-center gap-1">
-                              <StarIcon size={8} className="text-green-400" />
-                              Complete this set for +{(setBonusBps / 100).toFixed(2)}% bonus
-                            </span>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Slots Section */}
-                    <div className="bg-purple-950/40 rounded-lg p-2 border border-purple-500/20">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-xs text-purple-400 uppercase">📊 Slots</span>
-                        <span className="text-sm font-bold text-purple-100">{personalOwned} / {totalSlots}</span>
-                      </div>
                       
-                      {/* Stacked Bar */}
-                      <div className="h-2 bg-purple-950/50 rounded-full overflow-hidden flex">
-                        {othersOwned > 0 && (
-                          <div 
-                            className="h-full bg-green-500"
-                            style={{ width: `${(othersOwned / totalSlots) * 100}%` }}
-                          />
-                        )}
-                        {personalOwned > 0 && (
-                          <div 
-                            className="h-full bg-purple-500"
-                            style={{ width: `${(personalOwned / totalSlots) * 100}%` }}
-                          />
-                        )}
-                        {availableSlots > 0 && (
-                          <div 
-                            className="h-full bg-white/15"
-                            style={{ width: `${(availableSlots / totalSlots) * 100}%` }}
-                          />
-                        )}
-                      </div>
-                      
-                      {/* Legend */}
-                      <div className="flex gap-2 text-[10px] mt-2">
-                        <div className="flex items-center gap-1">
-                          <div className="w-1.5 h-1.5 bg-green-500 rounded-sm"></div>
-                          <span className="text-purple-300">Others: {othersOwned}</span>
+                      {/* Slots - Compact */}
+                      <div className="bg-purple-950/40 rounded-lg p-2 border border-purple-500/20">
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-[10px] text-purple-400 uppercase">📊 Slots</span>
+                          <span className="text-xs font-bold text-purple-100">{personalOwned} / {totalSlots}</span>
                         </div>
-                        <div className="flex items-center gap-1">
-                          <div className="w-1.5 h-1.5 bg-purple-500 rounded-sm"></div>
-                          <span className="text-purple-300">You: {personalOwned}</span>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <div className="w-1.5 h-1.5 bg-white/30 rounded-sm"></div>
-                          <span className="text-purple-300">Available: {availableSlots}</span>
+                        <div className="h-1.5 bg-purple-950/50 rounded-full overflow-hidden flex">
+                          {othersOwned > 0 && (
+                            <div 
+                              className="h-full bg-green-500"
+                              style={{ width: `${(othersOwned / totalSlots) * 100}%` }}
+                            />
+                          )}
+                          {personalOwned > 0 && (
+                            <div 
+                              className="h-full bg-purple-500"
+                              style={{ width: `${(personalOwned / totalSlots) * 100}%` }}
+                            />
+                          )}
+                          {availableSlots > 0 && (
+                            <div 
+                              className="h-full bg-white/15"
+                              style={{ width: `${(availableSlots / totalSlots) * 100}%` }}
+                            />
+                          )}
                         </div>
                       </div>
                     </div>
                   </div>
+
+                  {!connected ? (
+                    <div className="flex flex-col items-center py-6 space-y-3">
+                      <p className="text-purple-200 mb-1 text-center text-sm">Connect your wallet to interact with this property</p>
+                      <StyledWalletButton variant="modal" />
+                    </div>
+                  ) : (
+                    <PropertyActionsBar
+                      propertyId={propertyId}
+                      property={property}
+                      propertyData={propertyData}
+                      balance={balance}
+                      loading={loading}
+                      setLoading={setLoading}
+                      onClose={onClose}
+                      onOpenHelp={setShowHelpModal}
+                      isMobile={true}
+                      forceActiveAction="buy"
+                    />
+                  )}
                 </div>
-              </div>
 
-              {/* Buy Panel */}
-              <div className="min-w-full snap-center flex flex-col p-4 space-y-3 overflow-y-auto">
-                {!connected ? (
-                  <div className="flex flex-col items-center py-6 space-y-3">
-                    <p className="text-purple-200 mb-1 text-center text-sm">Connect your wallet to interact with this property</p>
-                    <StyledWalletButton variant="modal" />
+                {/* Shield Panel */}
+                <div className="min-w-full snap-center flex flex-col p-4 space-y-3 overflow-y-auto">
+                  {/* Compact Info Section */}
+                  <div className="flex gap-3 mb-4">
+                    {/* Property Card - Smaller */}
+                    <div className="w-[100px] h-[130px] flex-shrink-0">
+                      <PropertyCard 
+                        propertyId={propertyId} 
+                        onSelect={() => {}} 
+                        modalView={true}
+                        customPropertyCardBackground={gameState.profile.customPropertyCardBackground}
+                      />
+                    </div>
+                    
+                    {/* Details - Horizontal Layout */}
+                    <div className="flex-1 space-y-2">
+                      {/* Income - Compact */}
+                      <div className="bg-purple-950/40 rounded-lg p-2 border border-purple-500/20">
+                        <div className="text-[10px] text-purple-400 uppercase mb-1">💰 Daily Income</div>
+                        <div className="flex items-center gap-1">
+                          <span className="text-sm font-bold text-yellow-300">{baseIncomePerSlot.toLocaleString()}</span>
+                          {hasSetBonus && <span className="text-xs text-green-400">+{(setBonusBps / 100).toFixed(0)}%</span>}
+                          <span className="text-xs text-purple-300">=</span>
+                          <span className={`text-sm font-black ${hasSetBonus ? 'text-green-300' : 'text-yellow-300'}`}>
+                            {hasSetBonus ? Math.floor(baseIncomePerSlot * (10000 + setBonusBps) / 10000).toLocaleString() : baseIncomePerSlot.toLocaleString()}
+                          </span>
+                        </div>
+                      </div>
+                      
+                      {/* Slots - Compact */}
+                      <div className="bg-purple-950/40 rounded-lg p-2 border border-purple-500/20">
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-[10px] text-purple-400 uppercase">📊 Slots</span>
+                          <span className="text-xs font-bold text-purple-100">{personalOwned} / {totalSlots}</span>
+                        </div>
+                        <div className="h-1.5 bg-purple-950/50 rounded-full overflow-hidden flex">
+                          {othersOwned > 0 && (
+                            <div 
+                              className="h-full bg-green-500"
+                              style={{ width: `${(othersOwned / totalSlots) * 100}%` }}
+                            />
+                          )}
+                          {personalOwned > 0 && (
+                            <div 
+                              className="h-full bg-purple-500"
+                              style={{ width: `${(personalOwned / totalSlots) * 100}%` }}
+                            />
+                          )}
+                          {availableSlots > 0 && (
+                            <div 
+                              className="h-full bg-white/15"
+                              style={{ width: `${(availableSlots / totalSlots) * 100}%` }}
+                            />
+                          )}
+                        </div>
+                      </div>
+                    </div>
                   </div>
-                ) : (
-                  <PropertyActionsBar
-                    propertyId={propertyId}
-                    property={property}
-                    propertyData={propertyData}
-                    balance={balance}
-                    loading={loading}
-                    setLoading={setLoading}
-                    onClose={onClose}
-                    onOpenHelp={setShowHelpModal}
-                    isMobile={true}
-                    forceActiveAction="buy"
-                  />
-                )}
-              </div>
 
-              {/* Shield Panel */}
-              <div className="min-w-full snap-center flex flex-col p-4 space-y-3 overflow-y-auto">
-                {!connected ? (
-                  <div className="flex flex-col items-center py-6 space-y-3">
-                    <p className="text-purple-200 mb-1 text-center text-sm">Connect your wallet to interact with this property</p>
-                    <StyledWalletButton variant="modal" />
-                  </div>
-                ) : (
-                  <PropertyActionsBar
-                    propertyId={propertyId}
-                    property={property}
-                    propertyData={propertyData}
-                    balance={balance}
-                    loading={loading}
-                    setLoading={setLoading}
-                    onClose={onClose}
-                    onOpenHelp={setShowHelpModal}
-                    isMobile={true}
-                    forceActiveAction="shield"
-                  />
-                )}
-              </div>
+                  {!connected ? (
+                    <div className="flex flex-col items-center py-6 space-y-3">
+                      <p className="text-purple-200 mb-1 text-center text-sm">Connect your wallet to interact with this property</p>
+                      <StyledWalletButton variant="modal" />
+                    </div>
+                  ) : (
+                    <PropertyActionsBar
+                      propertyId={propertyId}
+                      property={property}
+                      propertyData={propertyData}
+                      balance={balance}
+                      loading={loading}
+                      setLoading={setLoading}
+                      onClose={onClose}
+                      onOpenHelp={setShowHelpModal}
+                      isMobile={true}
+                      forceActiveAction="shield"
+                    />
+                  )}
+                </div>
 
-              {/* Sell Panel */}
-              <div className="min-w-full snap-center flex flex-col p-4 space-y-3 overflow-y-auto">
-                {!connected ? (
-                  <div className="flex flex-col items-center py-6 space-y-3">
-                    <p className="text-purple-200 mb-1 text-center text-sm">Connect your wallet to interact with this property</p>
-                    <StyledWalletButton variant="modal" />
+                {/* Sell Panel */}
+                <div className="min-w-full snap-center flex flex-col p-4 space-y-3 overflow-y-auto">
+                  {/* Compact Info Section */}
+                  <div className="flex gap-3 mb-4">
+                    {/* Property Card - Smaller */}
+                    <div className="w-[100px] h-[130px] flex-shrink-0">
+                      <PropertyCard 
+                        propertyId={propertyId} 
+                        onSelect={() => {}} 
+                        modalView={true}
+                        customPropertyCardBackground={gameState.profile.customPropertyCardBackground}
+                      />
+                    </div>
+                    
+                    {/* Details - Horizontal Layout */}
+                    <div className="flex-1 space-y-2">
+                      {/* Income - Compact */}
+                      <div className="bg-purple-950/40 rounded-lg p-2 border border-purple-500/20">
+                        <div className="text-[10px] text-purple-400 uppercase mb-1">💰 Daily Income</div>
+                        <div className="flex items-center gap-1">
+                          <span className="text-sm font-bold text-yellow-300">{baseIncomePerSlot.toLocaleString()}</span>
+                          {hasSetBonus && <span className="text-xs text-green-400">+{(setBonusBps / 100).toFixed(0)}%</span>}
+                          <span className="text-xs text-purple-300">=</span>
+                          <span className={`text-sm font-black ${hasSetBonus ? 'text-green-300' : 'text-yellow-300'}`}>
+                            {hasSetBonus ? Math.floor(baseIncomePerSlot * (10000 + setBonusBps) / 10000).toLocaleString() : baseIncomePerSlot.toLocaleString()}
+                          </span>
+                        </div>
+                      </div>
+                      
+                      {/* Slots - Compact */}
+                      <div className="bg-purple-950/40 rounded-lg p-2 border border-purple-500/20">
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-[10px] text-purple-400 uppercase">📊 Slots</span>
+                          <span className="text-xs font-bold text-purple-100">{personalOwned} / {totalSlots}</span>
+                        </div>
+                        <div className="h-1.5 bg-purple-950/50 rounded-full overflow-hidden flex">
+                          {othersOwned > 0 && (
+                            <div 
+                              className="h-full bg-green-500"
+                              style={{ width: `${(othersOwned / totalSlots) * 100}%` }}
+                            />
+                          )}
+                          {personalOwned > 0 && (
+                            <div 
+                              className="h-full bg-purple-500"
+                              style={{ width: `${(personalOwned / totalSlots) * 100}%` }}
+                            />
+                          )}
+                          {availableSlots > 0 && (
+                            <div 
+                              className="h-full bg-white/15"
+                              style={{ width: `${(availableSlots / totalSlots) * 100}%` }}
+                            />
+                          )}
+                        </div>
+                      </div>
+                    </div>
                   </div>
-                ) : (
-                  <PropertyActionsBar
-                    propertyId={propertyId}
-                    property={property}
-                    propertyData={propertyData}
-                    balance={balance}
-                    loading={loading}
-                    setLoading={setLoading}
-                    onClose={onClose}
-                    onOpenHelp={setShowHelpModal}
-                    isMobile={true}
-                    forceActiveAction="sell"
-                  />
-                )}
-              </div>
 
-              {/* Steal Panel */}
-              <div className="min-w-full snap-center flex flex-col p-4 space-y-3 overflow-y-auto">
-                {!connected ? (
-                  <div className="flex flex-col items-center py-6 space-y-3">
-                    <p className="text-purple-200 mb-1 text-center text-sm">Connect your wallet to interact with this property</p>
-                    <StyledWalletButton variant="modal" />
+                  {!connected ? (
+                    <div className="flex flex-col items-center py-6 space-y-3">
+                      <p className="text-purple-200 mb-1 text-center text-sm">Connect your wallet to interact with this property</p>
+                      <StyledWalletButton variant="modal" />
+                    </div>
+                  ) : (
+                    <PropertyActionsBar
+                      propertyId={propertyId}
+                      property={property}
+                      propertyData={propertyData}
+                      balance={balance}
+                      loading={loading}
+                      setLoading={setLoading}
+                      onClose={onClose}
+                      onOpenHelp={setShowHelpModal}
+                      isMobile={true}
+                      forceActiveAction="sell"
+                    />
+                  )}
+                </div>
+
+                {/* Steal Panel */}
+                <div className="min-w-full snap-center flex flex-col p-4 space-y-3 overflow-y-auto">
+                  {/* Compact Info Section */}
+                  <div className="flex gap-3 mb-4">
+                    {/* Property Card - Smaller */}
+                    <div className="w-[100px] h-[130px] flex-shrink-0">
+                      <PropertyCard 
+                        propertyId={propertyId} 
+                        onSelect={() => {}} 
+                        modalView={true}
+                        customPropertyCardBackground={gameState.profile.customPropertyCardBackground}
+                      />
+                    </div>
+                    
+                    {/* Details - Horizontal Layout */}
+                    <div className="flex-1 space-y-2">
+                      {/* Income - Compact */}
+                      <div className="bg-purple-950/40 rounded-lg p-2 border border-purple-500/20">
+                        <div className="text-[10px] text-purple-400 uppercase mb-1">💰 Daily Income</div>
+                        <div className="flex items-center gap-1">
+                          <span className="text-sm font-bold text-yellow-300">{baseIncomePerSlot.toLocaleString()}</span>
+                          {hasSetBonus && <span className="text-xs text-green-400">+{(setBonusBps / 100).toFixed(0)}%</span>}
+                          <span className="text-xs text-purple-300">=</span>
+                          <span className={`text-sm font-black ${hasSetBonus ? 'text-green-300' : 'text-yellow-300'}`}>
+                            {hasSetBonus ? Math.floor(baseIncomePerSlot * (10000 + setBonusBps) / 10000).toLocaleString() : baseIncomePerSlot.toLocaleString()}
+                          </span>
+                        </div>
+                      </div>
+                      
+                      {/* Slots - Compact */}
+                      <div className="bg-purple-950/40 rounded-lg p-2 border border-purple-500/20">
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-[10px] text-purple-400 uppercase">📊 Slots</span>
+                          <span className="text-xs font-bold text-purple-100">{personalOwned} / {totalSlots}</span>
+                        </div>
+                        <div className="h-1.5 bg-purple-950/50 rounded-full overflow-hidden flex">
+                          {othersOwned > 0 && (
+                            <div 
+                              className="h-full bg-green-500"
+                              style={{ width: `${(othersOwned / totalSlots) * 100}%` }}
+                            />
+                          )}
+                          {personalOwned > 0 && (
+                            <div 
+                              className="h-full bg-purple-500"
+                              style={{ width: `${(personalOwned / totalSlots) * 100}%` }}
+                            />
+                          )}
+                          {availableSlots > 0 && (
+                            <div 
+                              className="h-full bg-white/15"
+                              style={{ width: `${(availableSlots / totalSlots) * 100}%` }}
+                            />
+                          )}
+                        </div>
+                      </div>
+                    </div>
                   </div>
-                ) : (
-                  <PropertyActionsBar
-                    propertyId={propertyId}
-                    property={property}
-                    propertyData={propertyData}
-                    balance={balance}
-                    loading={loading}
-                    setLoading={setLoading}
-                    onClose={onClose}
-                    onOpenHelp={setShowHelpModal}
-                    isMobile={true}
-                    forceActiveAction="steal"
-                  />
-                )}
+
+                  {!connected ? (
+                    <div className="flex flex-col items-center py-6 space-y-3">
+                      <p className="text-purple-200 mb-1 text-center text-sm">Connect your wallet to interact with this property</p>
+                      <StyledWalletButton variant="modal" />
+                    </div>
+                  ) : (
+                    <PropertyActionsBar
+                      propertyId={propertyId}
+                      property={property}
+                      propertyData={propertyData}
+                      balance={balance}
+                      loading={loading}
+                      setLoading={setLoading}
+                      onClose={onClose}
+                      onOpenHelp={setShowHelpModal}
+                      isMobile={true}
+                      forceActiveAction="steal"
+                    />
+                  )}
+                </div>
               </div>
             </div>
           ) : (
-          <div className={`
-            p-3 lg:p-4 space-y-3 overflow-y-auto flex-1
-            ${isMobile ? 'pb-safe' : ''}
-          `}>
-            {/* Property Card + Details */}
             <div className={`
-              ${isMobile 
-                ? 'flex flex-col gap-3' 
-                : 'grid grid-cols-[210px_1fr] gap-4'
-              }
+              p-3 lg:p-4 space-y-3 overflow-y-auto flex-1
+              ${isMobile ? 'pb-safe' : ''}
             `}>
-              {/* Property Card */}
+              {/* Property Card + Details */}
               <div className={`
                 ${isMobile 
-                  ? 'w-full flex justify-center' 
-                  : 'w-[200px] h-[250px]'
+                  ? 'flex flex-col gap-3' 
+                  : 'grid grid-cols-[210px_1fr] gap-4'
                 }
               `}>
-                <div className={isMobile ? 'w-[140px] h-[180px]' : 'w-full h-full'}>
-                  <PropertyCard 
-                    propertyId={propertyId} 
-                    onSelect={() => {}} 
-                    modalView={true}
-                    customPropertyCardBackground={gameState.profile.customPropertyCardBackground}
-                  />
+                {/* Property Card */}
+                <div className={`
+                  ${isMobile 
+                    ? 'w-full flex justify-center' 
+                    : 'w-[200px] h-[250px]'
+                  }
+                `}>
+                  <div className={isMobile ? 'w-[140px] h-[180px]' : 'w-full h-full'}>
+                    <PropertyCard 
+                      propertyId={propertyId} 
+                      onSelect={() => {}} 
+                      modalView={true}
+                      customPropertyCardBackground={gameState.profile.customPropertyCardBackground}
+                    />
+                  </div>
                 </div>
-              </div>
 
-              {/* Details */}
-              <div className="flex flex-col gap-2">
-                {/* Income Section */}
-                <div className="bg-purple-950/40 rounded-lg p-2 lg:p-3 border border-purple-500/20">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px] lg:text-xs text-purple-400 uppercase">💰 Daily Income</span>
-                  </div>
-                  
-                  {/* Always show full calculation */}
-                  <div className="grid grid-cols-[1fr_auto_1fr_auto_1fr] items-center gap-1 mt-1 w-full">
-                    <div className="flex flex-col">
-                      <span className="text-[8px] lg:text-[10px] text-purple-400 uppercase">Base</span>
-                      <span className="text-base lg:text-xl font-bold text-yellow-300">{baseIncomePerSlot.toLocaleString()}</span>
+                {/* Details */}
+                <div className="flex flex-col gap-2">
+                  {/* Income Section */}
+                  <div className="bg-purple-950/40 rounded-lg p-2 lg:p-3 border border-purple-500/20">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] lg:text-xs text-purple-400 uppercase">💰 Daily Income</span>
                     </div>
-                    <span className="text-purple-400 text-lg px-1">+</span>
-                    <div className="flex flex-col">
-                      <span className={`text-[8px] lg:text-[10px] uppercase ${hasSetBonus ? 'text-green-400' : 'text-gray-500'}`}>
-                        Boost <span className={hasSetBonus ? 'text-green-300' : 'text-gray-500'}>+{(setBonusBps / 100).toFixed(2)}%</span>
-                      </span>
-                      <span className={`text-base lg:text-xl font-bold ${hasSetBonus ? 'text-green-400' : 'text-gray-500'}`}>
-                        {Math.floor(baseIncomePerSlot * setBonusBps / 10000).toLocaleString()}
-                      </span>
-                    </div>
-                    <span className="text-purple-400 text-lg px-1">=</span>
-                    <div className={`flex flex-col rounded px-3 py-1 items-end ${hasSetBonus ? 'bg-purple-800/40' : 'bg-gray-800/20'}`}>
-                      <span className="text-[8px] lg:text-[10px] text-purple-300 uppercase">Total</span>
-                      <span className={`text-base lg:text-xl font-black ${hasSetBonus ? 'text-green-300' : 'text-gray-400'}`}>
-                        {hasSetBonus ? Math.floor(baseIncomePerSlot * (10000 + setBonusBps) / 10000).toLocaleString() : baseIncomePerSlot.toLocaleString()}
-                      </span>
-                    </div>
-                  </div>
-                  {hasSetBonus && (
-                    <div className="mt-2 px-2 py-1 bg-green-500/20 rounded border border-green-500/30 flex items-center justify-between">
-                      <span className="text-[9px] lg:text-xs text-green-300 font-semibold flex items-center gap-1">
-                        <StarIcon size={10} className="text-green-400" />
-                        Complete Set Bonus Active
-                      </span>
-                      <span className="text-[9px] lg:text-xs text-green-400">+{(setBonusBps / 100).toFixed(2)}% on {setBonusInfo?.boostedSlots || 0} slots</span>
-                    </div>
-                  )}
-                  {!hasSetBonus && (
-                    <div className="mt-2 px-2 py-1 bg-amber-500/10 rounded border border-amber-500/30">
-                      <div className="flex items-center gap-1.5 text-amber-300">
-                        <span className="text-[10px] lg:text-xs flex items-center gap-1">
-                          <StarIcon size={8} className="text-green-400" />
-                          Complete this set for +{(setBonusBps / 100).toFixed(2)}% bonus
+                    
+                    {/* Always show full calculation */}
+                    <div className="grid grid-cols-[1fr_auto_1fr_auto_1fr] items-center gap-1 mt-1 w-full">
+                      <div className="flex flex-col">
+                        <span className="text-[8px] lg:text-[10px] text-purple-400 uppercase">Base</span>
+                        <span className="text-base lg:text-xl font-bold text-yellow-300">{baseIncomePerSlot.toLocaleString()}</span>
+                      </div>
+                      <span className="text-purple-400 text-lg px-1">+</span>
+                      <div className="flex flex-col">
+                        <span className={`text-[8px] lg:text-[10px] uppercase ${hasSetBonus ? 'text-green-400' : 'text-gray-500'}`}>
+                          Boost <span className={hasSetBonus ? 'text-green-300' : 'text-gray-500'}>+{(setBonusBps / 100).toFixed(2)}%</span>
+                        </span>
+                        <span className={`text-base lg:text-xl font-bold ${hasSetBonus ? 'text-green-400' : 'text-gray-500'}`}>
+                          {Math.floor(baseIncomePerSlot * setBonusBps / 10000).toLocaleString()}
+                        </span>
+                      </div>
+                      <span className="text-purple-400 text-lg px-1">=</span>
+                      <div className={`flex flex-col rounded px-3 py-1 items-end ${hasSetBonus ? 'bg-purple-800/40' : 'bg-gray-800/20'}`}>
+                        <span className="text-[8px] lg:text-[10px] text-purple-300 uppercase">Total</span>
+                        <span className={`text-base lg:text-xl font-black ${hasSetBonus ? 'text-green-300' : 'text-gray-400'}`}>
+                          {hasSetBonus ? Math.floor(baseIncomePerSlot * (10000 + setBonusBps) / 10000).toLocaleString() : baseIncomePerSlot.toLocaleString()}
                         </span>
                       </div>
                     </div>
-                  )}
-                </div>
+                    {hasSetBonus && (
+                      <div className="mt-2 px-2 py-1 bg-green-500/20 rounded border border-green-500/30 flex items-center justify-between">
+                        <span className="text-[9px] lg:text-xs text-green-300 font-semibold flex items-center gap-1">
+                          <StarIcon size={10} className="text-green-400" />
+                          Complete Set Bonus Active
+                        </span>
+                        <span className="text-[9px] lg:text-xs text-green-400">+{(setBonusBps / 100).toFixed(2)}% on {setBonusInfo?.boostedSlots || 0} slots</span>
+                      </div>
+                    )}
+                    {!hasSetBonus && (
+                      <div className="mt-2 px-2 py-1 bg-amber-500/10 rounded border border-amber-500/30">
+                        <div className="flex items-center gap-1.5 text-amber-300">
+                          <span className="text-[10px] lg:text-xs flex items-center gap-1">
+                            <StarIcon size={8} className="text-green-400" />
+                            Complete this set for +{(setBonusBps / 100).toFixed(2)}% bonus
+                          </span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
 
-                {/* Slots Section */}
-                <div className="bg-purple-950/40 rounded-lg p-2 lg:p-3 border border-purple-500/20">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-[10px] lg:text-xs text-purple-400 uppercase">📊 Slots</span>
-                    <span className="text-xs lg:text-sm font-bold text-purple-100">{personalOwned} / {totalSlots}</span>
-                  </div>
-                  
-                  {/* Stacked Bar */}
-                  <div className="h-2 bg-purple-950/50 rounded-full overflow-hidden flex">
-                    {othersOwned > 0 && (
-                      <div 
-                        className="h-full bg-green-500"
-                        style={{ width: `${(othersOwned / totalSlots) * 100}%` }}
-                      />
-                    )}
-                    {personalOwned > 0 && (
-                      <div 
-                        className="h-full bg-purple-500"
-                        style={{ width: `${(personalOwned / totalSlots) * 100}%` }}
-                      />
-                    )}
-                    {availableSlots > 0 && (
-                      <div 
-                        className="h-full bg-white/15"
-                        style={{ width: `${(availableSlots / totalSlots) * 100}%` }}
-                      />
-                    )}
-                  </div>
-                  
-                  {/* Legend */}
-                  <div className="flex gap-2 lg:gap-3 text-[9px] lg:text-[10px] mt-2">
-                    <div className="flex items-center gap-1">
-                      <div className="w-1.5 h-1.5 bg-green-500 rounded-sm"></div>
-                      <span className="text-purple-300">Others: {othersOwned}</span>
+                  {/* Slots Section */}
+                  <div className="bg-purple-950/40 rounded-lg p-2 lg:p-3 border border-purple-500/20">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-[10px] lg:text-xs text-purple-400 uppercase">📊 Slots</span>
+                      <span className="text-xs lg:text-sm font-bold text-purple-100">{personalOwned} / {totalSlots}</span>
                     </div>
-                    <div className="flex items-center gap-1">
-                      <div className="w-1.5 h-1.5 bg-purple-500 rounded-sm"></div>
-                      <span className="text-purple-300">You: {personalOwned}</span>
+                    
+                    {/* Stacked Bar */}
+                    <div className="h-2 bg-purple-950/50 rounded-full overflow-hidden flex">
+                      {othersOwned > 0 && (
+                        <div 
+                          className="h-full bg-green-500"
+                          style={{ width: `${(othersOwned / totalSlots) * 100}%` }}
+                        />
+                      )}
+                      {personalOwned > 0 && (
+                        <div 
+                          className="h-full bg-purple-500"
+                          style={{ width: `${(personalOwned / totalSlots) * 100}%` }}
+                        />
+                      )}
+                      {availableSlots > 0 && (
+                        <div 
+                          className="h-full bg-white/15"
+                          style={{ width: `${(availableSlots / totalSlots) * 100}%` }}
+                        />
+                      )}
                     </div>
-                    <div className="flex items-center gap-1">
-                      <div className="w-1.5 h-1.5 bg-white/30 rounded-sm"></div>
-                      <span className="text-purple-300">Available: {availableSlots}</span>
+                    
+                    {/* Legend */}
+                    <div className="flex gap-2 lg:gap-3 text-[9px] lg:text-[10px] mt-2">
+                      <div className="flex items-center gap-1">
+                        <div className="w-1.5 h-1.5 bg-green-500 rounded-sm"></div>
+                        <span className="text-purple-300">Others: {othersOwned}</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <div className="w-1.5 h-1.5 bg-purple-500 rounded-sm"></div>
+                        <span className="text-purple-300">You: {personalOwned}</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <div className="w-1.5 h-1.5 bg-white/30 rounded-sm"></div>
+                        <span className="text-purple-300">Available: {availableSlots}</span>
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
+
+              {/* Action Buttons */}
+              {!connected ? (
+                <div className="flex flex-col items-center py-4 lg:py-6 space-y-3">
+                  <p className="text-purple-200 mb-1 text-center text-xs lg:text-sm">Connect your wallet to interact with this property</p>
+                  <StyledWalletButton variant="modal" />
+                </div>
+              ) : (
+                <PropertyActionsBar
+                  propertyId={propertyId}
+                  property={property}
+                  propertyData={propertyData}
+                  balance={balance}
+                  loading={loading}
+                  setLoading={setLoading}
+                  onClose={onClose}
+                  onOpenHelp={setShowHelpModal}
+                  isMobile={false}
+                />
+              )}
             </div>
-
-            {/* Action Buttons */}
-            {!connected ? (
-              <div className="flex flex-col items-center py-4 lg:py-6 space-y-3">
-                <p className="text-purple-200 mb-1 text-center text-xs lg:text-sm">Connect your wallet to interact with this property</p>
-                <StyledWalletButton variant="modal" />
-              </div>
-            ) : (
-              <PropertyActionsBar
-                propertyId={propertyId}
-                property={property}
-                propertyData={propertyData}
-                balance={balance}
-                loading={loading}
-                setLoading={setLoading}
-                onClose={onClose}
-                onOpenHelp={setShowHelpModal}
-                isMobile={false}
-              />
-            )}
-          </div>
           )}
         </div>
       </div>
