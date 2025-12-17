@@ -5,7 +5,7 @@
 
 'use client';
 
-import { useEffect, useState, useRef, useMemo } from 'react';
+import { useEffect, useState, useRef, useMemo, useCallback } from 'react';
 import { PROPERTIES, SET_BONUSES } from '@/utils/constants';
 import { useDefipoly } from '@/contexts/DefipolyContext';
 import { useWallet } from '@solana/wallet-adapter-react';
@@ -58,6 +58,13 @@ export function PropertyModal({ propertyId, onClose }: PropertyModalProps) {
     totalSlots: number;
   } | null>(null);
   const [isMobile, setIsMobile] = useState(false);
+  
+  // Mobile swipe state
+  const [activeTab, setActiveTab] = useState(0); // 0: info, 1: buy, 2: shield, 3: sell, 4: steal
+  const [isDragging, setIsDragging] = useState(false);
+  const [startY, setStartY] = useState<number | null>(null);
+  const [dragOffset, setDragOffset] = useState(0);
+  const scrollRef = useRef<HTMLDivElement>(null);
   
   // Check for mobile (match main page breakpoint)
   useEffect(() => {
@@ -199,6 +206,76 @@ export function PropertyModal({ propertyId, onClose }: PropertyModalProps) {
   const othersOwned = totalSlots - availableSlots - personalOwned;
 
   const hasSetBonus = setBonusInfo?.hasCompleteSet || false;
+  
+  // Swipe-to-close handler
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    if (!isMobile) return;
+    const touch = e.touches[0];
+    if (touch) {
+      setStartY(touch.clientY);
+      setIsDragging(true);
+    }
+  }, [isMobile]);
+  
+  const handleTouchMove = useCallback((e: React.TouchEvent) => {
+    if (!isMobile || !startY || !isDragging) return;
+    const touch = e.touches[0];
+    if (touch) {
+      const deltaY = touch.clientY - startY;
+      if (deltaY > 0) { // Only allow downward swipe
+        setDragOffset(deltaY);
+      }
+    }
+  }, [isMobile, startY, isDragging]);
+  
+  const handleTouchEnd = useCallback(() => {
+    if (!isMobile || !isDragging) return;
+    
+    // Close if dragged down more than 100px
+    if (dragOffset > 100) {
+      onClose();
+    } else {
+      setDragOffset(0);
+    }
+    
+    setIsDragging(false);
+    setStartY(null);
+  }, [isMobile, isDragging, dragOffset, onClose]);
+  
+  // Handle tab scroll sync
+  const handleScroll = useCallback(() => {
+    if (!scrollRef.current || isDragging) return;
+    
+    const container = scrollRef.current;
+    const scrollLeft = container.scrollLeft;
+    const tabWidth = container.clientWidth;
+    const newActiveTab = Math.round(scrollLeft / tabWidth);
+    
+    if (newActiveTab !== activeTab && newActiveTab >= 0 && newActiveTab <= 4) {
+      setActiveTab(newActiveTab);
+    }
+  }, [activeTab, isDragging]);
+  
+  // Scroll to tab programmatically
+  const scrollToTab = useCallback((tabIndex: number) => {
+    if (!scrollRef.current) return;
+    
+    const container = scrollRef.current;
+    const tabWidth = container.clientWidth;
+    container.scrollTo({
+      left: tabIndex * tabWidth,
+      behavior: 'smooth'
+    });
+    setActiveTab(tabIndex);
+  }, []);
+  
+  const tabs = [
+    { id: 'info', label: 'Info', icon: '📊' },
+    { id: 'buy', label: 'Buy', icon: '🛒' },
+    { id: 'shield', label: 'Shield', icon: '🛡️' },
+    { id: 'sell', label: 'Sell', icon: '💰' },
+    { id: 'steal', label: 'Steal', icon: '⚔️' }
+  ];
 
   return (
     <>
@@ -210,16 +287,27 @@ export function PropertyModal({ propertyId, onClose }: PropertyModalProps) {
           className={`
             bg-gradient-to-br from-purple-950/95 via-purple-900/95 to-purple-950/95 
             backdrop-blur-xl rounded-2xl border-2 border-purple-500/30 
-            shadow-2xl shadow-purple-500/20 overflow-hidden
+            shadow-2xl shadow-purple-500/20 overflow-hidden transition-transform duration-200
             ${isMobile 
               ? 'w-full h-full max-h-[100dvh] flex flex-col' 
               : 'max-w-2xl w-full max-h-[90vh]'
             }
           `}
+          style={isMobile ? { transform: `translateY(${dragOffset}px)` } : {}}
           onClick={e => e.stopPropagation()}
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
         >
           {/* Header */}
           <div className="relative bg-gradient-to-r from-purple-900/50 to-purple-800/50 border-b border-purple-500/30 p-3 lg:p-4 flex-shrink-0">
+            {/* Mobile drag handle */}
+            {isMobile && (
+              <div className="flex justify-center mb-2">
+                <div className="w-12 h-1.5 bg-purple-400/60 rounded-full"></div>
+              </div>
+            )}
+            
             <div className="flex justify-between items-start">
               <div>
                 <h2 className="text-lg lg:text-2xl font-black text-purple-100 mb-1">{property.name}</h2>
@@ -232,9 +320,266 @@ export function PropertyModal({ propertyId, onClose }: PropertyModalProps) {
                 <X size={isMobile ? 24 : 20} />
               </button>
             </div>
+            
+            {/* Mobile tab bar */}
+            {isMobile && (
+              <div className="mt-3">
+                <div className="flex justify-between items-center mb-2">
+                  {tabs.map((tab, index) => (
+                    <button
+                      key={tab.id}
+                      onClick={() => scrollToTab(index)}
+                      className={`flex flex-col items-center gap-1 px-2 py-1 rounded-lg transition-all ${
+                        activeTab === index 
+                          ? 'bg-purple-600/30 border border-purple-400/50' 
+                          : 'border border-transparent'
+                      }`}
+                    >
+                      <span className="text-lg">{tab.icon}</span>
+                      <span className={`text-xs font-medium ${
+                        activeTab === index ? 'text-purple-200' : 'text-purple-400'
+                      }`}>
+                        {tab.label}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+                
+                {/* Dot indicators */}
+                <div className="flex justify-center gap-1.5">
+                  {tabs.map((_, index) => (
+                    <div
+                      key={index}
+                      className={`w-1.5 h-1.5 rounded-full transition-all ${
+                        activeTab === index 
+                          ? 'bg-purple-400 scale-125' 
+                          : 'bg-purple-600/50'
+                      }`}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
-          {/* Content - Scrollable */}
+          {/* Content - Scrollable or Swipeable */}
+          {isMobile ? (
+            <div 
+              ref={scrollRef}
+              className="flex-1 flex overflow-x-auto scroll-smooth snap-x snap-mandatory"
+              style={{ scrollSnapType: 'x mandatory' }}
+              onScroll={handleScroll}
+            >
+              {/* Info Panel */}
+              <div className="min-w-full snap-center flex flex-col p-4 space-y-3 overflow-y-auto">
+                {/* Property Card + Details */}
+                <div className="flex flex-col gap-3">
+                  {/* Property Card */}
+                  <div className="w-full flex justify-center">
+                    <div className="w-[140px] h-[180px]">
+                      <PropertyCard 
+                        propertyId={propertyId} 
+                        onSelect={() => {}} 
+                        modalView={true}
+                        customPropertyCardBackground={gameState.profile.customPropertyCardBackground}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Details */}
+                  <div className="flex flex-col gap-2">
+                    {/* Income Section */}
+                    <div className="bg-purple-950/40 rounded-lg p-2 border border-purple-500/20">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs text-purple-400 uppercase">💰 Daily Income</span>
+                      </div>
+                      
+                      {/* Always show full calculation */}
+                      <div className="grid grid-cols-[1fr_auto_1fr_auto_1fr] items-center gap-1 mt-1 w-full">
+                        <div className="flex flex-col">
+                          <span className="text-[10px] text-purple-400 uppercase">Base</span>
+                          <span className="text-base font-bold text-yellow-300">{baseIncomePerSlot.toLocaleString()}</span>
+                        </div>
+                        <span className="text-purple-400 text-lg px-1">+</span>
+                        <div className="flex flex-col">
+                          <span className={`text-[10px] uppercase ${hasSetBonus ? 'text-green-400' : 'text-gray-500'}`}>
+                            Boost <span className={hasSetBonus ? 'text-green-300' : 'text-gray-500'}>+{(setBonusBps / 100).toFixed(2)}%</span>
+                          </span>
+                          <span className={`text-base font-bold ${hasSetBonus ? 'text-green-400' : 'text-gray-500'}`}>
+                            {Math.floor(baseIncomePerSlot * setBonusBps / 10000).toLocaleString()}
+                          </span>
+                        </div>
+                        <span className="text-purple-400 text-lg px-1">=</span>
+                        <div className={`flex flex-col rounded px-3 py-1 items-end ${hasSetBonus ? 'bg-purple-800/40' : 'bg-gray-800/20'}`}>
+                          <span className="text-[10px] text-purple-300 uppercase">Total</span>
+                          <span className={`text-base font-black ${hasSetBonus ? 'text-green-300' : 'text-gray-400'}`}>
+                            {hasSetBonus ? Math.floor(baseIncomePerSlot * (10000 + setBonusBps) / 10000).toLocaleString() : baseIncomePerSlot.toLocaleString()}
+                          </span>
+                        </div>
+                      </div>
+                      {hasSetBonus && (
+                        <div className="mt-2 px-2 py-1 bg-green-500/20 rounded border border-green-500/30 flex items-center justify-between">
+                          <span className="text-xs text-green-300 font-semibold flex items-center gap-1">
+                            <StarIcon size={10} className="text-green-400" />
+                            Complete Set Bonus Active
+                          </span>
+                          <span className="text-xs text-green-400">+{(setBonusBps / 100).toFixed(2)}% on {setBonusInfo?.boostedSlots || 0} slots</span>
+                        </div>
+                      )}
+                      {!hasSetBonus && (
+                        <div className="mt-2 px-2 py-1 bg-amber-500/10 rounded border border-amber-500/30">
+                          <div className="flex items-center gap-1.5 text-amber-300">
+                            <span className="text-xs flex items-center gap-1">
+                              <StarIcon size={8} className="text-green-400" />
+                              Complete this set for +{(setBonusBps / 100).toFixed(2)}% bonus
+                            </span>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Slots Section */}
+                    <div className="bg-purple-950/40 rounded-lg p-2 border border-purple-500/20">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-xs text-purple-400 uppercase">📊 Slots</span>
+                        <span className="text-sm font-bold text-purple-100">{personalOwned} / {totalSlots}</span>
+                      </div>
+                      
+                      {/* Stacked Bar */}
+                      <div className="h-2 bg-purple-950/50 rounded-full overflow-hidden flex">
+                        {othersOwned > 0 && (
+                          <div 
+                            className="h-full bg-green-500"
+                            style={{ width: `${(othersOwned / totalSlots) * 100}%` }}
+                          />
+                        )}
+                        {personalOwned > 0 && (
+                          <div 
+                            className="h-full bg-purple-500"
+                            style={{ width: `${(personalOwned / totalSlots) * 100}%` }}
+                          />
+                        )}
+                        {availableSlots > 0 && (
+                          <div 
+                            className="h-full bg-white/15"
+                            style={{ width: `${(availableSlots / totalSlots) * 100}%` }}
+                          />
+                        )}
+                      </div>
+                      
+                      {/* Legend */}
+                      <div className="flex gap-2 text-[10px] mt-2">
+                        <div className="flex items-center gap-1">
+                          <div className="w-1.5 h-1.5 bg-green-500 rounded-sm"></div>
+                          <span className="text-purple-300">Others: {othersOwned}</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <div className="w-1.5 h-1.5 bg-purple-500 rounded-sm"></div>
+                          <span className="text-purple-300">You: {personalOwned}</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <div className="w-1.5 h-1.5 bg-white/30 rounded-sm"></div>
+                          <span className="text-purple-300">Available: {availableSlots}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Buy Panel */}
+              <div className="min-w-full snap-center flex flex-col p-4 space-y-3 overflow-y-auto">
+                {!connected ? (
+                  <div className="flex flex-col items-center py-6 space-y-3">
+                    <p className="text-purple-200 mb-1 text-center text-sm">Connect your wallet to interact with this property</p>
+                    <StyledWalletButton variant="modal" />
+                  </div>
+                ) : (
+                  <PropertyActionsBar
+                    propertyId={propertyId}
+                    property={property}
+                    propertyData={propertyData}
+                    balance={balance}
+                    loading={loading}
+                    setLoading={setLoading}
+                    onClose={onClose}
+                    onOpenHelp={setShowHelpModal}
+                    isMobile={true}
+                    forceActiveAction="buy"
+                  />
+                )}
+              </div>
+
+              {/* Shield Panel */}
+              <div className="min-w-full snap-center flex flex-col p-4 space-y-3 overflow-y-auto">
+                {!connected ? (
+                  <div className="flex flex-col items-center py-6 space-y-3">
+                    <p className="text-purple-200 mb-1 text-center text-sm">Connect your wallet to interact with this property</p>
+                    <StyledWalletButton variant="modal" />
+                  </div>
+                ) : (
+                  <PropertyActionsBar
+                    propertyId={propertyId}
+                    property={property}
+                    propertyData={propertyData}
+                    balance={balance}
+                    loading={loading}
+                    setLoading={setLoading}
+                    onClose={onClose}
+                    onOpenHelp={setShowHelpModal}
+                    isMobile={true}
+                    forceActiveAction="shield"
+                  />
+                )}
+              </div>
+
+              {/* Sell Panel */}
+              <div className="min-w-full snap-center flex flex-col p-4 space-y-3 overflow-y-auto">
+                {!connected ? (
+                  <div className="flex flex-col items-center py-6 space-y-3">
+                    <p className="text-purple-200 mb-1 text-center text-sm">Connect your wallet to interact with this property</p>
+                    <StyledWalletButton variant="modal" />
+                  </div>
+                ) : (
+                  <PropertyActionsBar
+                    propertyId={propertyId}
+                    property={property}
+                    propertyData={propertyData}
+                    balance={balance}
+                    loading={loading}
+                    setLoading={setLoading}
+                    onClose={onClose}
+                    onOpenHelp={setShowHelpModal}
+                    isMobile={true}
+                    forceActiveAction="sell"
+                  />
+                )}
+              </div>
+
+              {/* Steal Panel */}
+              <div className="min-w-full snap-center flex flex-col p-4 space-y-3 overflow-y-auto">
+                {!connected ? (
+                  <div className="flex flex-col items-center py-6 space-y-3">
+                    <p className="text-purple-200 mb-1 text-center text-sm">Connect your wallet to interact with this property</p>
+                    <StyledWalletButton variant="modal" />
+                  </div>
+                ) : (
+                  <PropertyActionsBar
+                    propertyId={propertyId}
+                    property={property}
+                    propertyData={propertyData}
+                    balance={balance}
+                    loading={loading}
+                    setLoading={setLoading}
+                    onClose={onClose}
+                    onOpenHelp={setShowHelpModal}
+                    isMobile={true}
+                    forceActiveAction="steal"
+                  />
+                )}
+              </div>
+            </div>
+          ) : (
           <div className={`
             p-3 lg:p-4 space-y-3 overflow-y-auto flex-1
             ${isMobile ? 'pb-safe' : ''}
@@ -379,10 +724,11 @@ export function PropertyModal({ propertyId, onClose }: PropertyModalProps) {
                 setLoading={setLoading}
                 onClose={onClose}
                 onOpenHelp={setShowHelpModal}
-                isMobile={isMobile}
+                isMobile={false}
               />
             )}
           </div>
+          )}
         </div>
       </div>
 

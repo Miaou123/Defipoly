@@ -126,23 +126,8 @@ export async function fetchPlayerData(program: MemeopolyProgram, playerPubkey: P
         return null;
       }
       
-      console.log('✅ Account found! Data length:', accountInfo.data.length, 'bytes');
-      console.log('🔍 Account owner:', accountInfo.owner.toString());
-      console.log('🔍 Expected owner (program):', PROGRAM_ID.toString());
-      
-      // Log first 100 bytes as hex for debugging
-      console.log('🔍 First 100 bytes:', accountInfo.data.slice(0, 100).toString('hex'));
-      
       try {
         const playerAccount = deserializePlayer(accountInfo.data);
-        console.log('✅ Deserialization successful!');
-        console.log('🔍 Player data:', {
-          owner: playerAccount.owner.toString(),
-          totalBaseDailyIncome: playerAccount.totalBaseDailyIncome.toString(),
-          lastClaimTimestamp: playerAccount.lastClaimTimestamp.toString(),
-          pendingRewards: playerAccount.pendingRewards.toString(),
-          totalSlotsOwned: playerAccount.totalSlotsOwned,
-        });
         return playerAccount;
       } catch (deserializeError) {
         console.error('❌ Deserialization FAILED:', deserializeError);

@@ -3,7 +3,6 @@
 import { useMemo } from 'react';
 import { ConnectionProvider, WalletProvider } from '@solana/wallet-adapter-react';
 import { WalletModalProvider } from '@solana/wallet-adapter-react-ui';
-import { PhantomWalletAdapter } from '@solana/wallet-adapter-wallets';
 import { clusterApiUrl } from '@solana/web3.js';
 
 require('@solana/wallet-adapter-react-ui/styles.css');
@@ -14,7 +13,8 @@ export function WalletContextProvider({ children }: { children: React.ReactNode 
     return process.env['NEXT_PUBLIC_RPC_URL'] || clusterApiUrl('devnet');
   }, []);
 
-  const wallets = useMemo(() => [new PhantomWalletAdapter()], []);
+  // Phantom wallet auto-registers now, so we use an empty array
+  const wallets = useMemo(() => [], []);
 
   return (
     <ConnectionProvider endpoint={endpoint}>

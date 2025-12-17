@@ -1437,6 +1437,46 @@ export const SpinIcon: React.FC<IconProps> = ({ className = '', size = 24 }) => 
   </svg>
 );
 
+// ◀️ Chevron Left Icon
+export const ChevronLeftIcon: React.FC<IconProps> = ({ className = '', size = 24 }) => (
+  <svg 
+    width={size} 
+    height={size} 
+    viewBox="0 0 24 24" 
+    fill="none" 
+    xmlns="http://www.w3.org/2000/svg"
+    className={className}
+  >
+    <path 
+      d="M15 18l-6-6 6-6" 
+      stroke="currentColor" 
+      strokeWidth="2" 
+      strokeLinecap="round" 
+      strokeLinejoin="round"
+    />
+  </svg>
+);
+
+// ▶️ Chevron Right Icon
+export const ChevronRightIcon: React.FC<IconProps> = ({ className = '', size = 24 }) => (
+  <svg 
+    width={size} 
+    height={size} 
+    viewBox="0 0 24 24" 
+    fill="none" 
+    xmlns="http://www.w3.org/2000/svg"
+    className={className}
+  >
+    <path 
+      d="M9 18l6-6-6-6" 
+      stroke="currentColor" 
+      strokeWidth="2" 
+      strokeLinecap="round" 
+      strokeLinejoin="round"
+    />
+  </svg>
+);
+
 // Hexagon Badge with House for leaderboard rankings
 interface HexagonBadgeProps {
   rank: 1 | 2 | 3;
@@ -1558,5 +1598,7 @@ export default {
   SpinIcon,
   ACTION_ICONS,
   getActionIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
 
 };

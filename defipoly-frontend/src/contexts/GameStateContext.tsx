@@ -225,6 +225,50 @@ export function GameStateProvider({ children }: { children: React.ReactNode }) {
       const response = await fetch(`${API_BASE_URL}/api/game-state/${publicKey.toString()}`);
       
       if (!response.ok) {
+        // Handle 404 gracefully (new user, no game state yet)
+        if (response.status === 404) {
+          // Use default game state for new users
+          setGameState({
+            ownerships: [],
+            cooldowns: { sets: [], steals: [] },
+            stats: {
+              walletAddress: publicKey.toString(),
+              totalActions: 0,
+              propertiesBought: 0,
+              propertiesSold: 0,
+              successfulSteals: 0,
+              failedSteals: 0,
+              rewardsClaimed: 0,
+              shieldsUsed: 0,
+              totalSpent: 0,
+              totalEarned: 0,
+              totalSlotsOwned: 0,
+              dailyIncome: 0,
+              completeSets: 0,
+              leaderboardScore: 0,
+              lastActionTime: null,
+            },
+            profile: {
+              walletAddress: publicKey.toString(),
+              username: null,
+              profilePicture: null,
+              cornerSquareStyle: 'property',
+              boardTheme: 'dark',
+              propertyCardTheme: 'dark',
+              customBoardBackground: null,
+              customPropertyCardBackground: null,
+              customSceneBackground: null,
+              boardPresetId: null,
+              tilePresetId: null,
+              themeCategory: null,
+              writingStyle: 'light',
+              updatedAt: null,
+            },
+          });
+          setError(null);
+          return;
+        }
+        
         throw new Error(`Failed to fetch game state: ${response.statusText}`);
       }
 
@@ -252,7 +296,10 @@ export function GameStateProvider({ children }: { children: React.ReactNode }) {
       });
 
     } catch (err) {
-      console.error('Error fetching game state:', err);
+      // Only log unexpected errors in development mode
+      if (process.env.NODE_ENV === 'development') {
+        console.debug('Error fetching game state:', err);
+      }
       setError(err instanceof Error ? err.message : 'Failed to fetch game state');
     } finally {
       setLoading(false);
@@ -276,8 +323,11 @@ export function GameStateProvider({ children }: { children: React.ReactNode }) {
   
       if (!response.ok) {
         const errorText = await response.text();
-        console.error('GameStateContext updateProfile failed:', response.status, errorText);
-        console.error('Failed updates:', allUpdates);
+        // Only log unexpected errors in development mode
+        if (process.env.NODE_ENV === 'development') {
+          console.debug('GameStateContext updateProfile failed:', response.status, errorText);
+          console.debug('Failed updates:', allUpdates);
+        }
         throw new Error(`Failed to update profile: ${response.status} - ${errorText}`);
       }
   
@@ -285,7 +335,10 @@ export function GameStateProvider({ children }: { children: React.ReactNode }) {
       pendingUpdatesRef.current = {};
       return true;
     } catch (error) {
-      console.error('Error updating profile:', error);
+      // Only log unexpected errors in development mode
+      if (process.env.NODE_ENV === 'development') {
+        console.debug('Error updating profile:', error);
+      }
       return false;
     }
   }, [publicKey, isAuthenticated]);
@@ -330,7 +383,12 @@ export function GameStateProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (publicKey && !isAuthenticated) {
-      login().catch(console.error);
+      login().catch((error) => {
+        // Only log auth errors in development mode
+        if (process.env.NODE_ENV === 'development') {
+          console.debug('Auth login error:', error);
+        }
+      });
     }
   }, [publicKey, isAuthenticated, login]);
 

@@ -1,24 +1,18 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { PROPERTIES, getSetBonus } from '@/utils/constants';
 import { getSetName, isSetComplete, getMinSlots } from '@/utils/gameHelpers';
 import { useDefipoly } from '@/contexts/DefipolyContext';
+import { useGameState } from '@/contexts/GameStateContext';
 import type { PropertyOwnership } from '@/types/accounts';
 import { Shield, ChevronDown, ChevronRight, Award, Zap, Wallet } from 'lucide-react';
 import { ShieldAllModal } from './ShieldAllModal';
 import { BuildingIcon, ChartUpIcon, LoadingIcon } from './icons/UIIcons';
-import { useRewards } from '@/contexts/RewardsContext';
-import { useGameState } from '@/contexts/GameStateContext';
 
 interface OwnedProperty extends PropertyOwnership {
   propertyInfo: typeof PROPERTIES[0];
-}
-
-interface PortfolioProps {
-  onSelectProperty: (propertyId: number) => void;
-  scaleFactor?: number;
 }
 
 // Helper function to calculate daily income from price and yieldBps
@@ -26,22 +20,15 @@ const calculateDailyIncome = (price: number, yieldBps: number): number => {
   return Math.floor((price * yieldBps) / 10000);
 };
 
-export function Portfolio({ onSelectProperty, scaleFactor = 1 }: PortfolioProps) {
-  // Scaled sizes
-  const titleSize = Math.max(12, Math.round(18 * scaleFactor));
-  const subtitleSize = Math.max(8, Math.round(12 * scaleFactor));
-  const textSize = Math.max(9, Math.round(12 * scaleFactor));
-  const padding = Math.max(8, Math.round(16 * scaleFactor));
-  const headerIconSize = Math.max(14, Math.round(16 * scaleFactor));
-  const buttonIconSize = Math.max(12, Math.round(16 * scaleFactor));
-  const badgeIconSize = Math.max(9, Math.round(12 * scaleFactor));
-  const smallTextSize = Math.max(8, Math.round(10 * scaleFactor));
-  const balanceCardPadding = Math.max(6, Math.round(12 * scaleFactor));
-  const rowGap = Math.max(6, Math.round(12 * scaleFactor));
+interface PortfolioProps {
+  onSelectProperty: (propertyId: number) => void;
+  scaleFactor?: number;
+  isMobile?: boolean;
+}
+
+export function Portfolio({ onSelectProperty, scaleFactor = 1, isMobile = false }: PortfolioProps) {
   const { publicKey, connected } = useWallet();
-  const { program, tokenBalance: balance, loading: balanceLoading } = useDefipoly(); // Still need program for transactions
-  // Use backend calculated daily income with set bonuses from GameState
-  
+  const { tokenBalance: balance, loading: balanceLoading } = useDefipoly();
   const { ownerships, loading, stats } = useGameState();
   
   const [ownedProperties, setOwnedProperties] = useState<OwnedProperty[]>([]);
@@ -58,8 +45,7 @@ export function Portfolio({ onSelectProperty, scaleFactor = 1 }: PortfolioProps)
     return () => clearInterval(interval);
   }, []);
 
-  // ✅ NEW: Convert API ownerships to OwnedProperty format
-  // This replaces the old fetchPortfolio loop that made 22 RPC calls!
+  // Convert API ownerships to OwnedProperty format
   useEffect(() => {
     if (!connected) {
       setOwnedProperties([]);
@@ -154,6 +140,18 @@ export function Portfolio({ onSelectProperty, scaleFactor = 1 }: PortfolioProps)
       bonusPercent: setBonus?.percent || 40
     };
   };
+  
+  // Scaled sizes
+  const titleSize = Math.max(12, Math.round(18 * scaleFactor));
+  const subtitleSize = Math.max(8, Math.round(12 * scaleFactor));
+  const textSize = Math.max(9, Math.round(12 * scaleFactor));
+  const padding = Math.max(8, Math.round(16 * scaleFactor));
+  const headerIconSize = Math.max(14, Math.round(16 * scaleFactor));
+  const buttonIconSize = Math.max(12, Math.round(16 * scaleFactor));
+  const badgeIconSize = Math.max(9, Math.round(12 * scaleFactor));
+  const smallTextSize = Math.max(8, Math.round(10 * scaleFactor));
+  const balanceCardPadding = Math.max(6, Math.round(12 * scaleFactor));
+  const rowGap = Math.max(6, Math.round(12 * scaleFactor));
 
   // Calculate shield cost for a property
   const calculateShieldCost = (property: typeof PROPERTIES[0], slots: number): number => {
@@ -224,55 +222,57 @@ export function Portfolio({ onSelectProperty, scaleFactor = 1 }: PortfolioProps)
 
   return (
     <>
-      <div className="bg-purple-900/8 backdrop-blur-xl rounded-2xl border border-purple-500/20 h-full overflow-hidden flex flex-col">
-        {/* Header + Balance + Shield Button - Sticky */}
-        <div style={{ padding: `${Math.round(padding * 1.5)}px`, paddingBottom: `${padding}px`, gap: `${padding}px`, display: 'flex', flexDirection: 'column' }}>
-          {/* Header */}
-          <div className="flex justify-between items-center">
-            <h2 className="font-orbitron font-bold text-white" style={{ fontSize: `${titleSize}px` }}>My Portfolio</h2>
-            <span className="text-purple-400" style={{ fontSize: `${subtitleSize}px` }}>{totalSlots} slots</span>
-          </div>
+      <div className={`h-full overflow-hidden flex flex-col ${isMobile ? '' : 'bg-purple-900/8 backdrop-blur-xl rounded-2xl border border-purple-500/20'}`}>
+        {/* Header + Balance + Shield Button - Sticky - Hidden on mobile */}
+        {!isMobile && (
+          <div style={{ padding: `${Math.round(padding * 1.5)}px`, paddingBottom: `${padding}px`, gap: `${padding}px`, display: 'flex', flexDirection: 'column' }}>
+            {/* Header */}
+            <div className="flex justify-between items-center">
+              <h2 className="font-orbitron font-bold text-white" style={{ fontSize: `${titleSize}px` }}>My Portfolio</h2>
+              <span className="text-purple-400" style={{ fontSize: `${subtitleSize}px` }}>{totalSlots} slots</span>
+            </div>
 
-          {/* Token Balance Card - Compact */}
-          {connected && (
-            <div className="bg-gradient-to-br from-purple-800/40 to-purple-900/40 backdrop-blur-sm rounded-lg border border-purple-500/30" style={{ padding: `${balanceCardPadding}px` }}>
-              <div className="flex items-center justify-between" style={{ gap: `${balanceCardPadding}px` }}>
-                <div className="flex items-center" style={{ gap: `${Math.round(8 * scaleFactor)}px` }}>
-                  <div className="rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center flex-shrink-0" style={{ width: `${Math.round(28 * scaleFactor)}px`, height: `${Math.round(28 * scaleFactor)}px` }}>
-                    <div style={{ width: headerIconSize, height: headerIconSize }}>
-                      <Wallet style={{ width: '100%', height: '100%' }} className="text-white" />
+            {/* Token Balance Card - Compact */}
+            {connected && (
+              <div className="bg-gradient-to-br from-purple-800/40 to-purple-900/40 backdrop-blur-sm rounded-lg border border-purple-500/30" style={{ padding: `${balanceCardPadding}px` }}>
+                <div className="flex items-center justify-between" style={{ gap: `${balanceCardPadding}px` }}>
+                  <div className="flex items-center" style={{ gap: `${Math.round(8 * scaleFactor)}px` }}>
+                    <div className="rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center flex-shrink-0" style={{ width: `${Math.round(28 * scaleFactor)}px`, height: `${Math.round(28 * scaleFactor)}px` }}>
+                      <div style={{ width: headerIconSize, height: headerIconSize }}>
+                        <Wallet style={{ width: '100%', height: '100%' }} className="text-white" />
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-purple-300 font-semibold uppercase tracking-wide" style={{ fontSize: `${smallTextSize}px` }}>
+                        Balance
+                      </div>
+                      <div className="font-black text-white leading-tight" style={{ fontSize: `${Math.round(18 * scaleFactor)}px` }}>
+                        {balanceLoading ? (
+                          <span className="animate-pulse">...</span>
+                        ) : (
+                          balance.toLocaleString(undefined, { maximumFractionDigits: 0 })
+                        )}
+                      </div>
                     </div>
                   </div>
-                  <div>
-                    <div className="text-purple-300 font-semibold uppercase tracking-wide" style={{ fontSize: `${smallTextSize}px` }}>
-                      Balance
+                  <div className="text-right">
+                    <div className="text-purple-400 uppercase tracking-wide" style={{ fontSize: `${smallTextSize}px` }}>Daily Rewards</div>
+                    <div className="font-bold text-green-400 flex items-center" style={{ fontSize: `${subtitleSize}px`, gap: `${Math.round(4 * scaleFactor)}px` }}>
+                      <ChartUpIcon size={14} className="text-green-400" />
+                      <span>+{stats.dailyIncome > 0 ? stats.dailyIncome.toLocaleString() : '0'}/day</span>
                     </div>
-                    <div className="font-black text-white leading-tight" style={{ fontSize: `${Math.round(18 * scaleFactor)}px` }}>
-                      {balanceLoading ? (
-                        <span className="animate-pulse">...</span>
-                      ) : (
-                        balance.toLocaleString(undefined, { maximumFractionDigits: 0 })
-                      )}
-                    </div>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <div className="text-purple-400 uppercase tracking-wide" style={{ fontSize: `${smallTextSize}px` }}>Daily Rewards</div>
-                  <div className="font-bold text-green-400 flex items-center" style={{ fontSize: `${subtitleSize}px`, gap: `${Math.round(4 * scaleFactor)}px` }}>
-                    <ChartUpIcon size={14} className="text-green-400" />
-                    <span>+{stats.dailyIncome > 0 ? stats.dailyIncome.toLocaleString() : '0'}/day</span>
                   </div>
                 </div>
               </div>
-            </div>
-          )}
-          
-          {/* Shield All Button */}
-          {renderShieldAllButton()}
-        </div>
+            )}
+            
+            {/* Shield All Button */}
+            {renderShieldAllButton()}
+          </div>
+        )}
 
         {/* Scrollable Content */}
-        <div className="flex-1 overflow-y-auto" style={{ padding: `0 ${Math.round(padding * 1.5)}px ${Math.round(padding * 1.5)}px` }}>
+        <div className="flex-1 overflow-y-auto" style={{ padding: isMobile ? `${padding}px` : `0 ${Math.round(padding * 1.5)}px ${Math.round(padding * 1.5)}px` }}>
         {/* Loading State */}
         {loading && ownedProperties.length === 0 && (
           <div className="text-center" style={{ padding: `${padding * 3}px 0` }}>

@@ -40,7 +40,7 @@ export function WebSocketProvider({ children }: { children: React.ReactNode }) {
     const newSocket = io(socketUrl, {
       transports: ['websocket', 'polling'],
       reconnection: true,
-      reconnectionAttempts: Infinity,
+      reconnectionAttempts: 5,
       reconnectionDelay: 1000,
       reconnectionDelayMax: 5000,
     });
@@ -62,7 +62,10 @@ export function WebSocketProvider({ children }: { children: React.ReactNode }) {
     });
 
     newSocket.on('connect_error', (error) => {
-      console.error('❌ WebSocket connection error:', error.message);
+      // Only log in development mode, handle silently in production
+      if (process.env.NODE_ENV === 'development') {
+        console.debug('WebSocket connection error:', error.message);
+      }
     });
 
     return () => {

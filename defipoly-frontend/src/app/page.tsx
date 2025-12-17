@@ -8,6 +8,7 @@ import { PropertyModal } from '@/components/property-modal';
 import { FloatingCoinsModal } from '@/components/FloatingCoinsModal';
 import { ProfileWallet } from '@/components/ProfileWallet';
 import { MobileLayout } from '@/components/MobileLayout';
+import { ClientOnly } from '@/components/ClientOnly';
 import { useState, useEffect, useRef } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { useGameState } from '@/contexts/GameStateContext';
@@ -36,6 +37,7 @@ export default function Home() {
   const [themeCategory, setThemeCategory] = useState<'dark' | 'medium' | 'light' | null>(null);
   const [writingStyle, setWritingStyle] = useState<'light' | 'dark'>('light');
   const [isMobile, setIsMobile] = useState(false);
+  const [isClient, setIsClient] = useState(false);
   const [sideColumnWidth, setSideColumnWidth] = useState(400);
   
   // Showcase mode state
@@ -46,8 +48,16 @@ export default function Home() {
   // Calculate scaleFactor based on side column width (from 0.7 to 1.0)
   const scaleFactor = Math.max(0.7, Math.min(1.0, sideColumnWidth / 400));
 
+  // Mark as client-side after mount
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+
   // Check for mobile and calculate column width
   useEffect(() => {
+    // Only run on client side to prevent hydration mismatch
+    if (!isClient) return;
+
     const updateLayout = () => {
       const width = window.innerWidth;
       setIsMobile(width < 1024);
@@ -67,7 +77,7 @@ export default function Home() {
     updateLayout();
     window.addEventListener('resize', updateLayout);
     return () => window.removeEventListener('resize', updateLayout);
-  }, []);
+  }, [isClient]);
 
   // Load profile picture
   useEffect(() => {
@@ -199,12 +209,13 @@ export default function Home() {
     setCurrentShowcaseScene(null);
   };
 
-  // Mobile Layout
-  if (isMobile) {
-    return (
-      <>
+  return (
+    <ClientOnly fallback={<div className="h-screen bg-black" />}>
+      {isMobile ? (
         <MobileLayout
           onSelectProperty={setSelectedProperty}
+          selectedProperty={selectedProperty}
+          onCloseProperty={() => setSelectedProperty(null)}
           profilePicture={profilePicture}
           cornerSquareStyle={cornerSquareStyle}
           customBoardBackground={customBoardBackground}
@@ -212,112 +223,103 @@ export default function Home() {
           customSceneBackground={customSceneBackground}
           themeCategory={themeCategory}
         />
-        {selectedProperty !== null && (
+      ) : (
+        <div className="h-screen overflow-hidden relative">
+          {/* Main grid layout - fixed height, no scrolling */}
+          <div 
+            className="grid gap-2 p-4 h-full w-full mx-auto max-w-[1920px]"
+            style={{
+              gridTemplateColumns: `${sideColumnWidth}px 1fr ${sideColumnWidth}px`,
+            }}
+          >
+          {/* LEFT COLUMN: Logo + Portfolio */}
+          <div className="flex flex-col gap-2 overflow-hidden min-h-0">
+            {/* Logo at top of left column */}
+            <a 
+              href="/"
+              className="flex items-center gap-3 rounded-xl px-4 flex-shrink-0 hover:opacity-80 transition-opacity cursor-pointer"
+            >
+              <img 
+                src="/logo.svg" 
+                alt="Defipoly Logo" 
+                className="w-10 h-10 object-contain"
+              />
+              <h1 className="font-orbitron text-2xl font-bold text-white">
+                Defipoly
+              </h1>
+            </a>
+            
+            {/* Test Tokens Claim (only shows for whitelisted wallets) */}
+            <div className="flex-shrink-0">
+              <ClaimTestTokens />
+            </div>
+            
+            <div className="flex-1 overflow-hidden min-h-0">
+              <Portfolio onSelectProperty={setSelectedProperty} scaleFactor={scaleFactor} />
+            </div>
+          </div>
+            {/* CENTER: Board */}
+            <div className="flex items-center justify-center overflow-hidden">
+              <Board 
+                onSelectProperty={setSelectedProperty} 
+                onCoinClick={() => setShowCoinModal(true)}
+                profilePicture={profilePicture} 
+                cornerSquareStyle={cornerSquareStyle} 
+                customBoardBackground={gameState.profile.customBoardBackground || customBoardBackground}
+                custom3DPropertyTiles={gameState.profile.customPropertyCardBackground || customPropertyCardBackground} 
+                customSceneBackground={gameState.profile.customSceneBackground || customSceneBackground}
+                boardPresetId={gameState.profile.boardPresetId}
+                tilePresetId={gameState.profile.tilePresetId}
+                themeCategory={themeCategory}
+                writingStyle={writingStyle}
+                showcaseMode={showcaseMode}
+                showcaseScene={currentShowcaseScene}
+                onExitShowcase={handleExitShowcase}
+                onStartShowcase={handleStartShowcase}
+              />
+            </div>
+            
+            {/* RIGHT COLUMN: Profile/Wallet + Leaderboard + Live Feed */}
+            <div className="flex flex-col gap-2 overflow-hidden min-h-0">
+              {/* Profile & Wallet at top of right column */}
+              <div className="flex-shrink-0">
+                <ProfileWallet scaleFactor={scaleFactor} />
+              </div>
+              {/* Fixed height container - no scrolling */}
+              <div className="flex-1 flex flex-col gap-2 overflow-hidden min-h-0">
+                {/* Leaderboard - 45% of space */}
+                <div className="h-[45%] min-h-0 overflow-hidden">
+                  <Leaderboard scaleFactor={scaleFactor} />
+                </div>
+                
+                {/* Live Feed - 55% of space */}
+                <div className="h-[55%] min-h-0 overflow-hidden">
+                  <LiveFeed scaleFactor={scaleFactor} />
+                </div>
+              </div>
+            </div>
+          </div>
+
           <PropertyModal 
             propertyId={selectedProperty}
             onClose={() => setSelectedProperty(null)}
           />
-        )}
-      </>
-    );
-  }
-
-  // Desktop Layout
-  return (
-    <div className="h-screen overflow-hidden relative">
-      {/* Main grid layout - fixed height, no scrolling */}
-      <div 
-        className="grid gap-2 p-4 h-full w-full mx-auto max-w-[1920px]"
-        style={{
-          gridTemplateColumns: `${sideColumnWidth}px 1fr ${sideColumnWidth}px`,
-        }}
-      >
-      {/* LEFT COLUMN: Logo + Portfolio */}
-      <div className="flex flex-col gap-2 overflow-hidden min-h-0">
-        {/* Logo at top of left column */}
-        <a 
-          href="/"
-          className="flex items-center gap-3 rounded-xl px-4 flex-shrink-0 hover:opacity-80 transition-opacity cursor-pointer"
-        >
-          <img 
-            src="/logo.svg" 
-            alt="Defipoly Logo" 
-            className="w-10 h-10 object-contain"
+          
+          <FloatingCoinsModal
+            isOpen={showCoinModal}
+            onClose={() => setShowCoinModal(false)}
+            rewardsAmount={unclaimedRewards || 0}
           />
-          <h1 className="font-orbitron text-2xl font-bold text-white">
-            Defipoly
-          </h1>
-        </a>
-        
-        {/* Test Tokens Claim (only shows for whitelisted wallets) */}
-        <div className="flex-shrink-0">
-          <ClaimTestTokens />
-        </div>
-        
-        <div className="flex-1 overflow-hidden min-h-0">
-          <Portfolio onSelectProperty={setSelectedProperty} scaleFactor={scaleFactor} />
-        </div>
-      </div>
-        {/* CENTER: Board */}
-        <div className="flex items-center justify-center overflow-hidden">
-          <Board 
-            onSelectProperty={setSelectedProperty} 
-            onCoinClick={() => setShowCoinModal(true)}
-            profilePicture={profilePicture} 
-            cornerSquareStyle={cornerSquareStyle} 
-            customBoardBackground={gameState.profile.customBoardBackground || customBoardBackground}
-            custom3DPropertyTiles={gameState.profile.customPropertyCardBackground || customPropertyCardBackground} 
-            customSceneBackground={gameState.profile.customSceneBackground || customSceneBackground}
-            boardPresetId={gameState.profile.boardPresetId}
-            tilePresetId={gameState.profile.tilePresetId}
-            themeCategory={themeCategory}
-            writingStyle={writingStyle}
-            showcaseMode={showcaseMode}
-            showcaseScene={currentShowcaseScene}
-            onExitShowcase={handleExitShowcase}
-            onStartShowcase={handleStartShowcase}
-          />
-        </div>
-        
-        {/* RIGHT COLUMN: Profile/Wallet + Leaderboard + Live Feed */}
-        <div className="flex flex-col gap-2 overflow-hidden min-h-0">
-          {/* Profile & Wallet at top of right column */}
-          <div className="flex-shrink-0">
-            <ProfileWallet scaleFactor={scaleFactor} />
-          </div>
-          {/* Fixed height container - no scrolling */}
-          <div className="flex-1 flex flex-col gap-2 overflow-hidden min-h-0">
-            {/* Leaderboard - 45% of space */}
-            <div className="h-[45%] min-h-0 overflow-hidden">
-              <Leaderboard scaleFactor={scaleFactor} />
-            </div>
-            
-            {/* Live Feed - 55% of space */}
-            <div className="h-[55%] min-h-0 overflow-hidden">
-              <LiveFeed scaleFactor={scaleFactor} />
-            </div>
-          </div>
-        </div>
-      </div>
 
-      <PropertyModal 
-        propertyId={selectedProperty}
-        onClose={() => setSelectedProperty(null)}
-      />
-      
-      <FloatingCoinsModal
-        isOpen={showCoinModal}
-        onClose={() => setShowCoinModal(false)}
-        rewardsAmount={unclaimedRewards || 0}
-      />
-
-      {/* Showcase Overlay */}
-      {showcaseMode && currentShowcaseScene && (
-        <ShowcaseOverlay 
-          currentScene={currentShowcaseScene} 
-          onExit={handleExitShowcase} 
-        />
+          {/* Showcase Overlay */}
+          {showcaseMode && currentShowcaseScene && (
+            <ShowcaseOverlay 
+              currentScene={currentShowcaseScene} 
+              onExit={handleExitShowcase} 
+            />
+          )}
+        </div>
       )}
-    </div>
+    </ClientOnly>
   );
 }

@@ -33,9 +33,10 @@ import { API_BASE_URL, getImageUrl } from '@/utils/config';
 
 interface LeaderboardProps {
   scaleFactor?: number;
+  isMobile?: boolean;
 }
 
-export function Leaderboard({ scaleFactor = 1 }: LeaderboardProps) {
+export function Leaderboard({ scaleFactor = 1, isMobile = false }: LeaderboardProps) {
   const { socket, connected } = useWebSocket(); 
   const [leaderboardData, setLeaderboardData] = useState<LeaderboardData | null>(null);
   const [profiles, setProfiles] = useState<Record<string, ProfileData>>({});
@@ -276,24 +277,26 @@ export function Leaderboard({ scaleFactor = 1 }: LeaderboardProps) {
 
   return (
     <>
-      <div className="bg-purple-900/8 backdrop-blur-xl rounded-2xl border border-purple-500/20 h-full overflow-hidden flex flex-col">
-        {/* Header */}
-        <div style={{ padding: `${headerPadding}px`, paddingBottom: `${headerPadding / 2}px` }}>
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="flex items-center border-b border-purple-500/20" style={{ gap: `${rowGap}px`, paddingBottom: `${rowPaddingY}px` }}>
-                <TrophyIcon size={headerIconSize} className="text-yellow-400" />
-                <h2 className="font-orbitron font-bold text-white" style={{ fontSize: `${titleSize}px` }}>
-                  Leaderboard
-                </h2>
+      <div className={`h-full overflow-hidden flex flex-col ${isMobile ? '' : 'bg-purple-900/8 backdrop-blur-xl rounded-2xl border border-purple-500/20'}`}>
+        {/* Header - Hidden on mobile */}
+        {!isMobile && (
+          <div style={{ padding: `${headerPadding}px`, paddingBottom: `${headerPadding / 2}px` }}>
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="flex items-center border-b border-purple-500/20" style={{ gap: `${rowGap}px`, paddingBottom: `${rowPaddingY}px` }}>
+                  <TrophyIcon size={headerIconSize} className="text-yellow-400" />
+                  <h2 className="font-orbitron font-bold text-white" style={{ fontSize: `${titleSize}px` }}>
+                    Leaderboard
+                  </h2>
+                </div>
+                <p className="text-purple-400" style={{ fontSize: `${subtitleSize}px`, marginTop: `${Math.round(4 * scaleFactor)}px` }}>Click on a player to see their board</p>
               </div>
-              <p className="text-purple-400" style={{ fontSize: `${subtitleSize}px`, marginTop: `${Math.round(4 * scaleFactor)}px` }}>Click on a player to see their board</p>
             </div>
           </div>
-        </div>
+        )}
 
         {/* Scrollable Content */}
-        <div className="flex-1 overflow-y-auto" style={{ padding: `0 ${headerPadding}px ${headerPadding}px` }}>
+        <div className="flex-1 overflow-y-auto" style={{ padding: isMobile ? `${headerPadding}px` : `0 ${headerPadding}px ${headerPadding}px` }}>
         {loading ? (
             <div className="text-center" style={{ padding: `${headerPadding * 2}px 0` }}>
               <div style={{ marginBottom: `${Math.round(4 * scaleFactor)}px` }}>

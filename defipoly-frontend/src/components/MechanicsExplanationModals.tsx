@@ -76,9 +76,14 @@ export function BuyPropertyExplanationModal({ onClose, onProceed }: BuyPropertyE
               <Lock className="w-5 h-5 text-amber-400 mt-1 flex-shrink-0" />
               <div>
                 <h3 className="font-bold text-amber-200 mb-2">Set Cooldown</h3>
-                <p className="text-amber-200 text-sm leading-relaxed">
+                <p className="text-amber-200 text-sm leading-relaxed mb-2">
                   After purchasing from a set, there's a cooldown before you can buy a <span className="font-bold">different property</span> in that set. You can still buy more of the same property!
                 </p>
+                <div className="bg-blue-900/30 rounded-lg px-3 py-2 border border-blue-500/20">
+                  <p className="text-blue-200 text-xs">
+                    💡 <span className="font-semibold">Pro tip:</span> Stealing bypasses this cooldown - you can steal from any property regardless of set cooldowns!
+                  </p>
+                </div>
               </div>
             </div>
           </div>
@@ -154,9 +159,6 @@ export function SellPropertyExplanationModal({ onClose, onProceed }: SellPropert
                 <h3 className="font-bold text-orange-100 mb-2">Sell Value</h3>
                 <p className="text-orange-200 text-sm leading-relaxed mb-2">
                   Base sell value is <span className="font-bold text-orange-300">15%</span> of the buy price, increasing up to <span className="font-bold text-orange-300">30%</span> after holding for 14 days.
-                </p>
-                <p className="text-orange-300 text-xs leading-relaxed bg-orange-900/30 rounded p-2">
-                  <span className="font-bold">Tip:</span> Hold your properties longer for better returns when selling!
                 </p>
               </div>
             </div>
@@ -321,21 +323,12 @@ export function StealPropertyExplanationModal({ onClose, onProceed }: StealPrope
             <div className="flex items-start gap-3">
               <Target className="w-5 h-5 text-red-400 mt-1 flex-shrink-0" />
               <div>
-                <h3 className="font-bold text-red-100 mb-2">How It Works</h3>
-                <p className="text-red-200 text-sm leading-relaxed">
+                <h3 className="font-bold text-red-100 mb-2">How It Works & Cost</h3>
+                <p className="text-red-200 text-sm leading-relaxed mb-3">
                   Attempt to steal <span className="font-bold text-red-300">1 slot</span> from a random unshielded owner of the property. Success rate is <span className="font-bold text-red-300">33%</span>.
                 </p>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-red-900/30 rounded-xl p-4 border border-red-500/20">
-            <div className="flex items-start gap-3">
-              <Coins className="w-5 h-5 text-red-400 mt-1 flex-shrink-0" />
-              <div>
-                <h3 className="font-bold text-red-100 mb-2">Cost & Risk</h3>
                 <p className="text-red-200 text-sm leading-relaxed">
-                  Each steal attempt costs <span className="font-bold text-red-300">50%</span> of the property's slot price. <span className="font-bold text-red-300">You pay this cost regardless of success or failure.</span>
+                  Each attempt costs <span className="font-bold text-red-300">50%</span> of the property's slot price. <span className="font-bold text-red-300">You pay this cost regardless of success or failure.</span>
                 </p>
               </div>
             </div>
@@ -348,6 +341,18 @@ export function StealPropertyExplanationModal({ onClose, onProceed }: StealPrope
                 <h3 className="font-bold text-amber-200 mb-2">Cooldown</h3>
                 <p className="text-amber-200 text-sm leading-relaxed">
                   After a steal attempt, there's a cooldown before you can steal again from the same property.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-yellow-900/30 rounded-xl p-4 border-2 border-yellow-500/40">
+            <div className="flex items-start gap-3">
+              <Zap className="w-5 h-5 text-yellow-300 mt-1 flex-shrink-0" />
+              <div>
+                <h3 className="font-bold text-yellow-200 mb-2">⚡ Important Strategy</h3>
+                <p className="text-yellow-200 text-sm leading-relaxed">
+                  <span className="font-bold text-yellow-300">Stealing bypasses buy cooldowns!</span> If you can't buy more slots due to cooldown restrictions, you can steal to complete property sets faster.
                 </p>
               </div>
             </div>

@@ -169,7 +169,6 @@ export function RewardsProvider({ children }: { children: React.ReactNode }) {
     const handleVisibility = async () => {
       if (!document.hidden && publicKey && program && initialFetchDone) {
         // Tab became visible - refresh from blockchain to get accurate value
-        console.log('🔊 Tab visible - refreshing rewards from blockchain');
         const blockchainRewards = await fetchBlockchainRewards();
         if (blockchainRewards !== null) {
           setUnclaimedRewards(blockchainRewards);

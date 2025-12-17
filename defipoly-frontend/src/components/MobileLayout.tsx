@@ -11,12 +11,27 @@ import { useGameState } from '@/contexts/GameStateContext';
 import { useRewards } from '@/contexts/RewardsContext';
 import { useDefipoly } from '@/contexts/DefipolyContext';
 import { useNotification } from '@/contexts/NotificationContext';
-import { BriefcaseIcon, TrophyIcon, BroadcastIcon, UserIcon, LoadingIcon } from './icons/UIIcons';
+import { BriefcaseIcon, TrophyIcon, BroadcastIcon, UserIcon, LoadingIcon, WalletIcon, ChartUpIcon, ShieldIcon, BuildingIcon } from './icons/UIIcons';
+import { PROPERTIES } from '@/utils/constants';
+import { ShieldAllModal } from './ShieldAllModal';
+import { MobilePropertyPanel } from './mobile/MobilePropertyPanel';
+import type { PropertyOwnership } from '@/types/accounts';
 
-type TabType = 'board' | 'portfolio' | 'leaderboard' | 'feed';
+interface OwnedProperty extends PropertyOwnership {
+  propertyInfo: typeof PROPERTIES[0];
+}
+
+// Helper function to calculate daily income from price and yieldBps
+const calculateDailyIncome = (price: number, yieldBps: number): number => {
+  return Math.floor((price * yieldBps) / 10000);
+};
+
+type TabType = 'portfolio' | 'leaderboard' | 'feed' | 'property';
 
 interface MobileLayoutProps {
   onSelectProperty: (propertyId: number) => void;
+  selectedProperty: number | null;
+  onCloseProperty: () => void;
   profilePicture: string | null;
   cornerSquareStyle: 'property' | 'profile';
   customBoardBackground: string | null;
@@ -28,10 +43,68 @@ interface MobileLayoutProps {
 function MobileRewardsCard() {
   const { connected, publicKey } = useWallet();
   const { unclaimedRewards, loading: rewardsLoading } = useRewards();
-  const { claimRewards, loading: claimLoading } = useDefipoly();
+  const { claimRewards, loading: claimLoading, tokenBalance: balance, loading: balanceLoading } = useDefipoly();
+  const { ownerships, loading, stats } = useGameState();
   const { showSuccess, showError } = useNotification();
   const [claiming, setClaiming] = useState(false);
   const claimingRef = useRef(false);
+  const [showShieldAllModal, setShowShieldAllModal] = useState(false);
+  const [ownedProperties, setOwnedProperties] = useState<OwnedProperty[]>([]);
+
+  // Convert API ownerships to OwnedProperty format
+  useEffect(() => {
+    if (!connected) {
+      setOwnedProperties([]);
+      return;
+    }
+
+    // Filter and map ownerships to include property info
+    const owned: OwnedProperty[] = ownerships
+      .filter(o => o.slotsOwned > 0)
+      .map(ownership => {
+        const propertyInfo = PROPERTIES.find(p => p.id === ownership.propertyId);
+        if (!propertyInfo) {
+          console.warn(`Property ${ownership.propertyId} not found in PROPERTIES`);
+          return null;
+        }
+        return {
+          ...ownership,
+          propertyInfo,
+        };
+      })
+      .filter((p): p is OwnedProperty => p !== null);
+
+    setOwnedProperties(owned);
+  }, [ownerships, connected]);
+
+  // Helper to check if shield is active
+  const isShieldActive = (owned: OwnedProperty): boolean => {
+    const now = Date.now() / 1000;
+    return owned.slotsShielded > 0 && owned.shieldExpiry.toNumber() > now;
+  };
+
+  // Calculate shield cost for a property
+  const calculateShieldCost = (property: typeof PROPERTIES[0], slots: number): number => {
+    const shieldCostBps = property.shieldCostBps;
+    const dailyIncomePerSlot = calculateDailyIncome(property.price, property.yieldBps);
+    return Math.floor((dailyIncomePerSlot * shieldCostBps * slots) / 10000);
+  };
+
+  // Calculate shieldable properties with costs for ShieldAllModal
+  const shieldAllData = ownedProperties
+    .filter(owned => {
+      const shieldActive = isShieldActive(owned);
+      const unshieldedSlots = owned.slotsOwned - (shieldActive ? owned.slotsShielded : 0);
+      return unshieldedSlots > 0;
+    })
+    .map(owned => ({
+      propertyId: owned.propertyId,
+      propertyInfo: owned.propertyInfo,
+      slotsOwned: owned.slotsOwned,
+      shieldCost: calculateShieldCost(owned.propertyInfo, owned.slotsOwned)
+    }));
+
+  const hasShieldableProperties = shieldAllData.length > 0;
 
   const handleClaimRewards = async () => {
     if (!connected || !publicKey || unclaimedRewards === 0 || claiming || claimingRef.current) return;
@@ -60,33 +133,96 @@ function MobileRewardsCard() {
     }
   };
 
+  const handleShieldAll = () => {
+    if (hasShieldableProperties) {
+      setShowShieldAllModal(true);
+    }
+  };
+
   if (!connected) return null;
 
   return (
-    <div className="bg-gradient-to-r from-purple-900/40 to-cyan-900/30 backdrop-blur-lg rounded-xl border border-purple-500/30 p-3">
-      <div className="flex items-center justify-between gap-3">
-        <div className="flex-1 min-w-0">
-          <div className="text-[10px] text-purple-400 uppercase tracking-wider">Unclaimed Rewards</div>
-          <div className="flex items-baseline gap-1">
-            <span className="text-2xl font-black text-white tabular-nums">
-              {rewardsLoading ? '...' : unclaimedRewards.toLocaleString()}
-            </span>
+    <>
+      <div className="bg-gradient-to-br from-purple-900/60 to-cyan-900/30 backdrop-blur-lg rounded-xl border border-purple-500/30 p-3">
+        {/* Top Row: 3 stats with dividers */}
+        <div className="flex items-center justify-center mb-3">
+          {/* Unclaimed Rewards */}
+          <div className="flex flex-col items-center flex-1">
+            <div className="text-[10px] text-purple-400 uppercase tracking-wider">Unclaimed</div>
+            <div className="text-xl font-black text-white tabular-nums">
+              {rewardsLoading ? '...' : unclaimedRewards >= 100 
+                ? unclaimedRewards.toLocaleString(undefined, { maximumFractionDigits: 0 })
+                : unclaimedRewards.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+              }
+            </div>
+          </div>
+          
+          {/* Divider */}
+          <div className="w-px h-8 bg-purple-500/30 mx-2"></div>
+          
+          {/* Balance */}
+          <div className="flex flex-col items-center flex-1">
+            <div className="text-[10px] text-purple-400 uppercase tracking-wider">Balance</div>
+            <div className="text-xl font-black text-purple-200 tabular-nums">
+              {balanceLoading ? '...' : balance.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+            </div>
+          </div>
+          
+          {/* Divider */}
+          <div className="w-px h-8 bg-purple-500/30 mx-2"></div>
+          
+          {/* Daily Rewards */}
+          <div className="flex flex-col items-center flex-1">
+            <div className="text-[10px] text-purple-400 uppercase tracking-wider">Daily</div>
+            <div className="text-lg font-bold text-green-400 tabular-nums">
+              +{stats.dailyIncome > 0 ? stats.dailyIncome.toLocaleString() : '0'}
+            </div>
           </div>
         </div>
-        <button
-          onClick={handleClaimRewards}
-          disabled={claiming || claimLoading || unclaimedRewards === 0}
-          className="px-4 py-2.5 bg-gradient-to-r from-cyan-500 to-blue-600 rounded-lg font-bold text-sm text-white shadow-lg shadow-cyan-500/30 disabled:opacity-50 disabled:cursor-not-allowed active:scale-95 transition-transform"
-        >
-          {claiming ? <LoadingIcon size={16} className="text-yellow-400 animate-pulse" /> : 'Collect'}
-        </button>
+        
+        {/* Bottom Row: 2 action buttons */}
+        <div className="flex gap-2">
+          {/* Shield All Button */}
+          <button
+            onClick={handleShieldAll}
+            disabled={!hasShieldableProperties}
+            className={`flex-1 py-2 rounded-lg font-bold text-sm flex items-center justify-center gap-1 transition-all ${
+              hasShieldableProperties
+                ? 'bg-gradient-to-r from-yellow-600 to-amber-600 hover:from-yellow-500 hover:to-amber-500 text-white'
+                : 'bg-gray-800/50 text-gray-500 cursor-not-allowed'
+            }`}
+          >
+            <ShieldIcon size={14} />
+            Shield All
+          </button>
+          
+          {/* Collect Button */}
+          <button
+            onClick={handleClaimRewards}
+            disabled={claiming || claimLoading || unclaimedRewards === 0}
+            className="flex-1 py-2 bg-gradient-to-r from-cyan-500 to-blue-600 rounded-lg font-bold text-sm text-white disabled:opacity-50 disabled:cursor-not-allowed active:scale-95 transition-transform"
+          >
+            {claiming ? <LoadingIcon size={16} className="text-yellow-400 animate-pulse" /> : 'Collect'}
+          </button>
+        </div>
       </div>
-    </div>
+
+      {/* Shield All Modal */}
+      {showShieldAllModal && (
+        <ShieldAllModal
+          ownedProperties={shieldAllData}
+          balance={balance}
+          onClose={() => setShowShieldAllModal(false)}
+        />
+      )}
+    </>
   );
 }
 
 export function MobileLayout({ 
-  onSelectProperty, 
+  onSelectProperty,
+  selectedProperty,
+  onCloseProperty,
   profilePicture, 
   cornerSquareStyle,
   customBoardBackground,
@@ -94,14 +230,14 @@ export function MobileLayout({
   customSceneBackground,
   themeCategory
 }: MobileLayoutProps) {
-  const [activeTab, setActiveTab] = useState<TabType>('board');
+  const [activeTab, setActiveTab] = useState<TabType>('portfolio');
   const { publicKey, connected } = useWallet();
   const { profile } = useGameState();
   const [scaleFactor, setScaleFactor] = useState(1);
   const [startY, setStartY] = useState<number | null>(null);
   const [currentY, setCurrentY] = useState<number | null>(null);
   const [isDragging, setIsDragging] = useState(false);
-  const [panelHeight, setPanelHeight] = useState(300); // Initial height of bottom panel
+  const [panelHeight, setPanelHeight] = useState(60);
   
   // Calculate scaleFactor based on screen width for mobile
   useEffect(() => {
@@ -117,14 +253,31 @@ export function MobileLayout({
     return () => window.removeEventListener('resize', updateScaleFactor);
   }, []);
 
-  const tabs: { id: TabType; icon: React.FC<{size?: number; className?: string}>; label: string }[] = [
-    { id: 'portfolio', icon: BriefcaseIcon, label: 'Portfolio' },
-    { id: 'leaderboard', icon: TrophyIcon, label: 'Ranks' },
-    { id: 'feed', icon: BroadcastIcon, label: 'Feed' },
+  // Always show property tab
+  const tabs = [
+    { id: 'portfolio' as TabType, icon: BriefcaseIcon, label: 'Portfolio' },
+    { id: 'leaderboard' as TabType, icon: TrophyIcon, label: 'Ranks' },
+    { id: 'feed' as TabType, icon: BroadcastIcon, label: 'Feed' },
+    { id: 'property' as TabType, icon: BuildingIcon, label: 'Property' },
   ];
 
+  // Handle tab switching
+  const handleTabSwitch = (tabId: TabType) => {
+    setActiveTab(tabId);
+    if (panelHeight < 300) setPanelHeight(300);
+  };
+
+  // Auto-expand panel when property is selected
+  useEffect(() => {
+    if (selectedProperty !== null) {
+      // Switch to property tab and expand panel to mid-screen
+      setActiveTab('property');
+      const midScreenHeight = Math.floor(window.innerHeight * 0.6); // 60% of screen height
+      setPanelHeight(midScreenHeight);
+    }
+  }, [selectedProperty]);
+
   const handleTouchStart = (e: React.TouchEvent) => {
-    if (activeTab === 'board') return;
     const clientY = e.touches[0]?.clientY;
     if (clientY !== undefined) {
       setStartY(clientY);
@@ -133,7 +286,7 @@ export function MobileLayout({
   };
 
   const handleTouchMove = (e: React.TouchEvent) => {
-    if (!isDragging || !startY || activeTab === 'board') return;
+    if (!isDragging || !startY) return;
     const currentY = e.touches[0]?.clientY;
     if (!currentY) return;
     const diff = startY - currentY;
@@ -147,9 +300,9 @@ export function MobileLayout({
   };
 
   return (
-    <div className="h-[100dvh] flex flex-col bg-gradient-to-b from-purple-950/50 to-black relative overflow-hidden">
+    <div className="h-[100dvh] flex flex-col relative overflow-hidden">
       {/* Header */}
-      <header className="flex-shrink-0 flex items-center justify-between px-4 py-3 border-b border-purple-500/20 bg-black/40 backdrop-blur-lg safe-area-top z-20">
+      <header className="flex-shrink-0 flex items-center justify-between px-4 py-3 mt-4 backdrop-blur-lg safe-area-top z-20">
         <div className="flex items-center gap-2">
           <img 
             src="/logo.svg" 
@@ -186,10 +339,10 @@ export function MobileLayout({
       </header>
 
       {/* 3D Board - Full screen background */}
-      <div className="absolute inset-0 top-[72px] bottom-0">
+      <div className="absolute inset-0">
         <div className="relative w-full h-full">
           {/* Compact Rewards Bar - Fixed position at top */}
-          <div className="absolute top-3 left-3 right-3 z-10">
+          <div className="absolute top-20 left-3 right-3 z-10">
             <MobileRewardsCard />
           </div>
           
@@ -209,7 +362,7 @@ export function MobileLayout({
 
       {/* Swipeable Bottom Panel */}
       <div 
-        className="absolute bottom-0 left-0 right-0 bg-black/80 backdrop-blur-lg border-t border-purple-500/20 z-30"
+        className="absolute bottom-0 left-0 right-0 bg-black/90 backdrop-blur-lg border-t border-purple-500/20 z-30"
         style={{ height: `${panelHeight}px` }}
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
@@ -225,7 +378,7 @@ export function MobileLayout({
           {tabs.map((tab) => (
             <button
               key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
+              onClick={() => handleTabSwitch(tab.id)}
               className={`flex-1 py-2 flex flex-col items-center gap-1 transition-all ${
                 activeTab === tab.id 
                   ? 'bg-purple-600/20 border-b-2 border-purple-500' 
@@ -245,15 +398,22 @@ export function MobileLayout({
         {/* Panel Content */}
         <div className="flex-1 overflow-hidden" style={{ height: `${panelHeight - 80}px` }}>
           {activeTab === 'portfolio' && (
-            <Portfolio onSelectProperty={onSelectProperty} scaleFactor={scaleFactor} />
+            <Portfolio onSelectProperty={onSelectProperty} scaleFactor={scaleFactor} isMobile={true} />
           )}
 
           {activeTab === 'leaderboard' && (
-            <Leaderboard scaleFactor={scaleFactor} />
+            <Leaderboard scaleFactor={scaleFactor} isMobile={true} />
           )}
 
           {activeTab === 'feed' && (
-            <LiveFeed scaleFactor={scaleFactor} />
+            <LiveFeed scaleFactor={scaleFactor} isMobile={true} />
+          )}
+
+          {activeTab === 'property' && (
+            <MobilePropertyPanel 
+              selectedProperty={selectedProperty}
+              onSelectProperty={onSelectProperty}
+            />
           )}
         </div>
       </div>

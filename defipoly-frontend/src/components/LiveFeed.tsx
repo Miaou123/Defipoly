@@ -30,9 +30,10 @@ import { API_BASE_URL } from '@/utils/config';
 
 interface LiveFeedProps {
   scaleFactor?: number;
+  isMobile?: boolean;
 }
 
-export function LiveFeed({ scaleFactor = 1 }: LiveFeedProps) {
+export function LiveFeed({ scaleFactor = 1, isMobile = false }: LiveFeedProps) {
   const router = useRouter();
   const { socket, connected } = useWebSocket();
   const [feed, setFeed] = useState<FeedItem[]>([]);
@@ -294,28 +295,30 @@ export function LiveFeed({ scaleFactor = 1 }: LiveFeedProps) {
 
   return (
     <>
-      <div className="bg-purple-900/8 backdrop-blur-xl rounded-2xl border border-purple-500/20 h-full flex flex-col overflow-hidden">
-        {/* Header */}
-        <div style={{ padding: `${padding}px`, paddingBottom: `${padding / 2}px` }}>
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="flex items-center border-b border-purple-500/20" style={{ gap: `${rowGap}px`, paddingBottom: `${rowGap}px` }}>
-                <div style={{ width: headerIconSize, height: headerIconSize }}>
-                  <FeedIcon size={headerIconSize} className="text-white" />
+      <div className={`h-full flex flex-col overflow-hidden ${isMobile ? '' : 'bg-purple-900/8 backdrop-blur-xl rounded-2xl border border-purple-500/20'}`}>
+        {/* Header - Hidden on mobile */}
+        {!isMobile && (
+          <div style={{ padding: `${padding}px`, paddingBottom: `${padding / 2}px` }}>
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="flex items-center border-b border-purple-500/20" style={{ gap: `${rowGap}px`, paddingBottom: `${rowGap}px` }}>
+                  <div style={{ width: headerIconSize, height: headerIconSize }}>
+                    <FeedIcon size={headerIconSize} className="text-white" />
+                  </div>
+                  <h2 className="font-orbitron font-bold text-white" style={{ fontSize: `${titleSize}px` }}>Live Feed</h2>
                 </div>
-                <h2 className="font-orbitron font-bold text-white" style={{ fontSize: `${titleSize}px` }}>Live Feed</h2>
+                <p className="text-purple-400" style={{ fontSize: `${subtitleSize}px`, marginTop: `${Math.round(4 * scaleFactor)}px` }}>Click on an action to see the player's board</p>
               </div>
-              <p className="text-purple-400" style={{ fontSize: `${subtitleSize}px`, marginTop: `${Math.round(4 * scaleFactor)}px` }}>Click on an action to see the player's board</p>
-            </div>
-            <div className="flex items-center" style={{ gap: `${Math.round(6 * scaleFactor)}px` }}>
-              <div className={`rounded-full ${connected ? 'bg-green-500' : 'bg-red-500'}`} style={{ width: statusIconSize, height: statusIconSize }} />
-              <span className="text-purple-400" style={{ fontSize: `${subtitleSize}px` }}>{connected ? 'Live' : 'Offline'}</span>
+              <div className="flex items-center" style={{ gap: `${Math.round(6 * scaleFactor)}px` }}>
+                <div className={`rounded-full ${connected ? 'bg-green-500' : 'bg-red-500'}`} style={{ width: statusIconSize, height: statusIconSize }} />
+                <span className="text-purple-400" style={{ fontSize: `${subtitleSize}px` }}>{connected ? 'Live' : 'Offline'}</span>
+              </div>
             </div>
           </div>
-        </div>
+        )}
 
         {/* Scrollable Content */}
-        <div className="flex-1 overflow-y-auto" style={{ padding: `0 ${padding}px ${Math.round(padding * 1.5)}px` }}>
+        <div className="flex-1 overflow-y-auto" style={{ padding: isMobile ? `${padding}px` : `0 ${padding}px ${Math.round(padding * 1.5)}px` }}>
           {loading ? (
             <div className="text-center" style={{ padding: `${padding * 2}px 0` }}>
               <div style={{ marginBottom: `${Math.round(4 * scaleFactor)}px` }}>

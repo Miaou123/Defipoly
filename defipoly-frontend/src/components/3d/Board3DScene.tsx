@@ -42,12 +42,10 @@ function VisibilityHandler({
         // Tab hidden - pause rendering to prevent WebGL context loss
         gl.setAnimationLoop(null);
         setParticlesVisible(false);
-        console.log('🔇 Tab hidden - paused WebGL rendering and particles');
       } else {
         // Tab visible - resume
         gl.setAnimationLoop(() => {});
         setParticlesVisible(true);
-        console.log('🔊 Tab visible - resumed WebGL rendering and particles');
         // RewardsContext will auto-refresh from blockchain
       }
     };
@@ -403,6 +401,10 @@ const CAMERA_POSITIONS = {
     position: new THREE.Vector3(0, 8, 6),  // Much closer!
     lookAt: new THREE.Vector3(0, 0, 0),   // Look at board center
   },
+  ZOOMED_IN_MOBILE: {
+    position: new THREE.Vector3(0, 12, 9),
+    lookAt: new THREE.Vector3(0, 0, 0),
+  },
 };
 
 /**
@@ -415,12 +417,14 @@ function CameraController({
   connected, 
   controlsRef,
   showcaseMode,
-  spectatorMode = false
+  spectatorMode = false,
+  isMobile = false
 }: { 
   connected: boolean; 
   controlsRef: React.RefObject<any>;
   showcaseMode?: boolean;
   spectatorMode?: boolean;
+  isMobile?: boolean;
 }) {
   const targetPosition = useRef(CAMERA_POSITIONS.ZOOMED_OUT.position.clone());
   const targetLookAt = useRef(CAMERA_POSITIONS.ZOOMED_OUT.lookAt.clone());
@@ -435,15 +439,18 @@ function CameraController({
   useEffect(() => {
     // Spectator mode: immediately snap to centered view
     if (spectatorMode) {
-      targetPosition.current.copy(CAMERA_POSITIONS.ZOOMED_IN.position);
-      targetLookAt.current.copy(CAMERA_POSITIONS.ZOOMED_IN.lookAt);
-      currentLookAt.current.copy(CAMERA_POSITIONS.ZOOMED_IN.lookAt);
+      const config = isMobile ? CAMERA_POSITIONS.ZOOMED_IN_MOBILE : CAMERA_POSITIONS.ZOOMED_IN;
+      targetPosition.current.copy(config.position);
+      targetLookAt.current.copy(config.lookAt);
+      currentLookAt.current.copy(config.lookAt);
       animationComplete.current = true;
       needsImmediateSnap.current = true;
       return;
     }
     
-    const config = connected ? CAMERA_POSITIONS.ZOOMED_IN : CAMERA_POSITIONS.ZOOMED_OUT;
+    const config = connected 
+      ? (isMobile ? CAMERA_POSITIONS.ZOOMED_IN_MOBILE : CAMERA_POSITIONS.ZOOMED_IN)
+      : CAMERA_POSITIONS.ZOOMED_OUT;
     targetPosition.current.copy(config.position);
     targetLookAt.current.copy(config.lookAt);
     
@@ -477,7 +484,7 @@ function CameraController({
     
     // Update showcase mode tracking
     prevShowcaseMode.current = showcaseMode || false;
-  }, [connected, showcaseMode, spectatorMode]);
+  }, [connected, showcaseMode, spectatorMode, isMobile]);
 
   useFrame(({ camera }) => {
     // Handle immediate snap for already-connected users
@@ -1100,7 +1107,8 @@ function Scene({
   writingStyle,
   profilePicture,
   cornerSquareStyle,
-  rotationMode
+  rotationMode,
+  isMobile
 }: SceneProps) {
   
   
@@ -1260,7 +1268,7 @@ function Scene({
           connected={connected}
         />
       ) : (
-        <CameraController connected={connected} controlsRef={cameraControlsRef} showcaseMode={showcaseMode} spectatorMode={spectatorMode || false} />
+        <CameraController connected={connected} controlsRef={cameraControlsRef} showcaseMode={showcaseMode} spectatorMode={spectatorMode || false} isMobile={isMobile || false} />
       )}
       
       {/* Rotation Controller - only when rotation mode is enabled and not in showcase */}
@@ -1696,8 +1704,8 @@ export function Board3DScene({ onSelectProperty, onCoinClick, spectatorMode, spe
       style={{ width: '100%', height: '100%', position: 'relative' }}
     >
 
-      {/* Camera Controls and Demo Button - show when connected or always show demo button */}
-      {(connected || !isMobile) && (
+      {/* Camera Controls and Demo Button - hide completely on mobile */}
+      {!isMobile && (
         <div 
           style={{
             position: 'absolute',
@@ -1711,9 +1719,8 @@ export function Board3DScene({ onSelectProperty, onCoinClick, spectatorMode, spe
             borderRadius: '8px',
           }}
         >
-          {/* Demo Button - always show when not mobile */}
-          {!isMobile && (
-            <button
+          {/* Demo Button */}
+          <button
               onClick={() => {
                 console.log('🎬 Demo button clicked!', {
                   showcaseMode,
@@ -1758,7 +1765,6 @@ export function Board3DScene({ onSelectProperty, onCoinClick, spectatorMode, spe
                 </>
               )}
             </button>
-          )}
           
           {/* Camera Controls - only show when connected */}
           {connected && (
@@ -1962,6 +1968,7 @@ export function Board3DScene({ onSelectProperty, onCoinClick, spectatorMode, spe
             profilePicture={profilePicture || gameState?.profile?.profilePicture}
             cornerSquareStyle={cornerSquareStyle || gameState?.profile?.cornerSquareStyle || 'property'}
             rotationMode={rotationMode}
+            isMobile={isMobile}
             />
           </GeometryCacheProvider>
         </Suspense>

@@ -86,7 +86,10 @@ export async function getProfile(address: string): Promise<ProfileData> {
       };
     }
   } catch (error) {
-    console.warn('API unavailable, using localStorage fallback:', error);
+    // Only log API errors in development mode
+    if (process.env.NODE_ENV === 'development') {
+      console.debug('API unavailable, using localStorage fallback:', error);
+    }
   }
 
   // Fallback to localStorage
@@ -138,7 +141,10 @@ export async function getProfilesBatch(addresses: string[]): Promise<Record<stri
       return profiles;
     }
   } catch (error) {
-    console.warn('Batch API unavailable, using localStorage fallback:', error);
+    // Only log API errors in development mode
+    if (process.env.NODE_ENV === 'development') {
+      console.debug('Batch API unavailable, using localStorage fallback:', error);
+    }
   }
 
   // Fallback to localStorage for each address
@@ -176,7 +182,10 @@ export async function setUsername(address: string, username: string): Promise<bo
       return true;
     }
   } catch (error) {
-    console.error('Failed to save username to API:', error);
+    // Only log API errors in development mode
+    if (process.env.NODE_ENV === 'development') {
+      console.debug('Failed to save username to API:', error);
+    }
   }
 
   // Fallback to localStorage only
@@ -223,7 +232,10 @@ export async function setProfilePicture(address: string, base64Image: string): P
       return true;
     }
   } catch (error) {
-    console.error('Failed to save profile picture to API:', error);
+    // Only log API errors in development mode
+    if (process.env.NODE_ENV === 'development') {
+      console.debug('Failed to save profile picture to API:', error);
+    }
   }
 
   // Fallback to localStorage only
@@ -267,7 +279,10 @@ export async function setCornerSquareStyle(address: string, style: 'property' | 
       return true;
     }
   } catch (error) {
-    console.error('Failed to save corner square style to API:', error);
+    // Only log API errors in development mode
+    if (process.env.NODE_ENV === 'development') {
+      console.debug('Failed to save corner square style to API:', error);
+    }
   }
 
   // Fallback to localStorage only
@@ -337,7 +352,10 @@ export async function setThemePreferences(address: string, themes: {
       return true;
     }
   } catch (error) {
-    console.error('Failed to save theme preferences to API:', error);
+    // Only log API errors in development mode
+    if (process.env.NODE_ENV === 'development') {
+      console.debug('Failed to save theme preferences to API:', error);
+    }
   }
 
   // Fallback to localStorage only
@@ -391,7 +409,10 @@ export async function setWritingStyle(address: string, writingStyle: 'light' | '
       return true;
     }
   } catch (error) {
-    console.error('Failed to save writing style to API:', error);
+    // Only log API errors in development mode
+    if (process.env.NODE_ENV === 'development') {
+      console.debug('Failed to save writing style to API:', error);
+    }
   }
 
   // Fallback to localStorage only
@@ -426,7 +447,10 @@ export async function removeProfilePicture(address: string): Promise<boolean> {
       return true;
     }
   } catch (error) {
-    console.error('Failed to remove profile picture from API:', error);
+    // Only log API errors in development mode
+    if (process.env.NODE_ENV === 'development') {
+      console.debug('Failed to remove profile picture from API:', error);
+    }
   }
 
   // Fallback to localStorage only
