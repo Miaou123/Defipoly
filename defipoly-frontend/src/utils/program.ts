@@ -111,17 +111,12 @@ export async function fetchOwnershipData(program: MemeopolyProgram, playerPubkey
 export async function fetchPlayerData(program: MemeopolyProgram, playerPubkey: PublicKey): Promise<PlayerAccount | null> {
   const [playerPDA] = getPlayerPDA(playerPubkey);
   
-  console.log('🔍 fetchPlayerData called for:', playerPubkey.toString());
-  console.log('🔍 Derived PlayerPDA:', playerPDA.toString());
-  console.log('🔍 Program ID:', PROGRAM_ID.toString());
-  
   const maxRetries = 3;
   let lastError: any = null;
   
   for (let attempt = 0; attempt < maxRetries; attempt++) {
     try {
       const connection = program.provider.connection;
-      console.log('🔍 Attempt', attempt + 1, '- Fetching account info...');
       
       const accountInfo = await connection.getAccountInfo(playerPDA);
       

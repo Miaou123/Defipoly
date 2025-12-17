@@ -176,24 +176,3 @@ export function getEligibleStealTargets(
   return eligible;
 }
 
-// ============================================
-// DEPRECATED FUNCTIONS - Keep for backwards compatibility
-// These will log warnings and return empty results
-// ============================================
-
-/**
- * @deprecated Use fetchPropertyOwners() instead - this used on-chain PDAs that no longer exist
- */
-export async function fetchPropertyOwnersOnChain(): Promise<PropertyOwner[]> {
-  console.warn('⚠️ [v9] fetchPropertyOwnersOnChain is deprecated. PropertyOwnership PDAs no longer exist.');
-  console.warn('💡 Use fetchPropertyOwners() which fetches from backend API.');
-  return [];
-}
-
-/**
- * @deprecated PropertyOwnership PDAs don't exist in v9
- */
-export async function fetchPropertyOwnersViaPDA(): Promise<PropertyOwner[]> {
-  console.warn('⚠️ [v9] fetchPropertyOwnersViaPDA is deprecated. Use fetchPropertyOwners() instead.');
-  return [];
-}
