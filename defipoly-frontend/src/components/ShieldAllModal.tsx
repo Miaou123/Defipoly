@@ -228,7 +228,7 @@ export function ShieldAllModal({ ownedProperties, balance, onClose }: ShieldAllM
 
   return (
     <div 
-      className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-[70] p-2 lg:p-4"
+      className={`fixed inset-0 bg-black/70 backdrop-blur-sm z-[100] ${isMobile ? 'flex items-end' : 'flex items-center justify-center p-2 lg:p-4'}`}
       onClick={shielding ? undefined : onClose}
     >
       <div 

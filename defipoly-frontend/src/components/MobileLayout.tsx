@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { Board } from './Board';
 import { Portfolio } from './Portfolio';
 import { Leaderboard } from './Leaderboard';
@@ -40,41 +40,78 @@ interface MobileLayoutProps {
   themeCategory: 'dark' | 'medium' | 'light' | null;
 }
 
-function MobileRewardsCard() {
+// New Mobile Stats Row component
+function MobileStatsRow() {
   const { connected, publicKey } = useWallet();
   const { unclaimedRewards, loading: rewardsLoading } = useRewards();
-  const { claimRewards, loading: claimLoading, tokenBalance: balance, loading: balanceLoading } = useDefipoly();
-  const { ownerships, loading, stats } = useGameState();
+  const { tokenBalance: balance, loading: balanceLoading } = useDefipoly();
+  const { stats } = useGameState();
+
+  if (!connected) return null;
+
+  return (
+    <div className="px-4 py-3 border-b border-purple-500/20">
+      <div className="flex items-center justify-center">
+        {/* Unclaimed */}
+        <div className="flex flex-col items-center flex-1">
+          <div className="text-[10px] text-purple-300 uppercase tracking-wider mb-0.5">Unclaimed</div>
+          <div className="text-lg font-bold text-white tabular-nums">
+            {rewardsLoading ? '...' : unclaimedRewards >= 100 
+              ? unclaimedRewards.toLocaleString(undefined, { maximumFractionDigits: 0 })
+              : unclaimedRewards.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+            }
+          </div>
+        </div>
+        
+        {/* Divider */}
+        <div className="w-px h-8 bg-purple-400/30 mx-3"></div>
+        
+        {/* Balance */}
+        <div className="flex flex-col items-center flex-1">
+          <div className="text-[10px] text-purple-300 uppercase tracking-wider mb-0.5">Balance</div>
+          <div className="text-lg font-bold text-purple-200 tabular-nums">
+            {balanceLoading ? '...' : balance.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+          </div>
+        </div>
+        
+        {/* Divider */}
+        <div className="w-px h-8 bg-purple-400/30 mx-3"></div>
+        
+        {/* Daily */}
+        <div className="flex flex-col items-center flex-1">
+          <div className="text-[10px] text-purple-300 uppercase tracking-wider mb-0.5">Daily</div>
+          <div className="text-lg font-bold text-green-400 tabular-nums">
+            +{stats.dailyIncome > 0 ? stats.dailyIncome.toLocaleString() : '0'}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// New Mobile Actions Row component
+function MobileActionsRow() {
+  const { connected, publicKey } = useWallet();
+  const { unclaimedRewards } = useRewards();
+  const { claimRewards, loading: claimLoading, tokenBalance: balance } = useDefipoly();
+  const { ownerships } = useGameState();
   const { showSuccess, showError } = useNotification();
   const [claiming, setClaiming] = useState(false);
-  const claimingRef = useRef(false);
   const [showShieldAllModal, setShowShieldAllModal] = useState(false);
-  const [ownedProperties, setOwnedProperties] = useState<OwnedProperty[]>([]);
+  const claimingRef = useRef(false);
 
-  // Convert API ownerships to OwnedProperty format
-  useEffect(() => {
-    if (!connected) {
-      setOwnedProperties([]);
-      return;
-    }
-
-    // Filter and map ownerships to include property info
-    const owned: OwnedProperty[] = ownerships
+  // Convert API ownerships to OwnedProperty format for shield all
+  const ownedProperties = useMemo(() => {
+    if (!connected) return [];
+    
+    return ownerships
       .filter(o => o.slotsOwned > 0)
       .map(ownership => {
         const propertyInfo = PROPERTIES.find(p => p.id === ownership.propertyId);
-        if (!propertyInfo) {
-          console.warn(`Property ${ownership.propertyId} not found in PROPERTIES`);
-          return null;
-        }
-        return {
-          ...ownership,
-          propertyInfo,
-        };
+        if (!propertyInfo) return null;
+        return { ...ownership, propertyInfo };
       })
       .filter((p): p is OwnedProperty => p !== null);
-
-    setOwnedProperties(owned);
   }, [ownerships, connected]);
 
   // Helper to check if shield is active
@@ -84,13 +121,13 @@ function MobileRewardsCard() {
   };
 
   // Calculate shield cost for a property
-  const calculateShieldCost = (property: typeof PROPERTIES[0], slots: number): number => {
+  const calculateShieldCostLocal = (property: typeof PROPERTIES[0], slots: number): number => {
     const shieldCostBps = property.shieldCostBps;
     const dailyIncomePerSlot = calculateDailyIncome(property.price, property.yieldBps);
     return Math.floor((dailyIncomePerSlot * shieldCostBps * slots) / 10000);
   };
 
-  // Calculate shieldable properties with costs for ShieldAllModal
+  // Calculate shieldable properties
   const shieldAllData = ownedProperties
     .filter(owned => {
       const shieldActive = isShieldActive(owned);
@@ -101,7 +138,7 @@ function MobileRewardsCard() {
       propertyId: owned.propertyId,
       propertyInfo: owned.propertyInfo,
       slotsOwned: owned.slotsOwned,
-      shieldCost: calculateShieldCost(owned.propertyInfo, owned.slotsOwned)
+      shieldCost: calculateShieldCostLocal(owned.propertyInfo, owned.slotsOwned)
     }));
 
   const hasShieldableProperties = shieldAllData.length > 0;
@@ -122,7 +159,6 @@ function MobileRewardsCard() {
       
       const errorMessage = String(error instanceof Error ? error.message : error);
       if (errorMessage.includes('User rejected') || errorMessage.includes('rejected the request')) {
-        // User canceled the transaction - don't show an error
         console.log('User canceled the claim transaction');
       } else {
         showError('Claim Failed', 'Failed to claim rewards. Please try again.');
@@ -143,68 +179,29 @@ function MobileRewardsCard() {
 
   return (
     <>
-      <div className="bg-gradient-to-br from-purple-900/60 to-cyan-900/30 backdrop-blur-lg rounded-xl border border-purple-500/30 p-3">
-        {/* Top Row: 3 stats with dividers */}
-        <div className="flex items-center justify-center mb-3">
-          {/* Unclaimed Rewards */}
-          <div className="flex flex-col items-center flex-1">
-            <div className="text-[10px] text-purple-400 uppercase tracking-wider">Unclaimed</div>
-            <div className="text-xl font-black text-white tabular-nums">
-              {rewardsLoading ? '...' : unclaimedRewards >= 100 
-                ? unclaimedRewards.toLocaleString(undefined, { maximumFractionDigits: 0 })
-                : unclaimedRewards.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-              }
-            </div>
-          </div>
-          
-          {/* Divider */}
-          <div className="w-px h-8 bg-purple-500/30 mx-2"></div>
-          
-          {/* Balance */}
-          <div className="flex flex-col items-center flex-1">
-            <div className="text-[10px] text-purple-400 uppercase tracking-wider">Balance</div>
-            <div className="text-xl font-black text-purple-200 tabular-nums">
-              {balanceLoading ? '...' : balance.toLocaleString(undefined, { maximumFractionDigits: 0 })}
-            </div>
-          </div>
-          
-          {/* Divider */}
-          <div className="w-px h-8 bg-purple-500/30 mx-2"></div>
-          
-          {/* Daily Rewards */}
-          <div className="flex flex-col items-center flex-1">
-            <div className="text-[10px] text-purple-400 uppercase tracking-wider">Daily</div>
-            <div className="text-lg font-bold text-green-400 tabular-nums">
-              +{stats.dailyIncome > 0 ? stats.dailyIncome.toLocaleString() : '0'}
-            </div>
-          </div>
-        </div>
+      <div className="flex gap-3">
+        {/* Shield All Button */}
+        <button
+          onClick={handleShieldAll}
+          disabled={!hasShieldableProperties}
+          className={`flex-1 py-2.5 font-bold text-sm flex items-center justify-center gap-2 transition-all ${
+            hasShieldableProperties
+              ? 'bg-gradient-to-r from-yellow-600 to-amber-600 hover:from-yellow-500 hover:to-amber-500 text-white'
+              : 'bg-gray-800/50 text-gray-500 cursor-not-allowed'
+          }`}
+        >
+          <ShieldIcon size={16} />
+          Shield All
+        </button>
         
-        {/* Bottom Row: 2 action buttons */}
-        <div className="flex gap-2">
-          {/* Shield All Button */}
-          <button
-            onClick={handleShieldAll}
-            disabled={!hasShieldableProperties}
-            className={`flex-1 py-2 rounded-lg font-bold text-sm flex items-center justify-center gap-1 transition-all ${
-              hasShieldableProperties
-                ? 'bg-gradient-to-r from-yellow-600 to-amber-600 hover:from-yellow-500 hover:to-amber-500 text-white'
-                : 'bg-gray-800/50 text-gray-500 cursor-not-allowed'
-            }`}
-          >
-            <ShieldIcon size={14} />
-            Shield All
-          </button>
-          
-          {/* Collect Button */}
-          <button
-            onClick={handleClaimRewards}
-            disabled={claiming || claimLoading || unclaimedRewards === 0}
-            className="flex-1 py-2 bg-gradient-to-r from-cyan-500 to-blue-600 rounded-lg font-bold text-sm text-white disabled:opacity-50 disabled:cursor-not-allowed active:scale-95 transition-transform"
-          >
-            {claiming ? <LoadingIcon size={16} className="text-yellow-400 animate-pulse" /> : 'Collect'}
-          </button>
-        </div>
+        {/* Collect Button */}
+        <button
+          onClick={handleClaimRewards}
+          disabled={claiming || claimLoading || unclaimedRewards === 0}
+          className="flex-1 py-2.5 bg-gradient-to-r from-purple-600 to-purple-700 font-bold text-sm text-white disabled:opacity-50 disabled:cursor-not-allowed active:scale-95 transition-all"
+        >
+          {claiming ? <LoadingIcon size={16} className="text-yellow-400 animate-pulse" /> : 'Collect'}
+        </button>
       </div>
 
       {/* Shield All Modal */}
@@ -218,6 +215,7 @@ function MobileRewardsCard() {
     </>
   );
 }
+
 
 export function MobileLayout({ 
   onSelectProperty,
@@ -332,50 +330,59 @@ export function MobileLayout({
 
   return (
     <div className="h-[100dvh] flex flex-col relative overflow-hidden">
-      {/* Header */}
-      <header className="flex-shrink-0 flex items-center justify-between px-4 py-3 mt-4 backdrop-blur-lg safe-area-top z-20">
-        <div className="flex items-center gap-2">
-          <img 
-            src="/logo.svg" 
-            alt="Defipoly" 
-            className="w-8 h-8 object-contain"
-          />
-          <span className="font-orbitron font-bold text-white text-lg">Defipoly</span>
-        </div>
-        
-        <div className="flex items-center gap-2">
-          {connected && publicKey ? (
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-full bg-purple-500/30 flex items-center justify-center overflow-hidden border-2 border-green-500/50">
-                {profile?.profilePicture ? (
-                  <img 
-                    src={profile.profilePicture} 
-                    alt="Profile" 
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <UserIcon size={14} className="text-purple-300" />
-                )}
-              </div>
-              <div className="px-2 py-1 bg-green-500/20 rounded-lg border border-green-500/30">
+      {/* Mobile Header with Gradient Bar */}
+      <div className="flex-shrink-0 z-20 bg-gradient-to-b from-purple-900/80 via-purple-800/40 to-transparent backdrop-blur-lg">
+        {/* Header Row: Logo + Wallet */}
+        <div className="flex items-center justify-between px-4 py-3 mt-4 safe-area-top">
+          <div className="flex items-center gap-2">
+            <img 
+              src="/logo.svg" 
+              alt="Defipoly" 
+              className="w-8 h-8 object-contain"
+            />
+            <span className="font-orbitron font-bold text-white text-lg">Defipoly</span>
+          </div>
+          
+          <div className="flex items-center gap-2">
+            {connected && publicKey ? (
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-full bg-purple-500/30 flex items-center justify-center overflow-hidden border border-green-500/50">
+                  {profile?.profilePicture ? (
+                    <img 
+                      src={profile.profilePicture} 
+                      alt="Profile" 
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <UserIcon size={12} className="text-purple-300" />
+                  )}
+                </div>
                 <span className="text-green-400 text-xs font-medium">
                   {publicKey.toString().slice(0, 4)}...{publicKey.toString().slice(-4)}
                 </span>
               </div>
-            </div>
-          ) : (
-            <StyledWalletButton variant="header" />
-          )}
+            ) : (
+              <StyledWalletButton variant="header" />
+            )}
+          </div>
         </div>
-      </header>
+
+        {/* Stats Row: Plain centered text with dividers */}
+        {connected && (
+          <MobileStatsRow />
+        )}
+
+        {/* Buttons Row */}
+        {connected && (
+          <div className="px-4 pb-4">
+            <MobileActionsRow />
+          </div>
+        )}
+      </div>
 
       {/* 3D Board - Full screen background */}
-      <div className="absolute inset-0">
+      <div className="absolute inset-0 pt-32">
         <div className="relative w-full h-full">
-          {/* Compact Rewards Bar - Fixed position at top */}
-          <div className="absolute top-20 left-3 right-3 z-10">
-            <MobileRewardsCard />
-          </div>
           
           {/* 3D Board */}
           <Board 
