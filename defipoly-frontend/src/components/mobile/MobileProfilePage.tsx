@@ -446,14 +446,6 @@ export function MobileProfilePage() {
                 className="w-full h-full rounded-2xl border-2 border-purple-500/30"
               />
             </div>
-            
-            {/* Customize Button */}
-            <button 
-              onClick={() => setShowThemeModal(true)}
-              className="w-full py-3 bg-purple-600 hover:bg-purple-500 rounded-xl text-white font-semibold text-sm"
-            >
-              Customize Theme
-            </button>
           </div>
         )}
 

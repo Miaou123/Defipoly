@@ -179,7 +179,7 @@ export const SimpleBoardPreview: React.FC<SimpleBoardPreviewProps> = ({
                   <img src={profilePicture} alt="" className="w-full h-full object-cover" />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center">
-                    <span className={`text-[3px] ${writingStyle === 'light' ? 'text-white/60' : 'text-gray-900/60'}`}>GO→</span>
+                    <span className={`text-[4px] ${writingStyle === 'light' ? 'text-white/60' : 'text-gray-900/60'} leading-none text-center`}>DEFI<br/>POLY</span>
                   </div>
                 )}
               </div>

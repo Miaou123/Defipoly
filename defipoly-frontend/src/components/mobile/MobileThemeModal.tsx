@@ -5,7 +5,10 @@ import { useGameState } from '@/contexts/GameStateContext';
 import { useNotification } from '@/contexts/NotificationContext';
 import { SimpleBoardPreview } from '@/components/SimpleBoardPreview';
 import { THEME_PRESETS } from '@/utils/themePresets';
-import { getImageUrl } from '@/utils/config';
+import { getImageUrl, API_BASE_URL } from '@/utils/config';
+import { authenticatedFetch, useAuth } from '@/contexts/AuthContext';
+import { useWallet } from '@solana/wallet-adapter-react';
+import { clearProfileCache } from '@/utils/profileStorage';
 import { X } from 'lucide-react';
 
 type TabType = 'presets' | 'board' | 'cards' | 'scene' | 'corners' | 'writing';
@@ -18,6 +21,8 @@ export function MobileThemeModal({ onClose }: MobileThemeModalProps) {
   const [activeTab, setActiveTab] = useState<TabType>('board');
   const { profile, updateProfile } = useGameState();
   const { showSuccess, showError } = useNotification();
+  const { publicKey } = useWallet();
+  const { isAuthenticated } = useAuth();
   
   // Custom color states
   const [boardColor, setBoardColor] = useState('#9333ea');
@@ -72,6 +77,11 @@ export function MobileThemeModal({ onClose }: MobileThemeModalProps) {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    if (!publicKey) {
+      showError('Error', 'Wallet not connected');
+      return;
+    }
+
     // Validate file size (5MB for board, 3MB for cards, 5MB for scene)
     const maxSize = type === 'cards' ? 3 * 1024 * 1024 : 5 * 1024 * 1024;
     if (file.size > maxSize) {
@@ -79,36 +89,86 @@ export function MobileThemeModal({ onClose }: MobileThemeModalProps) {
       return;
     }
 
-    // Convert to base64
-    const reader = new FileReader();
-    reader.onload = async () => {
-      const base64 = reader.result as string;
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('wallet', publicKey.toString());
+      if (type === 'board') {
+        formData.append('uploadType', 'board');
+        formData.append('themeType', 'board');
+        formData.append('boardPresetId', '');
+        if (profile.customBoardBackground) {
+          formData.append('oldBackgroundUrl', profile.customBoardBackground);
+        }
+      } else if (type === 'cards') {
+        formData.append('uploadType', 'card');
+        formData.append('themeType', 'card');
+        formData.append('tilePresetId', '');
+        if (profile.customPropertyCardBackground) {
+          formData.append('oldBackgroundUrl', profile.customPropertyCardBackground);
+        }
+      } else if (type === 'scene') {
+        formData.append('uploadType', 'scene');
+        formData.append('themeType', 'scene');
+        if (profile.customSceneBackground) {
+          formData.append('oldBackgroundUrl', profile.customSceneBackground);
+        }
+      }
+
+      const response = await authenticatedFetch(`${API_BASE_URL}/api/profile/upload/theme`, {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errorData = await response.text();
+        console.error('Upload failed:', errorData);
+        throw new Error('Upload failed');
+      }
+
+      const data = await response.json();
       
       if (type === 'board') {
-        await updateProfile({ customBoardBackground: base64 });
+        await updateProfile({ customBoardBackground: data.backgroundUrl });
       } else if (type === 'cards') {
-        await updateProfile({ customPropertyCardBackground: base64 });
+        await updateProfile({ customPropertyCardBackground: data.backgroundUrl });
       } else if (type === 'scene') {
-        await updateProfile({ customSceneBackground: base64 });
+        await updateProfile({ customSceneBackground: data.backgroundUrl });
       }
       
+      // Clear profile cache and trigger update like desktop version
+      clearProfileCache(publicKey.toString());
+      window.dispatchEvent(new Event('profileUpdated'));
+      
       showSuccess('Uploaded!', `${type} background updated`);
-    };
-    reader.readAsDataURL(file);
+    } catch (error) {
+      console.error('Upload error:', error);
+      showError('Upload failed', 'Please try again');
+    }
   };
 
   // Apply preset theme
   const applyPreset = async (preset: any) => {
-    const gradientString = `linear-gradient(to bottom right, ${preset.colors[0]}, ${preset.colors[1]})`;
+    if (!isAuthenticated || !publicKey) {
+      showError('Authentication Error', 'Please reconnect your wallet');
+      return;
+    }
     
-    await updateProfile({
+    const gradientString = `${preset.colors[0]},${preset.colors[1]}`;
+    
+    const success = await updateProfile({
       boardPresetId: preset.id,
       tilePresetId: preset.id,
       customBoardBackground: gradientString,
       customPropertyCardBackground: gradientString,
       customSceneBackground: gradientString,
     });
-    showSuccess('Theme Applied', preset.name);
+    
+    if (success) {
+      showSuccess('Theme Applied', preset.name);
+    } else {
+      showError('Update Failed', 'Failed to apply theme preset');
+    }
   };
 
 
@@ -153,9 +213,9 @@ export function MobileThemeModal({ onClose }: MobileThemeModalProps) {
           </button>
         </div>
         
-        {/* Board Preview - square to show full board */}
-        <div className="px-4 pb-2 flex-shrink-0 flex justify-center">
-          <div className="w-[180px] h-[180px] overflow-hidden rounded-xl border border-purple-500/30 relative">
+        {/* Board Preview */}
+        <div className="px-4 pb-2 flex-shrink-0">
+          <div className="w-full max-w-[200px] mx-auto">
             <SimpleBoardPreview
               customSceneBackground={profile.customSceneBackground}
               customBoardBackground={profile.customBoardBackground}
@@ -163,7 +223,7 @@ export function MobileThemeModal({ onClose }: MobileThemeModalProps) {
               cornerSquareStyle={profile.cornerSquareStyle || 'property'}
               profilePicture={profile.profilePicture}
               writingStyle={profile.writingStyle || 'light'}
-              className="absolute inset-0"
+              className="w-full aspect-square rounded-xl border border-purple-500/30"
             />
           </div>
         </div>
@@ -239,10 +299,18 @@ export function MobileThemeModal({ onClose }: MobileThemeModalProps) {
                     <div className="text-purple-400/60 text-xs">Tap to pick a color</div>
                   </div>
                   <button
-                    onClick={() => {
+                    onClick={async () => {
+                      if (!isAuthenticated || !publicKey) {
+                        showError('Authentication Error', 'Please reconnect your wallet');
+                        return;
+                      }
                       const colorGradient = `${boardColor},${boardColor}`;
-                      updateProfile({ customBoardBackground: colorGradient, boardPresetId: null });
-                      showSuccess('Applied', 'Board color updated');
+                      const success = await updateProfile({ customBoardBackground: colorGradient, boardPresetId: null });
+                      if (success) {
+                        showSuccess('Applied', 'Board color updated');
+                      } else {
+                        showError('Update Failed', 'Failed to update board color');
+                      }
                     }}
                     className="px-4 py-2 bg-purple-600 hover:bg-purple-500 rounded-lg text-white text-sm font-medium"
                   >
@@ -290,10 +358,18 @@ export function MobileThemeModal({ onClose }: MobileThemeModalProps) {
                     <div className="text-purple-400/60 text-xs">Tap to pick a color</div>
                   </div>
                   <button
-                    onClick={() => {
+                    onClick={async () => {
+                      if (!isAuthenticated || !publicKey) {
+                        showError('Authentication Error', 'Please reconnect your wallet');
+                        return;
+                      }
                       const colorGradient = `${cardsColor},${cardsColor}`;
-                      updateProfile({ customPropertyCardBackground: colorGradient, tilePresetId: null });
-                      showSuccess('Applied', 'Card color updated');
+                      const success = await updateProfile({ customPropertyCardBackground: colorGradient, tilePresetId: null });
+                      if (success) {
+                        showSuccess('Applied', 'Card color updated');
+                      } else {
+                        showError('Update Failed', 'Failed to update card color');
+                      }
                     }}
                     className="px-4 py-2 bg-purple-600 hover:bg-purple-500 rounded-lg text-white text-sm font-medium"
                   >
@@ -341,10 +417,18 @@ export function MobileThemeModal({ onClose }: MobileThemeModalProps) {
                     <div className="text-purple-400/60 text-xs">Tap to pick a color</div>
                   </div>
                   <button
-                    onClick={() => {
+                    onClick={async () => {
+                      if (!isAuthenticated || !publicKey) {
+                        showError('Authentication Error', 'Please reconnect your wallet');
+                        return;
+                      }
                       const colorGradient = `${sceneColor},${sceneColor}`;
-                      updateProfile({ customSceneBackground: colorGradient });
-                      showSuccess('Applied', 'Scene color updated');
+                      const success = await updateProfile({ customSceneBackground: colorGradient });
+                      if (success) {
+                        showSuccess('Applied', 'Scene color updated');
+                      } else {
+                        showError('Update Failed', 'Failed to update scene color');
+                      }
                     }}
                     className="px-4 py-2 bg-purple-600 hover:bg-purple-500 rounded-lg text-white text-sm font-medium"
                   >
@@ -384,7 +468,16 @@ export function MobileThemeModal({ onClose }: MobileThemeModalProps) {
               <div className="grid grid-cols-2 gap-3">
                 {/* Property Option */}
                 <button
-                  onClick={() => updateProfile({ cornerSquareStyle: 'property' })}
+                  onClick={async () => {
+                    if (!isAuthenticated || !publicKey) {
+                      showError('Authentication Error', 'Please reconnect your wallet');
+                      return;
+                    }
+                    const success = await updateProfile({ cornerSquareStyle: 'property' });
+                    if (!success) {
+                      showError('Update Failed', 'Failed to update corner style');
+                    }
+                  }}
                   className={`rounded-xl p-3 text-center transition-all ${
                     profile.cornerSquareStyle === 'property'
                       ? 'bg-purple-900/30 border-2 border-purple-400'
@@ -392,10 +485,7 @@ export function MobileThemeModal({ onClose }: MobileThemeModalProps) {
                   }`}
                 >
                   <div className="w-12 h-12 mx-auto rounded-lg bg-purple-800/50 border border-purple-500/30 flex items-center justify-center mb-2">
-                    <div className="text-center">
-                      <div className="text-purple-300 text-[6px]">GO</div>
-                      <div className="text-white text-[10px] font-bold">→</div>
-                    </div>
+                    <span className="text-purple-300 text-[5px] leading-none text-center">DEFI<br/>POLY</span>
                   </div>
                   <div className="text-white text-xs font-medium">Property</div>
                   <div className="text-purple-400/60 text-[9px]">Default tiles</div>
@@ -406,7 +496,16 @@ export function MobileThemeModal({ onClose }: MobileThemeModalProps) {
                 
                 {/* Profile Option */}
                 <button
-                  onClick={() => updateProfile({ cornerSquareStyle: 'profile' })}
+                  onClick={async () => {
+                    if (!isAuthenticated || !publicKey) {
+                      showError('Authentication Error', 'Please reconnect your wallet');
+                      return;
+                    }
+                    const success = await updateProfile({ cornerSquareStyle: 'profile' });
+                    if (!success) {
+                      showError('Update Failed', 'Failed to update corner style');
+                    }
+                  }}
                   className={`rounded-xl p-3 text-center transition-all ${
                     profile.cornerSquareStyle === 'profile'
                       ? 'bg-purple-900/30 border-2 border-purple-400'
@@ -415,7 +514,7 @@ export function MobileThemeModal({ onClose }: MobileThemeModalProps) {
                 >
                   <div className="w-12 h-12 mx-auto rounded-lg bg-purple-800/50 border border-purple-500/30 flex items-center justify-center overflow-hidden mb-2">
                     {profile.profilePicture ? (
-                      <img src={getImageUrl(profile.profilePicture)} alt="" className="w-10 h-10 rounded-full object-cover" />
+                      <img src={getImageUrl(profile.profilePicture!)} alt="" className="w-10 h-10 rounded-full object-cover" />
                     ) : (
                       <div className="w-10 h-10 rounded-full bg-purple-500/30 flex items-center justify-center text-sm">👤</div>
                     )}
@@ -427,12 +526,7 @@ export function MobileThemeModal({ onClose }: MobileThemeModalProps) {
                   )}
                 </button>
               </div>
-              
-              <div className="bg-purple-900/20 rounded-lg p-2 border border-purple-500/20">
-                <p className="text-purple-300/60 text-[10px] text-center">
-                  💡 Changes apply immediately to your board
-                </p>
-              </div>
+            
             </div>
           )}
           
@@ -445,7 +539,16 @@ export function MobileThemeModal({ onClose }: MobileThemeModalProps) {
               <div className="grid grid-cols-2 gap-3">
                 {/* Light Option */}
                 <button
-                  onClick={() => updateProfile({ writingStyle: 'light' })}
+                  onClick={async () => {
+                    if (!isAuthenticated || !publicKey) {
+                      showError('Authentication Error', 'Please reconnect your wallet');
+                      return;
+                    }
+                    const success = await updateProfile({ writingStyle: 'light' });
+                    if (!success) {
+                      showError('Update Failed', 'Failed to update writing style');
+                    }
+                  }}
                   className={`rounded-xl p-4 text-center transition-all ${
                     profile.writingStyle === 'light'
                       ? 'bg-purple-900/30 border-2 border-purple-400'
@@ -464,7 +567,16 @@ export function MobileThemeModal({ onClose }: MobileThemeModalProps) {
                 
                 {/* Dark Option */}
                 <button
-                  onClick={() => updateProfile({ writingStyle: 'dark' })}
+                  onClick={async () => {
+                    if (!isAuthenticated || !publicKey) {
+                      showError('Authentication Error', 'Please reconnect your wallet');
+                      return;
+                    }
+                    const success = await updateProfile({ writingStyle: 'dark' });
+                    if (!success) {
+                      showError('Update Failed', 'Failed to update writing style');
+                    }
+                  }}
                   className={`rounded-xl p-4 text-center transition-all ${
                     profile.writingStyle === 'dark'
                       ? 'bg-purple-900/30 border-2 border-purple-400'

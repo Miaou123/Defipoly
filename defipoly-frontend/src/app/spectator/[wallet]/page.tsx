@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Board } from '@/components/Board';
 import { Leaderboard } from '@/components/Leaderboard';
@@ -178,7 +178,225 @@ export default function SpectatorPage() {
     );
   }
 
+  // Mobile Stats Row component for spectator
+  const MobileSpectatorStatsRow = () => (
+    <div className="px-4 py-3 border-b border-purple-500/20">
+      <div className="flex items-center justify-center">
+        {/* Rank */}
+        <div className="flex flex-col items-center flex-1">
+          <div className="text-[10px] text-purple-300 uppercase tracking-wider mb-0.5">Rank</div>
+          <div className="text-lg font-bold text-yellow-400 tabular-nums">
+            {leaderboardRank ? `#${leaderboardRank}` : 'N/A'}
+          </div>
+        </div>
+        
+        {/* Divider */}
+        <div className="w-px h-8 bg-purple-400/30 mx-3"></div>
+        
+        {/* Total Slots */}
+        <div className="flex flex-col items-center flex-1">
+          <div className="text-[10px] text-purple-300 uppercase tracking-wider mb-0.5">Slots</div>
+          <div className="text-lg font-bold text-white tabular-nums">
+            {stats?.totalSlotsOwned || 0}
+          </div>
+        </div>
+        
+        {/* Divider */}
+        <div className="w-px h-8 bg-purple-400/30 mx-3"></div>
+        
+        {/* Properties */}
+        <div className="flex flex-col items-center flex-1">
+          <div className="text-[10px] text-purple-300 uppercase tracking-wider mb-0.5">Properties</div>
+          <div className="text-lg font-bold text-purple-200 tabular-nums">
+            {stats?.propertiesBought || 0}
+          </div>
+        </div>
+        
+        {/* Divider */}
+        <div className="w-px h-8 bg-purple-400/30 mx-3"></div>
+        
+        {/* Sets */}
+        <div className="flex flex-col items-center flex-1">
+          <div className="text-[10px] text-purple-300 uppercase tracking-wider mb-0.5">Sets</div>
+          <div className="text-lg font-bold text-green-400 tabular-nums">
+            {stats?.completedSets || 0}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 
+  // Mobile Layout
+  if (isMobile) {
+    const [activeTab, setActiveTab] = useState<'stats' | 'ranks' | 'feed'>('stats');
+    const [startY, setStartY] = useState<number | null>(null);
+    const [panelHeight, setPanelHeight] = useState(300);
+    const [isDragging, setIsDragging] = useState(false);
+
+    const tabs = [
+      { id: 'stats' as const, icon: '📊', label: 'Stats' },
+      { id: 'ranks' as const, icon: '🏆', label: 'Ranks' },
+      { id: 'feed' as const, icon: '📡', label: 'Feed' },
+    ];
+
+    const handleTouchStart = (e: React.TouchEvent) => {
+      const clientY = e.touches[0]?.clientY;
+      if (clientY !== undefined) {
+        setStartY(clientY);
+        setIsDragging(true);
+      }
+    };
+
+    const handleTouchMove = (e: React.TouchEvent) => {
+      if (!isDragging || !startY) return;
+      const currentY = e.touches[0]?.clientY;
+      if (!currentY) return;
+      const diff = startY - currentY;
+      setPanelHeight(Math.max(100, Math.min(window.innerHeight - 200, 300 + diff)));
+    };
+
+    const handleTouchEnd = () => {
+      setIsDragging(false);
+      setStartY(null);
+    };
+
+    return (
+      <div className="h-[100dvh] flex flex-col relative overflow-hidden">
+        {/* Fixed Header */}
+        <div className="flex-shrink-0 bg-black/90 border-b border-purple-500/20 relative z-20">
+          <div className="safe-area-top" />
+          
+          {/* Top Row: Logo + Back Button */}
+          <div className="flex items-center justify-between px-4 py-3">
+            <div className="flex items-center gap-3">
+              <img src="/logo.svg" alt="Defipoly" className="w-8 h-8" />
+              <span className="font-orbitron text-lg font-bold text-white">Defipoly</span>
+            </div>
+            
+            <button
+              onClick={() => router.push('/')}
+              className="bg-black/60 backdrop-blur-xl rounded-xl border border-purple-500/30 px-4 py-2 flex items-center gap-2 hover:bg-purple-900/20 transition-all"
+            >
+              <svg className="w-5 h-5 text-purple-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+              </svg>
+              <span className="text-purple-300 text-sm font-medium">Back</span>
+            </button>
+          </div>
+
+          {/* Player Info */}
+          <div className="px-4 pb-3 flex items-center gap-3">
+            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center overflow-hidden border-2 border-purple-400/50">
+              {getImageUrl(profile?.profilePicture) ? (
+                <img 
+                  src={getImageUrl(profile?.profilePicture)!} 
+                  alt="Profile" 
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <span className="text-xl">👤</span>
+              )}
+            </div>
+            <div className="flex-1">
+              <h1 className="text-white font-bold text-lg">{getDisplayName()}</h1>
+              <div className="text-purple-300 text-sm font-mono">{formatAddress(walletAddress)}</div>
+            </div>
+            {leaderboardRank && (
+              <div className="bg-yellow-500/20 border border-yellow-400/30 rounded-lg px-3 py-1">
+                <span className="text-yellow-400 font-bold text-sm">#{leaderboardRank}</span>
+              </div>
+            )}
+          </div>
+
+          {/* Stats Row */}
+          <MobileSpectatorStatsRow />
+        </div>
+
+        {/* Board Background */}
+        <div className="flex-1 relative overflow-hidden">
+          <Board
+            onSelectProperty={() => {}}
+            spectatorMode={true}
+            spectatorWallet={walletAddress}
+            spectatorOwnerships={spectatorOwnerships}
+            profilePicture={profile?.profilePicture || null}
+            cornerSquareStyle={profile?.cornerSquareStyle || 'property'}
+            customBoardBackground={profile?.customBoardBackground || null}
+            custom3DPropertyTiles={profile?.customPropertyCardBackground || null}
+            customSceneBackground={profile?.customSceneBackground || null}
+            isMobile={true}
+          />
+        </div>
+
+        {/* Bottom Panel */}
+        <div 
+          className="absolute bottom-0 left-0 right-0 bg-black/95 backdrop-blur-xl border-t border-purple-500/30 rounded-t-3xl overflow-hidden"
+          style={{ height: `${panelHeight}px` }}
+        >
+          {/* Drag Handle */}
+          <div 
+            className="flex justify-center py-2 cursor-grab"
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleTouchEnd}
+          >
+            <div className="w-10 h-1 bg-purple-500/40 rounded-full"></div>
+          </div>
+          
+          {/* Tab Bar */}
+          <div className="flex border-b border-purple-500/20">
+            {tabs.map(tab => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`flex-1 py-3 flex flex-col items-center gap-1 transition-all ${
+                  activeTab === tab.id 
+                    ? 'border-b-2 border-purple-400 text-purple-300' 
+                    : 'border-b-2 border-transparent text-purple-500'
+                }`}
+              >
+                <span className="text-lg">{tab.icon}</span>
+                <span className="text-xs font-medium">{tab.label}</span>
+              </button>
+            ))}
+          </div>
+          
+          {/* Tab Content */}
+          <div className="flex-1 overflow-y-auto p-4" style={{ height: `${panelHeight - 100}px` }}>
+            {activeTab === 'stats' && (
+              <div className="grid grid-cols-2 gap-3">
+                {stats && Object.entries({
+                  'Rank': leaderboardRank ? `#${leaderboardRank}` : 'N/A',
+                  'Total Slots': stats.totalSlotsOwned,
+                  'Properties': stats.propertiesBought,
+                  'Completed Sets': stats.completedSets,
+                  'Successful Steals': stats.successfulSteals,
+                  'Failed Steals': stats.failedSteals,
+                  'Daily Income': stats.dailyIncome.toLocaleString(),
+                  'Total Earned': Math.floor(stats.totalEarned / 1e9).toLocaleString(),
+                }).map(([key, value]) => (
+                  <div key={key} className="bg-purple-900/20 rounded-lg p-3">
+                    <div className="text-purple-400 text-xs mb-1">{key}</div>
+                    <div className="text-white font-bold text-lg">{value}</div>
+                  </div>
+                ))}
+              </div>
+            )}
+            
+            {activeTab === 'ranks' && (
+              <Leaderboard scaleFactor={scaleFactor} isMobile={true} />
+            )}
+            
+            {activeTab === 'feed' && (
+              <LiveFeed scaleFactor={scaleFactor} isMobile={true} />
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Desktop Layout
   return (
     <div className="h-screen overflow-hidden relative">
       {/* Main grid layout - with dynamic scaling */}
