@@ -440,6 +440,9 @@ export function MobileProfilePage() {
                 customSceneBackground={gameState.profile.customSceneBackground}
                 customBoardBackground={gameState.profile.customBoardBackground}
                 customPropertyCardBackground={gameState.profile.customPropertyCardBackground}
+                cornerSquareStyle={gameState.profile.cornerSquareStyle || 'property'}
+                profilePicture={gameState.profile.profilePicture}
+                writingStyle={gameState.profile.writingStyle || 'light'}
                 className="w-full h-full rounded-2xl border-2 border-purple-500/30"
               />
             </div>
@@ -451,37 +454,6 @@ export function MobileProfilePage() {
             >
               Customize Theme
             </button>
-            
-            {/* Writing Style Toggle */}
-            <div className="bg-purple-900/30 rounded-xl p-4 border border-purple-500/20">
-              <div className="flex items-center gap-3 mb-3">
-                <span className="text-purple-400">✏️</span>
-                <span className="text-purple-200 text-sm font-medium">Writing Style</span>
-              </div>
-              <div className="flex gap-2">
-                <button 
-                  onClick={() => gameState.updateProfile({ writingStyle: 'light' })}
-                  className={`flex-1 py-2.5 rounded-lg text-sm font-medium flex items-center justify-center gap-2 ${
-                    gameState.profile.writingStyle === 'light' 
-                      ? 'bg-purple-600 text-white' 
-                      : 'bg-purple-900/50 text-purple-400 border border-purple-500/20'
-                  }`}
-                >
-                  Light
-                </button>
-                <button 
-                  onClick={() => gameState.updateProfile({ writingStyle: 'dark' })}
-                  className={`flex-1 py-2.5 rounded-lg text-sm font-medium flex items-center justify-center gap-2 ${
-                    gameState.profile.writingStyle === 'dark' 
-                      ? 'bg-purple-600 text-white' 
-                      : 'bg-purple-900/50 text-purple-400 border border-purple-500/20'
-                  }`}
-                >
-                  Dark
-                </button>
-              </div>
-              <p className="text-purple-400/60 text-xs mt-2 text-center">Controls text color on property tiles</p>
-            </div>
           </div>
         )}
 

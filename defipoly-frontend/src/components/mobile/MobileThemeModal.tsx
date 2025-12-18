@@ -8,16 +8,21 @@ import { THEME_PRESETS } from '@/utils/themePresets';
 import { getImageUrl } from '@/utils/config';
 import { X } from 'lucide-react';
 
-type TabType = 'presets' | 'board' | 'cards' | 'scene' | 'corners';
+type TabType = 'presets' | 'board' | 'cards' | 'scene' | 'corners' | 'writing';
 
 interface MobileThemeModalProps {
   onClose: () => void;
 }
 
 export function MobileThemeModal({ onClose }: MobileThemeModalProps) {
-  const [activeTab, setActiveTab] = useState<TabType>('presets');
+  const [activeTab, setActiveTab] = useState<TabType>('board');
   const { profile, updateProfile } = useGameState();
   const { showSuccess, showError } = useNotification();
+  
+  // Custom color states
+  const [boardColor, setBoardColor] = useState('#9333ea');
+  const [cardsColor, setCardsColor] = useState('#9333ea');
+  const [sceneColor, setSceneColor] = useState('#9333ea');
   
   // Swipe to dismiss state
   const [dragOffset, setDragOffset] = useState(0);
@@ -106,26 +111,14 @@ export function MobileThemeModal({ onClose }: MobileThemeModalProps) {
     showSuccess('Theme Applied', preset.name);
   };
 
-  // Color options for board/cards/scene
-  const colorOptions = [
-    { gradient: 'from-purple-700 to-purple-900', string: 'linear-gradient(to bottom right, #7c3aed, #581c87)' },
-    { gradient: 'from-indigo-700 to-indigo-900', string: 'linear-gradient(to bottom right, #4338ca, #312e81)' },
-    { gradient: 'from-blue-700 to-blue-900', string: 'linear-gradient(to bottom right, #1d4ed8, #1e3a8a)' },
-    { gradient: 'from-cyan-700 to-cyan-900', string: 'linear-gradient(to bottom right, #0891b2, #164e63)' },
-    { gradient: 'from-teal-700 to-teal-900', string: 'linear-gradient(to bottom right, #0f766e, #134e4a)' },
-    { gradient: 'from-green-700 to-green-900', string: 'linear-gradient(to bottom right, #15803d, #14532d)' },
-    { gradient: 'from-yellow-700 to-yellow-900', string: 'linear-gradient(to bottom right, #a16207, #713f12)' },
-    { gradient: 'from-orange-700 to-orange-900', string: 'linear-gradient(to bottom right, #c2410c, #7c2d12)' },
-    { gradient: 'from-red-700 to-red-900', string: 'linear-gradient(to bottom right, #dc2626, #7f1d1d)' },
-    { gradient: 'from-pink-700 to-pink-900', string: 'linear-gradient(to bottom right, #be185d, #831843)' },
-  ];
 
   const tabs: { id: TabType; label: string }[] = [
-    { id: 'presets', label: 'Presets' },
     { id: 'board', label: 'Board' },
     { id: 'cards', label: 'Cards' },
     { id: 'scene', label: 'Scene' },
     { id: 'corners', label: 'Corners' },
+    { id: 'writing', label: 'Text' },
+    { id: 'presets', label: 'Presets' },
   ];
 
   return (
@@ -160,14 +153,17 @@ export function MobileThemeModal({ onClose }: MobileThemeModalProps) {
           </button>
         </div>
         
-        {/* Board Preview - fixed height, NOT aspect-video */}
-        <div className="px-4 pb-2 flex-shrink-0">
-          <div className="h-[180px] w-full">
+        {/* Board Preview - square to show full board */}
+        <div className="px-4 pb-2 flex-shrink-0 flex justify-center">
+          <div className="w-[180px] h-[180px] overflow-hidden rounded-xl border border-purple-500/30 relative">
             <SimpleBoardPreview
               customSceneBackground={profile.customSceneBackground}
               customBoardBackground={profile.customBoardBackground}
               customPropertyCardBackground={profile.customPropertyCardBackground}
-              className="w-full h-full rounded-xl border border-purple-500/30"
+              cornerSquareStyle={profile.cornerSquareStyle || 'property'}
+              profilePicture={profile.profilePicture}
+              writingStyle={profile.writingStyle || 'light'}
+              className="absolute inset-0"
             />
           </div>
         </div>
@@ -197,7 +193,7 @@ export function MobileThemeModal({ onClose }: MobileThemeModalProps) {
           {activeTab === 'presets' && (
             <div>
               <div className="text-purple-400/60 text-xs uppercase tracking-wider mb-2">Theme Presets</div>
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-4 gap-1.5">
                 {Object.values(THEME_PRESETS).map(preset => (
                   <button
                     key={preset.id}
@@ -212,11 +208,11 @@ export function MobileThemeModal({ onClose }: MobileThemeModalProps) {
                     }}
                   >
                     {profile.boardPresetId === preset.id && (
-                      <div className="w-full h-full flex items-start justify-end p-1">
-                        <div className="w-4 h-4 bg-purple-500 rounded-full flex items-center justify-center text-white text-[8px]">✓</div>
+                      <div className="absolute top-0.5 right-0.5">
+                        <div className="w-3 h-3 bg-purple-500 rounded-full flex items-center justify-center text-white text-[6px]">✓</div>
                       </div>
                     )}
-                    <div className="absolute bottom-0 left-0 right-0 bg-black/60 text-white text-[8px] p-1 text-center">
+                    <div className="absolute bottom-0 left-0 right-0 bg-black/70 text-white text-[6px] py-0.5 text-center truncate px-0.5">
                       {preset.name}
                     </div>
                   </button>
@@ -228,173 +224,262 @@ export function MobileThemeModal({ onClose }: MobileThemeModalProps) {
           {/* BOARD TAB */}
           {activeTab === 'board' && (
             <div className="space-y-4">
+              {/* Color Picker */}
               <div>
-                <div className="text-purple-400/60 text-xs uppercase tracking-wider mb-2">Colors</div>
-                <div className="grid grid-cols-5 gap-2">
-                  {colorOptions.map((color, i) => (
-                    <button
-                      key={i}
-                      onClick={() => updateProfile({ customBoardBackground: color.string })}
-                      className={`aspect-square rounded-lg bg-gradient-to-br ${color.gradient} border border-purple-500/20`}
-                    />
-                  ))}
+                <div className="text-purple-400/60 text-xs uppercase tracking-wider mb-2">Custom Color</div>
+                <div className="flex items-center gap-3">
+                  <input
+                    type="color"
+                    value={boardColor}
+                    onChange={(e) => setBoardColor(e.target.value)}
+                    className="w-12 h-12 rounded-lg border-2 border-purple-500/30 cursor-pointer bg-transparent"
+                  />
+                  <div className="flex-1">
+                    <div className="text-white text-sm font-mono">{boardColor}</div>
+                    <div className="text-purple-400/60 text-xs">Tap to pick a color</div>
+                  </div>
+                  <button
+                    onClick={() => {
+                      const colorGradient = `${boardColor},${boardColor}`;
+                      updateProfile({ customBoardBackground: colorGradient, boardPresetId: null });
+                      showSuccess('Applied', 'Board color updated');
+                    }}
+                    className="px-4 py-2 bg-purple-600 hover:bg-purple-500 rounded-lg text-white text-sm font-medium"
+                  >
+                    Apply
+                  </button>
                 </div>
               </div>
               
-              <input
-                ref={boardFileRef}
-                type="file"
-                accept="image/*"
-                onChange={(e) => handleFileUpload(e, 'board')}
-                className="hidden"
-              />
-              <button 
-                onClick={() => boardFileRef.current?.click()}
-                className="w-full py-3 border border-dashed border-purple-500/40 rounded-xl text-purple-400 text-sm flex items-center justify-center gap-2"
-              >
-                📤 Upload Custom Image
-              </button>
-              <p className="text-purple-400/50 text-[10px] text-center">Max 5MB • JPG, PNG, GIF</p>
+              {/* Upload Custom Image */}
+              <div className="pt-2 border-t border-purple-500/20">
+                <div className="text-purple-400/60 text-xs uppercase tracking-wider mb-2">Or Upload Image</div>
+                <input
+                  ref={boardFileRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => handleFileUpload(e, 'board')}
+                  className="hidden"
+                />
+                <button 
+                  onClick={() => boardFileRef.current?.click()}
+                  className="w-full py-3 border border-dashed border-purple-500/40 rounded-xl text-purple-400 text-sm flex items-center justify-center gap-2"
+                >
+                  📤 Upload Custom Image
+                </button>
+                <p className="text-purple-400/50 text-[10px] text-center mt-1">Max 5MB • JPG, PNG, GIF</p>
+              </div>
             </div>
           )}
           
           {/* CARDS TAB */}
           {activeTab === 'cards' && (
             <div className="space-y-4">
+              {/* Color Picker */}
               <div>
-                <div className="text-purple-400/60 text-xs uppercase tracking-wider mb-2">Colors</div>
-                <div className="grid grid-cols-5 gap-2">
-                  {colorOptions.map((color, i) => (
-                    <button
-                      key={i}
-                      onClick={() => updateProfile({ customPropertyCardBackground: color.string })}
-                      className={`aspect-square rounded-lg bg-gradient-to-br ${color.gradient} border border-purple-500/20`}
-                    />
-                  ))}
+                <div className="text-purple-400/60 text-xs uppercase tracking-wider mb-2">Custom Color</div>
+                <div className="flex items-center gap-3">
+                  <input
+                    type="color"
+                    value={cardsColor}
+                    onChange={(e) => setCardsColor(e.target.value)}
+                    className="w-12 h-12 rounded-lg border-2 border-purple-500/30 cursor-pointer bg-transparent"
+                  />
+                  <div className="flex-1">
+                    <div className="text-white text-sm font-mono">{cardsColor}</div>
+                    <div className="text-purple-400/60 text-xs">Tap to pick a color</div>
+                  </div>
+                  <button
+                    onClick={() => {
+                      const colorGradient = `${cardsColor},${cardsColor}`;
+                      updateProfile({ customPropertyCardBackground: colorGradient, tilePresetId: null });
+                      showSuccess('Applied', 'Card color updated');
+                    }}
+                    className="px-4 py-2 bg-purple-600 hover:bg-purple-500 rounded-lg text-white text-sm font-medium"
+                  >
+                    Apply
+                  </button>
                 </div>
               </div>
               
-              <input
-                ref={cardsFileRef}
-                type="file"
-                accept="image/*"
-                onChange={(e) => handleFileUpload(e, 'cards')}
-                className="hidden"
-              />
-              <button 
-                onClick={() => cardsFileRef.current?.click()}
-                className="w-full py-3 border border-dashed border-purple-500/40 rounded-xl text-purple-400 text-sm flex items-center justify-center gap-2"
-              >
-                📤 Upload Custom Image
-              </button>
-              <p className="text-purple-400/50 text-[10px] text-center">Max 3MB • JPG, PNG, GIF</p>
+              {/* Upload Custom Image */}
+              <div className="pt-2 border-t border-purple-500/20">
+                <div className="text-purple-400/60 text-xs uppercase tracking-wider mb-2">Or Upload Image</div>
+                <input
+                  ref={cardsFileRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => handleFileUpload(e, 'cards')}
+                  className="hidden"
+                />
+                <button 
+                  onClick={() => cardsFileRef.current?.click()}
+                  className="w-full py-3 border border-dashed border-purple-500/40 rounded-xl text-purple-400 text-sm flex items-center justify-center gap-2"
+                >
+                  📤 Upload Custom Image
+                </button>
+                <p className="text-purple-400/50 text-[10px] text-center mt-1">Max 3MB • JPG, PNG, GIF</p>
+              </div>
             </div>
           )}
           
           {/* SCENE TAB */}
           {activeTab === 'scene' && (
             <div className="space-y-4">
+              {/* Color Picker */}
               <div>
-                <div className="text-purple-400/60 text-xs uppercase tracking-wider mb-2">Colors</div>
-                <div className="grid grid-cols-5 gap-2">
-                  {colorOptions.map((color, i) => (
-                    <button
-                      key={i}
-                      onClick={() => updateProfile({ customSceneBackground: color.string })}
-                      className={`aspect-square rounded-lg bg-gradient-to-br ${color.gradient} border border-purple-500/20`}
-                    />
-                  ))}
+                <div className="text-purple-400/60 text-xs uppercase tracking-wider mb-2">Custom Color</div>
+                <div className="flex items-center gap-3">
+                  <input
+                    type="color"
+                    value={sceneColor}
+                    onChange={(e) => setSceneColor(e.target.value)}
+                    className="w-12 h-12 rounded-lg border-2 border-purple-500/30 cursor-pointer bg-transparent"
+                  />
+                  <div className="flex-1">
+                    <div className="text-white text-sm font-mono">{sceneColor}</div>
+                    <div className="text-purple-400/60 text-xs">Tap to pick a color</div>
+                  </div>
+                  <button
+                    onClick={() => {
+                      const colorGradient = `${sceneColor},${sceneColor}`;
+                      updateProfile({ customSceneBackground: colorGradient });
+                      showSuccess('Applied', 'Scene color updated');
+                    }}
+                    className="px-4 py-2 bg-purple-600 hover:bg-purple-500 rounded-lg text-white text-sm font-medium"
+                  >
+                    Apply
+                  </button>
                 </div>
               </div>
               
-              <input
-                ref={sceneFileRef}
-                type="file"
-                accept="image/*"
-                onChange={(e) => handleFileUpload(e, 'scene')}
-                className="hidden"
-              />
-              <button 
-                onClick={() => sceneFileRef.current?.click()}
-                className="w-full py-3 border border-dashed border-purple-500/40 rounded-xl text-purple-400 text-sm flex items-center justify-center gap-2"
-              >
-                📤 Upload Custom Image
-              </button>
-              <p className="text-purple-400/50 text-[10px] text-center">Max 5MB • JPG, PNG, GIF</p>
+              {/* Upload Custom Image */}
+              <div className="pt-2 border-t border-purple-500/20">
+                <div className="text-purple-400/60 text-xs uppercase tracking-wider mb-2">Or Upload Image</div>
+                <input
+                  ref={sceneFileRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => handleFileUpload(e, 'scene')}
+                  className="hidden"
+                />
+                <button 
+                  onClick={() => sceneFileRef.current?.click()}
+                  className="w-full py-3 border border-dashed border-purple-500/40 rounded-xl text-purple-400 text-sm flex items-center justify-center gap-2"
+                >
+                  📤 Upload Custom Image
+                </button>
+                <p className="text-purple-400/50 text-[10px] text-center mt-1">Max 5MB • JPG, PNG, GIF</p>
+              </div>
             </div>
           )}
           
           {/* CORNERS TAB */}
           {activeTab === 'corners' && (
-            <div className="space-y-4">
-              <div className="text-purple-400/60 text-xs uppercase tracking-wider mb-1">Corner Square Style</div>
-              <p className="text-purple-300/70 text-sm mb-4">Choose what to display in the corner squares of your board.</p>
+            <div className="space-y-3">
+              <div className="text-purple-400/60 text-xs uppercase tracking-wider">Corner Square Style</div>
+              <p className="text-purple-300/70 text-xs">Choose what to display in the corner squares.</p>
               
-              {/* Property Option */}
-              <button
-                onClick={() => updateProfile({ cornerSquareStyle: 'property' })}
-                className={`w-full rounded-xl p-4 text-left transition-all ${
-                  profile.cornerSquareStyle === 'property'
-                    ? 'bg-purple-900/30 border-2 border-purple-400'
-                    : 'bg-purple-900/20 border border-purple-500/20'
-                }`}
-              >
-                <div className="flex items-center gap-4">
-                  <div className="w-16 h-16 rounded-lg bg-purple-800/50 border border-purple-500/30 flex items-center justify-center">
+              {/* Side by side options */}
+              <div className="grid grid-cols-2 gap-3">
+                {/* Property Option */}
+                <button
+                  onClick={() => updateProfile({ cornerSquareStyle: 'property' })}
+                  className={`rounded-xl p-3 text-center transition-all ${
+                    profile.cornerSquareStyle === 'property'
+                      ? 'bg-purple-900/30 border-2 border-purple-400'
+                      : 'bg-purple-900/20 border border-purple-500/20'
+                  }`}
+                >
+                  <div className="w-12 h-12 mx-auto rounded-lg bg-purple-800/50 border border-purple-500/30 flex items-center justify-center mb-2">
                     <div className="text-center">
-                      <div className="text-purple-300 text-[8px]">GO</div>
-                      <div className="text-white text-xs font-bold">→</div>
+                      <div className="text-purple-300 text-[6px]">GO</div>
+                      <div className="text-white text-[10px] font-bold">→</div>
                     </div>
                   </div>
-                  <div className="flex-1">
-                    <div className="text-white font-medium">Property Style</div>
-                    <div className="text-purple-400/60 text-xs">Shows default corner tiles (GO, Jail, etc.)</div>
-                  </div>
-                  <div className={`w-5 h-5 rounded-full flex items-center justify-center ${
-                    profile.cornerSquareStyle === 'property'
-                      ? 'bg-purple-500 text-white text-xs'
-                      : 'border border-purple-500/30'
-                  }`}>
-                    {profile.cornerSquareStyle === 'property' && '✓'}
-                  </div>
-                </div>
-              </button>
-              
-              {/* Profile Option */}
-              <button
-                onClick={() => updateProfile({ cornerSquareStyle: 'profile' })}
-                className={`w-full rounded-xl p-4 text-left transition-all ${
-                  profile.cornerSquareStyle === 'profile'
-                    ? 'bg-purple-900/30 border-2 border-purple-400'
-                    : 'bg-purple-900/20 border border-purple-500/20'
-                }`}
-              >
-                <div className="flex items-center gap-4">
-                  <div className="w-16 h-16 rounded-lg bg-purple-800/50 border border-purple-500/30 flex items-center justify-center overflow-hidden">
+                  <div className="text-white text-xs font-medium">Property</div>
+                  <div className="text-purple-400/60 text-[9px]">Default tiles</div>
+                  {profile.cornerSquareStyle === 'property' && (
+                    <div className="w-4 h-4 bg-purple-500 rounded-full flex items-center justify-center text-white text-[8px] mx-auto mt-2">✓</div>
+                  )}
+                </button>
+                
+                {/* Profile Option */}
+                <button
+                  onClick={() => updateProfile({ cornerSquareStyle: 'profile' })}
+                  className={`rounded-xl p-3 text-center transition-all ${
+                    profile.cornerSquareStyle === 'profile'
+                      ? 'bg-purple-900/30 border-2 border-purple-400'
+                      : 'bg-purple-900/20 border border-purple-500/20'
+                  }`}
+                >
+                  <div className="w-12 h-12 mx-auto rounded-lg bg-purple-800/50 border border-purple-500/30 flex items-center justify-center overflow-hidden mb-2">
                     {profile.profilePicture ? (
-                      <img src={getImageUrl(profile.profilePicture)} alt="" className="w-12 h-12 rounded-full object-cover" />
+                      <img src={getImageUrl(profile.profilePicture)} alt="" className="w-10 h-10 rounded-full object-cover" />
                     ) : (
-                      <div className="w-12 h-12 rounded-full bg-purple-500/30 flex items-center justify-center text-xl">👤</div>
+                      <div className="w-10 h-10 rounded-full bg-purple-500/30 flex items-center justify-center text-sm">👤</div>
                     )}
                   </div>
-                  <div className="flex-1">
-                    <div className="text-white font-medium">Profile Picture</div>
-                    <div className="text-purple-400/60 text-xs">Shows your profile picture in corners</div>
-                  </div>
-                  <div className={`w-5 h-5 rounded-full flex items-center justify-center ${
-                    profile.cornerSquareStyle === 'profile'
-                      ? 'bg-purple-500 text-white text-xs'
-                      : 'border border-purple-500/30'
-                  }`}>
-                    {profile.cornerSquareStyle === 'profile' && '✓'}
-                  </div>
-                </div>
-              </button>
+                  <div className="text-white text-xs font-medium">Profile Pic</div>
+                  <div className="text-purple-400/60 text-[9px]">Your avatar</div>
+                  {profile.cornerSquareStyle === 'profile' && (
+                    <div className="w-4 h-4 bg-purple-500 rounded-full flex items-center justify-center text-white text-[8px] mx-auto mt-2">✓</div>
+                  )}
+                </button>
+              </div>
               
-              <div className="bg-purple-900/20 rounded-xl p-3 border border-purple-500/20">
-                <p className="text-purple-300/60 text-xs">
-                  💡 This affects all 4 corner squares on your board.
+              <div className="bg-purple-900/20 rounded-lg p-2 border border-purple-500/20">
+                <p className="text-purple-300/60 text-[10px] text-center">
+                  💡 Changes apply immediately to your board
                 </p>
+              </div>
+            </div>
+          )}
+          
+          {/* WRITING TAB */}
+          {activeTab === 'writing' && (
+            <div className="space-y-3">
+              <div className="text-purple-400/60 text-xs uppercase tracking-wider">Writing Style</div>
+              <p className="text-purple-300/70 text-xs">Controls text color on property tiles.</p>
+              
+              <div className="grid grid-cols-2 gap-3">
+                {/* Light Option */}
+                <button
+                  onClick={() => updateProfile({ writingStyle: 'light' })}
+                  className={`rounded-xl p-4 text-center transition-all ${
+                    profile.writingStyle === 'light'
+                      ? 'bg-purple-900/30 border-2 border-purple-400'
+                      : 'bg-purple-900/20 border border-purple-500/20'
+                  }`}
+                >
+                  <div className="w-12 h-12 mx-auto rounded-lg bg-purple-800 border border-purple-500/30 flex items-center justify-center mb-2">
+                    <span className="text-white text-lg font-bold">Aa</span>
+                  </div>
+                  <div className="text-white text-xs font-medium">Light</div>
+                  <div className="text-purple-400/60 text-[9px]">White text</div>
+                  {profile.writingStyle === 'light' && (
+                    <div className="w-4 h-4 bg-purple-500 rounded-full flex items-center justify-center text-white text-[8px] mx-auto mt-2">✓</div>
+                  )}
+                </button>
+                
+                {/* Dark Option */}
+                <button
+                  onClick={() => updateProfile({ writingStyle: 'dark' })}
+                  className={`rounded-xl p-4 text-center transition-all ${
+                    profile.writingStyle === 'dark'
+                      ? 'bg-purple-900/30 border-2 border-purple-400'
+                      : 'bg-purple-900/20 border border-purple-500/20'
+                  }`}
+                >
+                  <div className="w-12 h-12 mx-auto rounded-lg bg-gray-200 border border-purple-500/30 flex items-center justify-center mb-2">
+                    <span className="text-gray-800 text-lg font-bold">Aa</span>
+                  </div>
+                  <div className="text-white text-xs font-medium">Dark</div>
+                  <div className="text-purple-400/60 text-[9px]">Dark text</div>
+                  {profile.writingStyle === 'dark' && (
+                    <div className="w-4 h-4 bg-purple-500 rounded-full flex items-center justify-center text-white text-[8px] mx-auto mt-2">✓</div>
+                  )}
+                </button>
               </div>
             </div>
           )}
