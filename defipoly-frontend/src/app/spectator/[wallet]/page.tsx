@@ -39,6 +39,12 @@ export default function SpectatorPage() {
   const [isMobile, setIsMobile] = useState(false);
   const [sideColumnWidth, setSideColumnWidth] = useState(400);
   
+  // Mobile layout hooks
+  const [activeTab, setActiveTab] = useState<'stats' | 'ranks' | 'feed'>('stats');
+  const [startY, setStartY] = useState<number | null>(null);
+  const [panelHeight, setPanelHeight] = useState(100);
+  const [isDragging, setIsDragging] = useState(false);
+  
   // Calculate scaleFactor based on side column width (from 0.7 to 1.0)
   const scaleFactor = Math.max(0.7, Math.min(1.0, sideColumnWidth / 400));
 
@@ -228,11 +234,6 @@ export default function SpectatorPage() {
 
   // Mobile Layout
   if (isMobile) {
-    const [activeTab, setActiveTab] = useState<'stats' | 'ranks' | 'feed'>('stats');
-    const [startY, setStartY] = useState<number | null>(null);
-    const [panelHeight, setPanelHeight] = useState(300);
-    const [isDragging, setIsDragging] = useState(false);
-
     const tabs = [
       { id: 'stats' as const, icon: '📊', label: 'Stats' },
       { id: 'ranks' as const, icon: '🏆', label: 'Ranks' },
@@ -287,9 +288,9 @@ export default function SpectatorPage() {
           {/* Player Info */}
           <div className="px-4 pb-3 flex items-center gap-3">
             <div className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center overflow-hidden border-2 border-purple-400/50">
-              {getImageUrl(profile?.profilePicture) ? (
+              {profile?.profilePicture && getImageUrl(profile.profilePicture) ? (
                 <img 
-                  src={getImageUrl(profile?.profilePicture)!} 
+                  src={getImageUrl(profile.profilePicture)} 
                   alt="Profile" 
                   className="w-full h-full object-cover"
                 />
