@@ -159,6 +159,7 @@ export function FloatingCoins3D({ rewardsAmount, position = [0, 1.95, 0], onCoin
   const [hoveredCoin, setHoveredCoin] = useState<number | null>(null);
   const [showFirstCoinHint, setShowFirstCoinHint] = useState(false);
   const [hasClickedFirstCoin, setHasClickedFirstCoin] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
 
   // Calculate how many tiers the user has reached
   const tierCount = useMemo(() => {
@@ -168,6 +169,16 @@ export function FloatingCoins3D({ rewardsAmount, position = [0, 1.95, 0], onCoin
 
   // Check if user reached first threshold for the first time
   const hasReachedFirstThreshold = rewardsAmount >= (ACCUMULATION_TIERS[0] || 0); // 1000
+  
+  // Mobile detection
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 1024 || 'ontouchstart' in window);
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   // Hint logic - show arrow when first threshold is reached but user hasn't clicked yet
   useEffect(() => {
@@ -213,8 +224,8 @@ export function FloatingCoins3D({ rewardsAmount, position = [0, 1.95, 0], onCoin
 
     const time = state.clock.elapsedTime;
     
-    // Rotate the entire group slowly (stop when any coin is hovered)
-    if (hoveredCoin === null) {
+    // Rotate the entire group slowly (stop when any coin is hovered on desktop only)
+    if (isMobile || hoveredCoin === null) {
       coinsGroupRef.current.rotation.y = time * 0.2;
     }
 
@@ -223,12 +234,12 @@ export function FloatingCoins3D({ rewardsAmount, position = [0, 1.95, 0], onCoin
       if (!coinRef || !coinData[i]) return;
       
       const data = coinData[i]!;
-      const isHovered = hoveredCoin === i;
+      const isHovered = !isMobile && hoveredCoin === i; // Only allow hover on desktop
       const isHintCoin = data.isHintCoin;
 
       // Individual coin rotation and movement 
-      // Stop ALL animations when: any coin hovered
-      if (hoveredCoin === null && !isHovered) {
+      // Stop ALL animations when: any coin hovered (desktop only)
+      if (isMobile || (hoveredCoin === null && !isHovered)) {
         coinRef.rotation.y = time * 2 + data.phase; // Orbit rotation
         coinRef.rotation.x = Math.sin(time + data.phase) * 0.2; // Slight wobble
         coinRef.rotation.z = time * 3 + data.phase * 2; // Self-rotation (coin spinning)
@@ -240,7 +251,7 @@ export function FloatingCoins3D({ rewardsAmount, position = [0, 1.95, 0], onCoin
 
       // Let hint coin move naturally with others
       
-      // Hover scaling animation - more dramatic and responsive
+      // Hover scaling animation - only on desktop
       const targetScale = isHovered ? 1.8 : 1.0;
       const currentScale = coinRef.scale.x;
       const lerpSpeed = 12; // Faster scaling response
@@ -269,14 +280,14 @@ export function FloatingCoins3D({ rewardsAmount, position = [0, 1.95, 0], onCoin
                   -1.5 + data.yOffset, // Even lower height
                   Math.sin(data.angle) * data.radius
                 ]}
-                onPointerOver={(e) => {
+                onPointerOver={!isMobile ? (e) => {
                   e.stopPropagation();
                   setHoveredCoin(i);
-                }}
-                onPointerOut={(e) => {
+                } : undefined}
+                onPointerOut={!isMobile ? (e) => {
                   e.stopPropagation();
                   setHoveredCoin(null);
-                }}
+                } : undefined}
                 onClick={(e) => {
                   e.stopPropagation();
                   
@@ -287,6 +298,7 @@ export function FloatingCoins3D({ rewardsAmount, position = [0, 1.95, 0], onCoin
                     setShowFirstCoinHint(false);
                   }
                   
+                  // Just trigger the modal
                   onCoinClick?.();
                 }}
                 isHovered={isHovered}

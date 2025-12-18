@@ -5,7 +5,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Shield, X, AlertCircle, CheckCircle, Loader, Trophy, Clock } from 'lucide-react';
 import { useDefipoly } from '@/contexts/DefipolyContext';
 import { useNotification } from '../contexts/NotificationContext';
@@ -47,6 +47,22 @@ export function ShieldAllModal({ ownedProperties, balance, onClose }: ShieldAllM
       status: 'pending' as ShieldStatus
     }))
   );
+  
+  // Mobile detection
+  const [isMobile, setIsMobile] = useState(false);
+  
+  // Mobile swipe state
+  const [isDragging, setIsDragging] = useState(false);
+  const [startY, setStartY] = useState<number | null>(null);
+  const [dragOffset, setDragOffset] = useState(0);
+  
+  // Check for mobile (match main page breakpoint)
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 1024);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   const propertyCount = ownedProperties.length;
   
@@ -174,39 +190,93 @@ export function ShieldAllModal({ ownedProperties, balance, onClose }: ShieldAllM
   const completedCount = propertyStatuses.filter(p => p.selected && p.status === 'success').length;
   const progressPercent = selectedCount > 0 ? (completedCount / selectedCount) * 100 : 0;
   const allSelected = propertyStatuses.every(p => p.selected);
+  
+  // Swipe-to-close handlers
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    if (!isMobile) return;
+    const touch = e.touches[0];
+    if (touch) {
+      setStartY(touch.clientY);
+      setIsDragging(true);
+    }
+  }, [isMobile]);
+  
+  const handleTouchMove = useCallback((e: React.TouchEvent) => {
+    if (!isMobile || !startY || !isDragging) return;
+    const touch = e.touches[0];
+    if (touch) {
+      const deltaY = touch.clientY - startY;
+      if (deltaY > 0) { // Only allow downward swipe
+        setDragOffset(deltaY);
+      }
+    }
+  }, [isMobile, startY, isDragging]);
+  
+  const handleTouchEnd = useCallback(() => {
+    if (!isMobile || !isDragging) return;
+    
+    // Close if dragged down more than 100px
+    if (dragOffset > 100) {
+      onClose();
+    } else {
+      setDragOffset(0);
+    }
+    
+    setIsDragging(false);
+    setStartY(null);
+  }, [isMobile, isDragging, dragOffset, onClose]);
 
   return (
     <div 
-      className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-[70] p-4"
+      className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-[70] p-2 lg:p-4"
       onClick={shielding ? undefined : onClose}
     >
       <div 
-        className="bg-gradient-to-br from-purple-950/95 via-purple-900/95 to-purple-950/95 backdrop-blur-xl rounded-2xl border-2 border-purple-500/30 shadow-2xl shadow-purple-500/20 max-w-lg w-full overflow-hidden"
+        className={`
+          bg-black overflow-hidden transition-transform duration-200
+          ${isMobile 
+            ? 'w-full h-[90vh] max-h-[90vh] flex flex-col' 
+            : 'max-w-lg w-full max-h-[90vh]'
+          }
+        `}
+        style={isMobile ? { transform: `translateY(${dragOffset}px)` } : {}}
         onClick={e => e.stopPropagation()}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
       >
         {/* Header */}
-        <div className="relative bg-gradient-to-r from-yellow-900/50 to-amber-700/50 border-b border-yellow-500/30 p-6">
+        <div className="relative bg-black p-3 lg:p-4 flex-shrink-0">
+          {/* Mobile drag handle */}
+          {isMobile && (
+            <div className="flex justify-center mb-2">
+              <div className="w-12 h-1.5 bg-purple-400/60 rounded-full"></div>
+            </div>
+          )}
+          
           <div className="flex justify-between items-start">
             <div className="flex items-center gap-3">
-              <Shield className="w-8 h-8 text-yellow-300" />
+              <Shield className={`${isMobile ? 'w-6 h-6' : 'w-8 h-8'} text-yellow-300`} />
               <div>
-                <h2 className="text-2xl font-black text-yellow-100">Shield Properties</h2>
-                <p className="text-sm text-yellow-200/80 mt-1">Select properties to protect</p>
+                <h2 className={`${isMobile ? 'text-lg' : 'text-2xl'} font-black text-purple-100`}>Shield Properties</h2>
+                <p className={`${isMobile ? 'text-xs' : 'text-sm'} text-purple-300/80 mt-1`}>Select properties to protect</p>
               </div>
             </div>
             {!shielding && (
               <button 
                 onClick={onClose}
-                className="text-yellow-300 hover:text-white transition-colors hover:bg-yellow-800/50 rounded-lg p-2"
+                className="text-purple-300 hover:text-white transition-colors p-2"
               >
-                <X size={24} />
+                <X size={isMobile ? 24 : 20} />
               </button>
             )}
           </div>
         </div>
 
         {/* Content */}
-        <div className="p-6 max-h-[60vh] overflow-y-auto">
+        <div className={`
+          ${isMobile ? 'flex-1 p-4 overflow-y-auto pb-safe' : 'p-6 max-h-[60vh] overflow-y-auto'}
+        `}>
           {/* All Properties Already Shielded or in Cooldown */}
           {propertyCount === 0 && (
             <div className="text-center py-8">
@@ -215,7 +285,7 @@ export function ShieldAllModal({ ownedProperties, balance, onClose }: ShieldAllM
               <div className="text-sm text-purple-300 mb-3">
                 All your properties are either actively shielded or in cooldown period.
               </div>
-              <div className="bg-purple-900/30 border border-purple-500/30 rounded-lg p-3 mb-4 text-xs text-purple-300">
+              <div className="bg-purple-900/20 p-3 mb-4 text-xs text-purple-300">
                 <div className="flex items-center gap-2 mb-1">
                   <Clock className="w-4 h-4" />
                   <span className="font-bold">Cooldown Info:</span>
@@ -224,7 +294,7 @@ export function ShieldAllModal({ ownedProperties, balance, onClose }: ShieldAllM
               </div>
               <button
                 onClick={onClose}
-                className="mt-4 px-6 py-2 bg-purple-800/60 hover:bg-purple-700/60 rounded-lg font-bold text-purple-100 transition-all"
+                className="mt-4 px-6 py-2 bg-purple-800/60 hover:bg-purple-700/60 font-bold text-purple-100 transition-all"
               >
                 Close
               </button>
@@ -234,18 +304,18 @@ export function ShieldAllModal({ ownedProperties, balance, onClose }: ShieldAllM
           {propertyCount > 0 && (
             <>
               {/* Summary Card */}
-          <div className="bg-yellow-900/20 rounded-xl p-4 border border-yellow-500/30 mb-4">
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-yellow-200 font-semibold">Selected Properties:</span>
-              <span className="text-yellow-100 font-black text-lg">{selectedCount} / {propertyCount}</span>
+          <div className="bg-purple-950/20 p-3 lg:p-4 mb-4">
+            <div className="flex items-center justify-between mb-2 lg:mb-3">
+              <span className={`${isMobile ? 'text-xs' : 'text-sm'} text-purple-300 font-semibold`}>Selected Properties:</span>
+              <span className={`${isMobile ? 'text-base' : 'text-lg'} text-purple-100 font-black`}>{selectedCount} / {propertyCount}</span>
             </div>
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-yellow-200 font-semibold">Total Cost:</span>
-              <span className="text-yellow-100 font-black text-lg">{totalCost.toLocaleString()} ${TOKEN_TICKER}</span>
+            <div className="flex items-center justify-between mb-2 lg:mb-3">
+              <span className={`${isMobile ? 'text-xs' : 'text-sm'} text-purple-300 font-semibold`}>Total Cost:</span>
+              <span className={`${isMobile ? 'text-base' : 'text-lg'} text-yellow-300 font-black`}>{totalCost.toLocaleString()} ${TOKEN_TICKER}</span>
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-yellow-200 font-semibold">Your Balance:</span>
-              <span className={`font-black text-lg ${canAfford ? 'text-green-400' : 'text-red-400'}`}>
+              <span className={`${isMobile ? 'text-xs' : 'text-sm'} text-purple-300 font-semibold`}>Your Balance:</span>
+              <span className={`${isMobile ? 'text-base' : 'text-lg'} font-black ${canAfford ? 'text-green-400' : 'text-red-400'}`}>
               {balance.toLocaleString()} ${TOKEN_TICKER}
               </span>
             </div>
@@ -255,7 +325,7 @@ export function ShieldAllModal({ ownedProperties, balance, onClose }: ShieldAllM
           <button
             onClick={toggleSelectAll}
             disabled={shielding}
-            className={`w-full py-2 rounded-lg font-bold text-sm mb-3 transition-all ${
+            className={`w-full py-2 font-bold text-sm mb-3 transition-all ${
               shielding
                 ? 'bg-purple-800/30 text-purple-500 cursor-not-allowed'
                 : 'bg-purple-800/60 hover:bg-purple-700/60 text-purple-100'
@@ -266,7 +336,7 @@ export function ShieldAllModal({ ownedProperties, balance, onClose }: ShieldAllM
 
           {/* Insufficient Balance Warning */}
           {!canAfford && selectedCount > 0 && (
-            <div className="bg-red-900/30 border border-red-500/40 rounded-lg p-3 mb-4 flex items-start gap-2">
+            <div className="bg-red-900/20 p-3 mb-4 flex items-start gap-2">
               <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
               <div className="text-sm text-red-200">
                 <div className="font-bold mb-1">Insufficient Balance</div>
@@ -277,7 +347,7 @@ export function ShieldAllModal({ ownedProperties, balance, onClose }: ShieldAllM
 
           {/* No Selection Warning */}
           {selectedCount === 0 && (
-            <div className="bg-amber-900/30 border border-amber-500/40 rounded-lg p-3 mb-4 flex items-start gap-2">
+            <div className="bg-amber-900/20 p-3 mb-4 flex items-start gap-2">
               <AlertCircle className="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5" />
               <div className="text-sm text-amber-200">
                 <div className="font-bold mb-1">No Properties Selected</div>
@@ -293,7 +363,7 @@ export function ShieldAllModal({ ownedProperties, balance, onClose }: ShieldAllM
                 <span>Shielding Properties...</span>
                 <span>{completedCount} / {selectedCount}</span>
               </div>
-              <div className="w-full bg-purple-900/40 rounded-full h-2 overflow-hidden">
+              <div className="w-full bg-purple-900/40 h-2 overflow-hidden">
                 <div 
                   className="bg-gradient-to-r from-yellow-500 to-amber-500 h-full transition-all duration-500 ease-out"
                   style={{ width: `${progressPercent}%` }}
@@ -304,7 +374,7 @@ export function ShieldAllModal({ ownedProperties, balance, onClose }: ShieldAllM
 
           {/* Properties List */}
           <div className="space-y-2">
-            <div className="text-xs text-purple-300 font-semibold uppercase tracking-wide mb-2">
+            <div className={`${isMobile ? 'text-[10px]' : 'text-xs'} text-purple-300 font-semibold uppercase tracking-wide mb-2`}>
               Properties Available to Shield:
             </div>
             {propertyStatuses.map((propStatus) => {
@@ -317,40 +387,40 @@ export function ShieldAllModal({ ownedProperties, balance, onClose }: ShieldAllM
                 <div 
                   key={propStatus.propertyId}
                   onClick={() => toggleProperty(propStatus.propertyId)}
-                  className={`rounded-lg p-3 border-2 transition-all cursor-pointer ${
-                    shielding ? 'cursor-not-allowed' : 'hover:border-purple-400/50'
+                  className={`${isMobile ? 'p-2.5' : 'p-3'} transition-all cursor-pointer ${
+                    shielding ? 'cursor-not-allowed' : ''
                   } ${
-                    !isSelected ? 'bg-purple-950/20 border-purple-700/30 opacity-50' :
-                    propStatus.status === 'success' ? 'border-green-500/60 bg-green-950/30' :
-                    propStatus.status === 'error' ? 'border-red-500/60 bg-red-950/30' :
-                    propStatus.status === 'processing' ? 'border-blue-500/60 bg-blue-950/30' :
-                    'bg-purple-900/40 border-purple-400/60'
+                    !isSelected ? 'bg-purple-950/20 opacity-50' :
+                    propStatus.status === 'success' ? 'bg-green-950/20' :
+                    propStatus.status === 'error' ? 'bg-red-950/20' :
+                    propStatus.status === 'processing' ? 'bg-blue-950/20' :
+                    'bg-purple-900/20'
                   }`}
                 >
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                    <div className="flex items-center gap-2 lg:gap-3 flex-1 min-w-0">
                       {/* Status Icon (only when processing/success/error) */}
                       {getStatusIcon(propStatus)}
                       
                       <div className="flex-1 min-w-0">
-                        <div className="text-sm font-bold text-purple-100 truncate">
+                        <div className={`${isMobile ? 'text-xs' : 'text-sm'} font-bold text-purple-100 truncate`}>
                           {propStatus.propertyName}
                         </div>
-                        <div className="text-xs text-purple-400">
+                        <div className={`${isMobile ? 'text-[10px]' : 'text-xs'} text-purple-400`}>
                           {property.slotsOwned} slot{property.slotsOwned > 1 ? 's' : ''}
                         </div>
                       </div>
                     </div>
                     <div className="text-right">
-                      <div className="text-sm font-bold text-yellow-300">
+                      <div className={`${isMobile ? 'text-xs' : 'text-sm'} font-bold text-yellow-300`}>
                         {property.shieldCost.toLocaleString()}
                       </div>
-                      <div className="text-xs text-purple-400">DEFI</div>
+                      <div className={`${isMobile ? 'text-[10px]' : 'text-xs'} text-purple-400`}>DEFI</div>
                     </div>
                   </div>
                   
                   {propStatus.status === 'error' && propStatus.error && (
-                    <div className="mt-2 text-xs text-red-300 flex items-start gap-1">
+                    <div className={`mt-2 ${isMobile ? 'text-[10px]' : 'text-xs'} text-red-300 flex items-start gap-1`}>
                       <AlertCircle className="w-3 h-3 flex-shrink-0 mt-0.5" />
                       <span>{propStatus.error}</span>
                     </div>
@@ -361,13 +431,13 @@ export function ShieldAllModal({ ownedProperties, balance, onClose }: ShieldAllM
           </div>
 
           {/* Info Box */}
-          <div className="mt-4 bg-purple-900/30 border border-purple-500/30 rounded-lg p-3">
-            <div className="text-xs text-purple-300">
-              <div className="font-bold mb-2 flex items-center gap-2">
-                <Shield className="w-4 h-4" />
+          <div className={`mt-4 bg-purple-900/20 ${isMobile ? 'p-2.5' : 'p-3'}`}>
+            <div className={`${isMobile ? 'text-[10px]' : 'text-xs'} text-purple-300`}>
+              <div className={`font-bold ${isMobile ? 'mb-1.5' : 'mb-2'} flex items-center gap-2`}>
+                <Shield className={`${isMobile ? 'w-3 h-3' : 'w-4 h-4'}`} />
                 Shield Information
               </div>
-              <div className="space-y-1.5">
+              <div className={`${isMobile ? 'space-y-1' : 'space-y-1.5'}`}>
                 <div className="flex items-start gap-2">
                   <span className="text-yellow-300">•</span>
                   <span><strong>Duration:</strong> 48 hours of protection from theft</span>
@@ -389,11 +459,11 @@ export function ShieldAllModal({ ownedProperties, balance, onClose }: ShieldAllM
 
         {/* Footer Actions - only show when there are properties */}
         {propertyCount > 0 && (
-          <div className="p-6 border-t border-purple-500/20 flex gap-3">
+          <div className={`${isMobile ? 'p-4' : 'p-6'} bg-black flex gap-3 flex-shrink-0`}>
           <button
             onClick={onClose}
             disabled={shielding}
-            className={`flex-1 py-3 rounded-xl font-bold text-base transition-all ${
+            className={`flex-1 ${isMobile ? 'py-2.5' : 'py-3'} font-bold ${isMobile ? 'text-sm' : 'text-base'} transition-all ${
               shielding 
                 ? 'bg-purple-800/30 text-purple-500 cursor-not-allowed'
                 : 'bg-purple-800/60 hover:bg-purple-700/60 text-purple-100'
@@ -404,7 +474,7 @@ export function ShieldAllModal({ ownedProperties, balance, onClose }: ShieldAllM
           <button
             onClick={handleShield}
             disabled={!canAfford || shielding || selectedCount === 0}
-            className={`flex-1 py-3 px-4 rounded-xl font-bold text-sm transition-all shadow-lg flex items-center justify-center gap-2 ${
+            className={`flex-1 ${isMobile ? 'py-2.5 px-3' : 'py-3 px-4'} font-bold ${isMobile ? 'text-xs' : 'text-sm'} transition-all flex items-center justify-center gap-2 ${
               !canAfford || shielding || selectedCount === 0
                 ? 'bg-gray-800/50 text-gray-500 cursor-not-allowed'
                 : 'bg-gradient-to-r from-yellow-600 to-amber-600 hover:from-yellow-500 hover:to-amber-500 text-white'
@@ -418,7 +488,7 @@ export function ShieldAllModal({ ownedProperties, balance, onClose }: ShieldAllM
             ) : (
               <>
                 <Shield className="w-4 h-4 flex-shrink-0" />
-                <span className="whitespace-nowrap">Shield ({totalCost.toLocaleString()} DEFI)</span>
+                <span className={isMobile ? 'text-xs' : 'text-sm'}>Shield ({totalCost.toLocaleString()} DEFI)</span>
               </>
             )}
           </button>

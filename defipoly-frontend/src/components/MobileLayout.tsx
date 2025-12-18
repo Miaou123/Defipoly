@@ -454,7 +454,7 @@ export function MobileLayout({
           }}
         >
           <div 
-            className="w-full h-[70vh] bg-black/90 backdrop-blur-lg border-t border-purple-500/20 transition-transform duration-300 ease-out"
+            className="w-full h-[90vh] bg-black/90 backdrop-blur-lg border-t border-purple-500/20 transition-transform duration-300 ease-out"
             style={{
               transform: `translateY(${modalTranslateY}px)`,
             }}
@@ -462,11 +462,6 @@ export function MobileLayout({
             onTouchMove={handleModalTouchMove}
             onTouchEnd={handleModalTouchEnd}
           >
-            {/* Drag Handle */}
-            <div className="flex justify-center py-2 cursor-grab active:cursor-grabbing">
-              <div className="w-10 h-1 bg-purple-500/60 rounded-full"></div>
-            </div>
-            
             {/* Property Panel Content */}
             <div className="h-full">
               <MobilePropertyPanel 
