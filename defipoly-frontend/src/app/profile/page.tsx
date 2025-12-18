@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { getPropertyById } from '@/utils/constants';
 import { useNotification } from '@/contexts/NotificationContext';
 import { ProfileCustomization } from '@/components/ProfileCustomization';
+import { MobileProfilePage } from '@/components/mobile/MobileProfilePage';
 import { useGameState } from '@/contexts/GameStateContext';
 import { TOKEN_TICKER } from '@/utils/constants';
 
@@ -208,6 +209,11 @@ export default function ProfilePage() {
 
   if (!connected || !publicKey) {
     return null;
+  }
+
+  // Render mobile profile page on mobile devices
+  if (isMobile) {
+    return <MobileProfilePage />;
   }
 
   return (

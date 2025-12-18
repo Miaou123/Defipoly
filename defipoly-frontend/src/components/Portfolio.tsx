@@ -185,7 +185,7 @@ export function Portfolio({ onSelectProperty, scaleFactor = 1, isMobile = false 
       <button
         onClick={() => hasShieldableProperties && setShowShieldAllModal(true)}
         disabled={!hasShieldableProperties}
-        className={`w-full rounded-lg font-semibold transition-all flex items-center justify-center ${
+        className={`w-full rounded-xl font-semibold transition-all flex items-center justify-center ${
           hasShieldableProperties
             ? 'bg-gradient-to-r from-yellow-600 to-amber-600 hover:from-yellow-500 hover:to-amber-500 text-white'
             : 'bg-gray-800/50 text-gray-500 cursor-not-allowed'
@@ -194,7 +194,8 @@ export function Portfolio({ onSelectProperty, scaleFactor = 1, isMobile = false 
           fontSize: `${subtitleSize}px`, 
           gap: `${Math.round(8 * scaleFactor)}px`,
           padding: `${Math.round(10 * scaleFactor)}px ${padding}px`,
-          marginBottom: `${padding}px`
+          marginBottom: `${padding}px`,
+          borderRadius: '12px'
         }}
       >
         <div style={{ width: buttonIconSize, height: buttonIconSize }}>
@@ -273,6 +274,9 @@ export function Portfolio({ onSelectProperty, scaleFactor = 1, isMobile = false 
 
         {/* Scrollable Content */}
         <div className="flex-1 overflow-y-auto" style={{ padding: isMobile ? `${padding}px` : `0 ${Math.round(padding * 1.5)}px ${Math.round(padding * 1.5)}px` }}>
+        {/* Mobile Shield All Button - Show at top of portfolio for mobile only */}
+        {isMobile && renderShieldAllButton()}
+        
         {/* Loading State */}
         {loading && ownedProperties.length === 0 && (
           <div className="text-center" style={{ padding: `${padding * 3}px 0` }}>

@@ -65,41 +65,35 @@ export function FloatingCoinsModal({ isOpen, onClose, rewardsAmount }: FloatingC
 
   return (
     <div 
-      className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-[70] p-4"
+      className="fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4"
       onClick={onClose}
     >
       <div 
-        className={`${
-          isMobile 
-            ? 'bg-black/95 backdrop-blur-xl rounded-xl border border-yellow-500/30 max-w-[320px] max-h-[80vh] flex flex-col' 
-            : 'bg-gradient-to-br from-purple-950/95 via-purple-900/95 to-purple-950/95 backdrop-blur-xl rounded-2xl border-2 border-purple-500/30 shadow-2xl shadow-purple-500/20 max-w-md'
-        } w-full overflow-hidden`}
+        className="bg-black/95 backdrop-blur-xl rounded-xl border border-yellow-500/30 max-w-[320px] w-full overflow-hidden"
         onClick={e => e.stopPropagation()}
       >
         {/* Header */}
-        <div className={`relative bg-gradient-to-r from-yellow-900/50 to-amber-700/50 border-b border-yellow-500/30 ${isMobile ? 'p-4 flex-shrink-0' : 'p-6'}`}>
-          <div className="flex justify-between items-start">
-            <div className="flex items-center gap-3">
-              <Coins className={`${isMobile ? 'w-6 h-6' : 'w-8 h-8'} text-yellow-300`} />
-              <h2 className={`${isMobile ? 'text-lg' : 'text-2xl'} font-black text-yellow-100`}>Bonus Coins</h2>
-            </div>
-            <button 
-              onClick={onClose}
-              className="text-yellow-300 hover:text-white transition-colors hover:bg-yellow-800/50 rounded-lg p-2"
-            >
-              <X size={isMobile ? 20 : 24} />
-            </button>
+        <div className="flex items-center justify-between p-4 border-b border-gray-500/20">
+          <div className="flex items-center gap-2">
+            <Coins className="w-6 h-6 text-yellow-400" />
+            <h2 className="text-lg font-bold text-white">Bonus Coins</h2>
           </div>
+          <button 
+            onClick={onClose}
+            className="text-gray-400/50 hover:text-white transition-colors p-1"
+          >
+            <X size={20} />
+          </button>
         </div>
 
         {/* Content */}
-        <div className={`${isMobile ? 'flex-1 overflow-y-auto p-4 pb-safe' : 'p-6'} space-y-4`}>
-          <div className="bg-yellow-900/30 rounded-xl p-4 border border-yellow-500/20">
-            <div className="flex items-start gap-3">
-              <Star className="w-5 h-5 text-yellow-400 mt-1 flex-shrink-0" />
+        <div className="p-4">
+          <div className="space-y-0">
+            <div className="flex items-start gap-3 py-3 border-b border-yellow-500/10">
+              <Star className="w-4 h-4 text-yellow-400 mt-0.5 flex-shrink-0" />
               <div>
-                <h3 className="font-bold text-yellow-100 mb-2">Current Status</h3>
-                <p className="text-yellow-200 text-sm leading-relaxed">
+                <h3 className="font-bold text-yellow-100 mb-2 text-sm">Current Status</h3>
+                <p className="text-yellow-200 text-xs leading-relaxed">
                   Pending rewards: <span className="font-bold text-yellow-300">${rewardsAmount.toLocaleString()}</span>
                   {progressiveBonus > 0 && (
                     <>
@@ -124,13 +118,11 @@ export function FloatingCoinsModal({ isOpen, onClose, rewardsAmount }: FloatingC
                 </p>
               </div>
             </div>
-          </div>
 
-          <div className="bg-yellow-900/30 rounded-xl p-4 border border-yellow-500/20">
-            <div className="flex items-start gap-3">
-              <Target className="w-5 h-5 text-yellow-400 mt-1 flex-shrink-0" />
+            <div className="flex items-start gap-3 py-3 border-b border-yellow-500/10">
+              <Target className="w-4 h-4 text-yellow-400 mt-0.5 flex-shrink-0" />
               <div>
-                <h3 className="font-bold text-yellow-100 mb-2">Accumulation Bonus Tiers</h3>
+                <h3 className="font-bold text-yellow-100 mb-2 text-sm">Accumulation Bonus Tiers</h3>
                 <div className="space-y-2">
                   {ACCUMULATION_TIERS.map((tier, index) => {
                     const unlocked = rewardsAmount >= tier.threshold;
@@ -154,23 +146,21 @@ export function FloatingCoinsModal({ isOpen, onClose, rewardsAmount }: FloatingC
                 </div>
               </div>
             </div>
-          </div>
 
-          <div className="bg-amber-900/20 rounded-xl p-4 border border-amber-500/20">
-            <div className="flex items-start gap-3">
-              <TrendingUp className="w-5 h-5 text-amber-400 mt-1 flex-shrink-0" />
+            <div className="flex items-start gap-3 py-3">
+              <TrendingUp className="w-4 h-4 text-amber-400 mt-0.5 flex-shrink-0" />
               <div>
-                <h3 className="font-bold text-amber-200 mb-2">Layered Bonus System</h3>
-                <p className="text-amber-200 text-sm leading-relaxed mb-2">
+                <h3 className="font-bold text-amber-200 mb-2 text-sm">Layered Bonus System</h3>
+                <p className="text-amber-200 text-xs leading-relaxed mb-2">
                   Your bonus grows progressively! Each tier's bonus rate only applies to the portion of rewards within that tier's range, creating a fair and balanced reward structure.
                 </p>
                 {nextTier && (
-                  <p className="text-amber-300 text-sm font-semibold">
+                  <p className="text-amber-300 text-xs font-semibold">
                     Next milestone: ${nextTier.threshold.toLocaleString()} for {nextTier.bonus}% bonus
                   </p>
                 )}
                 {!nextTier && (
-                  <p className="text-amber-300 text-sm font-semibold">
+                  <p className="text-amber-300 text-xs font-semibold">
                     🎉 Maximum tier reached! Your bonus: ${Math.floor(progressiveBonus).toLocaleString()}
                   </p>
                 )}
@@ -178,15 +168,16 @@ export function FloatingCoinsModal({ isOpen, onClose, rewardsAmount }: FloatingC
             </div>
           </div>
 
-          {/* Only show Got It button on desktop */}
-          {!isMobile && (
-            <button
-              onClick={onClose}
-              className="w-full py-2 rounded-lg font-semibold text-sm transition-all bg-yellow-600/40 hover:bg-yellow-600/60 border border-yellow-500/50 text-yellow-100 hover:border-yellow-400/70"
-            >
-              Got It!
-            </button>
-          )}
+        </div>
+
+        {/* Got It Button */}
+        <div className="p-4 pt-0">
+          <button
+            onClick={onClose}
+            className="w-full py-2 rounded-lg font-semibold text-sm transition-all bg-yellow-600/40 hover:bg-yellow-600/60 border border-yellow-500/50 text-yellow-100 hover:border-yellow-400/70"
+          >
+            Got It!
+          </button>
         </div>
       </div>
     </div>

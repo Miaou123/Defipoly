@@ -19,7 +19,7 @@ import {
   SellPropertyExplanationModal,
   ShieldPropertyExplanationModal,
   StealPropertyExplanationModal
-} from '../MechanicsExplanationModals';
+} from '../HelpModal';
 import { useGameState } from '@/contexts/GameStateContext';
 import { fetchPropertyState } from '@/services/api';
 import { StarIcon } from '../icons/UIIcons';

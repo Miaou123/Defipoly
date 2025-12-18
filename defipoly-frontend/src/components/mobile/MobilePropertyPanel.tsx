@@ -14,7 +14,7 @@ import {
   SellPropertySection,
   StealPropertySection
 } from '../property-modal/actions';
-import { MobileHelpModal } from './MobileHelpModal';
+import { MobileHelpModal } from '../HelpModal';
 import { HelpCircle } from 'lucide-react';
 
 interface MobilePropertyPanelProps {

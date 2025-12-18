@@ -17,6 +17,7 @@ import { ShieldAllModal } from './ShieldAllModal';
 import { MobilePropertyPanel } from './mobile/MobilePropertyPanel';
 import { FloatingCoinsModal } from './FloatingCoinsModal';
 import type { PropertyOwnership } from '@/types/accounts';
+import { useRouter } from 'next/navigation';
 
 interface OwnedProperty extends PropertyOwnership {
   propertyInfo: typeof PROPERTIES[0];
@@ -60,6 +61,17 @@ function MobileStatsRow() {
   return (
     <div className="px-4 py-3 border-b border-purple-500/20">
       <div className="flex items-center justify-center">
+        {/* Balance */}
+        <div className="flex flex-col items-center flex-1">
+          <div className="text-[10px] text-purple-300 uppercase tracking-wider mb-0.5">Balance</div>
+          <div className="text-lg font-bold text-purple-200 tabular-nums">
+            {balanceLoading ? '...' : balance.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+          </div>
+        </div>
+        
+        {/* Divider */}
+        <div className="w-px h-8 bg-purple-400/30 mx-3"></div>
+        
         {/* Unclaimed */}
         <div className="flex flex-col items-center flex-1">
           <div className="text-[10px] text-purple-300 uppercase tracking-wider mb-0.5">Unclaimed</div>
@@ -68,17 +80,6 @@ function MobileStatsRow() {
               ? unclaimedRewards.toLocaleString(undefined, { maximumFractionDigits: 0 })
               : unclaimedRewards.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
             }
-          </div>
-        </div>
-        
-        {/* Divider */}
-        <div className="w-px h-8 bg-purple-400/30 mx-3"></div>
-        
-        {/* Balance */}
-        <div className="flex flex-col items-center flex-1">
-          <div className="text-[10px] text-purple-300 uppercase tracking-wider mb-0.5">Balance</div>
-          <div className="text-lg font-bold text-purple-200 tabular-nums">
-            {balanceLoading ? '...' : balance.toLocaleString(undefined, { maximumFractionDigits: 0 })}
           </div>
         </div>
         
@@ -97,119 +98,10 @@ function MobileStatsRow() {
   );
 }
 
-// New Mobile Actions Row component
+// New Mobile Actions Row component (placeholder - removed functionality)
 function MobileActionsRow({ onOpenShieldModal }: { onOpenShieldModal: (data: ShieldableProperty[]) => void }) {
-  const { connected, publicKey } = useWallet();
-  const { unclaimedRewards } = useRewards();
-  const { claimRewards, loading: claimLoading } = useDefipoly();
-  const { ownerships } = useGameState();
-  const { showSuccess, showError } = useNotification();
-  const [claiming, setClaiming] = useState(false);
-  const claimingRef = useRef(false);
-
-  // Convert API ownerships to OwnedProperty format for shield all
-  const ownedProperties = useMemo(() => {
-    if (!connected) return [];
-    
-    return ownerships
-      .filter(o => o.slotsOwned > 0)
-      .map(ownership => {
-        const propertyInfo = PROPERTIES.find(p => p.id === ownership.propertyId);
-        if (!propertyInfo) return null;
-        return { ...ownership, propertyInfo };
-      })
-      .filter((p): p is OwnedProperty => p !== null);
-  }, [ownerships, connected]);
-
-  // Helper to check if shield is active
-  const isShieldActive = (owned: OwnedProperty): boolean => {
-    const now = Date.now() / 1000;
-    return owned.slotsShielded > 0 && owned.shieldExpiry.toNumber() > now;
-  };
-
-  // Calculate shield cost for a property
-  const calculateShieldCostLocal = (property: typeof PROPERTIES[0], slots: number): number => {
-    const shieldCostBps = property.shieldCostBps;
-    const dailyIncomePerSlot = calculateDailyIncome(property.price, property.yieldBps);
-    return Math.floor((dailyIncomePerSlot * shieldCostBps * slots) / 10000);
-  };
-
-  // Calculate shieldable properties
-  const shieldAllData = ownedProperties
-    .filter(owned => {
-      const shieldActive = isShieldActive(owned);
-      const unshieldedSlots = owned.slotsOwned - (shieldActive ? owned.slotsShielded : 0);
-      return unshieldedSlots > 0;
-    })
-    .map(owned => ({
-      propertyId: owned.propertyId,
-      propertyInfo: owned.propertyInfo,
-      slotsOwned: owned.slotsOwned,
-      shieldCost: calculateShieldCostLocal(owned.propertyInfo, owned.slotsOwned)
-    }));
-
-  const hasShieldableProperties = shieldAllData.length > 0;
-
-  const handleClaimRewards = async () => {
-    if (!connected || !publicKey || unclaimedRewards === 0 || claiming || claimingRef.current) return;
-    
-    claimingRef.current = true;
-    setClaiming(true);
-    
-    try {
-      const signature = await claimRewards();
-      if (signature) {
-        showSuccess('Rewards Claimed!', 'Successfully claimed rewards!', signature !== 'already-processed' ? signature : undefined);
-      }
-    } catch (error) {
-      console.error('Error claiming rewards:', error);
-      
-      const errorMessage = String(error instanceof Error ? error.message : error);
-      if (errorMessage.includes('User rejected') || errorMessage.includes('rejected the request')) {
-        console.log('User canceled the claim transaction');
-      } else {
-        showError('Claim Failed', 'Failed to claim rewards. Please try again.');
-      }
-    } finally {
-      setClaiming(false);
-      claimingRef.current = false;
-    }
-  };
-
-  const handleShieldAll = () => {
-    if (hasShieldableProperties) {
-      onOpenShieldModal(shieldAllData);
-    }
-  };
-
-  if (!connected) return null;
-
-  return (
-    <div className="flex gap-3">
-      {/* Shield All Button */}
-      <button
-        onClick={handleShieldAll}
-        disabled={!hasShieldableProperties}
-        className={`flex-1 py-2.5 font-bold text-sm flex items-center justify-center gap-2 transition-all ${
-          hasShieldableProperties
-            ? 'bg-gradient-to-r from-yellow-600 to-amber-600 hover:from-yellow-500 hover:to-amber-500 text-white'
-            : 'bg-gray-800/50 text-gray-500 cursor-not-allowed'
-        }`}
-      >
-        <ShieldIcon size={16} />
-        Shield All
-      </button>
-      
-      {/* Collect Button */}
-      <button
-        onClick={handleClaimRewards}
-        disabled={claiming || claimLoading || unclaimedRewards === 0}
-        className="flex-1 py-2.5 bg-gradient-to-r from-purple-600 to-purple-700 font-bold text-sm text-white disabled:opacity-50 disabled:cursor-not-allowed active:scale-95 transition-all"
-      >
-        {claiming ? <LoadingIcon size={16} className="text-yellow-400 animate-pulse" /> : 'Collect'}
-      </button>
-    </div>
-  );
+  // This component is now empty since we removed both buttons
+  return null;
 }
 
 
@@ -237,6 +129,7 @@ export function MobileLayout({
   const [showCoinModal, setShowCoinModal] = useState(false);
   const [showShieldAllModal, setShowShieldAllModal] = useState(false);
   const [shieldAllData, setShieldAllData] = useState<ShieldableProperty[]>([]);
+  const router = useRouter();
   
   // Property modal swipe state
   const [modalStartY, setModalStartY] = useState<number | null>(null);
@@ -345,24 +238,27 @@ export function MobileLayout({
           </div>
           
           <div className="flex items-center gap-2">
-            {connected && publicKey ? (
-              <div className="flex items-center gap-2">
-                <div className="w-7 h-7 rounded-full bg-purple-500/30 flex items-center justify-center overflow-hidden border border-green-500/50">
-                  {profile?.profilePicture ? (
-                    <img 
-                      src={profile.profilePicture} 
-                      alt="Profile" 
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <UserIcon size={12} className="text-purple-300" />
-                  )}
-                </div>
-                <span className="text-green-400 text-xs font-medium">
-                  {publicKey.toString().slice(0, 4)}...{publicKey.toString().slice(-4)}
-                </span>
+          {connected && publicKey ? (
+            <button 
+              onClick={() => router.push('/profile')}
+              className="flex items-center gap-2"
+            >
+              <div className="w-7 h-7 rounded-full bg-purple-500/30 flex items-center justify-center overflow-hidden border border-green-500/50">
+                {profile?.profilePicture ? (
+                  <img 
+                    src={profile.profilePicture} 
+                    alt="Profile" 
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <UserIcon size={12} className="text-purple-300" />
+                )}
               </div>
-            ) : (
+              <span className="text-green-400 text-xs font-medium">
+                {publicKey.toString().slice(0, 4)}...{publicKey.toString().slice(-4)}
+              </span>
+            </button>
+          ) : (
               <StyledWalletButton variant="header" />
             )}
           </div>
