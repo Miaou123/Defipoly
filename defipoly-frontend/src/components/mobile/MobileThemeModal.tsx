@@ -134,42 +134,46 @@ export function MobileThemeModal({ onClose }: MobileThemeModalProps) {
       onClick={onClose}
     >
       <div 
-        className="w-full bg-black/95 backdrop-blur-xl border-t border-purple-500/30 rounded-t-3xl flex flex-col"
+        className="w-full bg-black/95 backdrop-blur-xl border-t border-purple-500/30 rounded-t-3xl overflow-hidden"
         style={{ 
           height: '85vh',
           transform: `translateY(${dragOffset}px)`,
-          transition: isDragging ? 'none' : 'transform 0.2s ease-out'
+          transition: isDragging ? 'none' : 'transform 0.2s ease-out',
+          display: 'flex',
+          flexDirection: 'column'
         }}
         onClick={e => e.stopPropagation()}
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
       >
-        {/* Drag Handle */}
-        <div className="flex justify-center py-3 flex-shrink-0">
+        {/* Drag Handle - fixed */}
+        <div className="flex justify-center py-2 flex-shrink-0">
           <div className="w-10 h-1 bg-purple-500/40 rounded-full"></div>
         </div>
         
-        {/* Header */}
-        <div className="px-4 pb-3 flex items-center justify-between flex-shrink-0">
+        {/* Header - fixed */}
+        <div className="px-4 pb-2 flex items-center justify-between flex-shrink-0">
           <h2 className="text-white font-bold text-lg">Customize Theme</h2>
           <button onClick={onClose} className="text-purple-400 p-1">
             <X size={24} />
           </button>
         </div>
         
-        {/* Board Preview - Always Visible */}
-        <div className="px-4 pb-3 flex-shrink-0">
-          <SimpleBoardPreview
-            customSceneBackground={profile.customSceneBackground}
-            customBoardBackground={profile.customBoardBackground}
-            customPropertyCardBackground={profile.customPropertyCardBackground}
-            className="w-full aspect-video rounded-xl border border-purple-500/30"
-          />
+        {/* Board Preview - fixed height, NOT aspect-video */}
+        <div className="px-4 pb-2 flex-shrink-0">
+          <div className="h-[180px] w-full">
+            <SimpleBoardPreview
+              customSceneBackground={profile.customSceneBackground}
+              customBoardBackground={profile.customBoardBackground}
+              customPropertyCardBackground={profile.customPropertyCardBackground}
+              className="w-full h-full rounded-xl border border-purple-500/30"
+            />
+          </div>
         </div>
         
-        {/* Tab Bar */}
-        <div className="flex border-b border-purple-500/20 px-2 flex-shrink-0">
+        {/* Tab Bar - fixed */}
+        <div className="flex border-y border-purple-500/20 flex-shrink-0 bg-black/50">
           {tabs.map(tab => (
             <button
               key={tab.id}
@@ -185,8 +189,9 @@ export function MobileThemeModal({ onClose }: MobileThemeModalProps) {
           ))}
         </div>
         
-        {/* Tab Content - Scrollable */}
-        <div className="flex-1 overflow-y-auto p-4">
+        {/* Tab Content - this is the ONLY scrollable area */}
+        <div className="flex-1 overflow-y-auto min-h-0">
+          <div className="p-4">
           
           {/* PRESETS TAB */}
           {activeTab === 'presets' && (
@@ -394,6 +399,7 @@ export function MobileThemeModal({ onClose }: MobileThemeModalProps) {
             </div>
           )}
           
+          </div>
         </div>
       </div>
     </div>
