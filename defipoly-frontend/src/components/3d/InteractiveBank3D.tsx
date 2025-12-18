@@ -373,6 +373,7 @@ export const InteractiveBank3D = forwardRef<{ handleParticleArrive: (incomeValue
         <Html
           position={[0, 25, 0]}
           center
+          zIndexRange={[10, 0]}
           style={{
             display: 'flex',
             justifyContent: 'center',

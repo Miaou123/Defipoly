@@ -1,5 +1,6 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import { X, TrendingUp, Star, Target, Coins } from 'lucide-react';
 
 // Reward tiers for accumulation bonuses - these determine how many coins appear
@@ -21,6 +22,16 @@ interface FloatingCoinsModalProps {
 }
 
 export function FloatingCoinsModal({ isOpen, onClose, rewardsAmount }: FloatingCoinsModalProps) {
+  const [isMobile, setIsMobile] = useState(false);
+
+  // Mobile detection
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 1024);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
   if (!isOpen) return null;
 
   // Calculate how many tiers the user has reached and current bonus
@@ -58,27 +69,31 @@ export function FloatingCoinsModal({ isOpen, onClose, rewardsAmount }: FloatingC
       onClick={onClose}
     >
       <div 
-        className="bg-gradient-to-br from-purple-950/95 via-purple-900/95 to-purple-950/95 backdrop-blur-xl rounded-2xl border-2 border-purple-500/30 shadow-2xl shadow-purple-500/20 max-w-md w-full overflow-hidden"
+        className={`${
+          isMobile 
+            ? 'bg-black/95 backdrop-blur-xl rounded-xl border border-yellow-500/30 max-w-[320px] max-h-[80vh] flex flex-col' 
+            : 'bg-gradient-to-br from-purple-950/95 via-purple-900/95 to-purple-950/95 backdrop-blur-xl rounded-2xl border-2 border-purple-500/30 shadow-2xl shadow-purple-500/20 max-w-md'
+        } w-full overflow-hidden`}
         onClick={e => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="relative bg-gradient-to-r from-yellow-900/50 to-amber-700/50 border-b border-yellow-500/30 p-6">
+        <div className={`relative bg-gradient-to-r from-yellow-900/50 to-amber-700/50 border-b border-yellow-500/30 ${isMobile ? 'p-4 flex-shrink-0' : 'p-6'}`}>
           <div className="flex justify-between items-start">
             <div className="flex items-center gap-3">
-              <Coins className="w-8 h-8 text-yellow-300" />
-              <h2 className="text-2xl font-black text-yellow-100">Reward Coins</h2>
+              <Coins className={`${isMobile ? 'w-6 h-6' : 'w-8 h-8'} text-yellow-300`} />
+              <h2 className={`${isMobile ? 'text-lg' : 'text-2xl'} font-black text-yellow-100`}>Bonus Coins</h2>
             </div>
             <button 
               onClick={onClose}
               className="text-yellow-300 hover:text-white transition-colors hover:bg-yellow-800/50 rounded-lg p-2"
             >
-              <X size={24} />
+              <X size={isMobile ? 20 : 24} />
             </button>
           </div>
         </div>
 
         {/* Content */}
-        <div className="p-6 space-y-4">
+        <div className={`${isMobile ? 'flex-1 overflow-y-auto p-4 pb-safe' : 'p-6'} space-y-4`}>
           <div className="bg-yellow-900/30 rounded-xl p-4 border border-yellow-500/20">
             <div className="flex items-start gap-3">
               <Star className="w-5 h-5 text-yellow-400 mt-1 flex-shrink-0" />
@@ -103,7 +118,7 @@ export function FloatingCoinsModal({ isOpen, onClose, rewardsAmount }: FloatingC
                   {tierCount > 0 && (
                     <>
                       <br />
-                      <span className="text-yellow-300">{tierCount} coin{tierCount !== 1 ? 's' : ''}</span> unlocked around the bank
+                      <span className="text-yellow-300">Tier {tierCount}</span> bonus unlocked!
                     </>
                   )}
                 </p>
@@ -163,12 +178,15 @@ export function FloatingCoinsModal({ isOpen, onClose, rewardsAmount }: FloatingC
             </div>
           </div>
 
-          <button
-            onClick={onClose}
-            className="w-full py-2 rounded-lg font-semibold text-sm transition-all bg-yellow-600/40 hover:bg-yellow-600/60 border border-yellow-500/50 text-yellow-100 hover:border-yellow-400/70"
-          >
-            Got It!
-          </button>
+          {/* Only show Got It button on desktop */}
+          {!isMobile && (
+            <button
+              onClick={onClose}
+              className="w-full py-2 rounded-lg font-semibold text-sm transition-all bg-yellow-600/40 hover:bg-yellow-600/60 border border-yellow-500/50 text-yellow-100 hover:border-yellow-400/70"
+            >
+              Got It!
+            </button>
+          )}
         </div>
       </div>
     </div>

@@ -15,10 +15,18 @@ import { BriefcaseIcon, TrophyIcon, BroadcastIcon, UserIcon, LoadingIcon, Wallet
 import { PROPERTIES } from '@/utils/constants';
 import { ShieldAllModal } from './ShieldAllModal';
 import { MobilePropertyPanel } from './mobile/MobilePropertyPanel';
+import { FloatingCoinsModal } from './FloatingCoinsModal';
 import type { PropertyOwnership } from '@/types/accounts';
 
 interface OwnedProperty extends PropertyOwnership {
   propertyInfo: typeof PROPERTIES[0];
+}
+
+interface ShieldableProperty {
+  propertyId: number;
+  propertyInfo: typeof PROPERTIES[0];
+  slotsOwned: number;
+  shieldCost: number;
 }
 
 // Helper function to calculate daily income from price and yieldBps
@@ -90,14 +98,13 @@ function MobileStatsRow() {
 }
 
 // New Mobile Actions Row component
-function MobileActionsRow() {
+function MobileActionsRow({ onOpenShieldModal }: { onOpenShieldModal: (data: ShieldableProperty[]) => void }) {
   const { connected, publicKey } = useWallet();
   const { unclaimedRewards } = useRewards();
-  const { claimRewards, loading: claimLoading, tokenBalance: balance } = useDefipoly();
+  const { claimRewards, loading: claimLoading } = useDefipoly();
   const { ownerships } = useGameState();
   const { showSuccess, showError } = useNotification();
   const [claiming, setClaiming] = useState(false);
-  const [showShieldAllModal, setShowShieldAllModal] = useState(false);
   const claimingRef = useRef(false);
 
   // Convert API ownerships to OwnedProperty format for shield all
@@ -171,48 +178,37 @@ function MobileActionsRow() {
 
   const handleShieldAll = () => {
     if (hasShieldableProperties) {
-      setShowShieldAllModal(true);
+      onOpenShieldModal(shieldAllData);
     }
   };
 
   if (!connected) return null;
 
   return (
-    <>
-      <div className="flex gap-3">
-        {/* Shield All Button */}
-        <button
-          onClick={handleShieldAll}
-          disabled={!hasShieldableProperties}
-          className={`flex-1 py-2.5 font-bold text-sm flex items-center justify-center gap-2 transition-all ${
-            hasShieldableProperties
-              ? 'bg-gradient-to-r from-yellow-600 to-amber-600 hover:from-yellow-500 hover:to-amber-500 text-white'
-              : 'bg-gray-800/50 text-gray-500 cursor-not-allowed'
-          }`}
-        >
-          <ShieldIcon size={16} />
-          Shield All
-        </button>
-        
-        {/* Collect Button */}
-        <button
-          onClick={handleClaimRewards}
-          disabled={claiming || claimLoading || unclaimedRewards === 0}
-          className="flex-1 py-2.5 bg-gradient-to-r from-purple-600 to-purple-700 font-bold text-sm text-white disabled:opacity-50 disabled:cursor-not-allowed active:scale-95 transition-all"
-        >
-          {claiming ? <LoadingIcon size={16} className="text-yellow-400 animate-pulse" /> : 'Collect'}
-        </button>
-      </div>
-
-      {/* Shield All Modal */}
-      {showShieldAllModal && (
-        <ShieldAllModal
-          ownedProperties={shieldAllData}
-          balance={balance}
-          onClose={() => setShowShieldAllModal(false)}
-        />
-      )}
-    </>
+    <div className="flex gap-3">
+      {/* Shield All Button */}
+      <button
+        onClick={handleShieldAll}
+        disabled={!hasShieldableProperties}
+        className={`flex-1 py-2.5 font-bold text-sm flex items-center justify-center gap-2 transition-all ${
+          hasShieldableProperties
+            ? 'bg-gradient-to-r from-yellow-600 to-amber-600 hover:from-yellow-500 hover:to-amber-500 text-white'
+            : 'bg-gray-800/50 text-gray-500 cursor-not-allowed'
+        }`}
+      >
+        <ShieldIcon size={16} />
+        Shield All
+      </button>
+      
+      {/* Collect Button */}
+      <button
+        onClick={handleClaimRewards}
+        disabled={claiming || claimLoading || unclaimedRewards === 0}
+        className="flex-1 py-2.5 bg-gradient-to-r from-purple-600 to-purple-700 font-bold text-sm text-white disabled:opacity-50 disabled:cursor-not-allowed active:scale-95 transition-all"
+      >
+        {claiming ? <LoadingIcon size={16} className="text-yellow-400 animate-pulse" /> : 'Collect'}
+      </button>
+    </div>
   );
 }
 
@@ -231,11 +227,16 @@ export function MobileLayout({
   const [activeTab, setActiveTab] = useState<TabType>('portfolio');
   const { publicKey, connected } = useWallet();
   const { profile } = useGameState();
+  const { unclaimedRewards } = useRewards();
+  const { tokenBalance: balance } = useDefipoly();
   const [scaleFactor, setScaleFactor] = useState(1);
   const [startY, setStartY] = useState<number | null>(null);
   const [currentY, setCurrentY] = useState<number | null>(null);
   const [isDragging, setIsDragging] = useState(false);
-  const [panelHeight, setPanelHeight] = useState(60);
+  const [panelHeight, setPanelHeight] = useState(80);
+  const [showCoinModal, setShowCoinModal] = useState(false);
+  const [showShieldAllModal, setShowShieldAllModal] = useState(false);
+  const [shieldAllData, setShieldAllData] = useState<ShieldableProperty[]>([]);
   
   // Property modal swipe state
   const [modalStartY, setModalStartY] = useState<number | null>(null);
@@ -375,7 +376,12 @@ export function MobileLayout({
         {/* Buttons Row */}
         {connected && (
           <div className="px-4 pb-4">
-            <MobileActionsRow />
+            <MobileActionsRow 
+              onOpenShieldModal={(data) => { 
+                setShieldAllData(data); 
+                setShowShieldAllModal(true); 
+              }} 
+            />
           </div>
         )}
       </div>
@@ -387,6 +393,7 @@ export function MobileLayout({
           {/* 3D Board */}
           <Board 
             onSelectProperty={onSelectProperty}
+            onCoinClick={() => setShowCoinModal(true)}
             profilePicture={profilePicture}
             cornerSquareStyle={cornerSquareStyle}
             customBoardBackground={customBoardBackground}
@@ -400,7 +407,7 @@ export function MobileLayout({
 
       {/* Swipeable Bottom Panel */}
       <div 
-        className="absolute bottom-0 left-0 right-0 bg-black/90 backdrop-blur-lg border-t border-purple-500/20 z-30"
+        className="absolute bottom-0 left-0 right-0 bg-black/90 backdrop-blur-lg border-t border-purple-500/20 z-30 pb-safe"
         style={{ height: `${panelHeight}px` }}
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
@@ -478,6 +485,22 @@ export function MobileLayout({
             </div>
           </div>
         </div>
+      )}
+
+      {/* Floating Coins Modal */}
+      <FloatingCoinsModal
+        isOpen={showCoinModal}
+        onClose={() => setShowCoinModal(false)}
+        rewardsAmount={unclaimedRewards || 0}
+      />
+
+      {/* Shield All Modal */}
+      {showShieldAllModal && (
+        <ShieldAllModal
+          ownedProperties={shieldAllData}
+          balance={balance}
+          onClose={() => setShowShieldAllModal(false)}
+        />
       )}
     </div>
   );

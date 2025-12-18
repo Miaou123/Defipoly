@@ -280,14 +280,18 @@ export function FloatingCoins3D({ rewardsAmount, position = [0, 1.95, 0], onCoin
                   -1.5 + data.yOffset, // Even lower height
                   Math.sin(data.angle) * data.radius
                 ]}
-                onPointerOver={!isMobile ? (e) => {
-                  e.stopPropagation();
-                  setHoveredCoin(i);
-                } : undefined}
-                onPointerOut={!isMobile ? (e) => {
-                  e.stopPropagation();
-                  setHoveredCoin(null);
-                } : undefined}
+                onPointerOver={(e) => {
+                  if (!isMobile) {
+                    e.stopPropagation();
+                    setHoveredCoin(i);
+                  }
+                }}
+                onPointerOut={(e) => {
+                  if (!isMobile) {
+                    e.stopPropagation();
+                    setHoveredCoin(null);
+                  }
+                }}
                 onClick={(e) => {
                   e.stopPropagation();
                   
@@ -313,6 +317,7 @@ export function FloatingCoins3D({ rewardsAmount, position = [0, 1.95, 0], onCoin
                     coinRefs.current[i]!.position.z
                   ]}
                   center
+                  zIndexRange={[10, 0]}
                   style={{
                     display: 'flex',
                     justifyContent: 'center',

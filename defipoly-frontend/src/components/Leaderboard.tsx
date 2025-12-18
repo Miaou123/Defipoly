@@ -392,7 +392,7 @@ export function Leaderboard({ scaleFactor = 1, isMobile = false }: LeaderboardPr
             top: arrowPosition.top, 
             left: arrowPosition.left,
             transform: 'translateY(-50%)',
-            zIndex: 9999
+            zIndex: 10
           }}
         >
           <PointerArrowIcon className="w-6 h-6 text-yellow-400 drop-shadow-[0_0_8px_rgba(250,204,21,0.8)]" />

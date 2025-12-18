@@ -14,6 +14,8 @@ import {
   SellPropertySection,
   StealPropertySection
 } from '../property-modal/actions';
+import { MobileHelpModal } from './MobileHelpModal';
+import { HelpCircle } from 'lucide-react';
 
 interface MobilePropertyPanelProps {
   selectedProperty: number | null;
@@ -26,6 +28,7 @@ export function MobilePropertyPanel({ selectedProperty, onSelectProperty }: Mobi
   const [activeSection, setActiveSection] = useState<SectionType>('buy');
   const [currentPropertyId, setCurrentPropertyId] = useState(selectedProperty || 1); // Default to Mediterranean Avenue (ID: 1)
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const [showHelp, setShowHelp] = useState<'buy' | 'shield' | 'sell' | 'steal' | null>(null);
   
   // Header swipe state
   const [headerSwipeStart, setHeaderSwipeStart] = useState<{ x: number; time: number } | null>(null);
@@ -299,17 +302,28 @@ export function MobilePropertyPanel({ selectedProperty, onSelectProperty }: Mobi
       {/* Section tabs */}
       <div className="flex border-b border-purple-500/20 flex-shrink-0">
         {sections.map((section, index) => (
-          <button
-            key={section.id}
-            onClick={() => scrollToSection(index)}
-            className={`flex-1 py-2 text-[10px] font-semibold capitalize transition-all ${
-              activeSection === section.id 
-                ? 'text-purple-300 border-b-2 border-purple-500 bg-purple-600/20' 
-                : 'text-purple-500 border-b-2 border-transparent'
-            }`}
-          >
-            {section.label}
-          </button>
+          <div key={section.id} className="flex-1 relative">
+            <button
+              onClick={() => scrollToSection(index)}
+              className={`w-full py-2 text-[10px] font-semibold capitalize transition-all ${
+                activeSection === section.id 
+                  ? 'text-purple-300 border-b-2 border-purple-500 bg-purple-600/20' 
+                  : 'text-purple-500 border-b-2 border-transparent'
+              }`}
+            >
+              {section.label}
+            </button>
+            {/* Help button */}
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowHelp(section.id);
+              }}
+              className="absolute top-1 right-1 text-purple-400/60 hover:text-purple-300 transition-colors"
+            >
+              <HelpCircle size={12} />
+            </button>
+          </div>
         ))}
       </div>
       
@@ -839,6 +853,15 @@ export function MobilePropertyPanel({ selectedProperty, onSelectProperty }: Mobi
           </div>
         </div>
       </div>
+      
+      {/* Help Modal */}
+      {showHelp && (
+        <MobileHelpModal 
+          isOpen={showHelp !== null} 
+          onClose={() => setShowHelp(null)} 
+          type={showHelp} 
+        />
+      )}
     </div>
   );
 }

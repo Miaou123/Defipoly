@@ -11,7 +11,7 @@ import { useDefipoly } from '@/contexts/DefipolyContext';
 import { useNotification } from '../contexts/NotificationContext';
 import { PROPERTIES, TOKEN_TICKER } from '@/utils/constants';
 
-interface OwnedProperty {
+interface ShieldableProperty {
   propertyId: number;
   propertyInfo: typeof PROPERTIES[0];
   slotsOwned: number;
@@ -19,7 +19,7 @@ interface OwnedProperty {
 }
 
 interface ShieldAllModalProps {
-  ownedProperties: OwnedProperty[];
+  ownedProperties: ShieldableProperty[];
   balance: number;
   onClose: () => void;
 }
