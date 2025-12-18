@@ -246,7 +246,7 @@ export function MobileLayout({
               <div className="w-7 h-7 rounded-full bg-purple-500/30 flex items-center justify-center overflow-hidden border border-green-500/50">
                 {profile?.profilePicture ? (
                   <img 
-                    src={profile.profilePicture} 
+                    src={profile.profilePicture ?? undefined} 
                     alt="Profile" 
                     className="w-full h-full object-cover"
                   />

@@ -272,7 +272,7 @@ export function MobileProfilePage() {
             >
               {gameState.profile.profilePicture ? (
                 <img 
-                  src={getImageUrl(gameState.profile.profilePicture)} 
+                  src={getImageUrl(gameState.profile.profilePicture) ?? undefined} 
                   alt="Profile" 
                   className="w-full h-full object-cover"
                 />
@@ -498,9 +498,8 @@ export function MobileProfilePage() {
 
       {showThemePresetsModal && (
         <ThemePresetsModal
-          currentBoardPresetId={gameState.profile.boardPresetId}
-          currentTilePresetId={gameState.profile.tilePresetId}
-          onSelectPreset={async (preset) => {
+          isOpen={showThemePresetsModal}
+          onApply={async (preset) => {
             await gameState.updateProfile({ 
               boardPresetId: preset.id,
               tilePresetId: preset.id,
@@ -517,14 +516,14 @@ export function MobileProfilePage() {
 
       {showCornerSquareModal && (
         <CornerSquareModal
-          currentStyle={gameState.profile.cornerSquareStyle || 'property'}
-          onSelectStyle={async (style) => {
+          isOpen={showCornerSquareModal}
+          currentCornerSquareStyle={gameState.profile.cornerSquareStyle || 'property'}
+          onCornerSquareStyleChange={async (style) => {
             await gameState.updateProfile({ cornerSquareStyle: style });
             setShowCornerSquareModal(false);
             showSuccess('Style Updated', 'Corner square style has been updated!');
           }}
           onClose={() => setShowCornerSquareModal(false)}
-          profilePicture={gameState.profile.profilePicture}
         />
       )}
     </div>

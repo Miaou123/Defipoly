@@ -290,7 +290,7 @@ export default function SpectatorPage() {
             <div className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center overflow-hidden border-2 border-purple-400/50">
               {profile?.profilePicture && getImageUrl(profile.profilePicture) ? (
                 <img 
-                  src={getImageUrl(profile.profilePicture)} 
+                  src={getImageUrl(profile.profilePicture) ?? undefined} 
                   alt="Profile" 
                   className="w-full h-full object-cover"
                 />
@@ -449,7 +449,7 @@ export default function SpectatorPage() {
                     <div className="w-24 h-24 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-3xl overflow-hidden border-4 border-purple-500/30">
                       {getImageUrl(profile?.profilePicture) ? (
                         <img 
-                          src={getImageUrl(profile?.profilePicture)!} 
+                          src={getImageUrl(profile?.profilePicture) ?? undefined} 
                           alt="Profile" 
                           className="w-full h-full object-cover"
                         />

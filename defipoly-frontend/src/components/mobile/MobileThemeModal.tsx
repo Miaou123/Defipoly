@@ -514,7 +514,7 @@ export function MobileThemeModal({ onClose }: MobileThemeModalProps) {
                 >
                   <div className="w-12 h-12 mx-auto rounded-lg bg-purple-800/50 border border-purple-500/30 flex items-center justify-center overflow-hidden mb-2">
                     {profile.profilePicture && getImageUrl(profile.profilePicture) ? (
-                      <img src={getImageUrl(profile.profilePicture)} alt="" className="w-10 h-10 rounded-full object-cover" />
+                      <img src={getImageUrl(profile.profilePicture) ?? undefined} alt="" className="w-10 h-10 rounded-full object-cover" />
                     ) : (
                       <div className="w-10 h-10 rounded-full bg-purple-500/30 flex items-center justify-center text-sm">👤</div>
                     )}

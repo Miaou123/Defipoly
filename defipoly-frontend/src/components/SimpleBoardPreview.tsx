@@ -117,7 +117,7 @@ export const SimpleBoardPreview: React.FC<SimpleBoardPreviewProps> = ({
               {/* Top-left corner */}
               <div className="w-4 h-4 overflow-hidden" style={getPropertyBackgroundStyle()}>
                 {cornerSquareStyle === 'profile' && profilePicture ? (
-                  <img src={profilePicture} alt="" className="w-full h-full object-cover" />
+                  <img src={profilePicture ?? undefined} alt="" className="w-full h-full object-cover" />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center">
                     <span className={`text-[4px] ${writingStyle === 'light' ? 'text-white/60' : 'text-gray-900/60'} leading-none text-center`}>DEFI<br/>POLY</span>
@@ -134,7 +134,7 @@ export const SimpleBoardPreview: React.FC<SimpleBoardPreviewProps> = ({
               {/* Top-right corner */}
               <div className="w-4 h-4 overflow-hidden" style={getPropertyBackgroundStyle()}>
                 {cornerSquareStyle === 'profile' && profilePicture ? (
-                  <img src={profilePicture} alt="" className="w-full h-full object-cover" />
+                  <img src={profilePicture ?? undefined} alt="" className="w-full h-full object-cover" />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center">
                     <span className={`text-[4px] ${writingStyle === 'light' ? 'text-white/60' : 'text-gray-900/60'} leading-none text-center`}>DEFI<br/>POLY</span>
@@ -159,7 +159,7 @@ export const SimpleBoardPreview: React.FC<SimpleBoardPreviewProps> = ({
               {/* Bottom-left corner */}
               <div className="w-4 h-4 overflow-hidden" style={getPropertyBackgroundStyle()}>
                 {cornerSquareStyle === 'profile' && profilePicture ? (
-                  <img src={profilePicture} alt="" className="w-full h-full object-cover" />
+                  <img src={profilePicture ?? undefined} alt="" className="w-full h-full object-cover" />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center">
                     <span className={`text-[4px] ${writingStyle === 'light' ? 'text-white/60' : 'text-gray-900/60'} leading-none text-center`}>DEFI<br/>POLY</span>
@@ -176,7 +176,7 @@ export const SimpleBoardPreview: React.FC<SimpleBoardPreviewProps> = ({
               {/* Bottom-right corner */}
               <div className="w-4 h-4 overflow-hidden" style={getPropertyBackgroundStyle()}>
                 {cornerSquareStyle === 'profile' && profilePicture ? (
-                  <img src={profilePicture} alt="" className="w-full h-full object-cover" />
+                  <img src={profilePicture ?? undefined} alt="" className="w-full h-full object-cover" />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center">
                     <span className={`text-[4px] ${writingStyle === 'light' ? 'text-white/60' : 'text-gray-900/60'} leading-none text-center`}>DEFI<br/>POLY</span>
