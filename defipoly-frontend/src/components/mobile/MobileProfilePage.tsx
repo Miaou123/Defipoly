@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { useRouter } from 'next/navigation';
 import { useGameState } from '@/contexts/GameStateContext';
@@ -44,6 +44,13 @@ export function MobileProfilePage() {
   const [showCornerSquareModal, setShowCornerSquareModal] = useState(false);
   const [showThemeModal, setShowThemeModal] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  // Touch handling state
+  const [touchStart, setTouchStart] = useState<number | null>(null);
+  const [touchEnd, setTouchEnd] = useState<number | null>(null);
+  const [isSwiping, setIsSwiping] = useState(false);
+  const [swipeOffset, setSwipeOffset] = useState(0);
+  const contentRef = useRef<HTMLDivElement>(null);
 
   // Redirect if not connected
   useEffect(() => {
@@ -235,6 +242,71 @@ export function MobileProfilePage() {
     }
   };
 
+  // Tab configuration
+  const tabs = [
+    { id: 'stats' as TabType, label: 'Stats', icon: BarChart3 },
+    { id: 'theme' as TabType, label: 'Theme', icon: Palette },
+    { id: 'activity' as TabType, label: 'Activity', icon: Activity },
+  ];
+
+  const getTabIndex = (tab: TabType) => tabs.findIndex(t => t.id === tab);
+
+  // Handle touch start
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    const touch = e.targetTouches[0];
+    if (!touch) return;
+    setTouchStart(touch.clientX);
+    setTouchEnd(touch.clientX);
+    setIsSwiping(false);
+  }, []);
+
+  // Handle touch move
+  const handleTouchMove = useCallback((e: React.TouchEvent) => {
+    if (!touchStart) return;
+    
+    const touch = e.targetTouches[0];
+    if (!touch) return;
+    const diff = touchStart - touch.clientX;
+    
+    // Only start swiping after a minimum threshold
+    if (Math.abs(diff) > 10) {
+      setIsSwiping(true);
+      setSwipeOffset(-diff);
+      setTouchEnd(touch.clientX);
+    }
+  }, [touchStart]);
+
+  // Handle touch end
+  const handleTouchEnd = useCallback(() => {
+    if (!touchStart || touchEnd === null) return;
+    
+    const diff = touchStart - touchEnd;
+    const threshold = 50; // Minimum distance for a swipe
+    const currentIndex = getTabIndex(activeTab);
+    
+    if (Math.abs(diff) > threshold) {
+      if (diff > 0 && currentIndex < tabs.length - 1) {
+        // Swiped left - go to next tab
+        const nextTab = tabs[currentIndex + 1];
+        if (nextTab) {
+          setActiveTab(nextTab.id);
+        }
+      } else if (diff < 0 && currentIndex > 0) {
+        // Swiped right - go to previous tab
+        const prevTab = tabs[currentIndex - 1];
+        if (prevTab) {
+          setActiveTab(prevTab.id);
+        }
+      }
+    }
+    
+    // Reset swipe state
+    setTouchStart(null);
+    setTouchEnd(null);
+    setIsSwiping(false);
+    setSwipeOffset(0);
+  }, [touchStart, touchEnd, activeTab]);
+
   if (!connected || !publicKey) {
     return null;
   }
@@ -351,33 +423,49 @@ export function MobileProfilePage() {
 
       {/* Tab Bar - Sticky */}
       <div className="flex-shrink-0 bg-black/90 border-b border-purple-500/20">
-        <div className="flex">
-          {[
-            { id: 'stats' as TabType, label: 'Stats', icon: BarChart3 },
-            { id: 'theme' as TabType, label: 'Theme', icon: Palette },
-            { id: 'activity' as TabType, label: 'Activity', icon: Activity },
-          ].map((tab) => (
+        <div className="flex relative">
+          {tabs.map((tab) => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
               className={`flex-1 py-3 flex flex-col items-center gap-1 transition-all ${
                 activeTab === tab.id 
-                  ? 'border-b-2 border-purple-400 text-purple-300' 
-                  : 'border-b-2 border-transparent text-purple-500'
+                  ? 'text-purple-300' 
+                  : 'text-purple-500'
               }`}
             >
               <tab.icon size={20} />
               <span className="text-xs font-medium">{tab.label}</span>
             </button>
           ))}
+          {/* Animated indicator */}
+          <div 
+            className="absolute bottom-0 h-0.5 bg-purple-400 transition-all duration-300 ease-out"
+            style={{
+              width: `${100 / tabs.length}%`,
+              transform: `translateX(${getTabIndex(activeTab) * 100}%)`,
+            }}
+          />
         </div>
       </div>
 
       {/* Tab Content - Fixed height, no scroll */}
-      <div className="flex-1 flex flex-col min-h-0">
-        {/* Stats Tab */}
-        {activeTab === 'stats' && (
-          <div className="flex-1 p-3 flex flex-col min-h-0">
+      <div 
+        ref={contentRef}
+        className="flex-1 min-h-0 relative overflow-hidden"
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+      >
+        {/* Swipeable container */}
+        <div 
+          className="flex absolute inset-0 transition-transform duration-300 ease-out"
+          style={{
+            transform: `translateX(calc(-${getTabIndex(activeTab) * 100}% + ${isSwiping ? swipeOffset : 0}px))`,
+          }}
+        >
+          {/* Stats Tab */}
+          <div className="w-full h-full flex-shrink-0 p-3 flex flex-col overflow-y-auto">
             <div className="flex-1 grid grid-cols-2 gap-2 mb-3 min-h-0">
               {/* Regular stat cards */}
               <div className="bg-purple-900/30 rounded-lg p-3 flex flex-col justify-center min-h-0">
@@ -426,11 +514,9 @@ export function MobileProfilePage() {
               </div>
             </div>
           </div>
-        )}
 
-        {/* Theme Tab */}
-        {activeTab === 'theme' && (
-          <div className="p-4 space-y-4">
+          {/* Theme Tab */}
+          <div className="w-full h-full flex-shrink-0 p-4 space-y-4 overflow-y-auto">
             {/* Large Board Preview - Tappable */}
             <div 
               className="aspect-square max-w-[280px] mx-auto cursor-pointer"
@@ -447,11 +533,9 @@ export function MobileProfilePage() {
               />
             </div>
           </div>
-        )}
 
-        {/* Activity Tab */}
-        {activeTab === 'activity' && (
-          <div className="flex-1 p-3 flex flex-col min-h-0">
+          {/* Activity Tab */}
+          <div className="w-full h-full flex-shrink-0 p-3 flex flex-col overflow-y-auto">
             {loading ? (
               <div className="flex-1 flex items-center justify-center">
                 <div className="text-purple-300 text-sm">Loading activities...</div>
@@ -462,8 +546,7 @@ export function MobileProfilePage() {
                 <div className="text-sm text-purple-500">Start playing to see your history!</div>
               </div>
             ) : (
-              <div className="flex-1 overflow-y-auto">
-                <div className="space-y-2">
+              <div className="space-y-2">
                   {activities.slice(0, 20).map((activity) => (
                     <div
                       key={activity.signature}
@@ -487,10 +570,9 @@ export function MobileProfilePage() {
                     </div>
                   ))}
                 </div>
-              </div>
             )}
           </div>
-        )}
+        </div>
       </div>
 
       {/* Modals */}

@@ -116,6 +116,9 @@ defipoly-program/**/*.pdb
 # ================================
 /node_modules/
 
+# Database at root level
+defipoly.db
+
 # ================================
 # SECURITY & SECRETS
 # ================================

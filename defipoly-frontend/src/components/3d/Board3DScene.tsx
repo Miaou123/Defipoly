@@ -34,30 +34,33 @@ function VisibilityHandler({
 }: { 
   setParticlesVisible: (v: boolean) => void 
 }) {
-  const { gl } = useThree();
+  const { gl, invalidate } = useThree();
   
   useEffect(() => {
+    let animationFrameId: number | null = null;
+    
     const handleVisibility = () => {
       if (document.hidden) {
-        // Tab hidden - pause rendering to prevent WebGL context loss
+        // Tab hidden - stop animation loop
         gl.setAnimationLoop(null);
         setParticlesVisible(false);
       } else {
-        // Tab visible - resume
-        gl.setAnimationLoop(() => {});
+        // Tab visible - trigger re-render, R3F will handle the loop
         setParticlesVisible(true);
-        // RewardsContext will auto-refresh from blockchain
+        invalidate(); // Tell R3F to re-render
       }
     };
     
     const handleContextLost = (e: Event) => {
       e.preventDefault();
       console.warn('⚠️ WebGL context lost - prevented default behavior');
+      // Stop any pending renders
+      gl.setAnimationLoop(null);
     };
     
     const handleContextRestored = () => {
       console.log('✅ WebGL context restored');
-      // Context restored, rendering should resume automatically
+      invalidate(); // Trigger re-render after restoration
     };
     
     document.addEventListener('visibilitychange', handleVisibility);
@@ -69,7 +72,7 @@ function VisibilityHandler({
       gl.domElement.removeEventListener('webglcontextlost', handleContextLost);
       gl.domElement.removeEventListener('webglcontextrestored', handleContextRestored);
     };
-  }, [gl, setParticlesVisible]);
+  }, [gl, setParticlesVisible, invalidate]);
   
   return null;
 }
@@ -434,6 +437,7 @@ function CameraController({
   const needsImmediateSnap = useRef(false);
   const prevConnected = useRef<boolean | null>(null);
   const prevShowcaseMode = useRef<boolean>(false);
+  const { invalidate } = useThree();
 
   // Handle initial mount and connection changes
   useEffect(() => {
@@ -496,6 +500,7 @@ function CameraController({
         controlsRef.current.update();
       }
       needsImmediateSnap.current = false;
+      invalidate();
       return;
     }
     
@@ -530,7 +535,10 @@ function CameraController({
       }
       animationComplete.current = true;
     }
-  });
+    
+    // Request render since we're animating
+    invalidate();
+  }, 1);
 
   return null;
 }
@@ -546,6 +554,7 @@ function ShowcaseController({
   controlsRef: React.RefObject<any>;
 }) {
   const angleRef = useRef(0);
+  const { invalidate } = useThree();
 
   useFrame((state, delta) => {
     if (!enabled || !controlsRef.current) return;
@@ -566,7 +575,10 @@ function ShowcaseController({
     // Update controls target to look at center of board
     controlsRef.current.target.set(0, 0, 0);
     controlsRef.current.update();
-  });
+    
+    // Request render since we're animating
+    invalidate();
+  }, 1);
 
   return null;
 }
@@ -575,6 +587,7 @@ function ShowcaseController({
 function RisingIncomeParticles({ side, visible = true }: { side: 'top' | 'bottom' | 'left' | 'right'; visible?: boolean }) {
   const particlesRef = useRef<THREE.Group>(null);
   const particleCount = 2;
+  const { invalidate } = useThree();
   
   const getParticleOffset = () => {
     switch (side) {
@@ -599,7 +612,7 @@ function RisingIncomeParticles({ side, visible = true }: { side: 'top' | 'bottom
   }, [offset.x, offset.z]);
 
   useFrame((state) => {
-    if (!particlesRef.current) return;
+    if (!particlesRef.current || !visible) return;
     const time = state.clock.elapsedTime;
     
     particlesRef.current.children.forEach((particle, i) => {
@@ -629,7 +642,10 @@ function RisingIncomeParticles({ side, visible = true }: { side: 'top' | 'bottom
       const scale = 0.7 + Math.sin(progress * Math.PI) * 0.3;
       particle.scale.setScalar(scale);
     });
-  });
+    
+    // Request render since we're animating
+    invalidate();
+  }, 1);
 
   return (
     <group ref={particlesRef} position={[0, tileThickness / 2 + 0.05, 0]}>
@@ -963,6 +979,8 @@ function PinOnTile({ propertyId, side, showHint = false }: { propertyId: number;
   const arrowRef = useRef<any>(null);
   
 
+  const { invalidate } = useThree();
+  
   // Animate the golden hint arrow
   useFrame((state) => {
     if (arrowRef.current && showHint) {
@@ -971,8 +989,9 @@ function PinOnTile({ propertyId, side, showHint = false }: { propertyId: number;
       const float = Math.sin(t * 1.5) * 3; // Gentle up/down float
       arrowRef.current.style.opacity = pulse;
       arrowRef.current.style.transform = `translateY(${float}px) rotate(90deg)`;
+      invalidate(); // Request render since we're animating
     }
-  });
+  }, showHint ? 1 : 0);
   
   const pinRotation = {
     top: [0, Math.PI, 0] as [number, number, number],
@@ -1874,6 +1893,7 @@ export function Board3DScene({ onSelectProperty, onCoinClick, spectatorMode, spe
       )}
 
       <Canvas
+        frameloop="demand"  // Only render when needed
         camera={{ 
           position: [0, 18, 25],  // Start at ZOOMED_OUT position
           fov: 50,

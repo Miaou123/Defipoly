@@ -18,3 +18,9 @@ test-ledger/
 
 # Logs
 *.log
+
+# Environment variables
+.env
+
+# Database
+defipoly.db

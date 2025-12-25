@@ -1,9 +1,9 @@
+// AppShell.tsx
 'use client';
 
 import { useState, useEffect, ReactNode } from 'react';
 import { Providers } from './Providers';
-import { SharedCanvasProvider } from './3d/SharedCanvasClient';
-import { LoadingScreen } from './LoadingScreen';  // Add this import
+import { LoadingScreen } from './LoadingScreen';
 
 interface AppShellProps {
   children: ReactNode;
@@ -17,14 +17,12 @@ export function AppShell({ children }: AppShellProps) {
   }, []);
 
   if (!mounted) {
-    return <LoadingScreen />;  // Replace the old loading div
+    return <LoadingScreen />;
   }
 
   return (
     <Providers>
-      <SharedCanvasProvider>
-        {children}
-      </SharedCanvasProvider>
+      {children}
     </Providers>
   );
 }

@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { Board } from './Board';
 import { Portfolio } from './Portfolio';
 import { Leaderboard } from './Leaderboard';
@@ -11,13 +12,14 @@ import { useGameState } from '@/contexts/GameStateContext';
 import { useRewards } from '@/contexts/RewardsContext';
 import { useDefipoly } from '@/contexts/DefipolyContext';
 import { useNotification } from '@/contexts/NotificationContext';
-import { BriefcaseIcon, TrophyIcon, BroadcastIcon, UserIcon, LoadingIcon, WalletIcon, ChartUpIcon, ShieldIcon, BuildingIcon } from './icons/UIIcons';
+import { BriefcaseIcon, TrophyIcon, BroadcastIcon, UserIcon, LoadingIcon, WalletIcon, ChartUpIcon, ShieldIcon, BuildingIcon, PointerArrowIcon } from './icons/UIIcons';
 import { PROPERTIES } from '@/utils/constants';
 import { ShieldAllModal } from './ShieldAllModal';
 import { MobilePropertyPanel } from './mobile/MobilePropertyPanel';
 import { FloatingCoinsModal } from './FloatingCoinsModal';
 import type { PropertyOwnership } from '@/types/accounts';
 import { useRouter } from 'next/navigation';
+import { LogOut } from 'lucide-react';
 
 interface OwnedProperty extends PropertyOwnership {
   propertyInfo: typeof PROPERTIES[0];
@@ -117,7 +119,7 @@ export function MobileLayout({
   themeCategory
 }: MobileLayoutProps) {
   const [activeTab, setActiveTab] = useState<TabType>('portfolio');
-  const { publicKey, connected } = useWallet();
+  const { publicKey, connected, disconnect } = useWallet();
   const { profile } = useGameState();
   const { unclaimedRewards } = useRewards();
   const { tokenBalance: balance } = useDefipoly();
@@ -136,6 +138,23 @@ export function MobileLayout({
   const [modalTranslateY, setModalTranslateY] = useState(0);
   const [isModalSwiping, setIsModalSwiping] = useState(false);
   
+  // Mobile hint arrows state - multi-step system
+  const [showMobileTabHints, setShowMobileTabHints] = useState(false); // Step 1: Tab hints
+  const [showMobileContentHints, setShowMobileContentHints] = useState(false); // Step 2: Content hints
+  const [ranksArrowPosition, setRanksArrowPosition] = useState<{ top: number; left: number } | null>(null);
+  const [feedArrowPosition, setFeedArrowPosition] = useState<{ top: number; left: number } | null>(null);
+  const ranksTabRef = useRef<HTMLButtonElement>(null);
+  const feedTabRef = useRef<HTMLButtonElement>(null);
+  
+  // Profile hint state (after spectator usage)
+  const [showProfileHint, setShowProfileHint] = useState(false);
+  const [profileArrowPosition, setProfileArrowPosition] = useState<{ top: number; left: number } | null>(null);
+  const profileCardRef = useRef<HTMLButtonElement>(null);
+  
+  // Get game state to check if user owns properties for hints
+  const gameState = useGameState();
+  const totalSlotsOwned = gameState.stats.totalSlotsOwned || 0;
+  
   // Calculate scaleFactor based on screen width for mobile
   useEffect(() => {
     const updateScaleFactor = () => {
@@ -151,15 +170,134 @@ export function MobileLayout({
   }, []);
 
   const tabs = [
-    { id: 'portfolio' as TabType, icon: BriefcaseIcon, label: 'Portfolio' },
-    { id: 'leaderboard' as TabType, icon: TrophyIcon, label: 'Ranks' },
-    { id: 'feed' as TabType, icon: BroadcastIcon, label: 'Feed' },
+    { id: 'portfolio' as TabType, icon: BriefcaseIcon, label: 'Portfolio', ref: null },
+    { id: 'leaderboard' as TabType, icon: TrophyIcon, label: 'Ranks', ref: ranksTabRef },
+    { id: 'feed' as TabType, icon: BroadcastIcon, label: 'Feed', ref: feedTabRef },
   ];
 
   // Handle tab switching
   const handleTabSwitch = (tabId: TabType) => {
     setActiveTab(tabId);
     if (panelHeight < 300) setPanelHeight(300);
+    
+    // Multi-step mobile hint progression
+    if (showMobileTabHints && (tabId === 'leaderboard' || tabId === 'feed')) {
+      // Step 1 -> Step 2: User opened a hinted tab, now show content hints
+      localStorage.setItem('hasMobileTabHints', 'true');
+      setShowMobileTabHints(false);
+      setShowMobileContentHints(true);
+    }
+  };
+  
+  // Check if we should show mobile tab hints (Step 1)
+  useEffect(() => {
+    const hasUsedSpectator = localStorage.getItem('hasUsedSpectator');
+    const hasSeenTabHints = localStorage.getItem('hasMobileTabHints');
+    
+    // Show tab hints if: user owns properties AND hasn't used spectator AND hasn't seen tab hints
+    if (!hasUsedSpectator && !hasSeenTabHints && totalSlotsOwned > 0) {
+      setShowMobileTabHints(true);
+    }
+  }, [totalSlotsOwned]);
+
+  // Check if we should show mobile content hints (Step 2)
+  useEffect(() => {
+    const hasUsedSpectator = localStorage.getItem('hasUsedSpectator');
+    const hasSeenTabHints = localStorage.getItem('hasMobileTabHints');
+    
+    // Show content hints if: user has seen tab hints AND hasn't used spectator yet
+    if (hasSeenTabHints && !hasUsedSpectator && (activeTab === 'leaderboard' || activeTab === 'feed')) {
+      setShowMobileContentHints(true);
+    } else {
+      setShowMobileContentHints(false);
+    }
+  }, [activeTab]);
+
+  // Check if we should show profile hint (after spectator usage)
+  useEffect(() => {
+    const hasUsedSpectator = localStorage.getItem('hasUsedSpectator');
+    const hasSeenProfileHint = localStorage.getItem('hasSeenProfileHint');
+    
+    // Show profile hint if: user has used spectator AND hasn't seen profile hint yet
+    if (hasUsedSpectator && !hasSeenProfileHint && connected) {
+      setShowProfileHint(true);
+    }
+  }, [connected]);
+  
+  // Update arrow positions when tab hints are shown (Step 1)
+  useEffect(() => {
+    if (!showMobileTabHints) return;
+    
+    const updatePositions = () => {
+      // Position arrow for Ranks tab
+      if (ranksTabRef.current) {
+        const rect = ranksTabRef.current.getBoundingClientRect();
+        setRanksArrowPosition({
+          top: rect.top - 35, // Point from above
+          left: rect.left + rect.width / 2 - 12 // Center horizontally
+        });
+      }
+      
+      // Position arrow for Feed tab
+      if (feedTabRef.current) {
+        const rect = feedTabRef.current.getBoundingClientRect();
+        setFeedArrowPosition({
+          top: rect.top - 35, // Point from above
+          left: rect.left + rect.width / 2 - 12 // Center horizontally
+        });
+      }
+    };
+    
+    updatePositions();
+    window.addEventListener('resize', updatePositions);
+    window.addEventListener('scroll', updatePositions, true);
+    
+    return () => {
+      window.removeEventListener('resize', updatePositions);
+      window.removeEventListener('scroll', updatePositions, true);
+    };
+  }, [showMobileTabHints]);
+
+  // Update profile arrow position when profile hint is shown
+  useEffect(() => {
+    if (!showProfileHint) return;
+    
+    const updatePosition = () => {
+      if (profileCardRef.current) {
+        const rect = profileCardRef.current.getBoundingClientRect();
+        setProfileArrowPosition({
+          top: rect.top + rect.height / 2 - 12, // Point from left side
+          left: rect.left - 35 // Point from left
+        });
+      }
+    };
+    
+    updatePosition();
+    window.addEventListener('resize', updatePosition);
+    window.addEventListener('scroll', updatePosition, true);
+    
+    return () => {
+      window.removeEventListener('resize', updatePosition);
+      window.removeEventListener('scroll', updatePosition, true);
+    };
+  }, [showProfileHint]);
+  
+  const dismissMobileTabHints = () => {
+    localStorage.setItem('hasMobileTabHints', 'true');
+    setShowMobileTabHints(false);
+    setRanksArrowPosition(null);
+    setFeedArrowPosition(null);
+  };
+
+  const dismissMobileContentHints = () => {
+    localStorage.setItem('hasUsedSpectator', 'true');
+    setShowMobileContentHints(false);
+  };
+
+  const dismissProfileHint = () => {
+    localStorage.setItem('hasSeenProfileHint', 'true');
+    setShowProfileHint(false);
+    setProfileArrowPosition(null);
   };
 
 
@@ -226,8 +364,9 @@ export function MobileLayout({
     <div className="h-[100dvh] flex flex-col relative overflow-hidden">
       {/* Mobile Header with Gradient Bar */}
       <div className="flex-shrink-0 z-20 bg-gradient-to-b from-purple-900/80 via-purple-800/40 to-transparent backdrop-blur-lg">
-        {/* Header Row: Logo + Wallet */}
+        {/* Header Row: Logo + Profile Card */}
         <div className="flex items-center justify-between px-4 py-3 mt-4 safe-area-top">
+          {/* Logo */}
           <div className="flex items-center gap-2">
             <img 
               src="/logo.svg" 
@@ -237,31 +376,64 @@ export function MobileLayout({
             <span className="font-orbitron font-bold text-white text-lg">Defipoly</span>
           </div>
           
-          <div className="flex items-center gap-2">
+          {/* Profile Card with Disconnect */}
           {connected && publicKey ? (
-            <button 
-              onClick={() => router.push('/profile')}
-              className="flex items-center gap-2"
-            >
-              <div className="w-7 h-7 rounded-full bg-purple-500/30 flex items-center justify-center overflow-hidden border border-green-500/50">
-                {profile?.profilePicture ? (
-                  <img 
-                    src={profile.profilePicture ?? undefined} 
-                    alt="Profile" 
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <UserIcon size={12} className="text-purple-300" />
-                )}
-              </div>
-              <span className="text-green-400 text-xs font-medium">
-                {publicKey.toString().slice(0, 4)}...{publicKey.toString().slice(-4)}
-              </span>
-            </button>
+            <div className={`flex items-center bg-black/50 border rounded-xl overflow-hidden transition-all duration-500 ${
+              showProfileHint 
+                ? 'border-yellow-400/60 shadow-[0_0_20px_rgba(250,204,21,0.4)] animate-pulse' 
+                : 'border-purple-500/25'
+            }`}>
+              {/* Profile Section - clickable */}
+              <button
+                ref={profileCardRef}
+                onClick={() => {
+                  if (showProfileHint) {
+                    dismissProfileHint();
+                  }
+                  router.push('/profile');
+                }}
+                className={`flex items-center gap-2.5 px-3 py-2 transition-all ${
+                  showProfileHint 
+                    ? 'bg-yellow-400/10 hover:bg-yellow-400/15' 
+                    : 'hover:bg-purple-900/20'
+                }`}
+              >
+                <div className="w-8 h-8 rounded-full bg-purple-500/30 flex items-center justify-center overflow-hidden border border-purple-400/30">
+                  {profile?.profilePicture ? (
+                    <img 
+                      src={profile.profilePicture} 
+                      alt="Profile" 
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <UserIcon size={14} className="text-purple-300" />
+                  )}
+                </div>
+                <div className="text-left">
+                  <div className="text-[10px] text-purple-300">Profile</div>
+                  <div className="text-xs font-bold text-white">
+                    {profile?.username || `${publicKey.toString().slice(0, 4)}...${publicKey.toString().slice(-4)}`}
+                  </div>
+                </div>
+                <svg className="w-4 h-4 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              </button>
+              
+              {/* Divider */}
+              <div className="w-px h-8 bg-purple-500/20" />
+              
+              {/* Disconnect Button */}
+              <button
+                onClick={disconnect}
+                className="px-3 py-2 hover:bg-red-500/10 transition-all"
+              >
+                <LogOut size={18} className="text-red-400" />
+              </button>
+            </div>
           ) : (
-              <StyledWalletButton variant="header" />
-            )}
-          </div>
+            <StyledWalletButton variant="header" />
+          )}
         </div>
 
         {/* Stats Row: Plain centered text with dividers */}
@@ -316,24 +488,43 @@ export function MobileLayout({
         
         {/* Tab Navigation */}
         <nav className="flex border-b border-purple-500/20 bg-black/40">
-          {tabs.map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => handleTabSwitch(tab.id)}
-              className={`flex-1 py-2 flex flex-col items-center gap-1 transition-all ${
-                activeTab === tab.id 
-                  ? 'bg-purple-600/20 border-b-2 border-purple-500' 
-                  : 'border-b-2 border-transparent'
-              }`}
-            >
-              <tab.icon size={20} className={activeTab === tab.id ? 'text-purple-300' : 'text-purple-500'} />
-              <span className={`text-[9px] font-medium ${
-                activeTab === tab.id ? 'text-purple-300' : 'text-purple-500'
-              }`}>
-                {tab.label}
-              </span>
-            </button>
-          ))}
+          {tabs.map((tab) => {
+            const shouldGlow = showMobileTabHints && (tab.id === 'leaderboard' || tab.id === 'feed');
+            return (
+              <button
+                key={tab.id}
+                ref={tab.ref}
+                onClick={() => handleTabSwitch(tab.id)}
+                className={`flex-1 py-2 flex flex-col items-center gap-1 transition-all duration-500 ${
+                  activeTab === tab.id 
+                    ? 'bg-purple-600/20 border-b-2 border-purple-500' 
+                    : shouldGlow
+                    ? 'border-b-2 border-yellow-400/60 shadow-[0_0_15px_rgba(250,204,21,0.4)] animate-pulse bg-yellow-400/10'
+                    : 'border-b-2 border-transparent'
+                }`}
+              >
+                <tab.icon 
+                  size={20} 
+                  className={
+                    activeTab === tab.id 
+                      ? 'text-purple-300' 
+                      : shouldGlow 
+                      ? 'text-yellow-300' 
+                      : 'text-purple-500'
+                  } 
+                />
+                <span className={`text-[9px] font-medium ${
+                  activeTab === tab.id 
+                    ? 'text-purple-300' 
+                    : shouldGlow 
+                    ? 'text-yellow-300' 
+                    : 'text-purple-500'
+                }`}>
+                  {tab.label}
+                </span>
+              </button>
+            );
+          })}
         </nav>
         
         {/* Panel Content */}
@@ -343,11 +534,21 @@ export function MobileLayout({
           )}
 
           {activeTab === 'leaderboard' && (
-            <Leaderboard scaleFactor={scaleFactor} isMobile={true} />
+            <Leaderboard 
+              scaleFactor={scaleFactor} 
+              isMobile={true} 
+              showMobileContentHint={showMobileContentHints}
+              onMobileContentHintDismiss={dismissMobileContentHints}
+            />
           )}
 
           {activeTab === 'feed' && (
-            <LiveFeed scaleFactor={scaleFactor} isMobile={true} />
+            <LiveFeed 
+              scaleFactor={scaleFactor} 
+              isMobile={true} 
+              showMobileContentHint={showMobileContentHints}
+              onMobileContentHintDismiss={dismissMobileContentHints}
+            />
           )}
         </div>
       </div>
@@ -397,6 +598,61 @@ export function MobileLayout({
           balance={balance}
           onClose={() => setShowShieldAllModal(false)}
         />
+      )}
+
+      {/* Mobile Hint Arrows - Portal to document.body */}
+      {showMobileTabHints && typeof document !== 'undefined' && (
+        <>
+          {/* Arrow pointing to Ranks tab */}
+          {ranksArrowPosition && createPortal(
+            <div
+              className="fixed animate-bounce pointer-events-none"
+              style={{ 
+                top: ranksArrowPosition.top, 
+                left: ranksArrowPosition.left,
+                zIndex: 50
+              }}
+            >
+              <div style={{ transform: 'rotate(90deg)' }}>
+                <PointerArrowIcon className="w-6 h-6 text-yellow-400 drop-shadow-[0_0_8px_rgba(250,204,21,0.8)]" />
+              </div>
+            </div>,
+            document.body
+          )}
+          
+          {/* Arrow pointing to Feed tab */}
+          {feedArrowPosition && createPortal(
+            <div
+              className="fixed animate-bounce pointer-events-none"
+              style={{ 
+                top: feedArrowPosition.top, 
+                left: feedArrowPosition.left,
+                zIndex: 50
+              }}
+            >
+              <div style={{ transform: 'rotate(90deg)' }}>
+                <PointerArrowIcon className="w-6 h-6 text-yellow-400 drop-shadow-[0_0_8px_rgba(250,204,21,0.8)]" />
+              </div>
+            </div>,
+            document.body
+          )}
+        </>
+      )}
+
+      {/* Profile Hint Arrow - Portal to document.body */}
+      {showProfileHint && profileArrowPosition && typeof document !== 'undefined' && createPortal(
+        <div 
+          className="fixed animate-bounce-x pointer-events-none"
+          style={{ 
+            top: profileArrowPosition.top, 
+            left: profileArrowPosition.left,
+            transform: 'translateY(-50%)',
+            zIndex: 50
+          }}
+        >
+          <PointerArrowIcon className="w-6 h-6 text-yellow-400 drop-shadow-[0_0_8px_rgba(250,204,21,0.8)]" />
+        </div>,
+        document.body
       )}
     </div>
   );

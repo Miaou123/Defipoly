@@ -31,9 +31,11 @@ import { API_BASE_URL } from '@/utils/config';
 interface LiveFeedProps {
   scaleFactor?: number;
   isMobile?: boolean;
+  showMobileContentHint?: boolean;
+  onMobileContentHintDismiss?: () => void;
 }
 
-export function LiveFeed({ scaleFactor = 1, isMobile = false }: LiveFeedProps) {
+export function LiveFeed({ scaleFactor = 1, isMobile = false, showMobileContentHint = false, onMobileContentHintDismiss }: LiveFeedProps) {
   const router = useRouter();
   const { socket, connected } = useWebSocket();
   const [feed, setFeed] = useState<FeedItem[]>([]);
@@ -148,6 +150,12 @@ export function LiveFeed({ scaleFactor = 1, isMobile = false }: LiveFeedProps) {
     if (showSpectatorHint) {
       dismissSpectatorHint();
     }
+    
+    // Dismiss mobile content hint on first click
+    if (showMobileContentHint && onMobileContentHintDismiss) {
+      onMobileContentHintDismiss();
+    }
+    
     const playerAddr = item.playerAddress || item.buyer || item.seller || item.attacker || item.owner || item.wallet;
     if (playerAddr) {
       router.push(`/spectator/${playerAddr}`);
@@ -340,7 +348,7 @@ export function LiveFeed({ scaleFactor = 1, isMobile = false }: LiveFeedProps) {
             <div style={{ gap: `${Math.round(8 * scaleFactor)}px`, display: 'flex', flexDirection: 'column' }}>
               {feed.map((item, index) => {
                 const isFirstRow = index === 0;
-                const showHintOnRow = showSpectatorHint && isFirstRow;
+                const showHintOnRow = (showSpectatorHint || showMobileContentHint) && isFirstRow;
                 
                 return (
                   <div
@@ -370,8 +378,8 @@ export function LiveFeed({ scaleFactor = 1, isMobile = false }: LiveFeedProps) {
         </div>
       </div>
 
-      {/* Portal arrow - renders at document.body level */}
-      {showSpectatorHint && arrowPosition && typeof document !== 'undefined' && createPortal(
+      {/* Portal arrow - renders at document.body level (desktop only) */}
+      {!isMobile && showSpectatorHint && arrowPosition && typeof document !== 'undefined' && createPortal(
         <div 
           className="fixed animate-bounce-x pointer-events-none"
           style={{ 

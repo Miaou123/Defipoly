@@ -1,0 +1,23 @@
+{
+  "name": "defipoly-bots",
+  "version": "1.0.0",
+  "description": "Bot testing suite for Defipoly",
+  "license": "ISC",
+  "type": "module",
+  "scripts": {
+    "bot:setup": "tsx setup-test-wallets.ts",
+    "bot:init": "tsx bot-interactions.ts init all",
+    "bot": "tsx bot-interactions.ts",
+    "bot:claim": "tsx bot-interactions.ts claim all"
+  },
+  "dependencies": {
+    "@coral-xyz/anchor": "^0.31.1",
+    "@solana/spl-token": "^0.4.14",
+    "dotenv": "^17.2.3"
+  },
+  "devDependencies": {
+    "@types/node": "^24.7.2",
+    "tsx": "^4.20.6",
+    "typescript": "^5.7.3"
+  }
+}

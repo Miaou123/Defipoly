@@ -1,11 +1,11 @@
-// Defipoly Solana Program - v9 Cleaned (Unused Code Removed)
+// Defipoly Solana Program - v10 Hardened Security
 // Anchor 0.31.1 - Zero-Copy with proper field alignment
 
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, Token, TokenAccount, Transfer, Mint};
 use anchor_spl::associated_token::AssociatedToken;
 
-declare_id!("A3NESRFzmph9W4EvCyYA7mmSMQU1uDjrenT2u4mid1s4");
+declare_id!("5cqZuDNcbn7FrJerCJ97HTmCEexgMu4pZtTLaf4QG5Xj");
 
 const DEV_WALLET: &str = "CgWTFX7JJQHed3qyMDjJkNCxK4sFe3wbDFABmWAAmrdS";
 const MARKETING_WALLET: &str = "FoPKSQ5HDSVyZgaQobX64YEBVQ2iiKMZp8VHWtd6jLQE";
@@ -15,12 +15,21 @@ const MAX_SETS: usize = 8;
 // ========== HELPER: UPDATE PENDING REWARDS ==========
 
 #[inline(never)]
-fn update_pending_rewards(player: &mut PlayerAccount, clock_timestamp: i64) -> Result<()> {
-    let time_elapsed = clock_timestamp - player.last_accumulation_timestamp;
+fn update_pending_rewards(player: &mut PlayerAccount) -> Result<()> {
+    let clock = Clock::get()?;
+    let clock_timestamp = clock.unix_timestamp;
+    
+    let time_elapsed = clock_timestamp
+        .checked_sub(player.last_accumulation_timestamp)
+        .ok_or(ErrorCode::Overflow)?;
     
     if time_elapsed > 0 && player.total_base_daily_income > 0 {
-        let minutes_elapsed = time_elapsed / 60;
-        let income_per_minute = player.total_base_daily_income / 1440;
+        let minutes_elapsed = time_elapsed
+            .checked_div(60)
+            .ok_or(ErrorCode::Overflow)?;
+        let income_per_minute = player.total_base_daily_income
+            .checked_div(1440)
+            .ok_or(ErrorCode::Overflow)?;
         
         let new_rewards = (income_per_minute as u128)
             .checked_mul(minutes_elapsed as u128)
@@ -87,7 +96,6 @@ pub mod defipoly_program {
         game_config.reward_pool_vault_bump = ctx.bumps.reward_pool_vault;
         game_config._padding = [0u8; 1];
 
-        msg!("Game initialized");
         Ok(())
     }
 
@@ -117,7 +125,6 @@ pub mod defipoly_program {
         property.cooldown_seconds = cooldown_seconds;
         property.bump = ctx.bumps.property;
         
-        msg!("Property {} initialized (Set {})", property_id, set_id);
         Ok(())
     }
 
@@ -151,7 +158,6 @@ pub mod defipoly_program {
         player.set_last_purchased_property = [255u8; MAX_SETS];
         player.set_properties_mask = [0u8; MAX_SETS];
         
-        msg!("Player initialized: {}", player.owner);
         Ok(())
     }
 
@@ -171,20 +177,22 @@ pub mod defipoly_program {
         let property_id = property.property_id as usize;
         let set_id = property.set_id as usize;
 
-        update_pending_rewards(player, clock.unix_timestamp)?;
+        update_pending_rewards(player)?;
     
         require!(game_config.game_paused == 0, ErrorCode::GamePaused);
         require!(slots > 0, ErrorCode::InvalidSlotAmount);
         require!(property.available_slots >= slots, ErrorCode::NoSlotsAvailable);
         
         require!(
-            player.property_slots[property_id] + slots <= property.max_per_player,
+            player.property_slots[property_id].checked_add(slots).ok_or(ErrorCode::Overflow)? <= property.max_per_player,
             ErrorCode::MaxSlotsReached
         );
     
         // Cooldown check
         if player.set_cooldown_timestamp[set_id] != 0 {
-            let time_since_last_purchase = clock.unix_timestamp - player.set_cooldown_timestamp[set_id];
+            let time_since_last_purchase = clock.unix_timestamp
+                .checked_sub(player.set_cooldown_timestamp[set_id])
+                .ok_or(ErrorCode::Overflow)?;
             
             if player.set_last_purchased_property[set_id] != property.property_id {
                 require!(
@@ -194,7 +202,8 @@ pub mod defipoly_program {
             }
         }
     
-        let total_price = property.price.checked_mul(slots as u64)
+        let total_price = property.price
+            .checked_mul(slots as u64)
             .ok_or(ErrorCode::Overflow)?;
 
         distribute_payment(
@@ -214,7 +223,9 @@ pub mod defipoly_program {
         let is_new_ownership = player.property_slots[property_id] == 0;
         if is_new_ownership {
             player.property_purchase_timestamp[property_id] = clock.unix_timestamp;
-            player.properties_owned_count += 1;
+            player.properties_owned_count = player.properties_owned_count
+                .checked_add(1)
+                .ok_or(ErrorCode::Overflow)?;
             
             let property_bit = get_property_bit_in_set(property.property_id, property.set_id);
             player.set_properties_mask[set_id] |= 1 << property_bit;
@@ -228,7 +239,11 @@ pub mod defipoly_program {
             .checked_add(slots)
             .ok_or(ErrorCode::Overflow)?;
 
-        let daily_income_per_slot = (property.price * property.yield_percent_bps as u64) / 10000;
+        let daily_income_per_slot = property.price
+            .checked_mul(property.yield_percent_bps as u64)
+            .ok_or(ErrorCode::Overflow)?
+            .checked_div(10000)
+            .ok_or(ErrorCode::Overflow)?;
         let total_daily_income_increase = daily_income_per_slot
             .checked_mul(slots as u64)
             .ok_or(ErrorCode::Overflow)?;
@@ -243,7 +258,9 @@ pub mod defipoly_program {
         let was_complete = player.complete_sets_owned > 0 && is_set_complete(player, property.set_id);
         
         if owned_count >= required_properties && !was_complete {
-            player.complete_sets_owned += 1;
+            player.complete_sets_owned = player.complete_sets_owned
+                .checked_add(1)
+                .ok_or(ErrorCode::Overflow)?;
         }
     
         // Update cooldown
@@ -261,8 +278,6 @@ pub mod defipoly_program {
             total_slots_owned: player.property_slots[property_id],
         });
     
-        msg!("Player {} bought {} slots of property {} for {} tokens", 
-             player.owner, slots, property.property_id, total_price);
         Ok(())
     }
 
@@ -297,10 +312,24 @@ pub mod defipoly_program {
     
         let slots_to_shield = player.property_slots[property_id];
     
-        let daily_income_per_slot = (property.price * property.yield_percent_bps as u64) / 10000;
-        let shield_cost_per_slot = (daily_income_per_slot * property.shield_cost_percent_bps as u64) / 10000;
-        let cost_per_slot_for_duration = (shield_cost_per_slot * shield_duration_hours as u64) / 24;
-        let total_cost = cost_per_slot_for_duration * slots_to_shield as u64;
+        let daily_income_per_slot = property.price
+            .checked_mul(property.yield_percent_bps as u64)
+            .ok_or(ErrorCode::Overflow)?
+            .checked_div(10000)
+            .ok_or(ErrorCode::Overflow)?;
+        let shield_cost_per_slot = daily_income_per_slot
+            .checked_mul(property.shield_cost_percent_bps as u64)
+            .ok_or(ErrorCode::Overflow)?
+            .checked_div(10000)
+            .ok_or(ErrorCode::Overflow)?;
+        let cost_per_slot_for_duration = shield_cost_per_slot
+            .checked_mul(shield_duration_hours as u64)
+            .ok_or(ErrorCode::Overflow)?
+            .checked_div(24)
+            .ok_or(ErrorCode::Overflow)?;
+        let total_cost = cost_per_slot_for_duration
+            .checked_mul(slots_to_shield as u64)
+            .ok_or(ErrorCode::Overflow)?;
     
         distribute_payment(
             total_cost,
@@ -312,7 +341,9 @@ pub mod defipoly_program {
             &ctx.accounts.token_program,
         )?;
     
-        let shield_duration_seconds = (shield_duration_hours as i64) * 3600;
+        let shield_duration_seconds = (shield_duration_hours as i64)
+            .checked_mul(3600)
+            .ok_or(ErrorCode::Overflow)?;
         
         let shield_start_time = if clock.unix_timestamp < player.property_steal_protection_expiry[property_id] {
             player.property_steal_protection_expiry[property_id]
@@ -321,8 +352,12 @@ pub mod defipoly_program {
         };
     
         player.property_shielded[property_id] = slots_to_shield;
-        player.property_shield_expiry[property_id] = shield_start_time + shield_duration_seconds;
-        player.property_shield_cooldown[property_id] = shield_duration_seconds / 4;
+        player.property_shield_expiry[property_id] = shield_start_time
+            .checked_add(shield_duration_seconds)
+            .ok_or(ErrorCode::Overflow)?;
+        player.property_shield_cooldown[property_id] = shield_duration_seconds
+            .checked_div(4)
+            .ok_or(ErrorCode::Overflow)?;
     
         emit!(ShieldActivatedEvent {
             player: player.owner,
@@ -331,12 +366,6 @@ pub mod defipoly_program {
             cost: total_cost,
             expiry: player.property_shield_expiry[property_id],
         });
-    
-        msg!("Shield activated: {} slots for {}h (expires at {})",
-            slots_to_shield,
-            shield_duration_hours,
-            player.property_shield_expiry[property_id]
-        );
     
         Ok(())
     }
@@ -417,9 +446,13 @@ pub mod defipoly_program {
         require!(!has_steal_protection, ErrorCode::StealProtectionActive);
 
         // Cooldown check
-        let cooldown_duration = property.cooldown_seconds / 2;
+        let cooldown_duration = property.cooldown_seconds
+            .checked_div(2)
+            .ok_or(ErrorCode::Overflow)?;
         if player.steal_cooldown_timestamp[property_id] != 0 {
-            let time_since_last_steal = clock.unix_timestamp - player.steal_cooldown_timestamp[property_id];
+            let time_since_last_steal = clock.unix_timestamp
+                .checked_sub(player.steal_cooldown_timestamp[property_id])
+                .ok_or(ErrorCode::Overflow)?;
             require!(
                 time_since_last_steal >= cooldown_duration,
                 ErrorCode::StealCooldownActive
@@ -428,7 +461,11 @@ pub mod defipoly_program {
 
         player.steal_cooldown_timestamp[property_id] = clock.unix_timestamp;
 
-        let steal_cost = (property.price * steal_cost_percent_bps as u64) / 10000;
+        let steal_cost = property.price
+            .checked_mul(steal_cost_percent_bps as u64)
+            .ok_or(ErrorCode::Overflow)?
+            .checked_div(10000)
+            .ok_or(ErrorCode::Overflow)?;
 
         distribute_payment(
             steal_cost,
@@ -445,13 +482,17 @@ pub mod defipoly_program {
         let success_random = u64::from_le_bytes(combined_entropy[8..16].try_into().unwrap());
         let success = (success_random % 10000) < success_threshold;
 
-        player.total_steals_attempted += 1;
+        player.total_steals_attempted = player.total_steals_attempted
+            .checked_add(1)
+            .ok_or(ErrorCode::Overflow)?;
 
         if success {
-            update_pending_rewards(player, clock.unix_timestamp)?;
-            update_pending_rewards(&mut target_account, clock.unix_timestamp)?;
+            update_pending_rewards(player)?;
+            update_pending_rewards(&mut target_account)?;
             
-            target_account.property_slots[property_id] -= 1;
+            target_account.property_slots[property_id] = target_account.property_slots[property_id]
+                .checked_sub(1)
+                .ok_or(ErrorCode::Overflow)?;
 
             if target_account.property_shielded[property_id] > target_account.property_slots[property_id] {
                 target_account.property_shielded[property_id] = target_account.property_slots[property_id];
@@ -460,18 +501,30 @@ pub mod defipoly_program {
             let was_new = player.property_slots[property_id] == 0;
             if was_new {
                 player.property_purchase_timestamp[property_id] = clock.unix_timestamp;
-                player.properties_owned_count += 1;
+                player.properties_owned_count = player.properties_owned_count
+                    .checked_add(1)
+                    .ok_or(ErrorCode::Overflow)?;
                 
                 let set_id = property.set_id as usize;
                 let property_bit = get_property_bit_in_set(property.property_id, property.set_id);
                 player.set_properties_mask[set_id] |= 1 << property_bit;
             }
-            player.property_slots[property_id] += 1;
+            player.property_slots[property_id] = player.property_slots[property_id]
+                .checked_add(1)
+                .ok_or(ErrorCode::Overflow)?;
 
-            player.total_slots_owned += 1;
-            player.total_steals_successful += 1;
+            player.total_slots_owned = player.total_slots_owned
+                .checked_add(1)
+                .ok_or(ErrorCode::Overflow)?;
+            player.total_steals_successful = player.total_steals_successful
+                .checked_add(1)
+                .ok_or(ErrorCode::Overflow)?;
 
-            let daily_income_per_slot = (property.price * property.yield_percent_bps as u64) / 10000;
+            let daily_income_per_slot = property.price
+                .checked_mul(property.yield_percent_bps as u64)
+                .ok_or(ErrorCode::Overflow)?
+                .checked_div(10000)
+                .ok_or(ErrorCode::Overflow)?;
 
             player.total_base_daily_income = player.total_base_daily_income
                 .checked_add(daily_income_per_slot)
@@ -492,9 +545,6 @@ pub mod defipoly_program {
                 steal_cost,
                 vrf_result: random_u64,
             });
-
-            msg!("STEAL SUCCESS: {} stole 1 slot from {}", 
-                 ctx.accounts.attacker.key(), target_player);
         } else {
             emit!(StealFailedEvent {
                 attacker: ctx.accounts.attacker.key(),
@@ -503,16 +553,15 @@ pub mod defipoly_program {
                 steal_cost,
                 vrf_result: random_u64,
             });
-
-            msg!("STEAL FAILED: {} targeted {}", 
-                 ctx.accounts.attacker.key(), target_player);
         }
 
         // Apply 6-hour steal protection
-        target_account.property_steal_protection_expiry[property_id] = clock.unix_timestamp + (6 * 3600);
-
-        msg!("Steal protection applied to {} until {}", 
-             target_player, target_account.property_steal_protection_expiry[property_id]);
+        let protection_duration: i64 = 6_i64
+            .checked_mul(3600)
+            .ok_or(ErrorCode::Overflow)?;
+        target_account.property_steal_protection_expiry[property_id] = clock.unix_timestamp
+            .checked_add(protection_duration)
+            .ok_or(ErrorCode::Overflow)?;
 
         Ok(())
     }
@@ -529,12 +578,18 @@ pub mod defipoly_program {
         require!(player.owner == ctx.accounts.player.key(), ErrorCode::Unauthorized);
         require!(game_config.game_paused == 0, ErrorCode::GamePaused);
         
+        let min_interval_seconds = game_config.min_claim_interval_minutes
+            .checked_mul(60)
+            .ok_or(ErrorCode::Overflow)?;
+        let time_since_last_claim = clock.unix_timestamp
+            .checked_sub(player.last_claim_timestamp)
+            .ok_or(ErrorCode::Overflow)?;
         require!(
-            (clock.unix_timestamp - player.last_claim_timestamp) >= game_config.min_claim_interval_minutes * 60,
+            time_since_last_claim >= min_interval_seconds,
             ErrorCode::ClaimTooSoon
         );
         
-        update_pending_rewards(player, clock.unix_timestamp)?;
+        update_pending_rewards(player)?;
         
         let base_rewards = player.pending_rewards;
         
@@ -567,9 +622,6 @@ pub mod defipoly_program {
             ErrorCode::InsufficientRewardPool
         );
         
-        msg!("Claiming {} base + {} accumulation + {} set = {} total", 
-             base_rewards, accumulation_bonus, set_bonus, total_rewards);
-        
         let game_config_key = ctx.accounts.game_config.key();
         let seeds = &[
             b"reward_pool_vault",
@@ -590,7 +642,9 @@ pub mod defipoly_program {
         token::transfer(transfer_ctx, total_rewards)?;
     
         player.pending_rewards = 0;
-        player.total_rewards_claimed += total_rewards;
+        player.total_rewards_claimed = player.total_rewards_claimed
+            .checked_add(total_rewards)
+            .ok_or(ErrorCode::Overflow)?;
         player.last_claim_timestamp = clock.unix_timestamp;        
         player.last_accumulation_timestamp = clock.unix_timestamp;
     
@@ -600,7 +654,6 @@ pub mod defipoly_program {
             seconds_elapsed: 0,
         });
     
-        msg!("Rewards claimed successfully!");
         Ok(())
     }
 
@@ -619,21 +672,39 @@ pub mod defipoly_program {
         
         let property_id = property.property_id as usize;
 
-        update_pending_rewards(player, clock.unix_timestamp)?;
+        update_pending_rewards(player)?;
 
         require!(game_config.game_paused == 0, ErrorCode::GamePaused);
         require!(player.property_slots[property_id] >= slots, ErrorCode::InsufficientSlots);
 
-        let days_held = (clock.unix_timestamp - player.property_purchase_timestamp[property_id]) / 86400;
+        let time_held = clock.unix_timestamp
+            .checked_sub(player.property_purchase_timestamp[property_id])
+            .ok_or(ErrorCode::Overflow)?;
+        let days_held = time_held
+            .checked_div(86400)
+            .ok_or(ErrorCode::Overflow)?;
         let additional_percent = if days_held >= 14 {
-            1500
+            1500u16
         } else {
-            (days_held * 1500 / 14) as u16
+            let scaled = (days_held as u64)
+                .checked_mul(1500)
+                .ok_or(ErrorCode::Overflow)?
+                .checked_div(14)
+                .ok_or(ErrorCode::Overflow)?;
+            scaled as u16
         };
-        let sell_value_bps = 1500 + additional_percent;
+        let sell_value_bps = 1500u16
+            .checked_add(additional_percent)
+            .ok_or(ErrorCode::Overflow)?;
 
-        let total_value = property.price * slots as u64;
-        let player_receives = (total_value * sell_value_bps as u64) / 10000;
+        let total_value = property.price
+            .checked_mul(slots as u64)
+            .ok_or(ErrorCode::Overflow)?;
+        let player_receives = total_value
+            .checked_mul(sell_value_bps as u64)
+            .ok_or(ErrorCode::Overflow)?
+            .checked_div(10000)
+            .ok_or(ErrorCode::Overflow)?;
 
         let game_config_key = ctx.accounts.game_config.key();
         let seeds = &[
@@ -654,7 +725,9 @@ pub mod defipoly_program {
         );
         token::transfer(transfer_ctx, player_receives)?;
 
-        player.property_slots[property_id] -= slots;
+        player.property_slots[property_id] = player.property_slots[property_id]
+            .checked_sub(slots)
+            .ok_or(ErrorCode::Overflow)?;
         
         if player.property_shielded[property_id] > 0 {
             if clock.unix_timestamp < player.property_shield_expiry[property_id] {
@@ -662,7 +735,9 @@ pub mod defipoly_program {
                     player.property_shielded[property_id] = 0;
                     player.property_shield_expiry[property_id] = 0;
                 } else {
-                    player.property_shielded[property_id] -= slots;
+                    player.property_shielded[property_id] = player.property_shielded[property_id]
+                        .checked_sub(slots)
+                        .ok_or(ErrorCode::Overflow)?;
                 }
             } else {
                 player.property_shielded[property_id] = 0;
@@ -678,13 +753,23 @@ pub mod defipoly_program {
             let set_id = property.set_id as usize;
             let property_bit = get_property_bit_in_set(property.property_id, property.set_id);
             player.set_properties_mask[set_id] &= !(1 << property_bit);
-            player.properties_owned_count -= 1;
+            player.properties_owned_count = player.properties_owned_count
+                .checked_sub(1)
+                .ok_or(ErrorCode::Overflow)?;
         }
 
-        property.available_slots += slots;
-        player.total_slots_owned -= slots;
+        property.available_slots = property.available_slots
+            .checked_add(slots)
+            .ok_or(ErrorCode::Overflow)?;
+        player.total_slots_owned = player.total_slots_owned
+            .checked_sub(slots)
+            .ok_or(ErrorCode::Overflow)?;
 
-        let daily_income_per_slot = (property.price * property.yield_percent_bps as u64) / 10000;
+        let daily_income_per_slot = property.price
+            .checked_mul(property.yield_percent_bps as u64)
+            .ok_or(ErrorCode::Overflow)?
+            .checked_div(10000)
+            .ok_or(ErrorCode::Overflow)?;
         let total_daily_income_decrease = daily_income_per_slot
             .checked_mul(slots as u64)
             .ok_or(ErrorCode::Overflow)?;
@@ -702,8 +787,6 @@ pub mod defipoly_program {
             days_held,
         });
 
-        msg!("Property {} sold: {} slots for {} tokens", 
-             property.property_id, slots, player_receives);
         Ok(())
     }
 
@@ -720,7 +803,6 @@ pub mod defipoly_program {
             update_type: "price".to_string(),
             new_value: new_price,
         });
-        msg!("Property {} price updated to {}", property_id, new_price);
         Ok(())
     }
 
@@ -730,15 +812,19 @@ pub mod defipoly_program {
         new_max_slots: u16,
     ) -> Result<()> {
         let property = &mut ctx.accounts.property;
-        let slots_difference = new_max_slots as i32 - property.max_slots_per_property as i32;
+        let slots_difference = (new_max_slots as i32)
+            .checked_sub(property.max_slots_per_property as i32)
+            .ok_or(ErrorCode::Overflow)?;
         property.max_slots_per_property = new_max_slots;
-        property.available_slots = (property.available_slots as i32 + slots_difference) as u16;
+        let new_available = (property.available_slots as i32)
+            .checked_add(slots_difference)
+            .ok_or(ErrorCode::Overflow)?;
+        property.available_slots = new_available as u16;
         emit!(AdminUpdateEvent {
             property_id,
             update_type: "max_slots".to_string(),
             new_value: new_max_slots as u64,
         });
-        msg!("Property {} max slots updated to {}", property_id, new_max_slots);
         Ok(())
     }
 
@@ -748,34 +834,28 @@ pub mod defipoly_program {
     ) -> Result<()> {
         let game_config = &mut ctx.accounts.game_config.load_mut()?;
         game_config.steal_chance_bps = chance_bps;
-        msg!("Steal chance updated to {}%", chance_bps / 100);
         Ok(())
     }
 
     pub fn pause_game(ctx: Context<AdminUpdateGame>) -> Result<()> {
         let game_config = &mut ctx.accounts.game_config.load_mut()?;
         game_config.game_paused = 1;
-        msg!("Game PAUSED");
         Ok(())
     }
 
     pub fn unpause_game(ctx: Context<AdminUpdateGame>) -> Result<()> {
         let game_config = &mut ctx.accounts.game_config.load_mut()?;
         game_config.game_paused = 0;
-        msg!("Game UNPAUSED");
         Ok(())
     }
 
     pub fn close_player_account(ctx: Context<ClosePlayerAccount>) -> Result<()> {
         let player = ctx.accounts.player_account.load()?;
         require!(player.owner == ctx.accounts.player.key(), ErrorCode::Unauthorized);
-        msg!("Closing player account: {}", player.owner);
         Ok(())
     }
 
     pub fn admin_close_player_account(ctx: Context<AdminClosePlayerAccount>) -> Result<()> {
-        msg!("Admin force closing player account");
-        
         require!(
             ctx.accounts.player_account.owner == ctx.program_id,
             ErrorCode::Unauthorized
@@ -786,7 +866,7 @@ pub mod defipoly_program {
         
         **ctx.accounts.rent_receiver.lamports.borrow_mut() = dest_starting_lamports
             .checked_add(account_lamports)
-            .unwrap();
+            .ok_or(ErrorCode::Overflow)?;
         **ctx.accounts.player_account.lamports.borrow_mut() = 0;
         
         let mut data = ctx.accounts.player_account.try_borrow_mut_data()?;
@@ -811,7 +891,7 @@ pub mod defipoly_program {
         require!(slots > 0, ErrorCode::InvalidSlotAmount);
         require!(property.available_slots >= slots, ErrorCode::NoSlotsAvailable);
         require!(
-            player.property_slots[property_id] + slots <= property.max_per_player,
+            player.property_slots[property_id].checked_add(slots).ok_or(ErrorCode::Overflow)? <= property.max_per_player,
             ErrorCode::MaxSlotsReached
         );
 
@@ -821,7 +901,9 @@ pub mod defipoly_program {
 
         if player.property_slots[property_id] == 0 {
             player.property_purchase_timestamp[property_id] = clock.unix_timestamp;
-            player.properties_owned_count += 1;
+            player.properties_owned_count = player.properties_owned_count
+                .checked_add(1)
+                .ok_or(ErrorCode::Overflow)?;
             
             let set_id = property.set_id as usize;
             let property_bit = get_property_bit_in_set(property.property_id, property.set_id);
@@ -836,7 +918,11 @@ pub mod defipoly_program {
             .checked_add(slots)
             .ok_or(ErrorCode::Overflow)?;
 
-        let daily_income_per_slot = (property.price * property.yield_percent_bps as u64) / 10000;
+        let daily_income_per_slot = property.price
+            .checked_mul(property.yield_percent_bps as u64)
+            .ok_or(ErrorCode::Overflow)?
+            .checked_div(10000)
+            .ok_or(ErrorCode::Overflow)?;
         let total_daily_income_increase = daily_income_per_slot
             .checked_mul(slots as u64)
             .ok_or(ErrorCode::Overflow)?;
@@ -852,8 +938,6 @@ pub mod defipoly_program {
             slots,
         });
 
-        msg!("Admin granted {} slots of property {} to {}", 
-             slots, property.property_id, player.owner);
         Ok(())
     }
 
@@ -880,7 +964,9 @@ pub mod defipoly_program {
             let set_id = property.set_id as usize;
             let property_bit = get_property_bit_in_set(property.property_id, property.set_id);
             player.set_properties_mask[set_id] &= !(1 << property_bit);
-            player.properties_owned_count -= 1;
+            player.properties_owned_count = player.properties_owned_count
+                .checked_sub(1)
+                .ok_or(ErrorCode::Overflow)?;
         }
 
         property.available_slots = property.available_slots
@@ -891,7 +977,11 @@ pub mod defipoly_program {
             .checked_sub(slots)
             .ok_or(ErrorCode::Overflow)?;
 
-        let daily_income_per_slot = (property.price * property.yield_percent_bps as u64) / 10000;
+        let daily_income_per_slot = property.price
+            .checked_mul(property.yield_percent_bps as u64)
+            .ok_or(ErrorCode::Overflow)?
+            .checked_div(10000)
+            .ok_or(ErrorCode::Overflow)?;
         let total_daily_income_decrease = daily_income_per_slot
             .checked_mul(slots as u64)
             .ok_or(ErrorCode::Overflow)?;
@@ -907,8 +997,6 @@ pub mod defipoly_program {
             slots,
         });
 
-        msg!("Admin revoked {} slots of property {} from {}", 
-             slots, property.property_id, player.owner);
         Ok(())
     }
 
@@ -927,7 +1015,6 @@ pub mod defipoly_program {
             new_value: new_yield_bps as u64,
         });
         
-        msg!("Property {} yield updated to {} bps", property_id, new_yield_bps);
         Ok(())
     }
 
@@ -946,7 +1033,6 @@ pub mod defipoly_program {
             new_value: new_shield_cost_bps as u64,
         });
         
-        msg!("Property {} shield cost updated to {} bps", property_id, new_shield_cost_bps);
         Ok(())
     }
 
@@ -965,7 +1051,6 @@ pub mod defipoly_program {
             new_value: new_cooldown_seconds as u64,
         });
         
-        msg!("Property {} cooldown updated to {} seconds", property_id, new_cooldown_seconds);
         Ok(())
     }
 
@@ -980,7 +1065,6 @@ pub mod defipoly_program {
         let game_config = &mut ctx.accounts.game_config.load_mut()?;
         game_config.set_bonus_bps[set_id as usize] = bonus_bps;
         
-        msg!("Set {} bonus updated to {}bps ({}%)", set_id, bonus_bps, bonus_bps / 100);
         Ok(())
     }
 
@@ -991,8 +1075,6 @@ pub mod defipoly_program {
         let player = &mut ctx.accounts.player_account.load_mut()?;
         player.set_cooldown_timestamp[set_id as usize] = 0;
         
-        msg!("Admin cleared cooldown for player {} on set {}", 
-             player.owner, set_id);
         Ok(())
     }
 
@@ -1003,8 +1085,6 @@ pub mod defipoly_program {
         let player = &mut ctx.accounts.player_account.load_mut()?;
         player.steal_cooldown_timestamp[property_id as usize] = 0;
         
-        msg!("Admin cleared steal cooldown for player {} on property {}", 
-             player.owner, property_id);
         Ok(())
     }
 
@@ -1022,7 +1102,9 @@ pub mod defipoly_program {
             ErrorCode::InvalidShieldDuration
         );
         
-        let shield_duration_seconds = (duration_hours as i64) * 3600;
+        let shield_duration_seconds = (duration_hours as i64)
+            .checked_mul(3600)
+            .ok_or(ErrorCode::Overflow)?;
         
         let shield_start_time = if clock.unix_timestamp < player.property_steal_protection_expiry[pid] {
             player.property_steal_protection_expiry[pid]
@@ -1031,8 +1113,12 @@ pub mod defipoly_program {
         };
         
         player.property_shielded[pid] = player.property_slots[pid];
-        player.property_shield_expiry[pid] = shield_start_time + shield_duration_seconds;
-        player.property_shield_cooldown[pid] = shield_duration_seconds / 4;
+        player.property_shield_expiry[pid] = shield_start_time
+            .checked_add(shield_duration_seconds)
+            .ok_or(ErrorCode::Overflow)?;
+        player.property_shield_cooldown[pid] = shield_duration_seconds
+            .checked_div(4)
+            .ok_or(ErrorCode::Overflow)?;
         
         emit!(AdminShieldGrantEvent {
             admin: ctx.accounts.authority.key(),
@@ -1042,8 +1128,6 @@ pub mod defipoly_program {
             expiry: player.property_shield_expiry[pid],
         });
         
-        msg!("Admin granted shield to {} for property {} ({} hours)", 
-             player.owner, property_id, duration_hours);
         Ok(())
     }
 
@@ -1083,7 +1167,6 @@ pub mod defipoly_program {
             destination: ctx.accounts.destination_account.key(),
         });
 
-        msg!("Emergency withdrawal: {} tokens", amount);
         Ok(())
     }
 
@@ -1101,7 +1184,6 @@ pub mod defipoly_program {
             new_authority,
         });
         
-        msg!("Authority transferred from {} to {}", old_authority, new_authority);
         Ok(())
     }
 
@@ -1172,7 +1254,6 @@ pub mod defipoly_program {
         game_config.accumulation_tier8_threshold = tier8_threshold;
         game_config.accumulation_tier8_bonus_bps = tier8_bonus_bps;
         
-        msg!("Accumulation bonuses updated");
         Ok(())
     }
 }
@@ -1189,9 +1270,21 @@ fn distribute_payment<'info>(
     authority: &Signer<'info>,
     token_program: &Program<'info, Token>,
 ) -> Result<()> {
-    let to_reward_pool = amount * 95 / 100;
-    let to_marketing = amount * 3 / 100;
-    let to_dev = amount * 2 / 100;
+    let to_reward_pool = amount
+        .checked_mul(95)
+        .ok_or(ErrorCode::Overflow)?
+        .checked_div(100)
+        .ok_or(ErrorCode::Overflow)?;
+    let to_marketing = amount
+        .checked_mul(3)
+        .ok_or(ErrorCode::Overflow)?
+        .checked_div(100)
+        .ok_or(ErrorCode::Overflow)?;
+    let to_dev = amount
+        .checked_mul(2)
+        .ok_or(ErrorCode::Overflow)?
+        .checked_div(100)
+        .ok_or(ErrorCode::Overflow)?;
 
     token::transfer(
         CpiContext::new(
@@ -1250,7 +1343,9 @@ fn calculate_progressive_bonus(pending_rewards: u64, game_config: &GameConfig) -
     
     for (threshold, bonus_bps) in tiers.iter() {
         if *threshold > 0 && remaining > *threshold {
-            let amount_in_tier = remaining - *threshold;
+            let amount_in_tier = remaining
+                .checked_sub(*threshold)
+                .ok_or(ErrorCode::Overflow)?;
             
             let tier_bonus = (amount_in_tier as u128)
                 .checked_mul(*bonus_bps as u128)
@@ -1268,13 +1363,13 @@ fn calculate_progressive_bonus(pending_rewards: u64, game_config: &GameConfig) -
 fn get_property_bit_in_set(property_id: u8, set_id: u8) -> u8 {
     match set_id {
         0 => property_id,
-        1 => property_id - 2,
-        2 => property_id - 5,
-        3 => property_id - 8,
-        4 => property_id - 11,
-        5 => property_id - 14,
-        6 => property_id - 17,
-        7 => property_id - 20,
+        1 => property_id.saturating_sub(2),
+        2 => property_id.saturating_sub(5),
+        3 => property_id.saturating_sub(8),
+        4 => property_id.saturating_sub(11),
+        5 => property_id.saturating_sub(14),
+        6 => property_id.saturating_sub(17),
+        7 => property_id.saturating_sub(20),
         _ => 0,
     }
 }
@@ -1329,7 +1424,10 @@ pub struct InitializeGame<'info> {
     )]
     pub dev_token_account: Account<'info, TokenAccount>,
     
-    /// CHECK: Dev wallet address
+    /// CHECK: Dev wallet address verified against constant
+    #[account(
+        constraint = dev_wallet.key() == DEV_WALLET.parse::<Pubkey>().unwrap() @ ErrorCode::InvalidDevWallet
+    )]
     pub dev_wallet: UncheckedAccount<'info>,
 
     #[account(
@@ -1340,7 +1438,10 @@ pub struct InitializeGame<'info> {
     )]
     pub marketing_token_account: Account<'info, TokenAccount>,
     
-    /// CHECK: Marketing wallet address
+    /// CHECK: Marketing wallet address verified against constant
+    #[account(
+        constraint = marketing_wallet.key() == MARKETING_WALLET.parse::<Pubkey>().unwrap() @ ErrorCode::InvalidMarketingWallet
+    )]
     pub marketing_wallet: UncheckedAccount<'info>,
     
     #[account(mut)]
@@ -1364,10 +1465,18 @@ pub struct InitializeProperty<'info> {
     )]
     pub property: Account<'info, Property>,
     
-    #[account(mut)]
+    #[account(
+        mut,
+        constraint = game_config.load()?.authority == authority.key() @ ErrorCode::Unauthorized
+    )]
     pub authority: Signer<'info>,
     
+    #[account(
+        seeds = [b"game_config"],
+        bump = game_config.load()?.bump
+    )]
     pub game_config: AccountLoader<'info, GameConfig>,
+    
     pub system_program: Program<'info, System>,
 }
 
@@ -1389,25 +1498,52 @@ pub struct InitializePlayer<'info> {
 }
 
 #[derive(Accounts)]
+#[instruction(slots: u16)]
 pub struct BuyProperty<'info> {
-    #[account(mut)]
+    #[account(
+        mut,
+        seeds = [b"property", property.property_id.to_le_bytes().as_ref()],
+        bump = property.bump
+    )]
     pub property: Account<'info, Property>,
     
-    #[account(mut)]
+    #[account(
+        mut,
+        seeds = [b"player", player.key().as_ref()],
+        bump = player_account.load()?.bump
+    )]
     pub player_account: AccountLoader<'info, PlayerAccount>,
     
-    #[account(mut)]
+    #[account(
+        mut,
+        constraint = player_token_account.owner == player.key() @ ErrorCode::InvalidTokenAccountOwner,
+        constraint = player_token_account.mint == game_config.load()?.token_mint @ ErrorCode::InvalidTokenMint
+    )]
     pub player_token_account: Account<'info, TokenAccount>,
     
-    #[account(mut)]
+    #[account(
+        mut,
+        seeds = [b"reward_pool_vault", game_config.key().as_ref()],
+        bump = game_config.load()?.reward_pool_vault_bump
+    )]
     pub reward_pool_vault: Account<'info, TokenAccount>,
     
-    #[account(mut)]
+    #[account(
+        mut,
+        constraint = dev_token_account.key() == get_ata(game_config.load()?.dev_wallet, game_config.load()?.token_mint) @ ErrorCode::InvalidDevTokenAccount
+    )]
     pub dev_token_account: Account<'info, TokenAccount>,
 
-    #[account(mut)]
+    #[account(
+        mut,
+        constraint = marketing_token_account.key() == get_ata(game_config.load()?.marketing_wallet, game_config.load()?.token_mint) @ ErrorCode::InvalidMarketingTokenAccount
+    )]
     pub marketing_token_account: Account<'info, TokenAccount>,
     
+    #[account(
+        seeds = [b"game_config"],
+        bump = game_config.load()?.bump
+    )]
     pub game_config: AccountLoader<'info, GameConfig>,
     
     #[account(mut)]
@@ -1419,23 +1555,49 @@ pub struct BuyProperty<'info> {
 
 #[derive(Accounts)]
 pub struct ActivateShield<'info> {
+    #[account(
+        seeds = [b"property", property.property_id.to_le_bytes().as_ref()],
+        bump = property.bump
+    )]
     pub property: Account<'info, Property>,
     
-    #[account(mut)]
+    #[account(
+        mut,
+        seeds = [b"player", player.key().as_ref()],
+        bump = player_account.load()?.bump
+    )]
     pub player_account: AccountLoader<'info, PlayerAccount>,
     
-    #[account(mut)]
+    #[account(
+        mut,
+        constraint = player_token_account.owner == player.key() @ ErrorCode::InvalidTokenAccountOwner,
+        constraint = player_token_account.mint == game_config.load()?.token_mint @ ErrorCode::InvalidTokenMint
+    )]
     pub player_token_account: Account<'info, TokenAccount>,
     
-    #[account(mut)]
+    #[account(
+        mut,
+        seeds = [b"reward_pool_vault", game_config.key().as_ref()],
+        bump = game_config.load()?.reward_pool_vault_bump
+    )]
     pub reward_pool_vault: Account<'info, TokenAccount>,
     
-    #[account(mut)]
+    #[account(
+        mut,
+        constraint = dev_token_account.key() == get_ata(game_config.load()?.dev_wallet, game_config.load()?.token_mint) @ ErrorCode::InvalidDevTokenAccount
+    )]
     pub dev_token_account: Account<'info, TokenAccount>,
 
-    #[account(mut)]
+    #[account(
+        mut,
+        constraint = marketing_token_account.key() == get_ata(game_config.load()?.marketing_wallet, game_config.load()?.token_mint) @ ErrorCode::InvalidMarketingTokenAccount
+    )]
     pub marketing_token_account: Account<'info, TokenAccount>,
     
+    #[account(
+        seeds = [b"game_config"],
+        bump = game_config.load()?.bump
+    )]
     pub game_config: AccountLoader<'info, GameConfig>,
     
     #[account(mut)]
@@ -1446,23 +1608,49 @@ pub struct ActivateShield<'info> {
 
 #[derive(Accounts)]
 pub struct StealPropertyInstant<'info> {
+    #[account(
+        seeds = [b"property", property.property_id.to_le_bytes().as_ref()],
+        bump = property.bump
+    )]
     pub property: Account<'info, Property>,
     
-    #[account(mut)]
+    #[account(
+        mut,
+        seeds = [b"player", attacker.key().as_ref()],
+        bump = player_account.load()?.bump
+    )]
     pub player_account: AccountLoader<'info, PlayerAccount>,
     
-    #[account(mut)]
+    #[account(
+        mut,
+        constraint = player_token_account.owner == attacker.key() @ ErrorCode::InvalidTokenAccountOwner,
+        constraint = player_token_account.mint == game_config.load()?.token_mint @ ErrorCode::InvalidTokenMint
+    )]
     pub player_token_account: Account<'info, TokenAccount>,
     
-    #[account(mut)]
+    #[account(
+        mut,
+        seeds = [b"reward_pool_vault", game_config.key().as_ref()],
+        bump = game_config.load()?.reward_pool_vault_bump
+    )]
     pub reward_pool_vault: Account<'info, TokenAccount>,
     
-    #[account(mut)]
+    #[account(
+        mut,
+        constraint = dev_token_account.key() == get_ata(game_config.load()?.dev_wallet, game_config.load()?.token_mint) @ ErrorCode::InvalidDevTokenAccount
+    )]
     pub dev_token_account: Account<'info, TokenAccount>,
 
-    #[account(mut)]
+    #[account(
+        mut,
+        constraint = marketing_token_account.key() == get_ata(game_config.load()?.marketing_wallet, game_config.load()?.token_mint) @ ErrorCode::InvalidMarketingTokenAccount
+    )]
     pub marketing_token_account: Account<'info, TokenAccount>,
     
+    #[account(
+        seeds = [b"game_config"],
+        bump = game_config.load()?.bump
+    )]
     pub game_config: AccountLoader<'info, GameConfig>,
     
     /// CHECK: Slot hashes sysvar for entropy
@@ -1477,15 +1665,31 @@ pub struct StealPropertyInstant<'info> {
 
 #[derive(Accounts)]
 pub struct ClaimRewards<'info> {
-    #[account(mut)]
+    #[account(
+        mut,
+        seeds = [b"player", player.key().as_ref()],
+        bump = player_account.load()?.bump
+    )]
     pub player_account: AccountLoader<'info, PlayerAccount>,
     
-    #[account(mut)]
+    #[account(
+        mut,
+        constraint = player_token_account.owner == player.key() @ ErrorCode::InvalidTokenAccountOwner,
+        constraint = player_token_account.mint == game_config.load()?.token_mint @ ErrorCode::InvalidTokenMint
+    )]
     pub player_token_account: Account<'info, TokenAccount>,
     
-    #[account(mut)]
+    #[account(
+        mut,
+        seeds = [b"reward_pool_vault", game_config.key().as_ref()],
+        bump = game_config.load()?.reward_pool_vault_bump
+    )]
     pub reward_pool_vault: Account<'info, TokenAccount>,
     
+    #[account(
+        seeds = [b"game_config"],
+        bump = game_config.load()?.bump
+    )]
     pub game_config: AccountLoader<'info, GameConfig>,
     
     #[account(mut)]
@@ -1496,18 +1700,38 @@ pub struct ClaimRewards<'info> {
 
 #[derive(Accounts)]
 pub struct SellProperty<'info> {
-    #[account(mut)]
+    #[account(
+        mut,
+        seeds = [b"property", property.property_id.to_le_bytes().as_ref()],
+        bump = property.bump
+    )]
     pub property: Account<'info, Property>,
     
-    #[account(mut)]
+    #[account(
+        mut,
+        seeds = [b"player", player.key().as_ref()],
+        bump = player_account.load()?.bump
+    )]
     pub player_account: AccountLoader<'info, PlayerAccount>,
     
-    #[account(mut)]
+    #[account(
+        mut,
+        constraint = player_token_account.owner == player.key() @ ErrorCode::InvalidTokenAccountOwner,
+        constraint = player_token_account.mint == game_config.load()?.token_mint @ ErrorCode::InvalidTokenMint
+    )]
     pub player_token_account: Account<'info, TokenAccount>,
     
-    #[account(mut)]
+    #[account(
+        mut,
+        seeds = [b"reward_pool_vault", game_config.key().as_ref()],
+        bump = game_config.load()?.reward_pool_vault_bump
+    )]
     pub reward_pool_vault: Account<'info, TokenAccount>,
     
+    #[account(
+        seeds = [b"game_config"],
+        bump = game_config.load()?.bump
+    )]
     pub game_config: AccountLoader<'info, GameConfig>,
     
     #[account(mut)]
@@ -1517,24 +1741,46 @@ pub struct SellProperty<'info> {
 }
 
 #[derive(Accounts)]
+#[instruction(property_id: u8)]
 pub struct AdminUpdateProperty<'info> {
-    #[account(mut)]
+    #[account(
+        mut,
+        seeds = [b"property", property_id.to_le_bytes().as_ref()],
+        bump = property.bump
+    )]
     pub property: Account<'info, Property>,
     
+    #[account(
+        seeds = [b"game_config"],
+        bump = game_config.load()?.bump,
+        constraint = game_config.load()?.authority == authority.key() @ ErrorCode::Unauthorized
+    )]
     pub game_config: AccountLoader<'info, GameConfig>,
+    
     pub authority: Signer<'info>,
 }
 
 #[derive(Accounts)]
 pub struct AdminUpdateGame<'info> {
-    #[account(mut)]
+    #[account(
+        mut,
+        seeds = [b"game_config"],
+        bump = game_config.load()?.bump,
+        constraint = game_config.load()?.authority == authority.key() @ ErrorCode::Unauthorized
+    )]
     pub game_config: AccountLoader<'info, GameConfig>,
+    
     pub authority: Signer<'info>,
 }
 
 #[derive(Accounts)]
 pub struct ClosePlayerAccount<'info> {
-    #[account(mut, close = rent_receiver)]
+    #[account(
+        mut,
+        close = rent_receiver,
+        seeds = [b"player", player.key().as_ref()],
+        bump = player_account.load()?.bump
+    )]
     pub player_account: AccountLoader<'info, PlayerAccount>,
     
     #[account(mut)]
@@ -1547,10 +1793,15 @@ pub struct ClosePlayerAccount<'info> {
 
 #[derive(Accounts)]
 pub struct AdminClosePlayerAccount<'info> {
-    /// CHECK: Force closing account
+    /// CHECK: Force closing account - verified by owner check
     #[account(mut)]
     pub player_account: AccountInfo<'info>,
     
+    #[account(
+        seeds = [b"game_config"],
+        bump = game_config.load()?.bump,
+        constraint = game_config.load()?.authority == authority.key() @ ErrorCode::Unauthorized
+    )]
     pub game_config: AccountLoader<'info, GameConfig>,
     
     #[account(mut)]
@@ -1564,12 +1815,25 @@ pub struct AdminClosePlayerAccount<'info> {
 #[derive(Accounts)]
 #[instruction(target_player: Pubkey)]
 pub struct AdminGrantProperty<'info> {
-    #[account(mut)]
+    #[account(
+        mut,
+        seeds = [b"property", property.property_id.to_le_bytes().as_ref()],
+        bump = property.bump
+    )]
     pub property: Account<'info, Property>,
     
-    #[account(mut)]
+    #[account(
+        mut,
+        seeds = [b"player", target_player.as_ref()],
+        bump = player_account.load()?.bump
+    )]
     pub player_account: AccountLoader<'info, PlayerAccount>,
     
+    #[account(
+        seeds = [b"game_config"],
+        bump = game_config.load()?.bump,
+        constraint = game_config.load()?.authority == authority.key() @ ErrorCode::Unauthorized
+    )]
     pub game_config: AccountLoader<'info, GameConfig>,
     
     #[account(mut)]
@@ -1577,13 +1841,23 @@ pub struct AdminGrantProperty<'info> {
 }
 
 #[derive(Accounts)]
+#[instruction(slots: u16)]
 pub struct AdminRevokeProperty<'info> {
-    #[account(mut)]
+    #[account(
+        mut,
+        seeds = [b"property", property.property_id.to_le_bytes().as_ref()],
+        bump = property.bump
+    )]
     pub property: Account<'info, Property>,
     
     #[account(mut)]
     pub player_account: AccountLoader<'info, PlayerAccount>,
     
+    #[account(
+        seeds = [b"game_config"],
+        bump = game_config.load()?.bump,
+        constraint = game_config.load()?.authority == authority.key() @ ErrorCode::Unauthorized
+    )]
     pub game_config: AccountLoader<'info, GameConfig>,
     
     pub authority: Signer<'info>,
@@ -1594,6 +1868,11 @@ pub struct AdminClearCooldown<'info> {
     #[account(mut)]
     pub player_account: AccountLoader<'info, PlayerAccount>,
     
+    #[account(
+        seeds = [b"game_config"],
+        bump = game_config.load()?.bump,
+        constraint = game_config.load()?.authority == authority.key() @ ErrorCode::Unauthorized
+    )]
     pub game_config: AccountLoader<'info, GameConfig>,
     
     pub authority: Signer<'info>,
@@ -1604,6 +1883,11 @@ pub struct AdminClearStealCooldown<'info> {
     #[account(mut)]
     pub player_account: AccountLoader<'info, PlayerAccount>,
     
+    #[account(
+        seeds = [b"game_config"],
+        bump = game_config.load()?.bump,
+        constraint = game_config.load()?.authority == authority.key() @ ErrorCode::Unauthorized
+    )]
     pub game_config: AccountLoader<'info, GameConfig>,
     
     pub authority: Signer<'info>,
@@ -1614,6 +1898,11 @@ pub struct AdminGrantShield<'info> {
     #[account(mut)]
     pub player_account: AccountLoader<'info, PlayerAccount>,
     
+    #[account(
+        seeds = [b"game_config"],
+        bump = game_config.load()?.bump,
+        constraint = game_config.load()?.authority == authority.key() @ ErrorCode::Unauthorized
+    )]
     pub game_config: AccountLoader<'info, GameConfig>,
     
     pub authority: Signer<'info>,
@@ -1621,12 +1910,21 @@ pub struct AdminGrantShield<'info> {
 
 #[derive(Accounts)]
 pub struct AdminEmergencyWithdraw<'info> {
-    #[account(mut)]
+    #[account(
+        mut,
+        seeds = [b"reward_pool_vault", game_config.key().as_ref()],
+        bump = game_config.load()?.reward_pool_vault_bump
+    )]
     pub reward_pool_vault: Account<'info, TokenAccount>,
     
     #[account(mut)]
     pub destination_account: Account<'info, TokenAccount>,
     
+    #[account(
+        seeds = [b"game_config"],
+        bump = game_config.load()?.bump,
+        constraint = game_config.load()?.authority == authority.key() @ ErrorCode::Unauthorized
+    )]
     pub game_config: AccountLoader<'info, GameConfig>,
     
     pub authority: Signer<'info>,
@@ -1636,10 +1934,21 @@ pub struct AdminEmergencyWithdraw<'info> {
 
 #[derive(Accounts)]
 pub struct AdminTransferAuthority<'info> {
-    #[account(mut)]
+    #[account(
+        mut,
+        seeds = [b"game_config"],
+        bump = game_config.load()?.bump,
+        constraint = game_config.load()?.authority == authority.key() @ ErrorCode::Unauthorized
+    )]
     pub game_config: AccountLoader<'info, GameConfig>,
     
     pub authority: Signer<'info>,
+}
+
+// ========== HELPER FUNCTION FOR ATA DERIVATION ==========
+
+fn get_ata(wallet: Pubkey, mint: Pubkey) -> Pubkey {
+    anchor_spl::associated_token::get_associated_token_address(&wallet, &mint)
 }
 
 // ========== STATE ACCOUNTS ==========
@@ -1902,4 +2211,16 @@ pub enum ErrorCode {
     InvalidClaimInterval,
     #[msg("Invalid bonus percentage (max 50%)")]
     InvalidBonus,
+    #[msg("Invalid dev wallet address")]
+    InvalidDevWallet,
+    #[msg("Invalid marketing wallet address")]
+    InvalidMarketingWallet,
+    #[msg("Invalid token account owner")]
+    InvalidTokenAccountOwner,
+    #[msg("Invalid token mint")]
+    InvalidTokenMint,
+    #[msg("Invalid dev token account")]
+    InvalidDevTokenAccount,
+    #[msg("Invalid marketing token account")]
+    InvalidMarketingTokenAccount,
 }

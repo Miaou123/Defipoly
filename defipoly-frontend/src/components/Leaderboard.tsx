@@ -34,9 +34,11 @@ import { API_BASE_URL, getImageUrl } from '@/utils/config';
 interface LeaderboardProps {
   scaleFactor?: number;
   isMobile?: boolean;
+  showMobileContentHint?: boolean;
+  onMobileContentHintDismiss?: () => void;
 }
 
-export function Leaderboard({ scaleFactor = 1, isMobile = false }: LeaderboardProps) {
+export function Leaderboard({ scaleFactor = 1, isMobile = false, showMobileContentHint = false, onMobileContentHintDismiss }: LeaderboardProps) {
   const { socket, connected } = useWebSocket(); 
   const [leaderboardData, setLeaderboardData] = useState<LeaderboardData | null>(null);
   const [profiles, setProfiles] = useState<Record<string, ProfileData>>({});
@@ -225,6 +227,11 @@ export function Leaderboard({ scaleFactor = 1, isMobile = false }: LeaderboardPr
       dismissSpectatorHint();
     }
     
+    // Dismiss mobile content hint on first click
+    if (showMobileContentHint && onMobileContentHintDismiss) {
+      onMobileContentHintDismiss();
+    }
+    
     // Pre-cache basic spectator data with rank for faster loading
     const profileData = profiles[leader.walletAddress] || {
       walletAddress: leader.walletAddress,
@@ -317,7 +324,7 @@ export function Leaderboard({ scaleFactor = 1, isMobile = false }: LeaderboardPr
               {leaderboardData.leaderboard.map((leader, index) => {
                 const isTop3 = leader.rank <= 3;
                 const isFirstRow = index === 0;
-                const showHintOnRow = showSpectatorHint && isFirstRow;
+                const showHintOnRow = (showSpectatorHint || showMobileContentHint) && isFirstRow;
                 
                 return (
                   <div
@@ -384,8 +391,8 @@ export function Leaderboard({ scaleFactor = 1, isMobile = false }: LeaderboardPr
         </div>
       </div>
 
-      {/* Portal arrow - renders at document.body level */}
-      {showSpectatorHint && arrowPosition && typeof document !== 'undefined' && createPortal(
+      {/* Portal arrow - renders at document.body level (desktop only) */}
+      {!isMobile && showSpectatorHint && arrowPosition && typeof document !== 'undefined' && createPortal(
         <div 
           className="fixed animate-bounce-x pointer-events-none"
           style={{ 

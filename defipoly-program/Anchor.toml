@@ -5,7 +5,7 @@ resolution = true
 skip-lint = false
 
 [programs.devnet]
-defipoly_program = "A3NESRFzmph9W4EvCyYA7mmSMQU1uDjrenT2u4mid1s4"
+defipoly_program = "5cqZuDNcbn7FrJerCJ97HTmCEexgMu4pZtTLaf4QG5Xj"
 
 [registry]
 url = "https://api.apr.dev"

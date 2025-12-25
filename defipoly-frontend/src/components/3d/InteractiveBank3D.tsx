@@ -11,7 +11,7 @@ import { BorshCoder, EventParser } from '@coral-xyz/anchor';
 import idl from '@/idl/defipoly_program.json';
 import { Bank3D_V2 } from './r3f/Bank3D_R3F';
 import { Html } from '@react-three/drei';
-import { useFrame } from '@react-three/fiber';
+import { useFrame, useThree } from '@react-three/fiber';
 import { PointerArrowIcon } from '@/components/icons/UIIcons';
 import * as THREE from 'three';
 
@@ -28,6 +28,7 @@ interface InteractiveBank3DProps {
 function ClaimHintGlow({ visible }: { visible: boolean }) {
   const ringRef = useRef<THREE.Mesh>(null);
   const [opacity, setOpacity] = useState(0);
+  const { invalidate } = useThree();
   
   // Fade in
   useEffect(() => {
@@ -51,7 +52,10 @@ function ClaimHintGlow({ visible }: { visible: boolean }) {
     
     // Rotate slowly
     ringRef.current.rotation.z = t * 0.3;
-  });
+    
+    // Request render since we're animating
+    invalidate();
+  }, visible ? 1 : 0);
   
   if (!visible) return null;
   
@@ -151,6 +155,7 @@ export const InteractiveBank3D = forwardRef<{ handleParticleArrive: (incomeValue
   const { claimRewards, loading: claimLoading } = useDefipoly();
   const { showSuccess, showError } = useNotification();
   const gameState = useGameState();
+  const { invalidate } = useThree();
   
   const [claiming, setClaiming] = useState(false);
   const [displayedRewards, setDisplayedRewards] = useState<number>(0);
@@ -349,13 +354,15 @@ export const InteractiveBank3D = forwardRef<{ handleParticleArrive: (incomeValue
       // If scale is very different from target, set it directly (initial setup)
       if (Math.abs(currentScale - targetScale) > 0.01) {
         bankGroupRef.current.scale.setScalar(targetScale);
-      } else {
+        invalidate();
+      } else if (Math.abs(currentScale - targetScale) > 0.0001) {
         // Otherwise animate smoothly
         const newScale = currentScale + (targetScale - currentScale) * delta * 8;
         bankGroupRef.current.scale.setScalar(newScale);
+        invalidate();
       }
     }
-  });
+  }, 1);
 
   return (
     <group 

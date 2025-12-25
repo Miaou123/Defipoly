@@ -29,3 +29,11 @@ yarn-error.log*
 
 #storage
 /uploads
+
+# Database files
+defipoly.db
+defipoly.db.backup*
+*.db
+
+# Log files
+server.log
