@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef } from 'react';
+import { useRef, useMemo } from 'react';
 import * as THREE from 'three';
 
 interface House3_R3FProps {}
@@ -35,37 +35,45 @@ export function House3_R3F({}: House3_R3FProps) {
   const gableDiagAngle = Math.atan2(roofHeight * 0.7, roofW * 0.7);
 
   // Roof geometries
-  const leftRoofGeo = new THREE.BufferGeometry();
-  const leftRoofVerts = new Float32Array([
-    0, roofPeakY, -roofD,
-    0, roofPeakY, roofD,
-    -roofW, roofBaseY, roofD,
-    0, roofPeakY, -roofD,
-    -roofW, roofBaseY, roofD,
-    -roofW, roofBaseY, -roofD,
-  ]);
-  leftRoofGeo.setAttribute('position', new THREE.BufferAttribute(leftRoofVerts, 3));
-  leftRoofGeo.computeVertexNormals();
+  const leftRoofGeo = useMemo(() => {
+    const geo = new THREE.BufferGeometry();
+    const leftRoofVerts = new Float32Array([
+      0, roofPeakY, -roofD,
+      0, roofPeakY, roofD,
+      -roofW, roofBaseY, roofD,
+      0, roofPeakY, -roofD,
+      -roofW, roofBaseY, roofD,
+      -roofW, roofBaseY, -roofD,
+    ]);
+    geo.setAttribute('position', new THREE.BufferAttribute(leftRoofVerts, 3));
+    geo.computeVertexNormals();
+    return geo;
+  }, [roofPeakY, roofD, roofW, roofBaseY]);
 
-  const rightRoofGeo = new THREE.BufferGeometry();
-  const rightRoofVerts = new Float32Array([
-    0, roofPeakY, roofD,
-    0, roofPeakY, -roofD,
-    roofW, roofBaseY, -roofD,
-    0, roofPeakY, roofD,
-    roofW, roofBaseY, -roofD,
-    roofW, roofBaseY, roofD,
-  ]);
-  rightRoofGeo.setAttribute('position', new THREE.BufferAttribute(rightRoofVerts, 3));
-  rightRoofGeo.computeVertexNormals();
+  const rightRoofGeo = useMemo(() => {
+    const geo = new THREE.BufferGeometry();
+    const rightRoofVerts = new Float32Array([
+      0, roofPeakY, roofD,
+      0, roofPeakY, -roofD,
+      roofW, roofBaseY, -roofD,
+      0, roofPeakY, roofD,
+      roofW, roofBaseY, -roofD,
+      roofW, roofBaseY, roofD,
+    ]);
+    geo.setAttribute('position', new THREE.BufferAttribute(rightRoofVerts, 3));
+    geo.computeVertexNormals();
+    return geo;
+  }, [roofPeakY, roofD, roofW, roofBaseY]);
 
   // Gable geometry
-  const gableShape = new THREE.Shape();
-  gableShape.moveTo(-roofW, 0);
-  gableShape.lineTo(roofW, 0);
-  gableShape.lineTo(0, roofHeight);
-  gableShape.closePath();
-  const gableGeo = new THREE.ShapeGeometry(gableShape);
+  const gableGeo = useMemo(() => {
+    const gableShape = new THREE.Shape();
+    gableShape.moveTo(-roofW, 0);
+    gableShape.lineTo(roofW, 0);
+    gableShape.lineTo(0, roofHeight);
+    gableShape.closePath();
+    return new THREE.ShapeGeometry(gableShape);
+  }, [roofW, roofHeight]);
 
   // Window positions (symmetrical)
   const windowPositions = [-mainWidth / 4 - 0.15, mainWidth / 4 + 0.15];

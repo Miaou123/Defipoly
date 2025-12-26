@@ -6,6 +6,7 @@ import { useGameState } from '@/contexts/GameStateContext';
 import { useParticleSpawn } from '@/contexts/ParticleSpawnContext';
 import { PROPERTIES } from '@/utils/constants';
 import * as THREE from 'three';
+import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 
 // ============================================================
 // CONSTANTS
@@ -127,60 +128,20 @@ function createDiamondGeometry(): THREE.BufferGeometry {
 }
 
 /**
- * Simple geometry merge utility
+ * Safe geometry merge utility using Three.js official implementation
  */
 function mergeBufferGeometries(geometries: THREE.BufferGeometry[]): THREE.BufferGeometry {
-  let totalVertices = 0;
-  
+  // Ensure all geometries have normals computed before merging
   geometries.forEach(geo => {
-    if (geo.attributes['position']) {
-      totalVertices += geo.attributes['position'].count;
+    if (!geo.attributes['normal']) {
+      geo.computeVertexNormals();
     }
   });
   
-  const positions = new Float32Array(totalVertices * 3);
-  const normals = new Float32Array(totalVertices * 3);
-  const indices: number[] = [];
-  
-  let vertexOffset = 0;
-  
-  geometries.forEach(geo => {
-    const pos = geo.attributes['position'];
-    const norm = geo.attributes['normal'];
-    
-    if (!pos) return;
-    
-    for (let i = 0; i < pos.count; i++) {
-      positions[(vertexOffset + i) * 3] = pos.getX(i);
-      positions[(vertexOffset + i) * 3 + 1] = pos.getY(i);
-      positions[(vertexOffset + i) * 3 + 2] = pos.getZ(i);
-      
-      if (norm) {
-        normals[(vertexOffset + i) * 3] = norm.getX(i);
-        normals[(vertexOffset + i) * 3 + 1] = norm.getY(i);
-        normals[(vertexOffset + i) * 3 + 2] = norm.getZ(i);
-      }
-    }
-    
-    if (geo.index) {
-      for (let i = 0; i < geo.index.count; i++) {
-        indices.push(geo.index.getX(i) + vertexOffset);
-      }
-    } else {
-      for (let i = 0; i < pos.count; i++) {
-        indices.push(vertexOffset + i);
-      }
-    }
-    
-    vertexOffset += pos.count;
-  });
-  
-  const merged = new THREE.BufferGeometry();
-  merged.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-  merged.setAttribute('normal', new THREE.BufferAttribute(normals, 3));
-  merged.setIndex(indices);
-  merged.computeVertexNormals();
-  
+  const merged = mergeGeometries(geometries, false);
+  if (!merged) {
+    return new THREE.BufferGeometry();
+  }
   return merged;
 }
 

@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, Suspense } from 'react';
+import { useRef, Suspense, useMemo } from 'react';
 import { Text, useTexture } from '@react-three/drei';
 import * as THREE from 'three';
 import { getImageUrl } from '@/utils/config';
@@ -15,7 +15,7 @@ function ProfilePictureMesh({ url }: { url: string }) {
   texture.colorSpace = THREE.SRGBColorSpace;
   
   // Create a shader material that clips the texture to a circle
-  const material = new THREE.ShaderMaterial({
+  const material = useMemo(() => new THREE.ShaderMaterial({
     uniforms: {
       map: { value: texture },
       brightness: { value: 1.8 }, // Moderately brighter for profile pictures
@@ -54,7 +54,7 @@ function ProfilePictureMesh({ url }: { url: string }) {
     `,
     side: THREE.DoubleSide,
     transparent: true,
-  });
+  }), [texture]);
   
   return (
     <mesh>
@@ -69,7 +69,7 @@ function LogoFallback() {
   texture.colorSpace = THREE.SRGBColorSpace;
   
   // Create the same circular clipping shader material for the logo
-  const material = new THREE.ShaderMaterial({
+  const material = useMemo(() => new THREE.ShaderMaterial({
     uniforms: {
       map: { value: texture },
     },
@@ -104,7 +104,7 @@ function LogoFallback() {
     `,
     side: THREE.DoubleSide,
     transparent: true,
-  });
+  }), [texture]);
   
   return (
     <mesh>
@@ -135,19 +135,22 @@ export function Bank3D_V2({
   const roofHalfWidth = counterSectionWidth / 2 + 0.1;
   const roofDepth = counterSectionDepth + 0.1;
 
-  const roofGeometry = new THREE.BufferGeometry();
-  const roofVertices = new Float32Array([
-    -roofHalfWidth, 0, roofDepth / 2, roofHalfWidth, 0, roofDepth / 2, 0, peakHeight, roofDepth / 2,
-    roofHalfWidth, 0, -roofDepth / 2, -roofHalfWidth, 0, -roofDepth / 2, 0, peakHeight, -roofDepth / 2,
-    -roofHalfWidth, 0, roofDepth / 2, 0, peakHeight, roofDepth / 2, 0, peakHeight, -roofDepth / 2,
-    0, peakHeight, -roofDepth / 2, -roofHalfWidth, 0, -roofDepth / 2, -roofHalfWidth, 0, roofDepth / 2,
-    roofHalfWidth, 0, roofDepth / 2, roofHalfWidth, 0, -roofDepth / 2, 0, peakHeight, -roofDepth / 2,
-    0, peakHeight, -roofDepth / 2, 0, peakHeight, roofDepth / 2, roofHalfWidth, 0, roofDepth / 2,
-    -roofHalfWidth, 0, roofDepth / 2, -roofHalfWidth, 0, -roofDepth / 2, roofHalfWidth, 0, -roofDepth / 2,
-    roofHalfWidth, 0, -roofDepth / 2, roofHalfWidth, 0, roofDepth / 2, -roofHalfWidth, 0, roofDepth / 2,
-  ]);
-  roofGeometry.setAttribute('position', new THREE.BufferAttribute(roofVertices, 3));
-  roofGeometry.computeVertexNormals();
+  const roofGeometry = useMemo(() => {
+    const geo = new THREE.BufferGeometry();
+    const roofVertices = new Float32Array([
+      -roofHalfWidth, 0, roofDepth / 2, roofHalfWidth, 0, roofDepth / 2, 0, peakHeight, roofDepth / 2,
+      roofHalfWidth, 0, -roofDepth / 2, -roofHalfWidth, 0, -roofDepth / 2, 0, peakHeight, -roofDepth / 2,
+      -roofHalfWidth, 0, roofDepth / 2, 0, peakHeight, roofDepth / 2, 0, peakHeight, -roofDepth / 2,
+      0, peakHeight, -roofDepth / 2, -roofHalfWidth, 0, -roofDepth / 2, -roofHalfWidth, 0, roofDepth / 2,
+      roofHalfWidth, 0, roofDepth / 2, roofHalfWidth, 0, -roofDepth / 2, 0, peakHeight, -roofDepth / 2,
+      0, peakHeight, -roofDepth / 2, 0, peakHeight, roofDepth / 2, roofHalfWidth, 0, roofDepth / 2,
+      -roofHalfWidth, 0, roofDepth / 2, -roofHalfWidth, 0, -roofDepth / 2, roofHalfWidth, 0, -roofDepth / 2,
+      roofHalfWidth, 0, -roofDepth / 2, roofHalfWidth, 0, roofDepth / 2, -roofHalfWidth, 0, roofDepth / 2,
+    ]);
+    geo.setAttribute('position', new THREE.BufferAttribute(roofVertices, 3));
+    geo.computeVertexNormals();
+    return geo;
+  }, [roofHalfWidth, roofDepth, peakHeight]);
 
   const roofEdgeLength = Math.sqrt(roofHalfWidth * roofHalfWidth + peakHeight * peakHeight);
   const roofAngle = Math.atan2(peakHeight, roofHalfWidth);

@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef } from 'react';
+import { useRef, useMemo } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 
@@ -12,21 +12,19 @@ export function Logo3D_R3F() {
     groupRef.current.rotation.y += 0.008;
   });
 
-  // No need to create material objects in R3F - use JSX directly
-
   // Crown dimensions
   const crownHeight = 1.8;
   const crownRadius = 1;
   const crownRadiusTop = 0.95;
 
-  // Brim geometry
-  const brimPoints = [
+  // Brim geometry - MEMOIZED to prevent recreation on every render
+  const brimPoints = useMemo(() => [
     new THREE.Vector2(crownRadius - 0.02, 0.04),
     new THREE.Vector2(1.6, 0.04),
     new THREE.Vector2(1.7, 0),
     new THREE.Vector2(1.6, -0.04),
     new THREE.Vector2(crownRadius - 0.02, -0.04),
-  ];
+  ], []);
 
   return (
     <group ref={groupRef} rotation={[0.2, 0, 0.08]}>

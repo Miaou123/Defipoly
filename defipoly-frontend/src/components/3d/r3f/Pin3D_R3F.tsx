@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef } from 'react';
+import { useRef, useMemo } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 
@@ -36,11 +36,20 @@ export function Pin3D_R3F({ color = 'bg-purple-500' }: Pin3D_R3FProps) {
 
   const pinColor = getColorHex(color);
 
+  // FIXED: Memoize all geometry args to prevent R3F reconciliation issues in Firefox
+  const geoArgs = useMemo(() => ({
+    head: [0.6, 24, 24] as const,
+    highlight: [0.12, 12, 12] as const,
+    post: [0.08, 0.12, 1.2, 12] as const,
+    point: [0.12, 0.3, 12] as const,
+    shadow: [0.6, 0.6] as const,
+  }), []);
+
   return (
     <group ref={groupRef} scale={0.8}>
       {/* Pin head - sphere */}
       <mesh position={[0, 1.2, 0]}>
-        <sphereGeometry args={[0.6, 24, 24]} />
+        <sphereGeometry args={geoArgs.head} />
         <meshStandardMaterial 
           color={pinColor} 
           roughness={0.3} 
@@ -50,7 +59,7 @@ export function Pin3D_R3F({ color = 'bg-purple-500' }: Pin3D_R3FProps) {
 
       {/* Highlight on pin head */}
       <mesh position={[-0.15, 1.4, 0.4]}>
-        <sphereGeometry args={[0.12, 12, 12]} />
+        <sphereGeometry args={geoArgs.highlight} />
         <meshStandardMaterial 
           color={0xffffff} 
           transparent
@@ -60,7 +69,7 @@ export function Pin3D_R3F({ color = 'bg-purple-500' }: Pin3D_R3FProps) {
 
       {/* Pin post - cylinder */}
       <mesh position={[0, 0.2, 0]}>
-        <cylinderGeometry args={[0.08, 0.12, 1.2, 12]} />
+        <cylinderGeometry args={geoArgs.post} />
         <meshStandardMaterial 
           color={0x9ca3af} 
           roughness={0.4} 
@@ -70,7 +79,7 @@ export function Pin3D_R3F({ color = 'bg-purple-500' }: Pin3D_R3FProps) {
 
       {/* Pin point */}
       <mesh position={[0, -0.5, 0]}>
-        <coneGeometry args={[0.12, 0.3, 12]} />
+        <coneGeometry args={geoArgs.point} />
         <meshStandardMaterial 
           color={0x6b7280} 
           roughness={0.3} 
@@ -80,7 +89,7 @@ export function Pin3D_R3F({ color = 'bg-purple-500' }: Pin3D_R3FProps) {
 
       {/* Shadow on ground */}
       <mesh position={[0, -0.64, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-        <planeGeometry args={[0.6, 0.6]} />
+        <planeGeometry args={geoArgs.shadow} />
         <meshBasicMaterial 
           color={0x000000} 
           transparent
