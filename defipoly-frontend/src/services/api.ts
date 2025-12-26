@@ -62,7 +62,6 @@ export interface ApiPlayerStats {
   dailyIncome: number;
   completedSets: number;
   lastActionTime?: number;
-  lastClaimTimestamp: number;
   updatedAt: number;
 }
 

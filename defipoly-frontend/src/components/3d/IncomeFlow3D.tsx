@@ -1,7 +1,7 @@
 'use client';
 
 import { useRef, useMemo, useEffect, useCallback, useState } from 'react';
-import { useFrame, useThree } from '@react-three/fiber';
+import { useFrame } from '@react-three/fiber';
 import { useGameState } from '@/contexts/GameStateContext';
 import { useParticleSpawn } from '@/contexts/ParticleSpawnContext';
 import { PROPERTIES } from '@/utils/constants';
@@ -405,7 +405,6 @@ interface IncomeFlow3DProps {
 export function IncomeFlow3D({ enabled = true, particlesVisible = true, onParticleArrive, showcaseMode = false, showcaseOwnerships }: IncomeFlow3DProps) {
   const { ownerships: gameOwnerships } = useGameState();
   const { triggerSpawn } = useParticleSpawn();
-  const { invalidate } = useThree();
   
   // Use showcase ownerships or real game ownerships
   const ownerships = showcaseMode ? (showcaseOwnerships || []) : gameOwnerships;
@@ -641,9 +640,6 @@ export function IncomeFlow3D({ enabled = true, particlesVisible = true, onPartic
     
     if (!billOpacities || !diamondOpacities) return;
     
-    // Check if any particles are active
-    let hasActiveParticles = false;
-    
     // Update bills
     billDataRef.current.forEach((particle, i) => {
       if (!particle.active) {
@@ -651,7 +647,6 @@ export function IncomeFlow3D({ enabled = true, particlesVisible = true, onPartic
         return;
       }
       
-      hasActiveParticles = true;
       particle.progress += delta * PARTICLE_SPEED;
       
       if (particle.progress >= 1) {
@@ -691,7 +686,6 @@ export function IncomeFlow3D({ enabled = true, particlesVisible = true, onPartic
         return;
       }
       
-      hasActiveParticles = true;
       particle.progress += delta * PARTICLE_SPEED;
       
       if (particle.progress >= 1) {
@@ -722,12 +716,7 @@ export function IncomeFlow3D({ enabled = true, particlesVisible = true, onPartic
     
     diamondMesh.instanceMatrix.needsUpdate = true;
     diamondOpacities.needsUpdate = true;
-    
-    // Request render if we have active particles
-    if (hasActiveParticles) {
-      invalidate();
-    }
-  }, 1);
+  });
 
   // Cleanup
   useEffect(() => {

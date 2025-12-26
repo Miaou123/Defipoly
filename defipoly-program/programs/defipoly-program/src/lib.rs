@@ -5,7 +5,7 @@ use anchor_lang::prelude::*;
 use anchor_spl::token::{self, Token, TokenAccount, Transfer, Mint};
 use anchor_spl::associated_token::AssociatedToken;
 
-declare_id!("5cqZuDNcbn7FrJerCJ97HTmCEexgMu4pZtTLaf4QG5Xj");
+declare_id!("HgKpwZUr4QWL9QJezJsHyHNUtjeyTDMrXYjxKgDBYmYr");
 
 const DEV_WALLET: &str = "CgWTFX7JJQHed3qyMDjJkNCxK4sFe3wbDFABmWAAmrdS";
 const MARKETING_WALLET: &str = "FoPKSQ5HDSVyZgaQobX64YEBVQ2iiKMZp8VHWtd6jLQE";
@@ -62,7 +62,6 @@ pub mod defipoly_program {
         game_config.marketing_wallet = MARKETING_WALLET.parse().unwrap();
         game_config.token_mint = ctx.accounts.token_mint.key();
         game_config.reward_pool_vault = ctx.accounts.reward_pool_vault.key();
-        game_config.min_claim_interval_minutes = 1;
         game_config.accumulation_tier1_threshold = 0;
         game_config.accumulation_tier2_threshold = 0;
         game_config.accumulation_tier3_threshold = 0;
@@ -94,7 +93,7 @@ pub mod defipoly_program {
         game_config.game_paused = 0;
         game_config.bump = ctx.bumps.game_config;
         game_config.reward_pool_vault_bump = ctx.bumps.reward_pool_vault;
-        game_config._padding = [0u8; 1];
+        game_config._padding = [0u8; 9];
 
         Ok(())
     }
@@ -134,7 +133,6 @@ pub mod defipoly_program {
         
         player.owner = ctx.accounts.player.key();
         player.total_base_daily_income = 0;
-        player.last_claim_timestamp = clock.unix_timestamp;
         player.last_accumulation_timestamp = clock.unix_timestamp;
         player.total_rewards_claimed = 0;
         player.pending_rewards = 0;
@@ -578,16 +576,6 @@ pub mod defipoly_program {
         require!(player.owner == ctx.accounts.player.key(), ErrorCode::Unauthorized);
         require!(game_config.game_paused == 0, ErrorCode::GamePaused);
         
-        let min_interval_seconds = game_config.min_claim_interval_minutes
-            .checked_mul(60)
-            .ok_or(ErrorCode::Overflow)?;
-        let time_since_last_claim = clock.unix_timestamp
-            .checked_sub(player.last_claim_timestamp)
-            .ok_or(ErrorCode::Overflow)?;
-        require!(
-            time_since_last_claim >= min_interval_seconds,
-            ErrorCode::ClaimTooSoon
-        );
         
         update_pending_rewards(player)?;
         
@@ -645,7 +633,6 @@ pub mod defipoly_program {
         player.total_rewards_claimed = player.total_rewards_claimed
             .checked_add(total_rewards)
             .ok_or(ErrorCode::Overflow)?;
-        player.last_claim_timestamp = clock.unix_timestamp;        
         player.last_accumulation_timestamp = clock.unix_timestamp;
     
         emit!(RewardsClaimedEvent {
@@ -1190,7 +1177,6 @@ pub mod defipoly_program {
     pub fn admin_update_global_rates(
         ctx: Context<AdminUpdateGame>,
         steal_cost_bps: Option<u16>,
-        min_claim_interval: Option<i64>,
     ) -> Result<()> {
         let game_config = &mut ctx.accounts.game_config.load_mut()?;
         
@@ -1199,10 +1185,6 @@ pub mod defipoly_program {
             game_config.steal_cost_percent_bps = cost;
         }
         
-        if let Some(interval) = min_claim_interval {
-            require!(interval >= 0, ErrorCode::InvalidClaimInterval);
-            game_config.min_claim_interval_minutes = interval;
-        }
         
         Ok(())
     }
@@ -1962,7 +1944,6 @@ pub struct GameConfig {
     pub token_mint: Pubkey,
     pub reward_pool_vault: Pubkey,
     
-    pub min_claim_interval_minutes: i64,
     pub accumulation_tier1_threshold: u64,
     pub accumulation_tier2_threshold: u64,
     pub accumulation_tier3_threshold: u64,
@@ -1988,7 +1969,7 @@ pub struct GameConfig {
     pub game_paused: u8,
     pub bump: u8,
     pub reward_pool_vault_bump: u8,
-    pub _padding: [u8; 1],
+    pub _padding: [u8; 9],
 }
 
 #[account]
@@ -2017,7 +1998,6 @@ pub struct PlayerAccount {
     pub owner: Pubkey,
     
     pub total_base_daily_income: u64,
-    pub last_claim_timestamp: i64,
     pub last_accumulation_timestamp: i64,
     pub total_rewards_claimed: u64,
     pub pending_rewards: u64,
@@ -2187,8 +2167,6 @@ pub enum ErrorCode {
     Unauthorized,
     #[msg("Insufficient reward pool balance")]
     InsufficientRewardPool,
-    #[msg("Claim too soon - wait at least 1 minute")]
-    ClaimTooSoon,
     #[msg("Steal cooldown active - wait before attempting again")]
     StealCooldownActive,
     #[msg("Slot hash unavailable - try again")]
@@ -2207,8 +2185,6 @@ pub enum ErrorCode {
     InvalidCooldown,
     #[msg("Invalid steal cost")]
     InvalidStealCost,
-    #[msg("Invalid claim interval")]
-    InvalidClaimInterval,
     #[msg("Invalid bonus percentage (max 50%)")]
     InvalidBonus,
     #[msg("Invalid dev wallet address")]

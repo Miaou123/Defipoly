@@ -1,7 +1,7 @@
 // ============================================
 // AUTO-GENERATED - DO NOT EDIT
 // Source: defipoly-program/scripts/property-config.ts
-// Generated: 2025-12-22T16:57:05.282Z
+// Generated: 2025-12-26T12:05:43.097Z
 // ============================================
 // 
 // This file contains game configuration data only.
@@ -12,7 +12,7 @@
 // ========================================
 // BLOCKCHAIN ADDRESSES
 // ========================================
-const TOKEN_MINT = "E7HKh2dk1rmubfUoVBGHYifDZr8zfLsYP7kc3647FniK";
+const TOKEN_MINT = "5xxAFb3J7BGFtyHRhearpVemNa4ZaDUJq3QkHJ3FPXNd";
 
 // ========================================
 // WALLET ADDRESSES

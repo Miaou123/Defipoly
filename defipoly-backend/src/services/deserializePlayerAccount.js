@@ -8,7 +8,6 @@ const BN = require('bn.js');
  * - 8 bytes: discriminator
  * - 32 bytes: owner
  * - 8 bytes: total_base_daily_income (u64)
- * - 8 bytes: last_claim_timestamp (i64)
  * - 8 bytes: last_accumulation_timestamp (i64)
  * - 8 bytes: total_rewards_claimed (u64)
  * - 8 bytes: pending_rewards (u64)
@@ -40,8 +39,6 @@ function deserializePlayerAccount(data) {
   const totalBaseDailyIncome = new BN(data.slice(offset, offset + 8), 'le');
   offset += 8;
 
-  const lastClaimTimestamp = new BN(data.slice(offset, offset + 8), 'le').toNumber();
-  offset += 8;
 
   const lastAccumulationTimestamp = new BN(data.slice(offset, offset + 8), 'le').toNumber();
   offset += 8;
@@ -143,7 +140,6 @@ function deserializePlayerAccount(data) {
   return {
     owner,
     totalBaseDailyIncome,
-    lastClaimTimestamp,
     lastAccumulationTimestamp,
     totalRewardsClaimed,
     pendingRewards,

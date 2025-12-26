@@ -134,7 +134,6 @@ function createTables() {
         complete_sets INTEGER DEFAULT 0,
         times_stolen INTEGER DEFAULT 0,
         last_action_time INTEGER,
-        last_claim_timestamp INTEGER DEFAULT 0,
         updated_at INTEGER DEFAULT (strftime('%s', 'now'))
       )
     `, (err) => {

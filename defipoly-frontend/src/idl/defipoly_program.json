@@ -1,5 +1,5 @@
 {
-  "address": "5cqZuDNcbn7FrJerCJ97HTmCEexgMu4pZtTLaf4QG5Xj",
+  "address": "HgKpwZUr4QWL9QJezJsHyHNUtjeyTDMrXYjxKgDBYmYr",
   "metadata": {
     "name": "defipoly_program",
     "version": "0.1.0",
@@ -918,12 +918,6 @@
           "name": "steal_cost_bps",
           "type": {
             "option": "u16"
-          }
-        },
-        {
-          "name": "min_claim_interval",
-          "type": {
-            "option": "i64"
           }
         }
       ]
@@ -2762,91 +2756,81 @@
     },
     {
       "code": 6017,
-      "name": "ClaimTooSoon",
-      "msg": "Claim too soon - wait at least 1 minute"
-    },
-    {
-      "code": 6018,
       "name": "StealCooldownActive",
       "msg": "Steal cooldown active - wait before attempting again"
     },
     {
-      "code": 6019,
+      "code": 6018,
       "name": "SlotHashUnavailable",
       "msg": "Slot hash unavailable - try again"
     },
     {
-      "code": 6020,
+      "code": 6019,
       "name": "InvalidShieldDuration",
       "msg": "Invalid shield duration. Must be between 1 and 48 hours."
     },
     {
-      "code": 6021,
+      "code": 6020,
       "name": "ShieldAlreadyActive",
       "msg": "Shield is already active. Wait for expiry before reactivating."
     },
     {
-      "code": 6022,
+      "code": 6021,
       "name": "StealProtectionActive",
       "msg": "Steal protection is active on this property"
     },
     {
-      "code": 6023,
+      "code": 6022,
       "name": "InvalidYield",
       "msg": "Invalid yield percentage (must be <= 100%)"
     },
     {
-      "code": 6024,
+      "code": 6023,
       "name": "InvalidShieldCost",
       "msg": "Invalid shield cost percentage"
     },
     {
-      "code": 6025,
+      "code": 6024,
       "name": "InvalidCooldown",
       "msg": "Invalid cooldown duration"
     },
     {
-      "code": 6026,
+      "code": 6025,
       "name": "InvalidStealCost",
       "msg": "Invalid steal cost"
     },
     {
-      "code": 6027,
-      "name": "InvalidClaimInterval",
-      "msg": "Invalid claim interval"
-    },
-    {
-      "code": 6028,
+      "code": 6026,
       "name": "InvalidBonus",
       "msg": "Invalid bonus percentage (max 50%)"
     },
     {
-      "code": 6029,
+      "code": 6027,
       "name": "InvalidDevWallet",
       "msg": "Invalid dev wallet address"
     },
     {
-      "code": 6030,
+      "code": 6028,
       "name": "InvalidMarketingWallet",
       "msg": "Invalid marketing wallet address"
     },
     {
-      "code": 6031,
+      "code": 6029,
       "name": "InvalidTokenAccountOwner",
       "msg": "Invalid token account owner"
     },
     {
-      "code": 6032,
+      "code": 6030,
       "name": "InvalidTokenMint",
       "msg": "Invalid token mint"
     },
     {
-      "code": 6033,
+      "code": 6031,
       "name": "InvalidDevTokenAccount",
       "msg": "Invalid dev token account"
     },
     {
-      "code": 6034,
+      "code": 6032,
       "name": "InvalidMarketingTokenAccount",
       "msg": "Invalid marketing token account"
     }
@@ -3014,10 +2998,6 @@
             "type": "pubkey"
           },
           {
-            "name": "min_claim_interval_minutes",
-            "type": "i64"
-          },
-          {
             "name": "accumulation_tier1_threshold",
             "type": "u64"
           },
@@ -3115,7 +3095,7 @@
             "type": {
               "array": [
                 "u8",
-                1
+                9
               ]
             }
           }
@@ -3138,10 +3118,6 @@
           {
             "name": "total_base_daily_income",
             "type": "u64"
-          },
-          {
-            "name": "last_claim_timestamp",
-            "type": "i64"
           },
           {
             "name": "last_accumulation_timestamp",

@@ -1,7 +1,7 @@
 'use client';
 
 import { useRef, useMemo, useState, useEffect, Suspense } from 'react';
-import { useFrame, useThree } from '@react-three/fiber';
+import { useFrame } from '@react-three/fiber';
 import { useTexture, Html } from '@react-three/drei';
 import * as THREE from 'three';
 import { PointerArrowIcon } from '@/components/icons/UIIcons';
@@ -160,7 +160,6 @@ export function FloatingCoins3D({ rewardsAmount, position = [0, 1.95, 0], onCoin
   const [showFirstCoinHint, setShowFirstCoinHint] = useState(false);
   const [hasClickedFirstCoin, setHasClickedFirstCoin] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
-  const { invalidate } = useThree();
 
   // Calculate how many tiers the user has reached
   const tierCount = useMemo(() => {
@@ -259,10 +258,7 @@ export function FloatingCoins3D({ rewardsAmount, position = [0, 1.95, 0], onCoin
       const newScale = THREE.MathUtils.lerp(currentScale, targetScale, lerpSpeed * 0.016);
       coinRef.scale.setScalar(newScale);
     });
-    
-    // Request render since we're animating
-    invalidate();
-  }, 1);
+  });
 
   if (tierCount === 0) {
     return null;

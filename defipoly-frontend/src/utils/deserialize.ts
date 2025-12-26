@@ -120,9 +120,6 @@ export function deserializePlayer(data: Buffer): PlayerAccount {
   const totalBaseDailyIncome = new BN(data.slice(offset, offset + 8), 'le');
   offset += 8;
 
-  // last_claim_timestamp: i64 (8 bytes)
-  const lastClaimTimestamp = new BN(data.slice(offset, offset + 8), 'le');
-  offset += 8;
 
   // last_accumulation_timestamp: i64 (8 bytes) - NEW in v9
   const lastAccumulationTimestamp = new BN(data.slice(offset, offset + 8), 'le');
@@ -169,7 +166,6 @@ export function deserializePlayer(data: Buffer): PlayerAccount {
   return {
     owner,
     totalBaseDailyIncome,
-    lastClaimTimestamp,
     lastAccumulationTimestamp,
     totalRewardsClaimed,
     pendingRewards,

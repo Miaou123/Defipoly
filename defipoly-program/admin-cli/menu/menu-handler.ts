@@ -250,13 +250,11 @@ export class MenuHandler {
     const stealCost = await question('Steal cost (bps): ');
     const setBonus = await question('Set bonus (bps): ');
     const maxProperties = await question('Max properties per claim: ');
-    const minInterval = await question('Min claim interval (minutes): ');
 
     const options: any = {};
     if (stealCost) options.stealCostBps = parseInt(stealCost);
     if (setBonus) options.setBonusBps = parseInt(setBonus);
     if (maxProperties) options.maxPropertiesClaim = parseInt(maxProperties);
-    if (minInterval) options.minClaimInterval = parseInt(minInterval);
 
     if (Object.keys(options).length === 0) {
       console.log('❌ No changes specified');

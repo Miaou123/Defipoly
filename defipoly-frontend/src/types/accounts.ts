@@ -38,7 +38,6 @@ export interface Property {
 export interface PlayerAccount {
   owner: PublicKey;
   totalBaseDailyIncome: BN;
-  lastClaimTimestamp: BN;
   lastAccumulationTimestamp: BN;  // ADD THIS - new in v9
   totalRewardsClaimed: BN;
   pendingRewards: BN;

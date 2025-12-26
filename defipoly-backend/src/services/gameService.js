@@ -145,10 +145,9 @@ async function updatePlayerStats(walletAddress, actionType, amount = 0, slots = 
             case 'shield':
             case 'claim':
               updateQuery = `UPDATE player_stats 
-                              SET last_action_time = ?,
-                                  last_claim_timestamp = ?
+                              SET last_action_time = ?
                               WHERE wallet_address = ?`;
-              params = [Math.floor(Date.now() / 1000), Math.floor(Date.now() / 1000), walletAddress];
+              params = [Math.floor(Date.now() / 1000), walletAddress];
               break;
 
             default:

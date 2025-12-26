@@ -59,11 +59,11 @@ export function RewardsProvider({ children }: { children: React.ReactNode }) {
       
       // Get player income and last claim info
       const totalBaseDailyIncome = Number(playerData.totalBaseDailyIncome?.toString() || '0') / 1e9;
-      const lastClaimTimestamp = Number(playerData.lastClaimTimestamp?.toString() || '0');
+      const lastAccumulationTimestamp = Number(playerData.lastAccumulationTimestamp?.toString() || '0');
       
       // Calculate time-based rewards since last update
       const currentTimestamp = Math.floor(Date.now() / 1000);
-      const timeElapsed = currentTimestamp - lastClaimTimestamp;
+      const timeElapsed = currentTimestamp - lastAccumulationTimestamp;
       
       
       if (timeElapsed > 0 && totalBaseDailyIncome > 0) {
