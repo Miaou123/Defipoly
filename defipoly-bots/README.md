@@ -1,6 +1,6 @@
-# 🤖 Defipoly Bot Testing Suite
+# 🤖 Defipoly Bots CLI
 
-Standalone bot testing system to simulate 50 players interacting with the Defipoly game. This suite has been extracted from the main program for better modularity.
+Advanced CLI tool for managing Defipoly bot wallets and automated game actions. Features both interactive menu-driven interface and command-line mode for automation.
 
 ## 📋 Quick Setup
 
@@ -10,85 +10,116 @@ npm install
 
 # Copy and configure the .env file
 cp .env.example .env
-# Edit .env with your settings
+# Edit .env with your RPC URL, program addresses, etc.
 
-# One command to set everything up
-./batch-bot-operations.sh setup-all
+# Build the CLI tools
+npm run build
+
+# Start interactive mode
+npm run cli
+
+# Or use command-line mode
+npm run cmd -- --help
 ```
 
-This will:
-- Generate/load 50 keypairs in `./test-wallets/`
-- Transfer 0.1 SOL from your main wallet to each test wallet
-- Create token accounts for each wallet
-- Transfer 1,000,000 tokens to each wallet
-- Initialize all 50 players
+## 🎯 Two Usage Modes
 
-## 🎮 Using Bot Commands
-
-All bot commands use npm scripts - no need for `tsx` or `npx`!
-
-### Initialize Players
-
+### 1. Interactive Mode (Recommended for beginners)
 ```bash
-# Initialize all 50 players
-npm run bot:init
-
-# Initialize specific players (wallets 0, 1, 2, 3)
-npm run bot init 0 1 2 3
+npm run interactive
+# or
+npm run cli
 ```
 
-### Buy Properties
+Features a beautiful menu-driven interface with:
+- 💰 Wallet Management (import, generate, list, balance)
+- 🎮 Game Actions (buy, claim, shield, steal, sell)
+- 📊 Stats & Information
+- ⚙️  Configuration
 
+### 2. Command-Line Mode (For automation & scripting)
 ```bash
-# All wallets buy property 0 (Bronze Basic)
-npm run bot buy 0 all
-
-# Wallet 5 buys property 2 (Silver Basic)
-npm run bot buy 2 5
-
-# Multiple specific wallets buy Silver Basic
-npm run bot buy 2 5 6 7 8 9
-
-# Different properties for different groups
-npm run bot buy 0 0 1 2 3 4      # Wallets 0-4 buy Bronze
-npm run bot buy 2 5 6 7 8 9      # Wallets 5-9 buy Silver
-npm run bot buy 4 10 11 12       # Wallets 10-12 buy Gold
+npm run cmd -- wallet list
+npm run cmd -- wallet balance
+npm run cmd -- game buy 0 5
+npm run cmd -- game claim
 ```
 
-### Activate Shields
+## 🎮 CLI Commands Reference
+
+### Wallet Management
 
 ```bash
-# Wallet 5 activates shield for property 2
-npm run bot shield 2 5
+# Import a wallet
+npm run cmd -- wallet import MyBot <private_key>
 
-# Multiple wallets activate shields
-npm run bot shield 2 5 6 7
+# Generate a new random wallet  
+npm run cmd -- wallet generate MyNewBot
 
-# All wallets activate shield for property 0
-npm run bot shield 0 all
+# List all wallets
+npm run cmd -- wallet list
+
+# Check balance (default wallet or specific address)
+npm run cmd -- wallet balance
+npm run cmd -- wallet balance <address>
+
+# Set default wallet
+npm run cmd -- wallet default <address>
 ```
 
-### Claim Rewards
+### Game Actions
 
 ```bash
-# All wallets claim rewards
-npm run bot:claim
+# Buy property (uses default wallet unless -w specified)
+npm run cmd -- game buy <propertyId> <slots>
+npm run cmd -- game buy 0 5 -w <wallet_address>
 
-# Wallet 5 claims rewards
-npm run bot claim 5
+# Claim rewards
+npm run cmd -- game claim
+npm run cmd -- game claim -w <wallet_address>
 
-# Specific wallets claim
-npm run bot claim 0 1 2 3 4
+# Shield property
+npm run cmd -- game shield <propertyId>
+
+# Steal property from another player
+npm run cmd -- game steal <targetAddress> <propertyId>
+
+# Sell property slots
+npm run cmd -- game sell <propertyId> <slots>
 ```
 
-### Get Wallet Info
+### Stats & Information
 
 ```bash
-# Check info for wallet 5
-npm run bot info 5
+# View player stats
+npm run cmd -- stats player
+npm run cmd -- stats player <address>
 
-# Check multiple wallets (bash loop)
-for i in {0..9}; do npm run bot info $i; done
+# Property information
+npm run cmd -- stats property <propertyId>
+
+# Leaderboard
+npm run cmd -- stats leaderboard
+```
+
+### Configuration
+
+```bash
+# Show current config
+npm run cmd -- config show
+
+# Set RPC URL (future feature)
+npm run cmd -- config rpc <url>
+```
+
+### Batch Operations
+
+```bash
+# Buy random properties with multiple wallets
+npm run cmd -- batch buy-random <walletCount> <maxSlots>
+
+# Claim rewards for all wallets
+npm run cmd -- batch claim-all
 ```
 
 ## 🔥 Quick Batch Commands

@@ -5,7 +5,7 @@ use anchor_lang::prelude::*;
 use anchor_spl::token::{self, Token, TokenAccount, Transfer, Mint};
 use anchor_spl::associated_token::AssociatedToken;
 
-declare_id!("HgKpwZUr4QWL9QJezJsHyHNUtjeyTDMrXYjxKgDBYmYr");
+declare_id!("6VQ9vttzEeuP1RktC92E49MQAmekFGJQu1b7XrUEJfnu");
 
 const DEV_WALLET: &str = "CgWTFX7JJQHed3qyMDjJkNCxK4sFe3wbDFABmWAAmrdS";
 const MARKETING_WALLET: &str = "FoPKSQ5HDSVyZgaQobX64YEBVQ2iiKMZp8VHWtd6jLQE";
@@ -24,15 +24,12 @@ fn update_pending_rewards(player: &mut PlayerAccount) -> Result<()> {
         .ok_or(ErrorCode::Overflow)?;
     
     if time_elapsed > 0 && player.total_base_daily_income > 0 {
-        let minutes_elapsed = time_elapsed
-            .checked_div(60)
-            .ok_or(ErrorCode::Overflow)?;
-        let income_per_minute = player.total_base_daily_income
-            .checked_div(1440)
+        let income_per_second = player.total_base_daily_income
+            .checked_div(86400)  // 86400 seconds per day
             .ok_or(ErrorCode::Overflow)?;
         
-        let new_rewards = (income_per_minute as u128)
-            .checked_mul(minutes_elapsed as u128)
+        let new_rewards = (income_per_second as u128)
+            .checked_mul(time_elapsed as u128)  // time_elapsed is already in seconds
             .and_then(|r| u64::try_from(r).ok())
             .ok_or(ErrorCode::Overflow)?;
         

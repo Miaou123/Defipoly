@@ -1,24 +1,87 @@
 # Dependencies
 node_modules/
-
-# Environment variables
-.env
-
-# Test wallets (contains private keys)
-test-wallets/
-
-# Logs
-*.log
 npm-debug.log*
-
-# OS files
-.DS_Store
-Thumbs.db
-
-# IDE files
-.vscode/
-.idea/
+yarn-debug.log*
+yarn-error.log*
 
 # Build output
 dist/
-build/
+*.tsbuildinfo
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Wallet storage (IMPORTANT: Never commit private keys!)
+wallets/
+*.json
+test-wallets/
+
+# IDE and OS files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# Logs
+logs/
+*.log
+pids/
+*.pid
+*.seed
+*.pid.lock
+
+# Runtime data
+.npm/
+.cache/
+.tmp/
+
+# Coverage directory used by tools like istanbul
+coverage/
+
+# nyc test coverage
+.nyc_output/
+
+# Optional npm cache directory
+.npm
+
+# Optional REPL history
+.node_repl_history
+
+# Output of 'npm pack'
+*.tgz
+
+# Yarn Integrity file
+.yarn-integrity
+
+# dotenv environment variables file
+.env
+
+# next.js build output
+.next
+
+# Nuxt.js build output
+.nuxt
+
+# Storybook build outputs
+.out
+.storybook-out
+
+# Temporary folders
+tmp/
+temp/
+
+# IDL files (will be copied from main program)
+idl/*.json
+
+# Legacy files (keep but don't track changes)
+!bot-interactions.ts
+!setup-test-wallets.ts
+!batch-bot-operations.sh
+!test-bot-suite.sh
+!verify-setup.sh
+!SETUP_GUIDE.md

@@ -1,18 +1,35 @@
 {
   "name": "defipoly-bots",
-  "version": "1.0.0",
-  "description": "Bot testing suite for Defipoly",
+  "version": "2.0.0",
+  "description": "Multi-wallet CLI tool for Defipoly game interactions",
   "license": "ISC",
   "type": "module",
   "scripts": {
-    "bot:setup": "tsx setup-test-wallets.ts",
-    "bot:init": "tsx bot-interactions.ts init all",
-    "bot": "tsx bot-interactions.ts",
-    "bot:claim": "tsx bot-interactions.ts claim all"
+    "cli": "tsx cli.ts",
+    "cmd": "tsx cmd.ts",
+    
+    "list": "tsx cmd.ts list",
+    "init": "tsx cmd.ts init",
+    "buy": "tsx cmd.ts buy",
+    "sell": "tsx cmd.ts sell",
+    "shield": "tsx cmd.ts shield",
+    "claim": "tsx cmd.ts claim",
+    "steal": "tsx cmd.ts steal",
+    "info": "tsx cmd.ts info",
+    "property": "tsx cmd.ts property",
+    "config": "tsx cmd.ts config",
+    
+    "init:all": "tsx cmd.ts init all",
+    "claim:all": "tsx cmd.ts claim all",
+    
+    "setup": "tsx setup-test-wallets.ts",
+    "bot": "tsx bot-interactions.ts"
   },
   "dependencies": {
     "@coral-xyz/anchor": "^0.31.1",
     "@solana/spl-token": "^0.4.14",
+    "bs58": "^6.0.0",
+    "chalk": "^5.4.1",
     "dotenv": "^17.2.3"
   },
   "devDependencies": {
