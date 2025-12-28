@@ -31,9 +31,6 @@ const GAS_AIRDROP_AMOUNT = 0.01 * LAMPORTS_PER_SOL;  // Auto-sent on connect
 const SOL_AIRDROP_AMOUNT = 0.5 * LAMPORTS_PER_SOL;   // Sent after verification
 const TOKEN_AIRDROP_AMOUNT = 10_000_000 * 1e9;       // 10M tokens
 
-// Cooldown: 24 hours per wallet
-const AIRDROP_COOLDOWN_MS = 24 * 60 * 60 * 1000;
-
 class AirdropService {
   constructor() {
     this.connection = new Connection(RPC_URL, 'confirmed');
@@ -158,12 +155,9 @@ class AirdropService {
       return { success: true, alreadySent: true, needsGas: false };
     }
     
-    // Completed and still in cooldown
+    // Already completed - one-time claim only
     if (status?.completed) {
-      const cooldownRemaining = AIRDROP_COOLDOWN_MS - (Date.now() - status.completed_at);
-      if (cooldownRemaining > 0) {
-        return { success: false, error: 'Cooldown active', needsGas: false };
-      }
+      return { success: false, error: 'Already claimed', needsGas: false };
     }
 
     // Send gas
@@ -223,13 +217,9 @@ class AirdropService {
       return { success: false, error: 'Gas not received yet. Please reconnect your wallet.' };
     }
     
-    // Check if already completed and in cooldown
+    // Check if already completed - one-time claim only
     if (status?.completed) {
-      const cooldownRemaining = AIRDROP_COOLDOWN_MS - (Date.now() - status.completed_at);
-      if (cooldownRemaining > 0) {
-        const hours = Math.ceil(cooldownRemaining / 1000 / 60 / 60);
-        return { success: false, error: `Already claimed. Try again in ${hours} hours.` };
-      }
+      return { success: false, error: 'Already claimed' };
     }
 
     console.log(`\n🔍 [AIRDROP] Verifying tx ${txSignature.slice(0, 8)}... for ${recipientAddress.slice(0, 8)}...`);
@@ -371,16 +361,8 @@ class AirdropService {
       step = 'not_whitelisted';
       message = 'Wallet not whitelisted for test phase';
     } else if (status?.completed) {
-      const cooldownRemaining = AIRDROP_COOLDOWN_MS - (Date.now() - status.completed_at);
-      if (cooldownRemaining > 0) {
-        step = 'completed';
-        const hours = Math.ceil(cooldownRemaining / 1000 / 60 / 60);
-        message = `Already claimed! Next claim in ${hours} hours`;
-      } else {
-        step = 'can_claim';
-        canClaim = true;
-        message = 'Cooldown expired. Claim again!';
-      }
+      step = 'completed';
+      message = 'Already claimed!';
     } else if (status?.gas_sent) {
       step = 'can_claim';
       canClaim = true;

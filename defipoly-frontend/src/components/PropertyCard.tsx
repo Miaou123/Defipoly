@@ -4,12 +4,14 @@ import { useState, useEffect } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { useGameState } from '@/contexts/GameStateContext';
 import { ShieldIcon, ShieldCooldownIcon, HourglassIcon, TargetIcon } from './icons/UIIcons';
-import { House1_3D_View } from './3d/House1_3D_View';
-import { House2_3D_View } from './3d/House2_3D_View';
-import { House3_3D_View } from './3d/House3_3D_View';
-import { House4_3D_View } from './3d/House4_3D_View';
-import { House5_3D_View } from './3d/House5_3D_View';
-import { Pin3D_View } from './3d/Pin3D_View';
+import { Canvas } from '@react-three/fiber';
+import { PerspectiveCamera, OrbitControls } from '@react-three/drei';
+import { House1_R3F } from './3d/r3f/House1_R3F';
+import { House2_R3F } from './3d/r3f/House2_R3F';
+import { House3_R3F } from './3d/r3f/House3_R3F';
+import { House4_R3F } from './3d/r3f/House4_R3F';
+import { House5_R3F } from './3d/r3f/House5_R3F';
+import { Pin3D_R3F } from './3d/r3f/Pin3D_R3F';
 
 import { PROPERTIES } from '@/utils/constants';
 import { THEME_CONSTANTS } from '@/utils/themeConstants';
@@ -18,6 +20,65 @@ import { THEME_CONSTANTS } from '@/utils/themeConstants';
 const formatNumber = (num: number): string => {
   return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
 };
+
+// Inline 3D components for modal view
+function ModalHouse3D({ level }: { level: number }) {
+  const HouseComponent = {
+    1: House1_R3F,
+    2: House2_R3F,
+    3: House3_R3F,
+    4: House4_R3F,
+    5: House5_R3F,
+  }[level];
+  
+  if (!HouseComponent) return null;
+  
+  return (
+    <Canvas
+      style={{ width: '100%', height: '100%' }}
+      gl={{ antialias: true, alpha: true, powerPreference: 'high-performance' }}
+      dpr={[1, 1.5]}
+    >
+      <ambientLight intensity={0.8} />
+      <directionalLight position={[5, 5, 5]} intensity={1.2} />
+      <PerspectiveCamera makeDefault position={[2, 1.5, 2]} fov={50} />
+      <group position={[0, 0, 0]} scale={0.175}>
+        <HouseComponent />
+      </group>
+      <OrbitControls 
+        enablePan={false}
+        enableZoom={false}
+        autoRotate={true}
+        autoRotateSpeed={2}
+        target={[0, 0.3, 0]}
+      />
+    </Canvas>
+  );
+}
+
+function ModalPin3D({ color }: { color: string }) {
+  return (
+    <Canvas
+      style={{ width: '100%', height: '100%' }}
+      gl={{ antialias: true, alpha: true, powerPreference: 'high-performance' }}
+      dpr={[1, 1.5]}
+    >
+      <ambientLight intensity={0.8} />
+      <directionalLight position={[5, 5, 5]} intensity={1.2} />
+      <PerspectiveCamera makeDefault position={[0, 1, 4]} fov={50} />
+      <group scale={0.7}>
+        <Pin3D_R3F color={color} />
+      </group>
+      <OrbitControls 
+        enablePan={false}
+        enableZoom={false}
+        autoRotate={true}
+        autoRotateSpeed={2}
+        target={[0, 0.5, 0]}
+      />
+    </Canvas>
+  );
+}
 
 interface PropertyCardProps {
   propertyId: number;
@@ -361,44 +422,33 @@ export function PropertyCard({
         >
                   
 
-        {buildingLevel === 0 ? (
-          <div className="w-full h-full flex items-center justify-center relative" style={{ zIndex: 101 }}>
-            <div style={{ transform: modalView ? 'scale(1)' : `scale(${iconScale})` }}>
-              <div>
-                <div style={{ transform: 'translateZ(15px)', transformStyle: 'preserve-3d' }}>
-                  <Pin3D_View size={modalView ? 120 : 80} color={property.color} inModal={modalView} />
-                </div>
-              </div>
-            </div>
+        {modalView ? (
+          // Modal view - use inline 3D Canvas
+          <div className="w-full h-full">
+            {buildingLevel === 0 ? (
+              <ModalPin3D color={property.color} />
+            ) : (
+              <ModalHouse3D level={buildingLevel} />
+            )}
           </div>
         ) : (
-          <div 
-            style={{ 
-              position: 'relative',
-              width: '100%',
-              height: '100%',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              zIndex: 1
-            }}
-          >
-            <div style={{ 
-              position: 'absolute',
-              width: modalView ? 160 : 60,
-              height: modalView ? 160 : 60,
-              top: '50%',
-              left: '50%',
-              transform: 'translate(-50%, -50%)'
-            }}>
-              <div style={{ transform: 'translateZ(15px)', transformStyle: 'preserve-3d' }}>
-                {buildingLevel === 1 && <House1_3D_View size={modalView ? 160 : 60} inModal={modalView} />}
-                {buildingLevel === 2 && <House2_3D_View size={modalView ? 160 : 60} inModal={modalView} />}
-                {buildingLevel === 3 && <House3_3D_View size={modalView ? 160 : 60} inModal={modalView} />}
-                {buildingLevel === 4 && <House4_3D_View size={modalView ? 160 : 60} inModal={modalView} />}
-                {buildingLevel === 5 && <House5_3D_View size={modalView ? 160 : 60} inModal={modalView} />}
+          // Board view - use existing 3D views
+          <div className="w-full h-full flex items-center justify-center relative" style={{ zIndex: 101 }}>
+            {buildingLevel === 0 ? (
+              <div style={{ transform: `scale(${iconScale})` }}>
+                <div style={{ transform: 'translateZ(15px)', transformStyle: 'preserve-3d' }}>
+                  <div style={{ width: 80, height: 80 }}>
+                    <ModalPin3D color={property.color} />
+                  </div>
+                </div>
               </div>
-            </div>
+            ) : (
+              <div style={{ position: 'absolute', width: 60, height: 60, top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }}>
+                <div style={{ transform: 'translateZ(15px)', transformStyle: 'preserve-3d' }}>
+                  <ModalHouse3D level={buildingLevel} />
+                </div>
+              </div>
+            )}
           </div>
         )}
         </div>

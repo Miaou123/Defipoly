@@ -9,7 +9,7 @@ export function Logo3D_R3F() {
 
   useFrame((state, delta) => {
     if (!groupRef.current) return;
-    groupRef.current.rotation.y += 0.008;
+    groupRef.current.rotation.y += delta * 0.5; // Use delta for frame-independent rotation
   });
 
   // Crown dimensions

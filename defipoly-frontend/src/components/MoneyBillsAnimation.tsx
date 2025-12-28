@@ -33,9 +33,9 @@ function getIncomeTier(income: number): IncomeTier {
 const SPREAD_ANIMATIONS = ['spreadUp1', 'spreadUp2', 'spreadUp3', 'spreadUp4', 'spreadUp5'];
 
 export function MoneyBillsAnimation({ income, compact = false, modalView = false }: MoneyBillsAnimationProps) {
-  const tier = useMemo(() => getIncomeTier(income), [income]);
-  
   if (income <= 0) return null;
+  
+  const tier = useMemo(() => getIncomeTier(income), [income]);
 
   const SymbolComponent = MONEY_SYMBOLS[tier.symbol];
   const billSize = modalView ? 28 : (compact ? 12 : 18);

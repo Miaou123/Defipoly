@@ -601,6 +601,10 @@ export function IncomeFlow3D({ enabled = true, particlesVisible = true, onPartic
     
     if (!billOpacities || !diamondOpacities) return;
     
+    // Track if we have active particles
+    let hasActiveBills = false;
+    let hasActiveDiamonds = false;
+    
     // Update bills
     billDataRef.current.forEach((particle, i) => {
       if (!particle.active) {
@@ -608,6 +612,7 @@ export function IncomeFlow3D({ enabled = true, particlesVisible = true, onPartic
         return;
       }
       
+      hasActiveBills = true;
       particle.progress += delta * PARTICLE_SPEED;
       
       if (particle.progress >= 1) {
@@ -637,8 +642,11 @@ export function IncomeFlow3D({ enabled = true, particlesVisible = true, onPartic
       billMesh.setMatrixAt(i, tempMatrix);
     });
     
-    billMesh.instanceMatrix.needsUpdate = true;
-    billOpacities.needsUpdate = true;
+    // Only update if there are active bills
+    if (hasActiveBills) {
+      billMesh.instanceMatrix.needsUpdate = true;
+      billOpacities.needsUpdate = true;
+    }
     
     // Update diamonds
     diamondDataRef.current.forEach((particle, i) => {
@@ -647,6 +655,7 @@ export function IncomeFlow3D({ enabled = true, particlesVisible = true, onPartic
         return;
       }
       
+      hasActiveDiamonds = true;
       particle.progress += delta * PARTICLE_SPEED;
       
       if (particle.progress >= 1) {
@@ -675,8 +684,11 @@ export function IncomeFlow3D({ enabled = true, particlesVisible = true, onPartic
       diamondMesh.setMatrixAt(i, tempMatrix);
     });
     
-    diamondMesh.instanceMatrix.needsUpdate = true;
-    diamondOpacities.needsUpdate = true;
+    // Only update if there are active diamonds
+    if (hasActiveDiamonds) {
+      diamondMesh.instanceMatrix.needsUpdate = true;
+      diamondOpacities.needsUpdate = true;
+    }
   });
 
   // Cleanup

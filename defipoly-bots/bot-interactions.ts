@@ -1,4 +1,4 @@
-// Updated bot-interactions.ts - Copy this entire file to scripts/bot/bot-interactions.ts
+// Updated bot-interactions.ts - Using auto-generated constants
 import * as anchor from "@coral-xyz/anchor";
 import { Program, AnchorProvider } from "@coral-xyz/anchor";
 import { PublicKey } from "@solana/web3.js";
@@ -8,6 +8,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import dotenv from "dotenv";
 import crypto from "crypto";
+import { PROPERTIES, getPropertyById, TOKEN_MINT, PROGRAM_ID } from "./src/constants.js";
 
 // Suppress dotenv output
 dotenv.config({ debug: false });
@@ -15,34 +16,9 @@ dotenv.config({ debug: false });
 // Backend integration
 const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:3001';
 
-// Property prices (matching backend constants)
-const PROPERTIES = [
-  { id: 0, setId: 0, price: 1000000000000 },      // Mediterranean
-  { id: 1, setId: 0, price: 1200000000000 },      // Baltic
-  { id: 2, setId: 1, price: 2500000000000 },      // Oriental
-  { id: 3, setId: 1, price: 2500000000000 },      // Vermont
-  { id: 4, setId: 1, price: 3000000000000 },      // Connecticut
-  { id: 5, setId: 2, price: 3500000000000 },      // St. Charles
-  { id: 6, setId: 2, price: 3500000000000 },      // States
-  { id: 7, setId: 2, price: 4000000000000 },      // Virginia
-  { id: 8, setId: 3, price: 4500000000000 },      // St. James
-  { id: 9, setId: 3, price: 4500000000000 },      // Tennessee
-  { id: 10, setId: 3, price: 5000000000000 },     // New York
-  { id: 11, setId: 4, price: 5500000000000 },     // Kentucky
-  { id: 12, setId: 4, price: 5500000000000 },     // Indiana
-  { id: 13, setId: 4, price: 6000000000000 },     // Illinois
-  { id: 14, setId: 5, price: 6500000000000 },     // Atlantic
-  { id: 15, setId: 5, price: 6500000000000 },     // Ventnor
-  { id: 16, setId: 5, price: 7000000000000 },     // Marvin Gardens
-  { id: 17, setId: 6, price: 7500000000000 },     // Pacific
-  { id: 18, setId: 6, price: 8000000000000 },     // North Carolina
-  { id: 19, setId: 6, price: 8500000000000 },     // Pennsylvania
-  { id: 20, setId: 7, price: 9000000000000 },     // Park Place
-  { id: 21, setId: 7, price: 10000000000000 },    // Boardwalk
-];
-
+// Use getPropertyById helper from generated constants
 function getPropertyPrice(propertyId: number): number {
-  const property = PROPERTIES.find(p => p.id === propertyId);
+  const property = getPropertyById(propertyId);
   return property ? property.price : 0;
 }
 
@@ -105,16 +81,14 @@ console.log("  Project root:", PROJECT_ROOT);
 console.log("  Wallets dir:", WALLETS_DIR);
 console.log("  IDL path:", IDL_PATH);
 
-// Read PROGRAM_ID from IDL
-let PROGRAM_ID: PublicKey;
+// Read IDL for program interface (PROGRAM_ID comes from generated constants)
 let programIdl: any;
 
 try {
   const idlString = fs.readFileSync(IDL_PATH, "utf8");
   programIdl = JSON.parse(idlString);
-  PROGRAM_ID = new PublicKey(programIdl.address || programIdl.metadata?.address);
   if (process.env.DEBUG) {
-    console.log("✅ Loaded Program ID:", PROGRAM_ID.toString());
+    console.log("✅ Using Program ID from constants:", PROGRAM_ID.toString());
   }
 } catch (error: any) {
   console.error("❌ Could not read IDL from:", IDL_PATH);
@@ -123,10 +97,7 @@ try {
   process.exit(1);
 }
 
-// Token mint from env or default
-const TOKEN_MINT = new PublicKey(
-  process.env.TOKEN_MINT || "743D9e7PCGgh2V3TY2tUeg31e63tmFjJ9rTZJkwhRVLX"
-);
+// Token mint from generated constants
 if (process.env.DEBUG) {
   console.log("✅ Token Mint:", TOKEN_MINT.toString());
   console.log("");

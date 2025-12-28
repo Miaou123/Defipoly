@@ -1,6 +1,6 @@
 'use client';
 
-import { Canvas, useFrame, useThree } from '@react-three/fiber';
+import { Canvas, useFrame, useThree, invalidate } from '@react-three/fiber';
 import { useMemo, useEffect, useRef, useState, Suspense, useCallback } from 'react';
 import { OrbitControls, Text, PerspectiveCamera, Html, useTexture } from '@react-three/drei';
 import { useGameState } from '@/contexts/GameStateContext';
@@ -30,11 +30,14 @@ import { GeometryCacheProvider } from './GeometryCache';
 
 // WebGL Context and Tab Visibility Handler
 function VisibilityHandler({ 
-  setParticlesVisible 
+  setParticlesVisible,
+  setWebglError
 }: { 
-  setParticlesVisible: (v: boolean) => void 
+  setParticlesVisible: (v: boolean) => void;
+  setWebglError: (error: string | null) => void;
 }) {
-  const { gl } = useThree();
+  const { gl, invalidate } = useThree();
+  const contextLostRef = useRef(false);
   
   useEffect(() => {
     const handleVisibility = () => {
@@ -46,6 +49,18 @@ function VisibilityHandler({
         // Tab visible - resume
         gl.setAnimationLoop(() => {});
         setParticlesVisible(true);
+        
+        // Check if context was lost and try to restore it
+        if (contextLostRef.current) {
+          const loseContext = gl.getContext()?.getExtension('WEBGL_lose_context');
+          if (loseContext) {
+            console.log('🔄 Attempting to restore WebGL context...');
+            loseContext.restoreContext();
+          }
+        }
+        
+        // Force re-render
+        invalidate();
         // RewardsContext will auto-refresh from blockchain
       }
     };
@@ -53,10 +68,19 @@ function VisibilityHandler({
     const handleContextLost = (e: Event) => {
       e.preventDefault();
       console.warn('⚠️ WebGL context lost - prevented default behavior');
+      contextLostRef.current = true;
+      
+      // Only show error if user is actively viewing
+      if (!document.hidden) {
+        setWebglError('WebGL context lost. Please refresh the page.');
+      }
     };
     
     const handleContextRestored = () => {
       console.log('✅ WebGL context restored');
+      contextLostRef.current = false;
+      setWebglError(null);
+      invalidate();
       // Context restored, rendering should resume automatically
     };
     
@@ -69,7 +93,7 @@ function VisibilityHandler({
       gl.domElement.removeEventListener('webglcontextlost', handleContextLost);
       gl.domElement.removeEventListener('webglcontextrestored', handleContextRestored);
     };
-  }, [gl, setParticlesVisible]);
+  }, [gl, setParticlesVisible, setWebglError, invalidate]);
   
   return null;
 }
@@ -496,6 +520,7 @@ function CameraController({
         controlsRef.current.update();
       }
       needsImmediateSnap.current = false;
+      invalidate();
       return;
     }
     
@@ -530,6 +555,9 @@ function CameraController({
       }
       animationComplete.current = true;
     }
+    
+    // Trigger render during animation
+    invalidate();
   });
 
   return null;
@@ -549,6 +577,8 @@ function ShowcaseController({
 
   useFrame((state, delta) => {
     if (!enabled || !controlsRef.current) return;
+    
+    invalidate(); // Keep rendering while rotating
 
     // Increment angle for smooth rotation
     angleRef.current += delta * 0.15;
@@ -629,6 +659,8 @@ function RisingIncomeParticles({ side, visible = true }: { side: 'top' | 'bottom
       const scale = 0.7 + Math.sin(progress * Math.PI) * 0.3;
       particle.scale.setScalar(scale);
     });
+    
+    invalidate(); // Keep rendering for particle animation
   });
 
   return (
@@ -971,6 +1003,7 @@ function PinOnTile({ propertyId, side, showHint = false }: { propertyId: number;
       const float = Math.sin(t * 1.5) * 3; // Gentle up/down float
       arrowRef.current.style.opacity = pulse;
       arrowRef.current.style.transform = `translateY(${float}px) rotate(90deg)`;
+      invalidate(); // Keep rendering for hint animation
     }
   });
   
@@ -1255,6 +1288,7 @@ function Scene({
   useFrame(({ camera }) => {
     const distance = camera.position.length();
     setCameraDistance(distance);
+    // No invalidate here - only updates state, doesn't need continuous rendering
   });
   
   return (
@@ -1277,16 +1311,10 @@ function Scene({
       )}
       
       {/* Enhanced Lighting Setup */}
-      <ambientLight intensity={1.1} />
-      <directionalLight position={[10, 20, 10]} intensity={1.6} castShadow />
-      <directionalLight position={[-5, 10, -5]} intensity={0.7} color="#9333ea" />
-      <directionalLight position={[0, 15, 0]} intensity={0.5} color="#ffffff" />
-      <directionalLight position={[15, 8, 0]} intensity={0.4} color="#ffffff" />
-      <directionalLight position={[-15, 8, 0]} intensity={0.4} color="#ffffff" />
-      <pointLight position={[5, 8, 5]} intensity={0.5} color="#facc15" />
-      <pointLight position={[-5, 8, -5]} intensity={0.5} color="#22c55e" />
-      <pointLight position={[0, 12, 0]} intensity={0.6} color="#ffffff" />
-      <hemisphereLight color="#ffffff" groundColor="#444444" intensity={0.4} />
+      <ambientLight intensity={0.9} />
+      <directionalLight position={[10, 20, 10]} intensity={1.8} />
+      <directionalLight position={[-8, 10, -8]} intensity={0.6} color="#9333ea" />
+      <hemisphereLight color="#ffffff" groundColor="#444444" intensity={0.5} />
       
       <OrbitControls
         ref={cameraControlsRef}
@@ -1933,14 +1961,14 @@ export function Board3DScene({ onSelectProperty, onCoinClick, spectatorMode, spe
         gl={{
           antialias: true,
           alpha: true,
-          powerPreference: "default",
+          powerPreference: "high-performance",
           failIfMajorPerformanceCaveat: false,
           preserveDrawingBuffer: false,
           stencil: false
         }}
       >
         {/* WebGL Context and Tab Visibility Handler */}
-        <VisibilityHandler setParticlesVisible={setParticlesVisible} />
+        <VisibilityHandler setParticlesVisible={setParticlesVisible} setWebglError={setWebglError} />
         
         <Suspense fallback={null}>
           <GeometryCacheProvider>

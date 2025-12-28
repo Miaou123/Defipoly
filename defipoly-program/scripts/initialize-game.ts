@@ -20,8 +20,40 @@ const __dirname = path.dirname(__filename);
 // Load environment variables
 dotenv.config({ path: path.join(__dirname, '../.env') });
 
-const DEV_WALLET = new anchor.web3.PublicKey(process.env.DEV_WALLET || "CgWTFX7JJQHed3qyMDjJkNCxK4sFe3wbDFABmWAAmrdS");
-const MARKETING_WALLET = new anchor.web3.PublicKey(process.env.MARKETING_WALLET || "FoPKSQ5HDSVyZgaQobX64YEBVQ2iiKMZp8VHWtd6jLQE");
+/**
+ * Parse wallet addresses from lib.rs to ensure consistency with the program
+ */
+function parseWalletAddressesFromLibRs(): { devWallet: string; marketingWallet: string } {
+  const libRsPath = path.join(__dirname, "../programs/defipoly-program/src/lib.rs");
+  
+  if (!fs.existsSync(libRsPath)) {
+    throw new Error(`lib.rs not found at ${libRsPath}`);
+  }
+  
+  const libRsContent = fs.readFileSync(libRsPath, "utf8");
+  
+  // Extract DEV_WALLET constant
+  const devWalletMatch = libRsContent.match(/const\s+DEV_WALLET:\s*&str\s*=\s*"([^"]+)"/);
+  if (!devWalletMatch) {
+    throw new Error("DEV_WALLET constant not found in lib.rs");
+  }
+  
+  // Extract MARKETING_WALLET constant
+  const marketingWalletMatch = libRsContent.match(/const\s+MARKETING_WALLET:\s*&str\s*=\s*"([^"]+)"/);
+  if (!marketingWalletMatch) {
+    throw new Error("MARKETING_WALLET constant not found in lib.rs");
+  }
+  
+  return {
+    devWallet: devWalletMatch[1],
+    marketingWallet: marketingWalletMatch[1],
+  };
+}
+
+// Parse wallet addresses from lib.rs (single source of truth)
+const { devWallet: DEV_WALLET_STRING, marketingWallet: MARKETING_WALLET_STRING } = parseWalletAddressesFromLibRs();
+const DEV_WALLET = new anchor.web3.PublicKey(DEV_WALLET_STRING);
+const MARKETING_WALLET = new anchor.web3.PublicKey(MARKETING_WALLET_STRING);
 
 async function main() {
   // Set defaults for environment

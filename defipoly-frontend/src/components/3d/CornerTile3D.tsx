@@ -385,50 +385,75 @@ function CornerTextureOverlay({ textureUrl, size, cornerSquareStyle, profilePict
   cornerSquareStyle: 'property' | 'profile';
   profilePicture?: string | null;
 }) {
+  // Generate texture URL - handle colors by creating canvas texture
   const finalTextureUrl = useMemo(() => {
+    // For profile pictures, transform the URL first
     if (cornerSquareStyle === 'profile' && profilePicture) {
       const transformedUrl = getImageUrl(profilePicture);
-      if (!transformedUrl) return textureUrl;
+      if (!transformedUrl) return textureUrl; // fallback if transformation fails
       return transformedUrl;
     }
     
+    const hexColorRegex = /^#[0-9A-Fa-f]{6}$/;
+    
     // Check if textureUrl is in gradient format (color1,color2)
-    if (textureUrl && textureUrl.includes(',') && textureUrl.split(',').length === 2) {
+    if (textureUrl.includes(',') && textureUrl.split(',').length === 2) {
       const colors = textureUrl.split(',').map(c => c.trim());
-      const hexColorRegex = /^#[0-9A-Fa-f]{6}$/;
       if (colors[0] && colors[1] && hexColorRegex.test(colors[0]) && hexColorRegex.test(colors[1])) {
+        // Generate canvas texture from gradient colors
         const canvas = document.createElement('canvas');
         canvas.width = 256;
         canvas.height = 256;
         const ctx = canvas.getContext('2d');
-        if (ctx) {
-          const gradient = ctx.createLinearGradient(0, 0, 256, 256);
-          gradient.addColorStop(0, colors[0]);
-          gradient.addColorStop(1, colors[1]);
-          ctx.fillStyle = gradient;
-          ctx.fillRect(0, 0, 256, 256);
-          return canvas.toDataURL('image/png');
+        
+        if (!ctx) {
+          console.warn('Could not get canvas context for gradient texture generation');
+          return null;
         }
+        
+        // Create diagonal gradient (135deg)
+        const gradient = ctx.createLinearGradient(0, 0, 256, 256);
+        gradient.addColorStop(0, colors[0]);
+        gradient.addColorStop(1, colors[1]);
+        
+        // Fill canvas with gradient
+        ctx.fillStyle = gradient;
+        ctx.fillRect(0, 0, 256, 256);
+        
+        // Return as data URL
+        return canvas.toDataURL('image/png');
       }
     }
     
     // Check if textureUrl is a single hex color
-    const hexColorRegex = /^#[0-9A-Fa-f]{6}$/;
-    if (textureUrl && hexColorRegex.test(textureUrl)) {
+    if (hexColorRegex.test(textureUrl)) {
+      // Generate canvas texture from single color
       const canvas = document.createElement('canvas');
       canvas.width = 256;
       canvas.height = 256;
       const ctx = canvas.getContext('2d');
-      if (!ctx) return textureUrl;
+      
+      if (!ctx) {
+        console.warn('Could not get canvas context for color texture generation');
+        return null;
+      }
+      
+      // Fill with solid color
       ctx.fillStyle = textureUrl;
       ctx.fillRect(0, 0, 256, 256);
+      
+      // Return as data URL
       return canvas.toDataURL('image/png');
     }
     
+    // If not a color format, treat as regular URL
     return textureUrl;
   }, [textureUrl, cornerSquareStyle, profilePicture]);
 
-  if (!finalTextureUrl) return null;
+  // Don't render if no valid texture URL
+  if (!finalTextureUrl) {
+    return null;
+  }
 
   return (
     <TextureOverlayInner 
@@ -453,45 +478,46 @@ function TextureOverlayInner({ textureUrl, size, cornerSquareStyle }: {
     texture.offset.set(0, 0);
   }, [texture]);
 
-  // Memoize plane args
   const planeArgs = useMemo(() => [size * 0.85, size * 0.85] as [number, number], [size]);
   const planeArgsRegular = useMemo(() => [size * 0.9, size * 0.9] as [number, number], [size]);
 
-  if (cornerSquareStyle === 'profile') {
-    const material = useMemo(() => new THREE.ShaderMaterial({
-      uniforms: {
-        map: { value: texture },
-        brightness: { value: 1.5 },
-      },
-      vertexShader: `
-        varying vec2 vUv;
-        void main() {
-          vUv = uv;
-          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-        }
-      `,
-      fragmentShader: `
-        uniform sampler2D map;
-        uniform float brightness;
-        varying vec2 vUv;
-        void main() {
-          vec2 center = vUv - 0.5;
-          float dist = length(center);
-          if (dist > 0.5) discard;
-          float alpha = 1.0 - smoothstep(0.48, 0.5, dist);
-          vec4 texColor = texture2D(map, vUv);
-          vec3 brightColor = texColor.rgb * brightness;
-          gl_FragColor = vec4(brightColor, texColor.a * alpha);
-        }
-      `,
-      side: THREE.DoubleSide,
-      transparent: true,
-    }), [texture]);
+  // MOVED OUTSIDE THE IF - always call useMemo
+  const profileMaterial = useMemo(() => new THREE.ShaderMaterial({
+    uniforms: {
+      map: { value: texture },
+      brightness: { value: 1.5 },
+    },
+    vertexShader: `
+      varying vec2 vUv;
+      void main() {
+        vUv = uv;
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+      }
+    `,
+    fragmentShader: `
+      uniform sampler2D map;
+      uniform float brightness;
+      varying vec2 vUv;
+      void main() {
+        vec2 center = vUv - 0.5;
+        float dist = length(center);
+        if (dist > 0.5) discard;
+        float alpha = 1.0 - smoothstep(0.48, 0.5, dist);
+        vec4 texColor = texture2D(map, vUv);
+        vec3 brightColor = texColor.rgb * brightness;
+        gl_FragColor = vec4(brightColor, texColor.a * alpha);
+      }
+    `,
+    side: THREE.DoubleSide,
+    transparent: true,
+  }), [texture]);
 
+  // NOW use conditional rendering (not conditional hooks)
+  if (cornerSquareStyle === 'profile') {
     return (
       <mesh position={[0, tileThickness / 2 + 0.002, 0]} rotation={[-Math.PI / 2, 0, 0]}>
         <planeGeometry args={planeArgs} />
-        <primitive object={material} attach="material" />
+        <primitive object={profileMaterial} attach="material" />
       </mesh>
     );
   }
