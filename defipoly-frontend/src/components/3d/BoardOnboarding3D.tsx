@@ -87,9 +87,9 @@ export function BoardOnboarding3D({ hasProperties, showClaimHint = false, onClai
     }
   }, [connected, hasProperties, hasOpenedModal]);
 
-  // Not connected - show title and connect button
+  // Not connected - show title and connect button (except on mobile)
   // BUT hide if wallet modal is open
-  if (!connected && !walletModalVisible) {
+  if (!connected && !walletModalVisible && typeof window !== 'undefined' && window.innerWidth > 768) {
     return (
       <Html
         fullscreen

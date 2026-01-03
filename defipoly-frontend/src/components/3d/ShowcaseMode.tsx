@@ -96,11 +96,13 @@ export function ShowcaseOverlay({
 export function ShowcaseCameraController({ 
   animation, 
   controlsRef,
-  connected 
+  connected,
+  skipDiveIn = false 
 }: { 
   animation: 'orbit' | 'slow-zoom' | 'pan-left' | 'pan-right';
   controlsRef: React.RefObject<any>;
   connected: boolean;
+  skipDiveIn?: boolean;
 }) {
   const startTimeRef = useRef<number | null>(null);
   
@@ -114,8 +116,8 @@ export function ShowcaseCameraController({
     
     const elapsedSinceStart = time - startTimeRef.current;
     
-    // For non-connected wallets, do dive-in animation first
-    if (!connected && elapsedSinceStart < 2) {
+    // For non-connected wallets, do dive-in animation first (unless skipDiveIn is true)
+    if (!connected && elapsedSinceStart < 2 && !skipDiveIn) {
       // Dive-in animation from ZOOMED_OUT to orbit position
       const progress = Math.min(elapsedSinceStart / 2, 1); // 2 second dive-in
       const easeInOut = progress * progress * (3 - 2 * progress); // Smooth easing
@@ -145,6 +147,21 @@ export function ShowcaseCameraController({
       // Update OrbitControls target to match
       if (controlsRef.current) {
         controlsRef.current.target.set(lookX, lookY, lookZ);
+      }
+    } else if (skipDiveIn && !connected) {
+      // For desktop: orbit at zoomed out position
+      const radius = 20; // Larger radius for zoomed out view
+      const speed = 0.1; // Slower for smoother rotation
+      const height = 18; // Stay at zoomed out height
+      
+      camera.position.x = Math.sin(time * speed) * radius;
+      camera.position.z = Math.cos(time * speed) * radius;
+      camera.position.y = height;
+      camera.lookAt(0, 5, 0);  // Look at same point as ZOOMED_OUT position
+      
+      // Update OrbitControls target to match
+      if (controlsRef.current) {
+        controlsRef.current.target.set(0, 5, 0);
       }
     } else {
       // Normal orbit animation after dive-in or for connected wallets

@@ -2,6 +2,7 @@
 
 import { useRef, useState, useEffect, useCallback, Suspense, forwardRef, useImperativeHandle } from 'react';
 import { useWallet, useConnection } from '@solana/wallet-adapter-react';
+import { useWalletModal } from '@solana/wallet-adapter-react-ui';
 import { useRewards } from '@/contexts/RewardsContext';
 import { useDefipoly } from '@/contexts/DefipolyContext';
 import { useNotification } from '@/contexts/NotificationContext';
@@ -147,6 +148,7 @@ export const InteractiveBank3D = forwardRef<{ handleParticleArrive: (incomeValue
 }, ref) {
   const { connected, publicKey } = useWallet();
   const { connection } = useConnection();
+  const { setVisible: setWalletModalVisible } = useWalletModal();
   const { unclaimedRewards, loading: rewardsLoading } = useRewards();
   const { claimRewards, loading: claimLoading } = useDefipoly();
   const { showSuccess, showError } = useNotification();
@@ -221,10 +223,15 @@ export const InteractiveBank3D = forwardRef<{ handleParticleArrive: (incomeValue
       onClaimHintDismiss();
     }
     
+    // Show wallet modal if not connected
+    if (!connected || !publicKey) {
+      showError('Connect Wallet', 'Please connect your wallet to interact with the bank');
+      setWalletModalVisible(true);
+      return;
+    }
+    
     // Check if user has any properties first
     const hasProperties = gameState?.ownerships?.some(o => o.slotsOwned > 0) || false;
-    
-    if (!connected || !publicKey) return;
     
     if (!hasProperties) {
       showError('No Properties Owned', 'You need to buy a property first before you can claim rewards.');
@@ -321,7 +328,7 @@ export const InteractiveBank3D = forwardRef<{ handleParticleArrive: (incomeValue
       setClaiming(false);
       claimingRef.current = false;
     }
-  }, [displayOnly, connected, publicKey, claiming, claimingRef, rewardsLoading, animatedRewards, claimRewards, connection, showSuccess, showError, gameState, showClaimHint, onClaimHintDismiss]);
+  }, [displayOnly, connected, publicKey, claiming, claimingRef, rewardsLoading, animatedRewards, claimRewards, connection, showSuccess, showError, gameState, showClaimHint, onClaimHintDismiss, setWalletModalVisible]);
 
   // Handle hover to scale bank
   const handlePointerOver = useCallback(() => {

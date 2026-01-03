@@ -461,9 +461,20 @@ function CameraController({
 
   // Handle initial mount and connection changes
   useEffect(() => {
+    // Mobile always shows zoomed in view
+    if (isMobile) {
+      const config = CAMERA_POSITIONS.ZOOMED_IN_MOBILE;
+      targetPosition.current.copy(config.position);
+      targetLookAt.current.copy(config.lookAt);
+      currentLookAt.current.copy(config.lookAt);
+      animationComplete.current = true;
+      needsImmediateSnap.current = true;
+      return;
+    }
+    
     // Spectator mode: immediately snap to centered view
     if (spectatorMode) {
-      const config = isMobile ? CAMERA_POSITIONS.ZOOMED_IN_MOBILE : CAMERA_POSITIONS.ZOOMED_IN;
+      const config = CAMERA_POSITIONS.ZOOMED_IN;
       targetPosition.current.copy(config.position);
       targetLookAt.current.copy(config.lookAt);
       currentLookAt.current.copy(config.lookAt);
@@ -473,7 +484,7 @@ function CameraController({
     }
     
     const config = connected 
-      ? (isMobile ? CAMERA_POSITIONS.ZOOMED_IN_MOBILE : CAMERA_POSITIONS.ZOOMED_IN)
+      ? CAMERA_POSITIONS.ZOOMED_IN
       : CAMERA_POSITIONS.ZOOMED_OUT;
     targetPosition.current.copy(config.position);
     targetLookAt.current.copy(config.lookAt);
@@ -489,8 +500,8 @@ function CameraController({
     // On initial mount, if already connected, skip animation and snap immediately
     if (isInitialMount.current) {
       isInitialMount.current = false;
-      if (connected || spectatorMode) {
-        // Already connected or in spectator mode - skip animation, snap to zoomed in position
+      if (connected || spectatorMode || isMobile) {
+        // Already connected or in spectator mode or mobile - skip animation, snap to zoomed in position
         animationComplete.current = true;
         needsImmediateSnap.current = true;
         currentLookAt.current.copy(config.lookAt);
@@ -501,7 +512,7 @@ function CameraController({
     }
     
     // Reset animation when connection state changes (disconnected -> connected)
-    if (prevConnected.current !== connected) {
+    if (prevConnected.current !== connected && !isMobile) {
       animationComplete.current = false;
       prevConnected.current = connected;
     }
@@ -1176,9 +1187,9 @@ function Scene({
     }
   }, [showcaseMode, showcaseScene, preloadedTextures]);
   
-  // Use buffered textures or fallback to direct access
-  const showcaseBoardTexture = showcaseMode ? currentTextures.board || preloadedTextures[showcaseScene?.themePresetId || '']?.board : null;
-  const showcasePropertyTexture = showcaseMode ? currentTextures.property || preloadedTextures[showcaseScene?.themePresetId || '']?.property : null;
+  // Use buffered textures or fallback to direct access - FORCE NULL FOR DEMO
+  const showcaseBoardTexture = null; // Force default colors in demo mode
+  const showcasePropertyTexture = null; // Force default colors in demo mode
   // Keep original scene background - don't change it during showcase
 
   // Get cooldown functions from useGameState
@@ -1224,7 +1235,11 @@ function Scene({
   }, []);
 
   useEffect(() => {
-    if (connected && !hasProperties && !hasOpenedModal) {
+    // On mobile, show property hint immediately without wallet connection
+    if (isMobile && !hasOpenedModal) {
+      setShowPropertyHint(true);
+      return undefined;
+    } else if (connected && !hasProperties && !hasOpenedModal) {
       const timer = setTimeout(() => {
         setShowPropertyHint(true);
       }, 5000); // Wait 5 seconds
@@ -1233,7 +1248,7 @@ function Scene({
       setShowPropertyHint(false);
       return undefined;
     }
-  }, [connected, hasProperties, hasOpenedModal]);
+  }, [connected, hasProperties, hasOpenedModal, isMobile]);
   
   const tileY = boardThickness + tileThickness/2;
   const halfW = boardWidth / 2;
@@ -1300,6 +1315,7 @@ function Scene({
           animation={showcaseScene.cameraAnimation} 
           controlsRef={cameraControlsRef}
           connected={connected}
+          skipDiveIn={!isMobile}
         />
       ) : (
         <CameraController connected={connected} controlsRef={cameraControlsRef} showcaseMode={showcaseMode} spectatorMode={spectatorMode || false} isMobile={isMobile || false} />
@@ -1319,8 +1335,8 @@ function Scene({
       <OrbitControls
         ref={cameraControlsRef}
         enablePan={false}
-        enableZoom={connected && !showcaseMode}
-        enableRotate={connected && !showcaseMode}
+        enableZoom={!showcaseMode}
+        enableRotate={!showcaseMode}
         minPolarAngle={Math.PI / 6}
         maxPolarAngle={Math.PI / 2.2}
         minDistance={5}
@@ -1387,7 +1403,7 @@ function Scene({
             hasCompleteSet={isPropertyInCompleteSet(id)}
             particlesVisible={particlesVisible}
             onClick={() => !showcaseMode && onSelectProperty(id)}
-            interactive={connected && !showcaseMode}
+            interactive={Boolean((connected || isMobile) && !showcaseMode)}
             showPropertyHint={showPropertyHint}
             ownership={getPropertyOwnership(id)}
             isPropertyOnCooldown={spectatorMode ? () => false : isPropertyOnCooldown || (() => false)}
@@ -1419,7 +1435,7 @@ function Scene({
             hasCompleteSet={isPropertyInCompleteSet(id)}
             particlesVisible={particlesVisible}
             onClick={() => !showcaseMode && onSelectProperty(id)}
-            interactive={connected && !showcaseMode}
+            interactive={Boolean((connected || isMobile) && !showcaseMode)}
             showPropertyHint={showPropertyHint}
             ownership={getPropertyOwnership(id)}
             isPropertyOnCooldown={spectatorMode ? () => false : isPropertyOnCooldown || (() => false)}
@@ -1451,7 +1467,7 @@ function Scene({
             hasCompleteSet={isPropertyInCompleteSet(id)}
             particlesVisible={particlesVisible}
             onClick={() => !showcaseMode && onSelectProperty(id)}
-            interactive={connected && !showcaseMode}
+            interactive={Boolean((connected || isMobile) && !showcaseMode)}
             showPropertyHint={showPropertyHint}
             ownership={getPropertyOwnership(id)}
             isPropertyOnCooldown={spectatorMode ? () => false : isPropertyOnCooldown || (() => false)}
@@ -1483,7 +1499,7 @@ function Scene({
             hasCompleteSet={isPropertyInCompleteSet(id)}
             particlesVisible={particlesVisible}
             onClick={() => !showcaseMode && onSelectProperty(id)}
-            interactive={connected && !showcaseMode}
+            interactive={Boolean((connected || isMobile) && !showcaseMode)}
             showPropertyHint={showPropertyHint}
             ownership={getPropertyOwnership(id)}
             isPropertyOnCooldown={spectatorMode ? () => false : isPropertyOnCooldown || (() => false)}
@@ -1521,8 +1537,8 @@ function Scene({
         />
       )}
       
-      {/* ===== ONBOARDING OVERLAY (hide in showcase mode) ===== */}
-      {!showcaseMode && (
+      {/* ===== ONBOARDING OVERLAY (hide in showcase mode on mobile only) ===== */}
+      {(!showcaseMode || (showcaseMode && !isMobile)) && (
         <BoardOnboarding3D 
           hasProperties={hasProperties} 
           showClaimHint={showClaimHint}
@@ -1903,7 +1919,7 @@ export function Board3DScene({ onSelectProperty, onCoinClick, spectatorMode, spe
 
       <Canvas
         camera={{ 
-          position: [0, 18, 25],  // Start at ZOOMED_OUT position
+          position: isMobile ? [3, 4.5, 5] : [0, 18, 25],  // Start at mobile zoomed in or desktop zoomed out
           fov: 50,
           far: 1000,
           near: 0.1
@@ -1932,8 +1948,8 @@ export function Board3DScene({ onSelectProperty, onCoinClick, spectatorMode, spe
         }}
         onCreated={(state) => {
           try {
-            // Set initial lookAt to ZOOMED_OUT lookAt
-            state.camera.lookAt(0, 5, 0);
+            // Set initial lookAt based on mobile or desktop
+            state.camera.lookAt(0, isMobile ? 0 : 5, 0);
             
             // Add WebGL context loss handling
             const canvas = state.gl.domElement;
@@ -1993,8 +2009,8 @@ export function Board3DScene({ onSelectProperty, onCoinClick, spectatorMode, spe
             tilePresetId={tilePresetId || null}
             themeCategory={themeCategory || null}
             writingStyle={writingStyle || 'light'}
-            profilePicture={profilePicture || gameState?.profile?.profilePicture}
-            cornerSquareStyle={cornerSquareStyle || gameState?.profile?.cornerSquareStyle || 'property'}
+            profilePicture={gameState?.profile?.profilePicture || profilePicture || null}
+            cornerSquareStyle={gameState?.profile?.cornerSquareStyle || cornerSquareStyle || 'property'}
             rotationMode={rotationMode}
             isMobile={isMobile}
             />

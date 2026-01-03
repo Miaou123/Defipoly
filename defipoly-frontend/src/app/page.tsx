@@ -44,6 +44,7 @@ export default function Home() {
   const [showcaseMode, setShowcaseMode] = useState(false);
   const [currentShowcaseScene, setCurrentShowcaseScene] = useState<ShowcaseScene | null>(null);
   const prevWalletConnected = useRef<boolean>(false);
+  const hasStartedDemo = useRef(false);
   
   // Calculate scaleFactor based on side column width (from 0.7 to 1.0)
   const scaleFactor = Math.max(0.7, Math.min(1.0, sideColumnWidth / 400));
@@ -155,13 +156,6 @@ export default function Home() {
       timeoutId = setTimeout(() => {
         const nextIndex = (sceneIndex + 1) % SHOWCASE_SCENES.length;
         
-        // If we completed all scenes and wallet is not connected, exit demo
-        if (nextIndex === 0 && !publicKey) {
-          setShowcaseMode(false);
-          setCurrentShowcaseScene(null);
-          return;
-        }
-        
         sceneIndex = nextIndex;
         const nextScene = SHOWCASE_SCENES[sceneIndex];
         
@@ -199,6 +193,19 @@ export default function Home() {
     prevWalletConnected.current = isWalletConnected;
   }, [showcaseMode, publicKey]);
 
+  // Auto-start demo mode for unconnected desktop users
+  useEffect(() => {
+    if (!publicKey && !hasStartedDemo.current && !isMobile && isClient) {
+      // Small delay to ensure smooth initial render
+      const timer = setTimeout(() => {
+        hasStartedDemo.current = true;
+        setShowcaseMode(true);
+      }, 1500);
+      return () => clearTimeout(timer);
+    }
+    return undefined;
+  }, [publicKey, isMobile, isClient]);
+
   // Showcase handlers
   const handleStartShowcase = () => {
     setShowcaseMode(true);
@@ -222,6 +229,10 @@ export default function Home() {
           customPropertyCardBackground={customPropertyCardBackground}
           customSceneBackground={customSceneBackground}
           themeCategory={themeCategory}
+          showcaseMode={showcaseMode}
+          currentShowcaseScene={currentShowcaseScene}
+          onStartShowcase={handleStartShowcase}
+          onExitShowcase={handleExitShowcase}
         />
       ) : (
         <div className="h-screen overflow-hidden relative">
@@ -263,15 +274,15 @@ export default function Home() {
               <Board 
                 onSelectProperty={setSelectedProperty} 
                 onCoinClick={() => setShowCoinModal(true)}
-                profilePicture={profilePicture} 
-                cornerSquareStyle={cornerSquareStyle} 
+                profilePicture={gameState.profile.profilePicture || profilePicture} 
+                cornerSquareStyle={gameState.profile.cornerSquareStyle || cornerSquareStyle} 
                 customBoardBackground={gameState.profile.customBoardBackground || customBoardBackground}
                 custom3DPropertyTiles={gameState.profile.customPropertyCardBackground || customPropertyCardBackground} 
                 customSceneBackground={gameState.profile.customSceneBackground || customSceneBackground}
                 boardPresetId={gameState.profile.boardPresetId}
                 tilePresetId={gameState.profile.tilePresetId}
-                themeCategory={themeCategory}
-                writingStyle={writingStyle}
+                themeCategory={gameState.profile.themeCategory || themeCategory}
+                writingStyle={gameState.profile.writingStyle || writingStyle}
                 showcaseMode={showcaseMode}
                 showcaseScene={currentShowcaseScene}
                 onExitShowcase={handleExitShowcase}

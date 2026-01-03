@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { THEME_PRESETS } from '@/utils/themePresets';
+import { API_BASE_URL } from '@/utils/config';
 
 /**
  * Generates a texture URL from a preset ID or returns custom URL
@@ -76,6 +77,10 @@ export function usePresetTexture(
       }
       
       // If not color format, treat as regular URL (actual image)
+      // Transform /uploads/ paths to full API URL for Three.js cross-origin loading
+      if (customUrl.startsWith('/uploads/')) {
+        return `${API_BASE_URL}${customUrl}`;
+      }
       return customUrl;
     }
     

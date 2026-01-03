@@ -408,7 +408,7 @@ function CornerTextureOverlay({ textureUrl, size, cornerSquareStyle, profilePict
         
         if (!ctx) {
           console.warn('Could not get canvas context for gradient texture generation');
-          return null;
+          return textureUrl;
         }
         
         // Create diagonal gradient (135deg)
@@ -435,7 +435,7 @@ function CornerTextureOverlay({ textureUrl, size, cornerSquareStyle, profilePict
       
       if (!ctx) {
         console.warn('Could not get canvas context for color texture generation');
-        return null;
+        return textureUrl;
       }
       
       // Fill with solid color
@@ -541,6 +541,7 @@ export function CornerTile3D({
   customPropertyCardBackground = null,
   profilePicture = null,
 }: CornerTile3DProps) {
+
 
   // Memoize geometry args
   const baseGeoArgs = useMemo(() => [size, tileThickness, size] as const, [size]);

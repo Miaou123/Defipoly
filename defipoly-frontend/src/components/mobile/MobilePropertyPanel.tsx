@@ -16,6 +16,7 @@ import {
 } from '../property-modal/actions';
 import { MobileHelpModal } from '../HelpModal';
 import { HelpCircle } from 'lucide-react';
+import { useWalletModal } from '@solana/wallet-adapter-react-ui';
 
 interface MobilePropertyPanelProps {
   selectedProperty: number | null;
@@ -29,6 +30,7 @@ export function MobilePropertyPanel({ selectedProperty, onSelectProperty }: Mobi
   const [currentPropertyId, setCurrentPropertyId] = useState(selectedProperty || 1); // Default to Mediterranean Avenue (ID: 1)
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [showHelp, setShowHelp] = useState<'buy' | 'shield' | 'sell' | 'steal' | null>(null);
+  const { setVisible: setWalletModalVisible } = useWalletModal();
   
   // Header swipe state
   const [headerSwipeStart, setHeaderSwipeStart] = useState<{ x: number; time: number } | null>(null);
@@ -268,6 +270,45 @@ export function MobilePropertyPanel({ selectedProperty, onSelectProperty }: Mobi
   const othersOwned = totalSlots - availableSlots - personalOwned;
 
   const hasSetBonus = setBonusInfo?.hasCompleteSet || false;
+
+  // Show connect wallet prompt when not connected
+  if (!connected) {
+    return (
+      <div className="h-full flex flex-col items-center justify-center p-6 bg-black/90">
+        <div className="max-w-sm w-full text-center space-y-6">
+          {/* Property preview card */}
+          <div className="flex justify-center mb-4">
+            <div className="w-[130px] h-[165px] opacity-75">
+              <PropertyCard 
+                propertyId={currentPropertyId} 
+                onSelect={() => {}} 
+                modalView={true}
+                disableHover={true}
+              />
+            </div>
+          </div>
+          
+          <div>
+            <h3 className="text-xl font-bold text-white mb-2">Connect Your Wallet</h3>
+            <p className="text-purple-300 text-sm">
+              Connect your wallet to buy, sell, shield, or steal properties in Defipoly
+            </p>
+          </div>
+          
+          <button
+            onClick={() => setWalletModalVisible(true)}
+            className="w-full bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-500 hover:to-purple-600 text-white font-bold py-3 px-6 rounded-lg transition-all transform hover:scale-105 shadow-lg"
+          >
+            Connect Wallet
+          </button>
+          
+          <p className="text-xs text-purple-400">
+            You can browse properties without connecting, but need a wallet to play
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="h-full flex flex-col">

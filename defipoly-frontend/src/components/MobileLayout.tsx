@@ -20,6 +20,7 @@ import { FloatingCoinsModal } from './FloatingCoinsModal';
 import type { PropertyOwnership } from '@/types/accounts';
 import { useRouter } from 'next/navigation';
 import { LogOut } from 'lucide-react';
+import { ShowcaseScene } from '@/utils/showcaseScenes';
 
 interface OwnedProperty extends PropertyOwnership {
   propertyInfo: typeof PROPERTIES[0];
@@ -49,16 +50,85 @@ interface MobileLayoutProps {
   customPropertyCardBackground: string | null;
   customSceneBackground: string | null;
   themeCategory: 'dark' | 'medium' | 'light' | null;
+  showcaseMode?: boolean;
+  currentShowcaseScene?: ShowcaseScene | null;
+  onStartShowcase?: () => void;
+  onExitShowcase?: () => void;
 }
 
 // New Mobile Stats Row component
-function MobileStatsRow() {
+function MobileStatsRow({ 
+  showcaseMode = false, 
+  currentShowcaseScene = null 
+}: { 
+  showcaseMode?: boolean; 
+  currentShowcaseScene?: ShowcaseScene | null; 
+}) {
   const { connected, publicKey } = useWallet();
   const { unclaimedRewards, loading: rewardsLoading } = useRewards();
   const { tokenBalance: balance, loading: balanceLoading } = useDefipoly();
   const { stats } = useGameState();
 
-  if (!connected) return null;
+  // Calculate demo progression (0 = start, 1 = end of demo cycle)
+  const getDemoProgression = () => {
+    if (!showcaseMode || !currentShowcaseScene) return 0;
+    
+    // Scene progression based on actual scene IDs
+    const sceneProgressions: Record<string, number> = {
+      'intro': 0,
+      'first-purchase': 0.1,
+      'growing': 0.2,
+      'expanding': 0.3,
+      'upgrades': 0.4,
+      'complete-sets': 0.5,
+      'premium-buildings': 0.6,
+      'mansion': 0.7,
+      'skyscrapers': 0.85,
+      'empire': 1.0
+    };
+    
+    return sceneProgressions[currentShowcaseScene.id] || 0;
+  };
+
+  const progression = getDemoProgression();
+
+  // Mock data that progresses from low to high with exponential growth
+  const getMockBalance = () => {
+    if (progression === 0) return 0; // Start with 0
+    const minBalance = 250;
+    const maxBalance = 12500000; // 12.5M at the end
+    // Use power of 3 for very exponential growth
+    return Math.floor(minBalance + (maxBalance - minBalance) * Math.pow(progression, 3));
+  };
+
+  const getMockUnclaimed = () => {
+    if (progression === 0) return 0; // Start with 0
+    const minUnclaimed = 1.25;
+    const maxUnclaimed = 1250000; // 1.25M at the end
+    // Use power of 2.8 for exponential growth
+    return minUnclaimed + (maxUnclaimed - minUnclaimed) * Math.pow(progression, 2.8);
+  };
+
+  const getMockDaily = () => {
+    if (progression === 0) return 0; // Start with 0
+    const minDaily = 2;
+    const maxDaily = 1050000; // 1.05M at the end
+    // Use power of 2.9 for exponential growth
+    return Math.floor(minDaily + (maxDaily - minDaily) * Math.pow(progression, 2.9));
+  };
+
+  // Use mock data in showcase mode on mobile, otherwise use real/zero data
+  const displayBalance = showcaseMode && typeof window !== 'undefined' && window.innerWidth < 1024 
+    ? getMockBalance() 
+    : (!connected ? 0 : balanceLoading ? '...' : balance);
+    
+  const displayUnclaimed = showcaseMode && typeof window !== 'undefined' && window.innerWidth < 1024 
+    ? getMockUnclaimed() 
+    : (!connected ? 0 : rewardsLoading ? '...' : unclaimedRewards);
+    
+  const displayDaily = showcaseMode && typeof window !== 'undefined' && window.innerWidth < 1024 
+    ? getMockDaily() 
+    : (!connected ? 0 : stats.dailyIncome > 0 ? stats.dailyIncome : 0);
 
   return (
     <div className="px-4 py-3 border-b border-purple-500/20">
@@ -67,7 +137,7 @@ function MobileStatsRow() {
         <div className="flex flex-col items-center flex-1">
           <div className="text-[10px] text-purple-300 uppercase tracking-wider mb-0.5">Balance</div>
           <div className="text-lg font-bold text-purple-200 tabular-nums">
-            {balanceLoading ? '...' : balance.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+            {typeof displayBalance === 'string' ? displayBalance : displayBalance.toLocaleString(undefined, { maximumFractionDigits: 0 })}
           </div>
         </div>
         
@@ -78,9 +148,10 @@ function MobileStatsRow() {
         <div className="flex flex-col items-center flex-1">
           <div className="text-[10px] text-purple-300 uppercase tracking-wider mb-0.5">Unclaimed</div>
           <div className="text-lg font-bold text-white tabular-nums">
-            {rewardsLoading ? '...' : unclaimedRewards >= 100 
-              ? unclaimedRewards.toLocaleString(undefined, { maximumFractionDigits: 0 })
-              : unclaimedRewards.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+            {typeof displayUnclaimed === 'string' ? displayUnclaimed : 
+              displayUnclaimed >= 100 
+                ? displayUnclaimed.toLocaleString(undefined, { maximumFractionDigits: 0 })
+                : displayUnclaimed.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
             }
           </div>
         </div>
@@ -92,7 +163,7 @@ function MobileStatsRow() {
         <div className="flex flex-col items-center flex-1">
           <div className="text-[10px] text-purple-300 uppercase tracking-wider mb-0.5">Daily</div>
           <div className="text-lg font-bold text-green-400 tabular-nums">
-            +{stats.dailyIncome > 0 ? stats.dailyIncome.toLocaleString() : '0'}
+            +{typeof displayDaily === 'string' ? displayDaily : displayDaily.toLocaleString()}
           </div>
         </div>
       </div>
@@ -116,7 +187,11 @@ export function MobileLayout({
   customBoardBackground,
   customPropertyCardBackground,
   customSceneBackground,
-  themeCategory
+  themeCategory,
+  showcaseMode = false,
+  currentShowcaseScene,
+  onStartShowcase,
+  onExitShowcase
 }: MobileLayoutProps) {
   const [activeTab, setActiveTab] = useState<TabType>('portfolio');
   const { publicKey, connected, disconnect } = useWallet();
@@ -132,6 +207,7 @@ export function MobileLayout({
   const [showShieldAllModal, setShowShieldAllModal] = useState(false);
   const [shieldAllData, setShieldAllData] = useState<ShieldableProperty[]>([]);
   const router = useRouter();
+  const hasStartedDemo = useRef(false);
   
   // Property modal swipe state
   const [modalStartY, setModalStartY] = useState<number | null>(null);
@@ -154,6 +230,26 @@ export function MobileLayout({
   // Get game state to check if user owns properties for hints
   const gameState = useGameState();
   const totalSlotsOwned = gameState.stats.totalSlotsOwned || 0;
+  
+  // Auto-start demo mode for unconnected mobile users
+  useEffect(() => {
+    if (!connected && !hasStartedDemo.current && onStartShowcase) {
+      // Small delay to ensure smooth initial render
+      const timer = setTimeout(() => {
+        hasStartedDemo.current = true;
+        onStartShowcase();
+      }, 1000);
+      return () => clearTimeout(timer);
+    }
+    return undefined;
+  }, [connected, onStartShowcase]);
+  
+  // Handle tap to exit showcase mode
+  const handleBoardTap = () => {
+    if (showcaseMode && onExitShowcase && !connected) {
+      onExitShowcase();
+    }
+  };
   
   // Calculate scaleFactor based on screen width for mobile
   useEffect(() => {
@@ -437,9 +533,7 @@ export function MobileLayout({
         </div>
 
         {/* Stats Row: Plain centered text with dividers */}
-        {connected && (
-          <MobileStatsRow />
-        )}
+        <MobileStatsRow showcaseMode={showcaseMode} currentShowcaseScene={currentShowcaseScene || null} />
 
         {/* Buttons Row */}
         {connected && (
@@ -455,7 +549,7 @@ export function MobileLayout({
       </div>
 
       {/* 3D Board - Full screen background */}
-      <div className="absolute inset-0 pt-32">
+      <div className="absolute inset-0 pt-32" onClick={handleBoardTap}>
         <div className="relative w-full h-full">
           
           {/* 3D Board */}
@@ -469,7 +563,22 @@ export function MobileLayout({
             customSceneBackground={customSceneBackground}
             themeCategory={themeCategory}
             isMobile={true}
+            showcaseMode={showcaseMode}
+            showcaseScene={currentShowcaseScene || null}
+            {...(onExitShowcase && { onExitShowcase })}
+            {...(onStartShowcase && { onStartShowcase })}
           />
+          
+          {/* Demo Mode Indicator */}
+          {showcaseMode && !connected && (
+            <div className="absolute top-20 left-0 right-0 flex justify-center pointer-events-none">
+              <div className="bg-black/70 backdrop-blur-md px-6 py-3 rounded-full border border-purple-500/30">
+                <p className="text-sm text-purple-300 text-center">
+                  Demo Mode • Tap anywhere to exit
+                </p>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
