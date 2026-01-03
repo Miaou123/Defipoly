@@ -436,6 +436,7 @@ const CAMERA_POSITIONS = {
  * Stops animating once transition is complete to allow manual control
  * Skips animation if already connected on page load
  * Handles zoom-out when showcase mode ends for non-connected wallets
+ * New: Handles zoom-in when showcase mode starts
  */
 function CameraController({ 
   connected, 
@@ -483,25 +484,27 @@ function CameraController({
       return;
     }
     
-    const config = connected 
+    // Determine target camera position
+    // If connected OR in showcase mode, zoom in. Otherwise zoom out.
+    const config = (connected || showcaseMode) 
       ? CAMERA_POSITIONS.ZOOMED_IN
       : CAMERA_POSITIONS.ZOOMED_OUT;
     targetPosition.current.copy(config.position);
     targetLookAt.current.copy(config.lookAt);
     
-    // Handle showcase mode ending for non-connected wallets
-    if (prevShowcaseMode.current === true && showcaseMode === false && !connected) {
-      // Showcase just ended and wallet is not connected - animate zoom out
+    // Handle showcase mode transitions
+    if (prevShowcaseMode.current !== showcaseMode && !isMobile) {
+      // Showcase mode changed - trigger animation
       animationComplete.current = false;
-      prevShowcaseMode.current = false;
+      prevShowcaseMode.current = showcaseMode || false;
       return;
     }
     
-    // On initial mount, if already connected, skip animation and snap immediately
+    // On initial mount, if already connected or in showcase, skip animation and snap immediately
     if (isInitialMount.current) {
       isInitialMount.current = false;
-      if (connected || spectatorMode || isMobile) {
-        // Already connected or in spectator mode or mobile - skip animation, snap to zoomed in position
+      if (connected || spectatorMode || isMobile || showcaseMode) {
+        // Already in a state that requires zoomed in view - skip animation
         animationComplete.current = true;
         needsImmediateSnap.current = true;
         currentLookAt.current.copy(config.lookAt);
@@ -517,7 +520,7 @@ function CameraController({
       prevConnected.current = connected;
     }
     
-    // Update showcase mode tracking
+    // Update tracking
     prevShowcaseMode.current = showcaseMode || false;
   }, [connected, showcaseMode, spectatorMode, isMobile]);
 
@@ -1315,7 +1318,7 @@ function Scene({
           animation={showcaseScene.cameraAnimation} 
           controlsRef={cameraControlsRef}
           connected={connected}
-          skipDiveIn={!isMobile}
+          skipDiveIn={true}  // Always skip dive-in since CameraController handles zoom transition
         />
       ) : (
         <CameraController connected={connected} controlsRef={cameraControlsRef} showcaseMode={showcaseMode} spectatorMode={spectatorMode || false} isMobile={isMobile || false} />
@@ -1537,16 +1540,15 @@ function Scene({
         />
       )}
       
-      {/* ===== ONBOARDING OVERLAY (hide in showcase mode on mobile only) ===== */}
-      {(!showcaseMode || (showcaseMode && !isMobile)) && (
-        <BoardOnboarding3D 
-          hasProperties={hasProperties} 
-          showClaimHint={showClaimHint}
-          onClaimHintDismiss={handleClaimHintDismiss}
-          {...(onStartShowcase && { onStartShowcase })}
-          spectatorMode={spectatorMode || false}
-        />
-      )}
+      {/* ===== ONBOARDING OVERLAY ===== */}
+      <BoardOnboarding3D 
+        hasProperties={hasProperties} 
+        showClaimHint={showClaimHint}
+        onClaimHintDismiss={handleClaimHintDismiss}
+        {...(onStartShowcase && { onStartShowcase })}
+        spectatorMode={spectatorMode || false}
+        showcaseMode={showcaseMode}
+      />
       
       {/* ===== 3D INCOME FLOW (show in showcase mode with fake income, or when connected and has properties) ===== */}
       {((!spectatorMode && connected && hasProperties) || (showcaseMode && showcaseScene)) && (

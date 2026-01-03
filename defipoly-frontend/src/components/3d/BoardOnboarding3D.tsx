@@ -24,9 +24,9 @@ interface BoardOnboarding3DProps {
  * - Connected, no properties: Properties will show golden glow (handled in PropertyTile)
  * - Has properties: Nothing rendered (bank claim handled separately)
  */
-export function BoardOnboarding3D({ hasProperties, showClaimHint = false, onClaimHintDismiss, onStartShowcase, spectatorMode }: BoardOnboarding3DProps) {
-  // Early return for spectator mode - no overlay
-  if (spectatorMode) return null;
+export function BoardOnboarding3D({ hasProperties, showClaimHint = false, onClaimHintDismiss, onStartShowcase, spectatorMode, showcaseMode }: BoardOnboarding3DProps & { showcaseMode?: boolean }) {
+  // Early return for spectator mode or showcase mode - no overlay
+  if (spectatorMode || showcaseMode) return null;
   
   const { connected } = useWallet();
   const { visible: walletModalVisible, setVisible } = useWalletModal();

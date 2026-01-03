@@ -149,19 +149,19 @@ export function ShowcaseCameraController({
         controlsRef.current.target.set(lookX, lookY, lookZ);
       }
     } else if (skipDiveIn && !connected) {
-      // For desktop: orbit at zoomed out position
-      const radius = 20; // Larger radius for zoomed out view
-      const speed = 0.1; // Slower for smoother rotation
-      const height = 18; // Stay at zoomed out height
+      // For desktop: orbit at zoomed in position (same as normal orbit)
+      const radius = 10;
+      const speed = 0.15;
+      const height = 7;
       
       camera.position.x = Math.sin(time * speed) * radius;
       camera.position.z = Math.cos(time * speed) * radius;
       camera.position.y = height;
-      camera.lookAt(0, 5, 0);  // Look at same point as ZOOMED_OUT position
+      camera.lookAt(0, 0, 0);  // Look at center
       
       // Update OrbitControls target to match
       if (controlsRef.current) {
-        controlsRef.current.target.set(0, 5, 0);
+        controlsRef.current.target.set(0, 0, 0);
       }
     } else {
       // Normal orbit animation after dive-in or for connected wallets
