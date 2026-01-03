@@ -193,9 +193,9 @@ export default function Home() {
     prevWalletConnected.current = isWalletConnected;
   }, [showcaseMode, publicKey]);
 
-  // Auto-start demo mode for unconnected desktop users
+  // Auto-start demo mode only for mobile users (removed auto-start for desktop)
   useEffect(() => {
-    if (!publicKey && !hasStartedDemo.current && !isMobile && isClient) {
+    if (!publicKey && !hasStartedDemo.current && isMobile && isClient) {
       // Small delay to ensure smooth initial render
       const timer = setTimeout(() => {
         hasStartedDemo.current = true;

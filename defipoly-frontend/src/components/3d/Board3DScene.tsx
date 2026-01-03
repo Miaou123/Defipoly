@@ -443,13 +443,15 @@ function CameraController({
   controlsRef,
   showcaseMode,
   spectatorMode = false,
-  isMobile = false
+  isMobile = false,
+  onAnimationComplete
 }: { 
   connected: boolean; 
   controlsRef: React.RefObject<any>;
   showcaseMode?: boolean;
   spectatorMode?: boolean;
   isMobile?: boolean;
+  onAnimationComplete?: () => void;
 }) {
   const targetPosition = useRef(CAMERA_POSITIONS.ZOOMED_OUT.position.clone());
   const targetLookAt = useRef(CAMERA_POSITIONS.ZOOMED_OUT.lookAt.clone());
@@ -492,35 +494,44 @@ function CameraController({
     targetPosition.current.copy(config.position);
     targetLookAt.current.copy(config.lookAt);
     
-    // Handle showcase mode transitions
-    if (prevShowcaseMode.current !== showcaseMode && !isMobile) {
-      // Showcase mode changed - trigger animation
-      animationComplete.current = false;
-      prevShowcaseMode.current = showcaseMode || false;
-      return;
-    }
-    
-    // On initial mount, if already connected or in showcase, skip animation and snap immediately
+    // On initial mount
     if (isInitialMount.current) {
       isInitialMount.current = false;
-      if (connected || spectatorMode || isMobile || showcaseMode) {
+      if (connected || spectatorMode || isMobile) {
         // Already in a state that requires zoomed in view - skip animation
         animationComplete.current = true;
         needsImmediateSnap.current = true;
         currentLookAt.current.copy(config.lookAt);
+      } else if (showcaseMode) {
+        // Starting in showcase mode but not connected - need to animate zoom in
+        animationComplete.current = false;
       }
       prevConnected.current = connected;
       prevShowcaseMode.current = showcaseMode || false;
       return;
     }
     
-    // Reset animation when connection state changes (disconnected -> connected)
-    if (prevConnected.current !== connected && !isMobile) {
+    // Handle showcase mode transitions
+    if (prevShowcaseMode.current !== showcaseMode && !isMobile) {
+      // Showcase mode changed - always trigger animation
       animationComplete.current = false;
-      prevConnected.current = connected;
+      // Force update the current lookAt to ensure smooth transition
+      if (!showcaseMode && !connected) {
+        // Exiting showcase and not connected - will zoom out
+        // Current lookAt should already be at ZOOMED_IN position
+      } else if (showcaseMode && !connected) {
+        // Entering showcase while not connected - will zoom in
+        // Make sure we start from current camera position
+      }
+    }
+    
+    // Reset animation when connection state changes (disconnected -> connected)
+    if (prevConnected.current !== connected && !isMobile && !showcaseMode) {
+      animationComplete.current = false;
     }
     
     // Update tracking
+    prevConnected.current = connected;
     prevShowcaseMode.current = showcaseMode || false;
   }, [connected, showcaseMode, spectatorMode, isMobile]);
 
@@ -568,6 +579,12 @@ function CameraController({
         controlsRef.current.update();
       }
       animationComplete.current = true;
+      console.log('Camera animation complete', { showcaseMode, connected });
+      
+      // Notify parent when animation completes during showcase mode
+      if (showcaseMode && !connected && onAnimationComplete) {
+        onAnimationComplete();
+      }
     }
     
     // Trigger render during animation
@@ -1164,6 +1181,7 @@ function Scene({
   const ownerships = showcaseMode && showcaseScene ? showcaseScene.mockOwnerships : (gameState?.ownerships || []);
   const bankRef = useRef<any>(null);
   const [cameraDistance, setCameraDistance] = useState(25);
+  const [showcaseReady, setShowcaseReady] = useState(false);
   
   // Preload all showcase textures for instant swapping
   const preloadedTextures = usePreloadedShowcaseTextures();
@@ -1309,11 +1327,25 @@ function Scene({
     // No invalidate here - only updates state, doesn't need continuous rendering
   });
   
+  // Handle showcase readiness after zoom animation
+  useEffect(() => {
+    if (showcaseMode && !connected) {
+      // Wait a bit for zoom animation to complete
+      setShowcaseReady(false);
+      const timer = setTimeout(() => {
+        setShowcaseReady(true);
+      }, 1500); // 1.5 seconds for zoom animation
+      return () => clearTimeout(timer);
+    } else {
+      setShowcaseReady(false);
+    }
+  }, [showcaseMode, connected]);
+  
   return (
     <>
       
       {/* Camera Controller */}
-      {showcaseMode && showcaseScene ? (
+      {showcaseMode && showcaseScene && (connected || showcaseReady) ? (
         <ShowcaseCameraController 
           animation={showcaseScene.cameraAnimation} 
           controlsRef={cameraControlsRef}
@@ -1321,7 +1353,14 @@ function Scene({
           skipDiveIn={true}  // Always skip dive-in since CameraController handles zoom transition
         />
       ) : (
-        <CameraController connected={connected} controlsRef={cameraControlsRef} showcaseMode={showcaseMode} spectatorMode={spectatorMode || false} isMobile={isMobile || false} />
+        <CameraController 
+          connected={connected} 
+          controlsRef={cameraControlsRef} 
+          showcaseMode={showcaseMode} 
+          spectatorMode={spectatorMode || false} 
+          isMobile={isMobile || false}
+          onAnimationComplete={() => setShowcaseReady(true)}
+        />
       )}
       
       {/* Rotation Controller - only when rotation mode is enabled and not in showcase */}
