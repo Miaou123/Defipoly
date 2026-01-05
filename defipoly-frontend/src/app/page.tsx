@@ -19,6 +19,7 @@ import { SHOWCASE_SCENES, ShowcaseScene } from '@/utils/showcaseScenes';
 import { ShowcaseMode, ShowcaseOverlay } from '@/components/3d/ShowcaseMode';
 import HelpButton from '@/components/HelpButton';
 import HelpDrawer from '@/components/HelpDrawer';
+import HelpButtonHint from '@/components/HelpButtonHint';
 
 export default function Home() {
   const { publicKey } = useWallet();
@@ -46,6 +47,7 @@ export default function Home() {
   const [showcaseMode, setShowcaseMode] = useState(false);
   const [currentShowcaseScene, setCurrentShowcaseScene] = useState<ShowcaseScene | null>(null);
   const [showHelpDrawer, setShowHelpDrawer] = useState(false);
+  const [hasOpenedHelp, setHasOpenedHelp] = useState(false);
   const prevWalletConnected = useRef<boolean>(false);
   const hasStartedDemo = useRef(false);
   
@@ -55,6 +57,22 @@ export default function Home() {
   // Mark as client-side after mount
   useEffect(() => {
     setIsClient(true);
+  }, []);
+
+  // Check if user has opened help before
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const hasOpened = localStorage.getItem('hasOpenedHelp') === 'true';
+      setHasOpenedHelp(hasOpened);
+      
+      // Listen for when help is opened
+      const handleHelpOpened = () => {
+        setHasOpenedHelp(true);
+      };
+      
+      window.addEventListener('helpOpened', handleHelpOpened);
+      return () => window.removeEventListener('helpOpened', handleHelpOpened);
+    }
   }, []);
 
   // Check for mobile and calculate column width
@@ -337,6 +355,18 @@ export default function Home() {
 
           {/* Help Button - Fixed Position */}
           <HelpButton onClick={() => setShowHelpDrawer(true)} />
+
+          {/* Help Button Hint for New Players */}
+          <HelpButtonHint 
+            hasProperties={gameState.ownerships.length > 0}
+            hasOpenedHelp={hasOpenedHelp}
+            onDismiss={() => {
+              if (typeof window !== 'undefined') {
+                localStorage.setItem('hasOpenedHelp', 'true');
+                setHasOpenedHelp(true);
+              }
+            }}
+          />
 
           {/* Help Drawer */}
           <HelpDrawer 

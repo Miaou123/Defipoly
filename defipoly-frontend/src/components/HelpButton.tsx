@@ -8,9 +8,19 @@ interface HelpButtonProps {
 }
 
 export default function HelpButton({ onClick }: HelpButtonProps) {
+  const handleClick = () => {
+    // Mark that help has been opened
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('hasOpenedHelp', 'true');
+      // Dispatch custom event for same-tab updates
+      window.dispatchEvent(new Event('helpOpened'));
+    }
+    onClick();
+  };
+
   return (
     <button
-      onClick={onClick}
+      onClick={handleClick}
       className="fixed z-40 group
                  md:w-14 md:h-14 w-8 h-8
                  md:bottom-8 md:right-8 bottom-auto right-4

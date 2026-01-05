@@ -19,6 +19,7 @@ import { MobilePropertyPanel } from './mobile/MobilePropertyPanel';
 import { FloatingCoinsModal } from './FloatingCoinsModal';
 import HelpButton from './HelpButton';
 import HelpDrawer from './HelpDrawer';
+import HelpButtonHint from './HelpButtonHint';
 import type { PropertyOwnership } from '@/types/accounts';
 import { useRouter } from 'next/navigation';
 import { LogOut } from 'lucide-react';
@@ -209,8 +210,25 @@ export function MobileLayout({
   const [showShieldAllModal, setShowShieldAllModal] = useState(false);
   const [shieldAllData, setShieldAllData] = useState<ShieldableProperty[]>([]);
   const [showHelpDrawer, setShowHelpDrawer] = useState(false);
+  const [hasOpenedHelp, setHasOpenedHelp] = useState(false);
   const router = useRouter();
   const hasStartedDemo = useRef(false);
+
+  // Check if user has opened help before
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const hasOpened = localStorage.getItem('hasOpenedHelp') === 'true';
+      setHasOpenedHelp(hasOpened);
+      
+      // Listen for when help is opened
+      const handleHelpOpened = () => {
+        setHasOpenedHelp(true);
+      };
+      
+      window.addEventListener('helpOpened', handleHelpOpened);
+      return () => window.removeEventListener('helpOpened', handleHelpOpened);
+    }
+  }, []);
   
   // Property modal swipe state
   const [modalStartY, setModalStartY] = useState<number | null>(null);
@@ -769,6 +787,18 @@ export function MobileLayout({
 
       {/* Help Button - Fixed Position */}
       <HelpButton onClick={() => setShowHelpDrawer(true)} />
+
+      {/* Help Button Hint for New Players */}
+      <HelpButtonHint 
+        hasProperties={gameState.ownerships.length > 0}
+        hasOpenedHelp={hasOpenedHelp}
+        onDismiss={() => {
+          if (typeof window !== 'undefined') {
+            localStorage.setItem('hasOpenedHelp', 'true');
+            setHasOpenedHelp(true);
+          }
+        }}
+      />
 
       {/* Help Drawer */}
       <HelpDrawer 
