@@ -1338,6 +1338,7 @@ function Scene({
       return () => clearTimeout(timer);
     } else {
       setShowcaseReady(false);
+      return undefined;
     }
   }, [showcaseMode, connected]);
   

@@ -14,6 +14,7 @@ interface BoardOnboarding3DProps {
   onClaimHintDismiss?: () => void;
   onStartShowcase?: () => void;
   spectatorMode?: boolean;
+  showcaseMode?: boolean;
 }
 
 /**
@@ -24,7 +25,7 @@ interface BoardOnboarding3DProps {
  * - Connected, no properties: Properties will show golden glow (handled in PropertyTile)
  * - Has properties: Nothing rendered (bank claim handled separately)
  */
-export function BoardOnboarding3D({ hasProperties, showClaimHint = false, onClaimHintDismiss, onStartShowcase, spectatorMode, showcaseMode }: BoardOnboarding3DProps & { showcaseMode?: boolean }) {
+export function BoardOnboarding3D({ hasProperties, showClaimHint = false, onClaimHintDismiss, onStartShowcase, spectatorMode, showcaseMode }: BoardOnboarding3DProps) {
   // Early return for spectator mode or showcase mode - no overlay
   if (spectatorMode || showcaseMode) return null;
   

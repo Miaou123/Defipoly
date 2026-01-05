@@ -1477,6 +1477,129 @@ export const ChevronRightIcon: React.FC<IconProps> = ({ className = '', size = 2
   </svg>
 );
 
+// ❓ Question Mark Icon (for help button)
+export const QuestionMarkIcon: React.FC<IconProps> = ({ className = '', size = 24 }) => (
+  <svg 
+    width={size} 
+    height={size} 
+    viewBox="0 0 24 24" 
+    fill="none" 
+    xmlns="http://www.w3.org/2000/svg"
+    className={className}
+  >
+    <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" fill="currentColor" fillOpacity="0.1"/>
+    <path 
+      d="M9 9a3 3 0 1 1 4 2.83V13" 
+      stroke="currentColor" 
+      strokeWidth="2" 
+      strokeLinecap="round"
+      fill="none"
+    />
+    <circle cx="12" cy="17" r="1" fill="currentColor"/>
+  </svg>
+);
+
+// 📖 Book Icon (for documentation/help content)
+export const BookIcon: React.FC<IconProps> = ({ className = '', size = 24 }) => (
+  <svg 
+    width={size} 
+    height={size} 
+    viewBox="0 0 24 24" 
+    fill="none" 
+    xmlns="http://www.w3.org/2000/svg"
+    className={className}
+  >
+    <path 
+      d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" 
+      stroke="currentColor" 
+      strokeWidth="2"
+      strokeLinecap="round"
+    />
+    <path 
+      d="M6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20" 
+      fill="currentColor"
+      opacity="0.2"
+    />
+    <path 
+      d="M6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20" 
+      stroke="currentColor" 
+      strokeWidth="2"
+      strokeLinecap="round"
+    />
+    <path 
+      d="M8 7h8M8 11h6" 
+      stroke="currentColor" 
+      strokeWidth="1.5" 
+      strokeLinecap="round"
+    />
+  </svg>
+);
+
+// 🚀 Rocket Icon (for quick start section)
+export const RocketIcon: React.FC<IconProps> = ({ className = '', size = 24 }) => (
+  <svg 
+    width={size} 
+    height={size} 
+    viewBox="0 0 24 24" 
+    fill="none" 
+    xmlns="http://www.w3.org/2000/svg"
+    className={className}
+  >
+    <path 
+      d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z" 
+      fill="currentColor"
+      opacity="0.3"
+    />
+    <path 
+      d="M12 15l-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z" 
+      fill="currentColor"
+      opacity="0.2"
+    />
+    <path 
+      d="M12 15l-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z" 
+      stroke="currentColor" 
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+    <path 
+      d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z" 
+      stroke="currentColor" 
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+    <circle cx="15" cy="9" r="1.5" fill="currentColor"/>
+    <path 
+      d="M9 11l-4 4M5 19l4-4" 
+      stroke="currentColor" 
+      strokeWidth="2" 
+      strokeLinecap="round"
+    />
+  </svg>
+);
+
+// 🔍 Search Icon (for search input)
+export const SearchIcon: React.FC<IconProps> = ({ className = '', size = 24 }) => (
+  <svg 
+    width={size} 
+    height={size} 
+    viewBox="0 0 24 24" 
+    fill="none" 
+    xmlns="http://www.w3.org/2000/svg"
+    className={className}
+  >
+    <circle cx="11" cy="11" r="8" fill="currentColor" opacity="0.1"/>
+    <circle cx="11" cy="11" r="8" stroke="currentColor" strokeWidth="2"/>
+    <path 
+      d="M21 21l-4.35-4.35" 
+      stroke="currentColor" 
+      strokeWidth="2" 
+      strokeLinecap="round"
+    />
+  </svg>
+);
+
 // Hexagon Badge with House for leaderboard rankings
 interface HexagonBadgeProps {
   rank: 1 | 2 | 3;
@@ -1600,5 +1723,10 @@ export default {
   getActionIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
+  // New icons for HelpDrawer
+  QuestionMarkIcon,
+  BookIcon,
+  RocketIcon,
+  SearchIcon,
 
 };

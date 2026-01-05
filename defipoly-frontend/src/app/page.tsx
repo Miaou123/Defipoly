@@ -17,6 +17,8 @@ import { getProfile, clearProfileCache } from '@/utils/profileStorage';
 import { ClaimTestTokens } from '@/components/ClaimTestTokens';
 import { SHOWCASE_SCENES, ShowcaseScene } from '@/utils/showcaseScenes';
 import { ShowcaseMode, ShowcaseOverlay } from '@/components/3d/ShowcaseMode';
+import HelpButton from '@/components/HelpButton';
+import HelpDrawer from '@/components/HelpDrawer';
 
 export default function Home() {
   const { publicKey } = useWallet();
@@ -43,6 +45,7 @@ export default function Home() {
   // Showcase mode state
   const [showcaseMode, setShowcaseMode] = useState(false);
   const [currentShowcaseScene, setCurrentShowcaseScene] = useState<ShowcaseScene | null>(null);
+  const [showHelpDrawer, setShowHelpDrawer] = useState(false);
   const prevWalletConnected = useRef<boolean>(false);
   const hasStartedDemo = useRef(false);
   
@@ -331,6 +334,15 @@ export default function Home() {
               onExit={handleExitShowcase} 
             />
           )}
+
+          {/* Help Button - Fixed Position */}
+          <HelpButton onClick={() => setShowHelpDrawer(true)} />
+
+          {/* Help Drawer */}
+          <HelpDrawer 
+            isOpen={showHelpDrawer} 
+            onClose={() => setShowHelpDrawer(false)} 
+          />
         </div>
       )}
     </ClientOnly>

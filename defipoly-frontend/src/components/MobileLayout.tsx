@@ -17,6 +17,8 @@ import { PROPERTIES } from '@/utils/constants';
 import { ShieldAllModal } from './ShieldAllModal';
 import { MobilePropertyPanel } from './mobile/MobilePropertyPanel';
 import { FloatingCoinsModal } from './FloatingCoinsModal';
+import HelpButton from './HelpButton';
+import HelpDrawer from './HelpDrawer';
 import type { PropertyOwnership } from '@/types/accounts';
 import { useRouter } from 'next/navigation';
 import { LogOut } from 'lucide-react';
@@ -206,6 +208,7 @@ export function MobileLayout({
   const [showCoinModal, setShowCoinModal] = useState(false);
   const [showShieldAllModal, setShowShieldAllModal] = useState(false);
   const [shieldAllData, setShieldAllData] = useState<ShieldableProperty[]>([]);
+  const [showHelpDrawer, setShowHelpDrawer] = useState(false);
   const router = useRouter();
   const hasStartedDemo = useRef(false);
   
@@ -763,6 +766,15 @@ export function MobileLayout({
         </div>,
         document.body
       )}
+
+      {/* Help Button - Fixed Position */}
+      <HelpButton onClick={() => setShowHelpDrawer(true)} />
+
+      {/* Help Drawer */}
+      <HelpDrawer 
+        isOpen={showHelpDrawer} 
+        onClose={() => setShowHelpDrawer(false)} 
+      />
     </div>
   );
 }
